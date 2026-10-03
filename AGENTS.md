@@ -24,6 +24,10 @@ airport-wx: a static page showing major-weather and delay risk at major US airpo
 
 - Live relay (README "Live relay"): `worker/worker.mjs` is a Cloudflare Worker that overlays fresh METAR/TAF/SIGMET/FAA/NWS on the last build. `.github/workflows/worker.yml` deploys it on every push to main that touches `worker/**`, `poller/**` or `airports.json` (and on manual dispatch); it skips with a notice until the repo secrets `CLOUDFLARE_API_TOKEN` (Account → Workers Scripts → Edit) and `CLOUDFLARE_ACCOUNT_ID` exist (Settings → Secrets and variables → Actions). The poll workflow then writes `site/data/config.json` with the relay URL (committed default `{"liveUrl":null}`). Modules the worker imports (`poller/core.mjs` and what it imports) must stay pure: no `node:` imports (`worker/pack.mjs` refuses them). Test locally with `node worker/dev.mjs serve`.
 
+## How the site works
+
+- Navigation shell (README "Navigation and Settings"): `site/nav.js` (glass tab bar Airports / Trips / Map with the hash as state, round search button, header buttons, menu popover, theme) and `site/settings.js` (Settings sheet and its pages), shared helpers in `site/navui.js`, check-page assertions in `site/navcheck.js`. Settings read and write only `site/prefs.js`; favourites stay in `awx-favs` (changed through `AWXApp.setFavs`). Existing ids are kept, so `app.js` and `searched.js` don't know about the shell; its hooks are marked `nav hook`.
+
 ## Checks before publishing
 
 1. `node poller/run-tests.mjs` — all pass.
