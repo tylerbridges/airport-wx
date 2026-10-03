@@ -24,6 +24,14 @@ airport-wx: a static page showing major-weather and delay risk at major US airpo
 
 - Live relay (README "Live relay"): `worker/worker.mjs` is a Cloudflare Worker that overlays fresh METAR/TAF/SIGMET/FAA/NWS on the last build. `.github/workflows/worker.yml` deploys it on every push to main that touches `worker/**`, `poller/**` or `airports.json` (and on manual dispatch); it skips with a notice until the repo secrets `CLOUDFLARE_API_TOKEN` (Account → Workers Scripts → Edit) and `CLOUDFLARE_ACCOUNT_ID` exist (Settings → Secrets and variables → Actions). The poll workflow then writes `site/data/config.json` with the relay URL (committed default `{"liveUrl":null}`). Modules the worker imports (`poller/core.mjs` and what it imports) must stay pure: no `node:` imports (`worker/pack.mjs` refuses them). Test locally with `node worker/dev.mjs serve`.
 
+## How the site works
+
+- `site/index.html` (markup + all CSS) loads `cats.js` (disruption categories, pure), `prefs.js` (settings state, ES module, also `window.AWXPrefs`), `app.js` (everything rendered; classic script) and `searched.js` (search + non-major airports). Bump `?v=` on each file you change.
+- Settings state belongs to `site/prefs.js` (`getPrefs/setPref/onPrefs/DEFAULTS`, localStorage `awx-settings`); never write that key elsewhere. Ground stops and full closures can't be hidden.
+- Category/level/impact rules for the page are in `site/cats.js` and must read back every poller reason (`tools/cats.test.mjs`); add a pattern there when `poller/risk.mjs` gets a new reason text.
+- Timelines are the local calendar day; past hours come from `observed` (poll.mjs `// build2b hook`), the rest from `hours`. The sheet's card stack keeps one footprint (all states in one grid cell): don't add content that changes its height on hour taps.
+- Traveler mode must show no aviation codes outside Pilot details (the check page scans every sheet).
+
 ## Checks before publishing
 
 1. `node poller/run-tests.mjs` — all pass.
