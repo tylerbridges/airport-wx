@@ -10,6 +10,7 @@ import { tcfAt, cwaAt } from "./sources.mjs";
 import { classifyCause, causePhrase } from "./cause.mjs";
 import { plainMetar, travelerImpact } from "./plain.mjs";
 import { opsPlanFor } from "./opsplan.mjs";
+import { scoreHours, HUBS } from "./delay.mjs"; // phase3 hook: delay model (README "Delay model")
 
 const HOUR = 3600e3;
 const ADV_KEYS = ["id", "type", "airport", "issued", "cause", "causeText", "title", "active", "cnx", "start", "end"];
@@ -17,10 +18,13 @@ const ADV_KEYS = ["id", "type", "airport", "issued", "cause", "causeText", "titl
 /**
  * status.json airports from parsed sources. over(a) (live relay) may return per-airport values that
  * replace the ones computed here: {faa, alerts, sigmets, spc, tcf, cwa, opsplan} (already in output shape).
+ * delay (phase3, optional): {model, fallback, analogs: {IATA: table}, icaoOf: {IATA: ICAO}, hubTaf(iata)}
+ * adds hours[].delay (poller/delay.mjs scoreHours); hub TAFs come from `tafs`, else delay.hubTaf.
  */
-export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc, nws, lamp = null, atcscc = null, tcf = null, cwa = null, plan = null, over = null }) {
+export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc, nws, lamp = null, atcscc = null, tcf = null, cwa = null, plan = null, over = null, delay = null }) {
   const metarBy = latestBy(metars, "icaoId", "obsTime");
   const tafBy = latestBy(tafs, "icaoId", "issueTime");
+  const validTaf = (x) => (x && !(toMs(x.validTimeTo) != null && toMs(x.validTimeTo) < +now) ? x : null);
   const out = [];
   const known = new Set(airports.map((a) => a.iata));
   for (const a of airports) {
@@ -71,10 +75,18 @@ export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc,
       ? { ...op, items: opsPlanItems(op, { faa, atcscc: adv, tz: a.tz, now }).map(({ kind, level, text, cause, until, raw, dup, ifr }) => ({ kind, level, text, cause, until, raw, dup, ifr })) }
       : null;
     const { now: nowS, peak } = summarize(hours, a.tz);
+    // phase3 hook: chance of a real delay per hour (FAA programs override; README "Delay model")
+    const dl = delay ? scoreHours({
+      iata: a.iata, tz: a.tz, now, hours, taf: t, metar: m, lamp: lampSt, faa, atcscc: adv, opsplan: op,
+      hubTafs: (HUBS[a.iata] || []).map((h) => validTaf(tafBy.get(delay.icaoOf?.[h])) || validTaf(delay.hubTaf?.(h))).filter(Boolean),
+      model: delay.model, fallback: delay.fallback, analogs: delay.analogs?.[a.iata] || null,
+    }) : null;
+    const hoursOut = hoursOutput(hours);
+    if (dl) hoursOut.forEach((h, i) => { if (dl[i]) h.delay = dl[i]; });
 
     out.push({
       iata: a.iata, icao: a.icao, name: a.name, city: a.city, state: a.state, tz: a.tz, lat: a.lat, lon: a.lon,
-      now: nowS, peak, hours: hoursOutput(hours),
+      now: nowS, peak, hours: hoursOut,
       metar: m
         ? {
             raw: m.rawOb || "",

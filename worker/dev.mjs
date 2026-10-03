@@ -35,8 +35,15 @@ export async function fixtureWorld(now = new Date()) {
     // AWC JSON for the curated airports, plus records for others from the global cache fixtures
     const metars = [...JSON.parse(await read("metar.json")), ...parseMetarCsv(await read("metars.cache.csv"), now)];
     const tafs = [...JSON.parse(await read("taf.json")), ...parseTafXml(await read("tafs.cache.xml"), now)];
+    // phase3: the delay model files the build used (site/data/model), served under data/model/
+    const modelDir = process.env.DELAY_MODEL_DIR ? resolve(process.env.DELAY_MODEL_DIR) : join(ROOT, "site/data/model");
+    const modelFiles = {};
+    const addModel = async (rel) => { try { modelFiles[rel] = await readFile(join(modelDir, rel), "utf8"); } catch { /* not present */ } };
+    await addModel("model.json");
+    await addModel("fallback.json");
+    for (const a of airports) await addModel(`analogs/${a.iata}.json`);
     return {
-      now, airports, status, statusText: JSON.stringify(status), shards, metars, tafs,
+      now, airports, status, statusText: JSON.stringify(status), shards, metars, tafs, modelFiles,
       sigmet: await read("airsigmet.json"), faa: await read("faa.xml"), nws: JSON.parse(await read("nws.json")),
     };
   } finally {
@@ -46,7 +53,8 @@ export async function fixtureWorld(now = new Date()) {
 
 /**
  * fetch() replacement answering the relay's upstream URLs from the world.
- * opts.fail: Set of source names to fail with HTTP 503 (metar, taf, sigmet, faa, nws, build, shard).
+ * opts.fail: Set of source names to fail with HTTP 503 (metar, taf, sigmet, faa, nws, build, shard);
+ * "model" makes the delay model files 404.
  * opts.log: array that receives every requested URL.
  */
 export function stubFetch(world, { fail = new Set(), log = null } = {}) {
@@ -71,7 +79,12 @@ export function stubFetch(world, { fail = new Set(), log = null } = {}) {
       case "sigmet": return res(world.sigmet);
       case "faa": return res(world.faa, 200, "application/xml");
       case "nws": return res(JSON.stringify(world.nws[byLatLon.get(url.searchParams.get("point"))] || { features: [] }));
-      case "build": return url.pathname.endsWith("/status.json") ? res(world.statusText) : res("not found", 404, "text/plain");
+      case "build": {
+        if (url.pathname.endsWith("/status.json")) return res(world.statusText);
+        const m = /\/data\/(model\/.+)$/.exec(url.pathname); // phase3: delay model files
+        if (m && !fail.has("model") && world.modelFiles?.[m[1]] != null) return res(world.modelFiles[m[1]]);
+        return res("not found", 404, "text/plain");
+      }
       case "shard": { const L = url.pathname.split("/").pop().replace(".json", ""); return world.shards[L] ? res(world.shards[L]) : res("not found", 404, "text/plain"); }
       default: return res("no stub for " + url.href, 404, "text/plain");
     }

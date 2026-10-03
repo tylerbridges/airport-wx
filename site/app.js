@@ -1112,6 +1112,7 @@
       h("div", { class: "aname" }, a.name),
       h("div", { class: "where" }, `${a.city}, ${a.state}`),
       h("div", { class: "reason" }, reason),
+      window.AWXDelay ? safeCall(() => AWXDelay.delayLine(a)) : null, // phase3 hook: chance of a real delay (site/delay.js)
       later ? h("div", { class: "sub" }, "Now: " + LEVELS[v.now.level].label) : null,
       cardPrograms(v).length ? h("div", { class: "badges" }, faaBadges(v)) : null,
       timeline(a, {}),
@@ -1735,7 +1736,9 @@
     const moreBtn = rs.length > max ? h("button", { type: "button", class: "morebtn", "aria-expanded": "false",
       onclick: (e) => { e.stopPropagation(); const box = e.currentTarget.closest(".sc"); const on = box.classList.toggle("expanded"); e.currentTarget.setAttribute("aria-expanded", String(on)); e.currentTarget.textContent = on ? "Show less" : "+" + (rs.length - max) + " more"; } },
       "+" + (rs.length - max) + " more") : null;
-    const delay = o.delay ? h("div", { class: "sc-delay" }, "Delay chance " + Math.round(o.delay.chance * (o.delay.chance <= 1 ? 100 : 1)) + "%" + (o.delay.minutes ? " · about " + o.delay.minutes + " min" : "")) : null;
+    // delay chance (Phase 3 hours[].delay: p 0..1, minutes); hidden when absent
+    const dp = o.delay && Number.isFinite(Number(o.delay.p)) ? Math.round(Number(o.delay.p) * 100) : null;
+    const delay = dp != null ? h("div", { class: "sc-delay" }, `${dp}% chance of delays` + (o.delay.minutes ? ` · about ${Math.round(o.delay.minutes)} min` : "")) : null;
     return h("div", { class: "box sc" + (o.full ? " full" : ""), "data-kind": o.kind },
       h("div", { class: "sc-h" },
         h("h4", {}, h("span", { class: "sc-label" }, o.label), o.level != null ? pill(o.level, true) : null),
@@ -1774,9 +1777,9 @@
         const pk = v.hours.find((x) => x.t === v.peak.at) || v.hours[0];
         const pt = Date.parse(pk.t);
         return h("div", { class: "two" },
-          stateCard({ a, kind: "now", label: "Now", level: v.now.level, when: "through " + whenLabel(endMs, tz), delay: a.delay && a.delay.now,
+          stateCard({ a, kind: "now", label: "Now", level: v.now.level, when: "through " + whenLabel(endMs, tz), delay: v.hours[0].delay,
             reasons: plainList(v.now.reasons, a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false), chips: cardSources(v.now.reasons, "now") }),
-          stateCard({ a, kind: "peak", label: "Peak", level: v.peak.level, when: peakRange(v), delay: a.delay && a.delay.peak,
+          stateCard({ a, kind: "peak", label: "Peak", level: v.peak.level, when: peakRange(v), delay: pk.delay,
             reasons: plainList(pk.reasons, a), programs: programsAt(v, pt, false), impact: CATS.impact(pk.reasons, programsAt(v, pt, false)), facts: factsRow(pk, a, pt, false), chips: cardSources(pk.reasons, "fc") }));
       }
       let when;
@@ -1791,7 +1794,7 @@
           when += ", then " + LEVELS[nxt.level].label + (e2 < lastMs ? " until " + whenLabel(e2, tz) : "");
         }
       }
-      return stateCard({ a, kind: "nowpeak", full: true, max: 3, label: layout === "clear" ? "Now" : "Now · Peak", level: v.now.level, when, delay: a.delay && a.delay.now,
+      return stateCard({ a, kind: "nowpeak", full: true, max: 3, label: layout === "clear" ? "Now" : "Now · Peak", level: v.now.level, when, delay: v.hours[0].delay,
         reasons: plainList(v.now.reasons, a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false),
         chips: cardSources(v.now.reasons, "now"), empty: layout === "clear" ? "Nothing expected" : null });
     };
@@ -1803,7 +1806,7 @@
       const zulu = aviation() ? " · " + new Date(s.t).toISOString().slice(11, 13) + "00Z" : "";
       const when = (s.kind === "obs" ? (s.observed ? "Observed" : "Earlier forecast") : s.kind === "none" ? "No report" : s.kind === "na" ? "Forecast not available yet" : isNow ? "Now" : "Forecast") + zulu;
       const progs = past || s.kind === "na" ? [] : programsAt(v, s.key, isNow);
-      return stateCard({ a, kind: "hour", full: true, max: 3, label, level: s.level, when, back: backToNow,
+      return stateCard({ a, kind: "hour", full: true, max: 3, label, level: s.level, when, back: backToNow, delay: !past && s.h ? s.h.delay : null,
         reasons: plainList(s.reasons, a), programs: progs, impact: s.level == null ? null : CATS.impact(s.reasons, progs),
         facts: c ? factsRow(c, a, s.key, past) : null, chips: s.level == null ? [] : cardSources(s.reasons, s.kind),
         empty: s.kind === "none" ? "No weather report for this hour" : s.kind === "na" ? "Forecast not available yet" : null });
@@ -1884,7 +1887,7 @@
     if (pd) secs.push(pd);
     if (secs.length) secs[0].id = "fullReport";
     // Will it cause delays?: site/delay.js (Phase 3) when present, directly under the timeline
-    const dl = window.AWXDelay && typeof AWXDelay.delayBlock === "function" ? safeCall(() => AWXDelay.delayBlock(a)) : null;
+    const dl = window.AWXDelay && typeof AWXDelay.delayBlock === "function" ? safeCall(() => AWXDelay.delayBlock(a, null)) : null; // phase3 hook
     const hiddenNote = v.hiddenCats && v.hiddenCats.size
       ? h("p", { class: "hidnote" }, "Hidden by your settings: " + [...v.hiddenCats].map((k) => CATS.LABELS[k]).join(", ") + ". Ground stops and airport closures are always shown.")
       : null;

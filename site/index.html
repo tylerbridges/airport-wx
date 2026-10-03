@@ -474,6 +474,7 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
   <main class="list" id="list" role="tabpanel"></main>
   <div class="notes" id="notes"></div>
   <p class="xfoot"><a href="check.html">Checks</a></p><!-- build2a hook: link to the check page (moves to settings later) -->
+  <p class="xfoot"><a href="accuracy.html">How accurate are the delay chances?</a></p><!-- phase3 hook -->
   <noscript><p class="empty">This page needs JavaScript.</p></noscript>
 </div>
 
@@ -488,7 +489,8 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 <div class="sr" id="announce" aria-live="polite"></div>
 <script src="cats.js?v=1"></script><!-- build2b: disruption categories -->
 <script type="module" src="prefs.js?v=1"></script><!-- build2b: settings state (before app.js: both run in order after parsing) -->
-<script src="app.js?v=8" defer></script>
+<script src="app.js?v=9" defer></script>
 <script type="module" src="searched.js?v=5"></script><!-- build2a hook -->
+<script type="module" src="delay.js?v=1"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 </body>
 </html>

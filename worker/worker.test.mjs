@@ -214,8 +214,9 @@ test("cache: same ids in any order are served from cache; upstreams are reused f
   assert.equal(b.log.length, 0, "response cache hit");
   assert.equal(b.body.generated, a.body.generated);
   const c = await call("/status?ids=ORD,MSP,DEN", { keep: true });
-  // new id set: METAR/TAF for the new list and DEN's alerts point; SIGMETs, FAA, the build and ORD/MSP's points are reused
-  assert.deepEqual(c.log.map((u) => new URL(u).pathname).sort(), ["/alerts/active", "/api/data/metar", "/api/data/taf"]);
+  // new id set: METAR/TAF for the new list, DEN's alerts point and (phase3) DEN's analog file; SIGMETs, FAA,
+  // the build, the delay model files and ORD/MSP's points are reused
+  assert.deepEqual(c.log.map((u) => new URL(u).pathname).sort(), ["/airport-wx/data/model/analogs/DEN.json", "/alerts/active", "/api/data/metar", "/api/data/taf"]);
   assert.match(c.log.find((u) => u.includes("/metar")), /ids=KDEN,KMSP,KORD&/);
 });
 
@@ -275,4 +276,54 @@ test("pack: flat ES modules, no node: imports, and the flattened bundle runs", a
 test("specifiers: import/export-from forms, comments ignored", () => {
   const src = `import { a } from "./a.mjs";\nimport {\n b,\n} from '../b.mjs';\nexport { c } from "./c.mjs";\nimport "./d.mjs";\n// import x from "./no.mjs"\n`;
   assert.deepEqual(specifiers(src), ["./a.mjs", "../b.mjs", "./c.mjs", "./d.mjs"]);
+});
+
+// ---------- phase3: delay model ----------
+
+test("phase3: model files unavailable -> the build's delay numbers carry over", async () => {
+  const r = await call("/status?ids=ORD,MSP", { fail: ["model"] });
+  assert.equal(r.status, 200);
+  for (const a of r.body.airports) {
+    const b = buildAp(a.iata);
+    assert.ok(b.hours.some((h) => h.delay), a.iata + " build has delay numbers");
+    assert.deepEqual(a.hours.map((h) => h.delay), b.hours.map((h) => h.delay), a.iata);
+  }
+});
+
+test("phase3: with a trained model the relay scores exactly like the build; hubs not requested use the build's TAF", async () => {
+  const { writeFile, mkdir } = await import("node:fs/promises");
+  const dir = await mkdtemp(join(tmpdir(), "awx-model-"));
+  const climo = new Array(288).fill(0.2);
+  const model = {
+    v: 1, spec: 1, trained: "2026-09-22T08:00:00Z", since: "2024-08", through: "2026-07", months: 24, lamp: false,
+    b0: -0.4, wc: 1, w: { "lvl:3": 1.2, "lvl:4": 2, "lvl:2": 0.5, "ts:4": 0.6, "ts:2": 0.3, "hub:ts": 0.7, "hub:ifr": 0.3, "obs:l3|0-3": 0.8, "ap:ORD": 0.1 },
+    cal: { x: [0.05, 0.3, 0.6, 0.9], y: [0.04, 0.28, 0.62, 0.93] }, minutes: { edges: [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9], all: [20, 22, 25, 28, 30, 33, 36, 40, 45, 50], ap: {} }, base: 0.18, rwy: { ORD: [90, 40] },
+  };
+  const fallback = { v: 1, spec: 1, source: "train", built: "2026-09-22T08:00:00Z", since: "2024-08", months: 24, levels: { "0-3": [0.1, 0.15, 0.3, 0.55, 0.85], "3-6": [0.1, 0.15, 0.3, 0.55, 0.85], "6-12": [0.1, 0.15, 0.3, 0.55, 0.85], "12-24": [0.1, 0.15, 0.3, 0.55, 0.85] }, climo: { ORD: climo, MSP: climo }, base: { all: 0.18 }, programs: { GS: { n: 12, k: 7, rate: 0.583 } } };
+  await mkdir(join(dir, "analogs"), { recursive: true });
+  await writeFile(join(dir, "model.json"), JSON.stringify(model));
+  await writeFile(join(dir, "fallback.json"), JSON.stringify(fallback));
+  await writeFile(join(dir, "analogs/ORD.json"), JSON.stringify({ v: 1, ap: "ORD", since: "2024-08", b: { "clear|0|*|*": [900, 120, 31, 0.002], "storms|2|*|*": [80, 49, 44, 0.03] } }));
+  process.env.DELAY_MODEL_DIR = dir;
+  let w2;
+  try { w2 = await fixtureWorld(NOW); } finally { delete process.env.DELAY_MODEL_DIR; await rm(dir, { recursive: true, force: true }); }
+  const built2 = JSON.parse(w2.statusText);
+  assert.equal(built2.delayModel.basis, "model");
+  const run2 = async (ids) => {
+    W._reset();
+    globalThis.fetch = stubFetch(w2, {});
+    try {
+      const res = await W.default.fetch(new Request("https://relay.test/status?ids=" + ids), ENV(w2), {});
+      return JSON.parse(await res.text());
+    } finally { globalThis.fetch = realFetch; }
+  };
+  const ids = ["MSP", "ORD", "DFW", "DEN", "JFK", "EWR", "LAS", "MCO", "SFO", "LAX", "ATL", "SEA"];
+  const body = await run2(ids.join(","));
+  for (const a of body.airports) {
+    const b = built2.airports.find((x) => x.iata === a.iata);
+    assert.deepEqual(a.hours.map((h) => h.delay), b.hours.map((h) => h.delay), a.iata);
+    assert.ok(a.hours.every((h) => h.delay && h.delay.basis === "model" && h.delay.p >= 0 && h.delay.p <= 1), a.iata);
+  }
+  const only = await run2("MSP"); // hub ORD not requested: its TAF comes from the build
+  assert.ok(only.airports[0].hours.every((h) => h.delay && h.delay.basis === "model"));
 });

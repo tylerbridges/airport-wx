@@ -22,3 +22,6 @@ import "../tools/cats.test.mjs";
 import "../tools/prefs.test.mjs";
 // live relay
 import "../worker/worker.test.mjs";
+// phase3: delay model
+import "./delay.test.mjs";
+import "../tools/train.test.mjs";
