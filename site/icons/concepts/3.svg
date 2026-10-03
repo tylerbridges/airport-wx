@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>Airport Status - concept 3: Split-flap tile</title>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#34343A"/>
+      <stop offset="1" stop-color="#26262A"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="#050506"/>
+  <rect x="124" y="104" width="776" height="816" rx="120" fill="url(#tile)"/>
+  <!-- the A, hand-built from strokes -->
+  <path d="M300 776 L512 288 L724 776 M395 620 L629 620" fill="none" stroke="#F4F4F6" stroke-width="108" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- split-flap seam and hinge notches -->
+  <rect x="124" y="502" width="776" height="22" fill="#050506"/>
+  <rect x="100" y="492" width="48" height="42" rx="12" fill="#050506"/>
+  <rect x="876" y="492" width="48" height="42" rx="12" fill="#050506"/>
+  <!-- status light -->
+  <circle cx="774" cy="244" r="52" fill="#34D27B"/>
+</svg>

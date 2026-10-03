@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <title>Airport Status - concept 1: Runway and status dot</title>
+  <defs>
+    <radialGradient id="glow" cx="512" cy="250" r="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FFB020" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#FFB020" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="#0B0B0D"/>
+  <rect width="1024" height="1024" fill="url(#glow)"/>
+  <!-- runway in perspective, white edge lines, running off the bottom edge -->
+  <path d="M479 432 L545 432 L902 1040 L122 1040 Z" fill="#1E1E22" stroke="#F4F4F6" stroke-width="26" stroke-linejoin="round"/>
+  <!-- centreline dashes -->
+  <path d="M497.7 520 L526.3 520 L526.9 590 L497.1 590 Z" fill="#F4F4F6"/>
+  <path d="M487.3 650 L536.7 650 L538.4 750 L485.6 750 Z" fill="#F4F4F6"/>
+  <path d="M478 790 L546 790 L551 850 L473 850 Z" fill="#F4F4F6"/>
+  <!-- threshold piano keys -->
+  <path d="M251.7 880 L310.9 880 L270.9 980 L200 980 Z M364.1 880 L423.3 880 L405.7 980 L334.8 980 Z M600.7 880 L659.9 880 L689.3 980 L618.4 980 Z M713.1 880 L772.3 880 L824 980 L753 980 Z" fill="#F4F4F6"/>
+  <!-- status dot at the far end -->
+  <circle cx="512" cy="250" r="118" fill="#FFB020"/>
+</svg>
