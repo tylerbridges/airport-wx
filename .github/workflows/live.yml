@@ -1,0 +1,47 @@
+name: Live ticker
+
+# GitHub's cron is often late or skipped, so this job keeps the data fresh on its own:
+# it dispatches "Poll and deploy" every 5 minutes for ~5h50m, then re-dispatches itself.
+# workflow_dispatch is one of the events GITHUB_TOKEN is allowed to trigger.
+# The hourly schedule only restarts the ticker if the chain ever breaks (concurrency keeps one running).
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: live-ticker
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - name: Dispatch Poll and deploy every 5 minutes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          api="https://api.github.com/repos/$REPO/actions/workflows"
+          end=$(( $(date +%s) + 350*60 ))
+          while [ "$(date +%s)" -lt "$end" ]; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
+              -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+              "$api/poll.yml/dispatches" -d '{"ref":"main"}')
+            echo "$(date -u +%H:%M:%S) dispatched poll.yml -> $code"
+            sleep 300
+          done
+      - name: Restart the ticker
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          curl -s -o /dev/null -w '%{http_code}\n' -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/$REPO/actions/workflows/live.yml/dispatches" -d '{"ref":"main"}'
