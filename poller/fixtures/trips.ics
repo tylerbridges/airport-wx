@@ -1,0 +1,73 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Apple Inc.//macOS 15.0//EN
+CALSCALE:GREGORIAN
+X-WR-CALNAME:Jane Doe Flights
+X-WR-TIMEZONE:America/Chicago
+BEGIN:VTIMEZONE
+TZID:America/Chicago
+BEGIN:DAYLIGHT
+TZOFFSETFROM:-0600
+TZOFFSETTO:-0500
+DTSTART:20070311T020000
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU
+TZNAME:CDT
+END:DAYLIGHT
+END:VTIMEZONE
+BEGIN:VEVENT
+UID:fixture-flight-1@example.invalid
+DTSTAMP:20261001T120000Z
+DTSTART;TZID=America/Chicago:{{ics+60 America/Chicago}}
+DTEND;TZID=America/Chicago:{{ics+150 America/Chicago}}
+SUMMARY:✈ DL 1234 · MSP → ORD
+LOCATION:Minneapolis–St Paul International Airport (MSP)
+DESCRIPTION:Jane Doe\nConfirmation: QX7Z2P\nSeat 14C\nTerminal 1 · Gate G1
+ 4\njane.doe@example.com
+BEGIN:VALARM
+ACTION:DISPLAY
+DESCRIPTION:Reminder for Jane
+TRIGGER:-PT2H
+END:VALARM
+END:VEVENT
+BEGIN:VEVENT
+UID:fixture-flight-2@example.invalid
+DTSTART;TZID=America/New_York:{{ics+180 America/New_York}}
+DTEND;TZID=America/Denver:{{ics+360 America/Denver}}
+SUMMARY:Flight to Denver (UA567)
+LOCATION:Washington Reagan National (DCA)
+DESCRIPTION:Booking ABC123 for John Smith
+END:VEVENT
+BEGIN:VEVENT
+UID:fixture-flight-3@example.invalid
+DTSTART;TZID=America/Denver:{{ics+405 America/Denver}}
+DTEND;TZID=America/Denver:{{ics+500 America/Denver}}
+SUMMARY:✈ UA 890 · DEN → SLC
+LOCATION:Denver International Airport (DEN)
+END:VEVENT
+BEGIN:VEVENT
+UID:fixture-flight-4@example.invalid
+DTSTART:{{icsz+1560}}
+DURATION:PT2H25M
+SUMMARY:Flight AA100 MSP-ATL
+END:VEVENT
+BEGIN:VEVENT
+UID:fixture-trip-allday@example.invalid
+DTSTART;VALUE=DATE:{{icsd+1}}
+DTEND;VALUE=DATE:{{icsd+4}}
+SUMMARY:Trip to Atlanta
+END:VEVENT
+BEGIN:VEVENT
+UID:fixture-cancelled@example.invalid
+DTSTART;TZID=America/Chicago:{{ics+240 America/Chicago}}
+DTEND;TZID=America/Los_Angeles:{{ics+420 America/Los_Angeles}}
+SUMMARY:✈ DL 999 · MSP → LAX
+STATUS:CANCELLED
+END:VEVENT
+BEGIN:VEVENT
+UID:fixture-dentist@example.invalid
+DTSTART;TZID=America/Chicago:{{ics+300 America/Chicago}}
+DTEND;TZID=America/Chicago:{{ics+360 America/Chicago}}
+SUMMARY:Dentist with Dr. Lee
+RRULE:FREQ=MONTHLY;COUNT=6
+END:VEVENT
+END:VCALENDAR

@@ -48,6 +48,10 @@ jobs:
       # Also writes raw response samples to .cache/raw for the history step.
       - name: Poll sources and compute risk
         id: poll
+        env:
+          # trips hook: the flight calendar link (README "Trips"). Empty when the secret isn't set
+          # (trips.json says "not configured"); the poller never logs or publishes it.
+          FLIGHTY_ICS_URL: ${{ secrets.FLIGHTY_ICS_URL }}
         run: node poller/poll.mjs
       - uses: actions/configure-pages@v5
       # Live relay: tell the page where the Cloudflare Worker answers (site/data/config.json), only

@@ -2,6 +2,7 @@
 // Builds the test scenarios: runs the real poller in fixture mode once per scenario and writes
 //   site/data/scenarios/<name>.json        status.json for the scenario (+ a "scenario" block)
 //   site/data/scenarios/<name>/wx/*.json   global METAR/TAF shards for the scenario
+//   site/data/scenarios/<name>/trips.json  calendar trips for the scenario (from its trips.ics, if any)
 //   site/data/scenarios/index.json         every scenario's title and expected assertions
 // Usage: node tools/build-scenarios.mjs [name ...]
 //
@@ -64,7 +65,7 @@ async function buildOne(name) {
   const out = join(OUT, `${name}.json`);
   const wxOut = join(OUT, name, "wx");
   const r = spawnSync(process.execPath, [join(ROOT, "poller/poll.mjs"), "--fixtures", "--out", out, "--raw", "none"], {
-    env: { ...process.env, FIXTURES_DIR: tmp, GLOBAL_WX_OUT: wxOut },
+    env: { ...process.env, FIXTURES_DIR: tmp, GLOBAL_WX_OUT: wxOut, TRIPS_OUT: join(OUT, name, "trips.json"), FLIGHTY_ICS_URL: "" }, // trips hook: <name>/trips.json (from the scenario's trips.ics)
     encoding: "utf8",
   });
   await rm(tmp, { recursive: true, force: true });

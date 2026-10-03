@@ -14,6 +14,7 @@ import { parseOpsPlan, opsPlanNational } from "./opsplan.mjs";
 import { assemble } from "./core.mjs"; // live relay: pure assembly shared with worker/worker.mjs
 import { runGlobal } from "./global.mjs"; // build2a hook: global METAR/TAF shards for searched airports
 import { modelInfo } from "./delay.mjs"; // phase3 hook: delay model
+import { prepareTrips } from "./trips-poll.mjs"; // trips hook: flight calendar -> trips.json + trip airports
 import { startMovement } from "./movement.mjs"; // movement hook: ADS-B departure/arrival rates -> site/data/movement.json
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -243,7 +244,8 @@ async function writeRaw(dir, raw, sources) {
 }
 
 export async function run({ fixtures = false, out = join(ROOT, "site/data/status.json"), now = new Date(), rawDir = null } = {}) {
-  const airports = await loadAirports();
+  const trips = await prepareTrips({ fixtures, now }); // trips hook: reads the calendar (env FLIGHTY_ICS_URL), never throws
+  const airports = await trips.addAirports(await loadAirports()); // trips hook: trip airports join the full pipeline for this run
   const raw = makeRaw();
   const p = fixtures ? fixtureProviders(airports, now, raw) : liveProviders(airports, now, raw);
   const names = SOURCE_NAMES;
@@ -275,11 +277,13 @@ export async function run({ fixtures = false, out = join(ROOT, "site/data/status
     }),
     opsplan: opsPlanNational(res.atcscc.data?.plan ?? null, now),
   };
+  trips.markAirports(status.airports); // trips hook: airports added for trips carry trip: true
   await mkdir(dirname(out), { recursive: true });
   await writeFile(out, JSON.stringify(status) + "\n");
   if (rawDir) {
     try { await writeRaw(rawDir, raw, status.sources); } catch (e) { console.error("raw samples not written: " + e.message); }
   }
+  await trips.finish({ out, rawDir }); // trips hook: site/data/trips.json (airports and times only) + redacted format sample
   const okCount = names.filter((n) => status.sources[n].ok).length;
   return { status, okCount, total: names.length, out, raw, metars: res.metar.data /* movement hook: field elevations */ };
 }

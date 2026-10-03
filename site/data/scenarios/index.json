@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-03T23:33:54.120Z",
+ "generated": "2026-10-03T23:51:04.814Z",
  "scenarios": [
   {
    "name": "airline-it-outage",
@@ -190,7 +190,7 @@
     },
     {
      "t": "rendered",
-     "text": "FAA status unavailable"
+     "text": "FAA delay info unavailable"
     }
    ]
   },
@@ -262,6 +262,105 @@
     {
      "t": "rendered",
      "text": "Test scenario"
+    }
+   ]
+  },
+  {
+   "name": "trip-all-clear",
+   "title": "Trip: all clear (MSP→ATL)",
+   "description": "A calendar trip MSP→ATL in three hours with quiet weather and no FAA programs: the trip is On track. The all-day \"Trip to Atlanta\" event is ignored.",
+   "file": "trip-all-clear.json",
+   "wx": "trip-all-clear/wx/",
+   "lagMin": 0,
+   "assert": [
+    {
+     "t": "allLevels",
+     "max": 0
+    },
+    {
+     "t": "trips",
+     "count": 1,
+     "configured": true
+    },
+    {
+     "t": "trip",
+     "i": 0,
+     "status": "On track",
+     "re": "^No weather or FAA issues expected around your flight times\\.$"
+    },
+    {
+     "t": "rendered",
+     "text": "On track"
+    }
+   ]
+  },
+  {
+   "name": "trip-gdp-destination",
+   "title": "Trip: ground delay program at the destination (MSP→ORD)",
+   "description": "A calendar trip MSP→ORD departing in 90 minutes while ORD has a ground delay program: flights to ORD are held at MSP, so the trip shows Delays likely.",
+   "file": "trip-gdp-destination.json",
+   "wx": "trip-gdp-destination/wx/",
+   "lagMin": 0,
+   "assert": [
+    {
+     "t": "faa",
+     "iata": "ORD",
+     "type": "ground_delay"
+    },
+    {
+     "t": "trips",
+     "count": 1,
+     "configured": true
+    },
+    {
+     "t": "trip",
+     "i": 0,
+     "status": "Delays likely",
+     "re": "^ORD ground delay program: flights to ORD are held — your .+ MSP→ORD departure may wait ~45 min\\.$"
+    },
+    {
+     "t": "rendered",
+     "text": "Add a trip"
+    },
+    {
+     "t": "rendered",
+     "text": "ORD ground delay program"
+    }
+   ]
+  },
+  {
+   "name": "trip-tight-connection",
+   "title": "Trip: tight connection at ORD (MSP→ORD→BZN)",
+   "description": "A calendar trip MSP→ORD→BZN with a 45-minute connection at ORD while ORD has a chance of thunderstorms (Moderate). BZN is not a major airport: it joins the full pipeline because it is on the trip.",
+   "file": "trip-tight-connection.json",
+   "wx": "trip-tight-connection/wx/",
+   "lagMin": 0,
+   "assert": [
+    {
+     "t": "level",
+     "iata": "ORD",
+     "of": "peak",
+     "op": ">=",
+     "v": 2
+    },
+    {
+     "t": "tripAirport",
+     "iata": "BZN"
+    },
+    {
+     "t": "trips",
+     "count": 1,
+     "configured": true
+    },
+    {
+     "t": "trip",
+     "i": 0,
+     "status": "Possible delays",
+     "re": "^Tight connection at ORD: 45 min to make your .+ flight to BZN"
+    },
+    {
+     "t": "rendered",
+     "text": "Tight connection at ORD"
     }
    ]
   },

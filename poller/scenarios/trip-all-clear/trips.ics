@@ -1,0 +1,17 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//airport-wx scenario//EN
+X-WR-CALNAME:Flights
+BEGIN:VEVENT
+UID:scn-clear-1@example.invalid
+DTSTART;TZID=America/Chicago:{{ics+180 America/Chicago}}
+DTEND;TZID=America/New_York:{{ics+330 America/New_York}}
+SUMMARY:✈ DL 800 · MSP → ATL
+END:VEVENT
+BEGIN:VEVENT
+UID:scn-clear-allday@example.invalid
+DTSTART;VALUE=DATE:{{icsd+0}}
+DTEND;VALUE=DATE:{{icsd+3}}
+SUMMARY:Trip to Atlanta
+END:VEVENT
+END:VCALENDAR

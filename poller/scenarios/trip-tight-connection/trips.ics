@@ -1,0 +1,19 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//airport-wx scenario//EN
+X-WR-CALNAME:Flights
+BEGIN:VEVENT
+UID:scn-conn-1@example.invalid
+DTSTART;TZID=America/Chicago:{{ics+60 America/Chicago}}
+DTEND;TZID=America/Chicago:{{ics+150 America/Chicago}}
+SUMMARY:Flight to Chicago (UA1500)
+LOCATION:Minneapolis–St Paul (MSP)
+END:VEVENT
+BEGIN:VEVENT
+UID:scn-conn-2@example.invalid
+DTSTART;TZID=America/Chicago:{{ics+195 America/Chicago}}
+DTEND;TZID=America/Denver:{{ics+360 America/Denver}}
+SUMMARY:✈ UA 1622 · ORD → BZN
+LOCATION:Chicago O'Hare (ORD)
+END:VEVENT
+END:VCALENDAR

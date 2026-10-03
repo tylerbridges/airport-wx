@@ -187,6 +187,7 @@
     const ids = [];
     const tz = [];
     const add = (c) => { if (c && ids.length < LIVE_MAX && !ids.includes(c)) ids.push(c); };
+    for (const c of (window.AWXTrips && AWXTrips.liveIds ? AWXTrips.liveIds() : [])) if (majors.has(c)) add(c); // trips hook: trip airports first
     for (const c of state.favs) if (majors.has(c)) add(c);
     const extra = (window.AWXExtra && AWXExtra.liveIds && AWXExtra.liveIds()) || [];
     for (const x of extra) if (ids.length < LIVE_MAX && x.icao && !ids.includes(x.icao)) { add(x.icao); if (x.tz) tz.push(x.icao + ":" + x.tz); }
@@ -280,6 +281,7 @@
     renderNotes();
     if (state.openIata) renderSheet(true);
     if (window.AWXExtra) window.AWXExtra.render(); // build2a hook: search + searched/starred non-major airports (site/searched.js)
+    if (window.AWXTrips) window.AWXTrips.render(); // trips hook: "Your trips" (site/trips.js)
   }
 
   function renderHeader() {
@@ -297,14 +299,14 @@
   }
 
   function visibleAirports() {
-    const all = (state.data && state.data.airports) || [];
+    const all = ((state.data && state.data.airports) || []).filter((a) => !a.trip || state.favs.includes(a.iata)); // trips hook: trip-only airports stay off the lists
     if (state.filter === "mine") return all.filter((a) => state.favs.includes(a.iata));
     if (state.filter === "risk") return all.filter((a) => a.peak.level >= 2);
     return all;
   }
 
   function renderSeg() {
-    const all = (state.data && state.data.airports) || [];
+    const all = ((state.data && state.data.airports) || []).filter((a) => !a.trip || state.favs.includes(a.iata)); // trips hook
     const counts = {
       mine: all.filter((a) => state.favs.includes(a.iata)).length,
       all: all.length,
@@ -844,6 +846,7 @@
       ...secs,
       checkedLine()
     );
+    if (window.AWXTrips) window.AWXTrips.decorateSheet(sheet, a); // trips hook: "Your flight" row + plane markers
     if (keepScroll) {
       sheet.scrollTop = top;
       if (sheetPick != null && a.hours[sheetPick]) showHour(sheetPick, sheet.querySelector(`.tl.big .s[data-i="${sheetPick}"]`));
@@ -899,6 +902,7 @@
   setInterval(() => { if (document.visibilityState === "visible") checkVersion(); }, 10 * 60e3); // live relay: self-update
 
   window.AWXApp = { state, openSheet, toggleFav, render }; // build2a hook: used by site/searched.js
+  window.AWXApp.setFavs = (list) => { state.favs = list.filter((x) => typeof x === "string"); saveFavs(); render(); }; // nav hook: Settings → Your airports (site/settings.js)
   if (!testMode()) liveConfig(); // live relay: read data/config.json on load
   render();
   load(false);

@@ -4,6 +4,8 @@
 // Writes "CHECK PASS" or "CHECK FAIL n" plus one line per row into <pre id="result"> so headless
 // Chrome (--dump-dom) and the uptime workflow can read it. Warnings don't fail the check.
 import { loadAirports, rank } from "./search.js";
+import { navChecks } from "./navcheck.js"; // nav hook
+import { tripChecks } from "./check-trips.js"; // trips hook
 
 const P = new URLSearchParams(location.search);
 const MOCK = P.get("mock") === "1";
@@ -89,7 +91,7 @@ async function checkData(data, ctx) {
   const noMetar = [];
   const noTaf = [];
   const tafUnknown = [];
-  for (const a of aps) {
+  for (const a of aps.filter((x) => !x.trip)) { // trips hook: trip-only airports are checked in the Trips group
     const obs = a.metar && Date.parse(a.metar.obsTime);
     if (!a.metar || !Number.isFinite(obs) || now - obs > METAR_MAX) noMetar.push(a.iata);
     const info = ctx.byIcao.get(a.icao);
@@ -308,6 +310,7 @@ async function runLive() {
   }
   searchChecks(group("Search"), list, error);
   await liveRelay(group("Live relay")); // live relay
+  await tripChecks(group("Trips"), { url: "./data/trips.json", data: st.ok ? st.data : null }); // trips hook
   try { await (await import("./movement.js")).checkRow(group("Movement feed")); } catch (e) { group("Movement feed")("warn", "Movement feed", "check failed: " + (e.message || e)); } // movement hook
 
   const up = group("Uptime");
@@ -328,6 +331,7 @@ async function runLive() {
       const r = await renderPage(url);
       rr(r.ready && !r.errors.length ? "pass" : "fail", `Render ${label}`, !r.ready ? "cards never appeared" : r.errors.length ? r.errors.join(" | ") : `${r.cards} cards, no errors`);
     }
+    await navChecks(group("Navigation (390 px, hidden frame)"), "./index.html"); // nav hook
   }
 }
 
@@ -337,6 +341,7 @@ async function runMock() {
   const { list, byIcao, error } = await airportList();
   searchChecks(group("Search"), list, error);
   if (!idx.ok) { group("Scenarios")("fail", "data/scenarios/index.json loads", `HTTP ${idx.status || idx.error}`); return; }
+  if (RENDER) await navChecks(group("Navigation (390 px, hidden frame)"), "./index.html?test=all-clear"); // nav hook
   for (const sc of idx.data.scenarios) {
     const add = group(`Scenario: ${sc.name} — ${sc.title}`);
     const got = await getJson(`./data/scenarios/${sc.file}`);
@@ -362,6 +367,7 @@ async function runMock() {
       if (!r) continue;
       add(r.ok ? "pass" : "fail", `Expect: ${r.label}`, [r.ok ? "" : r.got, x.note && !r.ok ? `(${x.note})` : ""].filter(Boolean).join(" "));
     }
+    await tripChecks(add, { url: `./data/scenarios/${sc.name}/trips.json`, data, shift: (d) => shift(d, delta), asserts: sc.assert, mock: true }); // trips hook
     if (RENDER) {
       const expect = (sc.assert || []).filter((x) => x.t === "rendered");
       const r = await renderPage(`./index.html?test=${sc.name}`, expect);
