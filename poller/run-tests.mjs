@@ -16,3 +16,5 @@ import "../tools/build-airports.test.mjs";
 import "../tools/build-scenarios.test.mjs";
 import "../tools/search.test.mjs";
 import "../tools/uptime-parse.test.mjs";
+// live relay
+import "../worker/worker.test.mjs";

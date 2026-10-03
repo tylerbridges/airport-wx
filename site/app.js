@@ -1,5 +1,7 @@
 (() => {
   "use strict";
+  // live relay: self-update compares this with index.html's app.js?v=
+  const APP_V = (/[?&]v=(\d+)/.exec((document.currentScript && document.currentScript.src) || "") || [])[1] | 0;
 
   const LEVELS = [
     { name: "None", label: "Clear" },
@@ -36,6 +38,8 @@
     fetchError: null,
     loaded: false,
     openIata: null,
+    build: null, // live relay: the build's status.json; `data` is it with live airports merged in
+    liveWx: {}, // live relay: fresh shard-shaped entries for starred non-major airports (site/searched.js)
   };
 
   // ---------- helpers ----------
@@ -121,11 +125,82 @@
     return res.json();
   }
 
+  // ---------- live relay (Cloudflare Worker, README "Live relay") ----------
+  const LIVE_MAX = 12;
+  const live = { url: undefined, data: null, failed: false, cfg: null };
+  const testMode = () => !!(window.AWXTest && AWXTest.name);
+  function liveConfig() {
+    if (!live.cfg) {
+      live.cfg = getJson("./data/config.json")
+        .then((c) => (c && typeof c.liveUrl === "string" && /^https?:\/\//.test(c.liveUrl) ? c.liveUrl.replace(/\/+$/, "") : null))
+        .catch(() => null)
+        .then((u) => (live.url = u));
+    }
+    return live.cfg;
+  }
+  /** Starred airports first (non-majors via site/searched.js, with their zone), then the visible list; at most 12. */
+  function liveQuery() {
+    const majors = new Set(((state.build && state.build.airports) || []).map((a) => a.iata));
+    const ids = [];
+    const tz = [];
+    const add = (c) => { if (c && ids.length < LIVE_MAX && !ids.includes(c)) ids.push(c); };
+    for (const c of state.favs) if (majors.has(c)) add(c);
+    const extra = (window.AWXExtra && AWXExtra.liveIds && AWXExtra.liveIds()) || [];
+    for (const x of extra) if (ids.length < LIVE_MAX && x.icao && !ids.includes(x.icao)) { add(x.icao); if (x.tz) tz.push(x.icao + ":" + x.tz); }
+    for (const a of visibleAirports()) add(a.iata);
+    return ids.length ? "ids=" + encodeURIComponent(ids.join(",")) + (tz.length ? "&tz=" + encodeURIComponent(tz.join(",")) : "") : null;
+  }
+  async function loadLive() {
+    if (testMode() || state.sample || !(await liveConfig())) return;
+    const q = liveQuery();
+    if (!q) return;
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 8000);
+    try {
+      const res = await fetch(live.url + "/status?" + q, { cache: "no-store", signal: ctl.signal });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const d = await res.json();
+      if (!d || !d.live || !Array.isArray(d.airports) || !d.sources) throw new Error("bad live data");
+      live.data = d;
+      live.failed = false;
+    } catch (e) {
+      live.failed = true; // silent: the build is shown, and the header says so
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  /** state.data = the build with the live airports (and sources) over it, unless the last live call failed. */
+  function mergeLive() {
+    const b = state.build;
+    const L = live.data;
+    state.liveWx = {};
+    if (!b || state.sample || live.failed || !L || !(Date.parse(L.generated) >= Date.parse(b.generated))) { state.data = b; return; }
+    const by = new Map(L.airports.map((a) => [a.iata, a]));
+    const airports = b.airports.map((a) => by.get(a.iata) || a)
+      .sort((x, y) => y.peak.level - x.peak.level || y.now.level - x.now.level || x.iata.localeCompare(y.iata));
+    state.data = Object.assign({}, b, { airports, sources: Object.assign({}, b.sources, L.sources), live: L.generated });
+    state.liveWx = L.wx || {};
+    state.liveH0 = L.h0;
+  }
+  // self-update: reload when the deployed index.html points at a newer app.js
+  let versionAt = 0;
+  async function checkVersion() {
+    if (!APP_V || Date.now() - versionAt < 10e3) return;
+    versionAt = Date.now();
+    try {
+      const res = await fetch("./index.html", { cache: "no-store" });
+      const m = res.ok && /app\.js\?v=(\d+)/.exec(await res.text());
+      if (m && Number(m[1]) > APP_V) location.reload();
+    } catch (e) { /* offline */ }
+  }
+
   let loading = false;
   async function load(manual) {
     if (loading) return;
     loading = true;
     $("refresh").classList.add("spin");
+    if (manual) checkVersion(); // live relay
+    let liveP = state.build ? loadLive() : null; // live relay: in parallel with the build once the airport list is known
     try {
       let data, sample = false;
       try {
@@ -136,13 +211,15 @@
         sample = true;
       }
       if (!data || !Array.isArray(data.airports)) throw new Error("bad data");
-      state.data = data;
+      state.build = data; // live relay (merged into state.data below)
       state.sample = sample;
       state.fetchError = null;
       state.fetchedAt = Date.now();
     } catch (e) {
       state.fetchError = manual || !state.data ? "Couldn't load data" : "Couldn't refresh";
     } finally {
+      await (liveP || loadLive()); // live relay: the refresh button waits for fresh data
+      mergeLive();
       loading = false;
       state.loaded = true;
       setTimeout(() => $("refresh").classList.remove("spin"), manual ? 500 : 0);
@@ -168,8 +245,11 @@
     el.classList.remove("stale");
     if (!d) { el.textContent = state.loaded ? "Not updated" : "Loading…"; return; }
     if (state.sample) { el.textContent = "Sample data"; return; }
+    el.classList.remove("livefail"); // live relay
+    if (d.live) { const s = Math.max(0, Date.now() - Date.parse(d.live)); el.textContent = "Live · " + (s < 60e3 ? Math.round(s / 1e3) + " s ago" : ago(s)); return; }
     const age = Date.now() - Date.parse(d.generated);
-    el.textContent = "Updated " + ago(age);
+    el.textContent = (live.failed ? "Live data unavailable — showing data from " : "Updated ") + ago(age);
+    if (live.failed) el.classList.add("livefail");
     if (age > STALE_MS) el.classList.add("stale");
   }
 
@@ -235,6 +315,8 @@
       for (const k of down) kids.push(h("p", {}, SOURCE_NAMES[k] + " unavailable"));
       const part = Object.keys(SOURCE_NAMES).filter((k) => d.sources && d.sources[k] && d.sources[k].ok && d.sources[k].error);
       for (const k of part) kids.push(h("p", {}, SOURCE_NAMES[k] + " partly unavailable"));
+      const stale = Object.keys(SOURCE_NAMES).filter((k) => d.live && d.sources && d.sources[k] && d.sources[k].ok && d.sources[k].stale && !d.sources[k].error);
+      for (const k of stale) kids.push(h("p", {}, SOURCE_NAMES[k] + ": live update failed, showing the last build")); // live relay
     }
     if (state.fetchError && d) kids.push(h("p", {}, state.fetchError + "; showing the last data"));
     n.replaceChildren(...kids);
@@ -666,14 +748,18 @@
 
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
+      checkVersion(); // live relay
       renderHeader();
       if (Date.now() - state.fetchedAt > 20e3) load(false);
     }
   });
   setInterval(() => { if (document.visibilityState === "visible") load(false); }, REFRESH_MS);
   setInterval(renderHeader, 30e3);
+  setInterval(() => { if (state.data && state.data.live && document.visibilityState === "visible") renderHeader(); }, 10e3); // live relay: "Live · 40 s ago"
+  setInterval(() => { if (document.visibilityState === "visible") checkVersion(); }, 10 * 60e3); // live relay: self-update
 
   window.AWXApp = { state, openSheet, toggleFav, render }; // build2a hook: used by site/searched.js
+  if (!testMode()) liveConfig(); // live relay: read data/config.json on load
   render();
   load(false);
 })();

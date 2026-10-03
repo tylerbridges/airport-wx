@@ -79,6 +79,7 @@ button:focus-visible, .card:focus-visible { outline: 2px solid var(--l1); outlin
 header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 h1 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 800; letter-spacing: -.03em; }
 .updated { margin-top: 4px; font-size: 14px; color: var(--muted); }
+.updated.livefail { color: var(--l2); } /* live relay: build shown because the live call failed */
 .updated.stale { color: var(--crit); font-weight: 600; }
 .refresh {
   flex: none; width: 44px; height: 44px; border-radius: 50%;
@@ -232,7 +233,7 @@ table.lt { border-collapse: collapse; font-size: 12px; }
   <div class="backdrop" id="backdrop"></div>
   <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle"></div>
 </div>
-<script src="app.js?v=3" defer></script>
-<script type="module" src="searched.js?v=3"></script><!-- build2a hook -->
+<script src="app.js?v=4" defer></script>
+<script type="module" src="searched.js?v=4"></script><!-- build2a hook -->
 </body>
 </html>

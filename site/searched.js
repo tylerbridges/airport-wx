@@ -169,7 +169,8 @@ function card(a, shard, opts) {
       h("div", { class: "sub" }, "Try again in a few minutes. " + scopeNote(a)),
     ] }, opts);
   }
-  const e = shard.data.a[a.icao];
+  const lw = (app().state.liveWx || {})[a.icao]; // live relay: fresher entry from the Worker when there is one
+  const e = lw || shard.data.a[a.icao];
   if (!e) {
     const list = airportsLoaded() || [];
     const near = nearest(a, list, (x) => x.hasMetar);
@@ -179,7 +180,7 @@ function card(a, shard, opts) {
         `Nearest with reports: ${near.airport.code} · ${placeLine(near.airport) || near.airport.name} (${Math.round(near.miles)} mi)`) : null,
     ] }, opts);
   }
-  const genMs = Date.parse(shard.data.generated);
+  const genMs = lw ? Date.parse(app().state.data.live) : Date.parse(shard.data.generated); // live relay
   const stale = Number.isFinite(genMs) && Date.now() - genMs > STALE_MS;
   const expanded = open.has(a.code);
   const reason = e.r || e.pl || (e.p ? "Elevated risk" : "No significant weather");
@@ -193,7 +194,7 @@ function card(a, shard, opts) {
   return shell(a, { right: [h("span", { class: "pill " + lv(e.p) }, LEVELS[e.p] || "Clear")], body: [
     h("div", { class: "reason" }, reason),
     e.n !== e.p ? h("div", { class: "sub" }, "Now: " + (LEVELS[e.n] || "Clear")) : null,
-    timeline(e, shard.data.h0 || e.pt, tz),
+    timeline(e, (lw && app().state.liveH0) || shard.data.h0 || e.pt, tz),
     h("div", { class: "sub xnote" }, scopeNote(a)),
     stale ? h("div", { class: "sub crit" }, "Weather data updated " + ago(Date.now() - genMs)) : null,
     !e.t ? h("div", { class: "sub" }, "No forecast (TAF) for this airport — only current conditions are known (grey hours)") : null,
@@ -269,7 +270,13 @@ function init() {
       onToggleFav: (code) => app() && app().toggleFav(code),
     });
   }
-  window.AWXExtra = { render: () => { render(); }, pick, _shardFor: shardFor };
+  // live relay: picked + starred non-major airports for app.js's live call: [{icao, tz}]
+  const liveIds = () => {
+    const majors = majorCodes();
+    const codes = [picked, ...(((app() && app().state.favs) || []))].filter((c) => c && !majors.has(c));
+    return [...new Set(codes)].map(byCode).filter((a) => a && a.icao).map((a) => ({ icao: a.icao, tz: a.tz || null }));
+  };
+  window.AWXExtra = { render: () => { render(); }, pick, _shardFor: shardFor, liveIds };
   render();
 }
 

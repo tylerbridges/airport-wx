@@ -8,16 +8,9 @@
 import { readFile, writeFile, mkdir, rm } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import {
-  buildHours, summarize, hoursOutput, compareAirports, parseVisib, ceilingOf, flightCategory, toMs,
-} from "./risk.mjs";
-import {
-  parseFaaXml, spcCategoryAt, convectiveSigmetsAt, normalizeAlerts, expandTemplate, pool, latestBy,
-} from "./lib.mjs";
-import {
-  lampCycles, lampUrl, parseLamp, lampBlocks, ATCSCC_URL, collectAtcscc, tcfAt, cwaAt,
-} from "./sources.mjs";
-import { classifyCause, causePhrase } from "./cause.mjs";
+import { parseFaaXml, expandTemplate, pool } from "./lib.mjs";
+import { lampCycles, lampUrl, parseLamp, lampBlocks, ATCSCC_URL, collectAtcscc } from "./sources.mjs";
+import { assemble } from "./core.mjs"; // live relay: pure assembly shared with worker/worker.mjs
 import { runGlobal } from "./global.mjs"; // build2a hook: global METAR/TAF shards for searched airports
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -216,73 +209,8 @@ function fixtureProviders(airports, now, raw) {
 
 // ---------- assembly ----------
 
-const ADV_KEYS = ["id", "type", "airport", "issued", "cause", "causeText", "title", "active", "cnx", "start", "end"];
-
-export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc, nws, lamp = null, atcscc = null, tcf = null, cwa = null }) {
-  const metarBy = latestBy(metars, "icaoId", "obsTime");
-  const tafBy = latestBy(tafs, "icaoId", "issueTime");
-  const out = [];
-  for (const a of airports) {
-    let m = metarBy.get(a.icao) || null;
-    const obsMs = m ? toMs(m.obsTime) : null;
-    if (m && obsMs != null && +now - obsMs > 2 * 3600e3) m = null; // stale
-    let t = tafBy.get(a.icao) || null;
-    if (t && toMs(t.validTimeTo) != null && toMs(t.validTimeTo) < +now) t = null;
-
-    const faa = (faaParsed?.byAirport[a.iata] || []).map((f) => {
-      const cause = classifyCause(f.reason);
-      // closures' reasons are NOTAM text: the page shows their plain-English summary instead
-      const o = { type: f.type, reason: f.reason, detail: f.detail, badge: f.badge, cause, causeLabel: f.type === "closure" ? "" : causePhrase(cause, f.reason) };
-      if (f.type === "closure") Object.assign(o, { scope: f.scope, active: f.active, plain: f.plain, runways: f.runways });
-      return o;
-    });
-    const alertsFull = nws ? normalizeAlerts(nws[a.iata], now) : [];
-    const sigs = sigmets ? convectiveSigmetsAt(a.lon, a.lat, sigmets, now) : [];
-    const spcCat = spc ? spcCategoryAt(a.lon, a.lat, spc) : null;
-    const lampSt = lamp?.stations?.[a.icao] || null;
-    const adv = (atcscc || []).filter((x) => x.airport === a.iata)
-      .map((x) => ({ ...Object.fromEntries(ADV_KEYS.map((k) => [k, x[k] ?? null])), causeLabel: causePhrase(x.cause, x.causeText) }));
-    const tcfHere = tcf ? tcfAt(a.lon, a.lat, tcf, now) : [];
-    const cwaHere = cwa ? cwaAt(a.lon, a.lat, cwa, now) : [];
-
-    const hours = buildHours({
-      now, tz: a.tz, taf: t, metar: m, faa, sigmet: sigs.length > 0,
-      alerts: alertsFull.map((x) => ({ event: x.event, onset: x.onset, ends: x.ends })), spc: spcCat,
-      atcscc: adv, lamp: lampSt, tcf: tcfHere, cwa: cwaHere,
-    });
-    const { now: nowS, peak } = summarize(hours, a.tz);
-
-    out.push({
-      iata: a.iata, icao: a.icao, name: a.name, city: a.city, state: a.state, tz: a.tz, lat: a.lat, lon: a.lon,
-      now: nowS, peak, hours: hoursOutput(hours),
-      metar: m
-        ? {
-            raw: m.rawOb || "",
-            obsTime: obsMs != null ? new Date(obsMs).toISOString() : null,
-            fltCat: m.fltCat || flightCategory(parseVisib(m.visib), ceilingOf(m.clouds)),
-            wind: { dir: m.wdir ?? null, spd: m.wspd ?? null },
-            gust: m.wgst ?? null,
-            visib: parseVisib(m.visib),
-            ceiling: ceilingOf(m.clouds),
-            wx: m.wxString || null,
-            temp: m.temp ?? null,
-            dewp: m.dewp ?? null,
-          }
-        : null,
-      taf: t ? { raw: t.rawTAF || "", issued: toMs(t.issueTime) != null ? new Date(toMs(t.issueTime)).toISOString() : null } : null,
-      faa,
-      atcscc: adv,
-      alerts: alertsFull.slice(0, 10).map(({ event, severity, headline, onset, ends }) => ({ event, severity, headline, onset, ends })),
-      spc: spcCat,
-      sigmets: sigs,
-      lamp: lampSt,
-      tcf: tcfHere,
-      cwa: cwaHere,
-    });
-  }
-  out.sort(compareAirports);
-  return out;
-}
+// assemble() lives in core.mjs (pure, shared with the live relay worker).
+export { assemble };
 
 /** Replace dir with this run's raw samples and sources.json. */
 async function writeRaw(dir, raw, sources) {

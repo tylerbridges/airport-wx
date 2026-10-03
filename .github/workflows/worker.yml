@@ -1,0 +1,125 @@
+name: Live relay deploy
+
+# Deploys the Cloudflare Worker "airport-wx-live" (worker/worker.mjs + the pure poller modules it
+# imports) with curl and the Cloudflare REST API: no wrangler, no npm. Needs the repo secrets
+# CLOUDFLARE_API_TOKEN (Account > Workers Scripts > Edit) and CLOUDFLARE_ACCOUNT_ID; without them it
+# prints a notice and succeeds without deploying. README "Live relay" has the details.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "worker/**"
+      - "poller/**"
+      - "airports.json"
+      - ".github/workflows/worker.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-relay-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      SCRIPT: airport-wx-live
+    steps:
+      - name: Check Cloudflare secrets
+        id: secrets
+        run: |
+          if [ -z "$CF_API_TOKEN" ] || [ -z "$CF_ACCOUNT_ID" ]; then
+            echo "::notice::Cloudflare secrets not set; skipping live relay deploy"
+            {
+              echo "### Live relay: skipped"
+              echo "Cloudflare secrets not set (CLOUDFLARE_API_TOKEN, CLOUDFLARE_ACCOUNT_ID); nothing deployed."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.secrets.outputs.ok == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.secrets.outputs.ok == 'true'
+        with:
+          node-version: 20
+      - name: Unit tests
+        if: steps.secrets.outputs.ok == 'true'
+        run: node poller/run-tests.mjs
+
+      # Flat module layout: worker/worker.mjs -> worker.mjs (main), poller/x.mjs -> x.mjs, with the
+      # worker's "../poller/x.mjs" imports rewritten to "./x.mjs" (worker/pack.mjs).
+      - name: Pack modules
+        if: steps.secrets.outputs.ok == 'true'
+        run: |
+          node worker/pack.mjs dist --version "${GITHUB_SHA::7}"
+          ls -la dist
+
+      - name: Upload the Worker
+        if: steps.secrets.outputs.ok == 'true'
+        run: |
+          set -euo pipefail
+          api="https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/workers"
+          parts=(-F "metadata=@dist/metadata.json;type=application/json")
+          while read -r m; do
+            [ -n "$m" ] && parts+=(-F "$m=@dist/$m;filename=$m;type=application/javascript+module")
+          done < dist/parts.txt
+          code=$(curl -sS -o upload.json -w '%{http_code}' -X PUT "$api/scripts/$SCRIPT" \
+            -H "Authorization: Bearer $CF_API_TOKEN" "${parts[@]}")
+          echo "upload: HTTP $code"
+          if [ "$(jq -r '.success' upload.json)" != "true" ]; then
+            jq -c '.errors' upload.json || cat upload.json
+            echo "::error::Worker upload failed (HTTP $code)"
+            exit 1
+          fi
+          curl -fsS -X POST "$api/scripts/$SCRIPT/subdomain" -H "Authorization: Bearer $CF_API_TOKEN" \
+            -H "Content-Type: application/json" -d '{"enabled":true}' > subdomain-enable.json \
+            || { echo "::error::Couldn't enable the workers.dev route"; cat subdomain-enable.json || true; exit 1; }
+
+      - name: Find the workers.dev URL
+        id: url
+        if: steps.secrets.outputs.ok == 'true'
+        run: |
+          set -euo pipefail
+          sub=$(curl -fsS "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/workers/subdomain" \
+            -H "Authorization: Bearer $CF_API_TOKEN" | jq -r '.result.subdomain // empty')
+          if [ -z "$sub" ]; then
+            echo "::error::This account has no workers.dev subdomain yet: open Workers & Pages in the Cloudflare dashboard once to pick one"
+            exit 1
+          fi
+          echo "url=https://$SCRIPT.$sub.workers.dev" >> "$GITHUB_OUTPUT"
+
+      # A new workers.dev route can take a little while to answer: retry for up to ~2 minutes.
+      - name: Smoke test
+        if: steps.secrets.outputs.ok == 'true'
+        env:
+          URL: ${{ steps.url.outputs.url }}
+        run: |
+          set -uo pipefail
+          rm -f health.json status.json
+          ok=""
+          for i in $(seq 1 24); do
+            if curl -fsS --max-time 15 "$URL/health" -o health.json && jq -e '.ok == true' health.json > /dev/null; then ok=1; break; fi
+            sleep 5
+          done
+          [ -n "$ok" ] || { echo "::error::$URL/health did not answer ok"; cat health.json 2>/dev/null; exit 1; }
+          echo "health: $(cat health.json)"
+          curl -fsS --max-time 30 "$URL/status?ids=MSP,ORD" -o status.json || { echo "::error::$URL/status?ids=MSP,ORD failed"; exit 1; }
+          jq -e '.live == true and (.airports | length) == 2 and .sources.metar.ok == true' status.json > /dev/null \
+            || { echo "::error::/status reply isn't right"; head -c 2000 status.json; exit 1; }
+          jq -c '{generated, build, unknown, sources: (.sources | map_values({ok, live, stale, from})), airports: [.airports[] | {iata, now: .now.level, peak: .peak.level, metar: .metar.obsTime}]}' status.json
+          echo "Live relay: $URL"
+          {
+            echo "### Live relay deployed"
+            echo "- URL: $URL"
+            echo "- Version: $(jq -r .version health.json)"
+            echo "- /status?ids=MSP,ORD: $(jq -r '[.airports[] | "\(.iata) now \(.now.level) peak \(.peak.level)"] | join(", ")' status.json)"
+            echo "- Live sources: $(jq -r '[.sources | to_entries[] | select(.value.live) | .key] | join(", ")' status.json)"
+          } >> "$GITHUB_STEP_SUMMARY"

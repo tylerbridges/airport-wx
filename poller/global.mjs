@@ -15,10 +15,10 @@ import { readFile, writeFile, mkdir, rm } from "node:fs/promises";
 import { gunzipSync } from "node:zlib";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildHours, summarize, toMs, flightCategory, parseVisib, ceilingOf } from "./risk.mjs";
+import { toMs } from "./risk.mjs";
 import { parseMetar, parseTaf } from "./taf-parse.mjs";
 import { expandTemplate } from "./lib.mjs";
-import { plainMetar, travelerImpact } from "./plain.mjs";
+import { computeGlobal } from "./core.mjs"; // live relay: pure scoring shared with worker/worker.mjs
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -28,7 +28,6 @@ export const GLOBAL_URLS = {
   tafs: "https://aviationweather.gov/data/cache/tafs.cache.xml.gz",
 };
 const HOUR = 3600e3;
-const METAR_MAX_AGE = 2 * HOUR;
 
 // ---------- parsing ----------
 
@@ -104,67 +103,8 @@ export function parseTafXml(text, now = new Date()) {
   return out;
 }
 
-function latest(list, key, timeKey) {
-  const m = new Map();
-  for (const r of list) {
-    const k = r[key];
-    if (!k) continue;
-    const prev = m.get(k);
-    if (!prev || (toMs(r[timeKey]) ?? 0) >= (toMs(prev[timeKey]) ?? 0)) m.set(k, r);
-  }
-  return m;
-}
-
-// ---------- scoring ----------
-
-/**
- * airports: [{icao, tz}] -> Map(icao -> compact entry)
- *   {n: now level, p: peak level, pt: peak hour ISO, h: "0123…" (24 hourly levels, "-" = no data), r: top reason,
- *    pl: plain-English now, im: traveler impact, c: flight category,
- *    m: METAR raw, mt: METAR time ISO, t: TAF raw, ti: TAF issue ISO}
- */
-export function computeGlobal({ airports, metars, tafs, now = new Date() }) {
-  const mBy = latest(metars || [], "icaoId", "obsTime");
-  const tBy = latest(tafs || [], "icaoId", "issueTime");
-  const out = new Map();
-  for (const a of airports) {
-    if (!a.icao || out.has(a.icao)) continue;
-    let m = mBy.get(a.icao) || null;
-    const obsMs = m ? toMs(m.obsTime) : null;
-    if (m && (obsMs == null || +now - obsMs > METAR_MAX_AGE)) m = null;
-    let t = tBy.get(a.icao) || null;
-    if (t && toMs(t.validTimeTo) != null && toMs(t.validTimeTo) < +now) t = null;
-    if (!m && !t) continue;
-    const tz = a.tz || "UTC";
-    let hours;
-    try {
-      hours = buildHours({ now, tz, taf: t, metar: m });
-    } catch {
-      continue; // unknown zone name or malformed report: skip rather than fail the run
-    }
-    const s = summarize(hours, tz);
-    const e = {
-      n: s.now.level,
-      p: s.peak.level,
-      pt: s.peak.at,
-      h: hours.map((x) => (x.fltCat ? x.level : "-")).join(""), // "-" = hour not covered by a METAR or TAF
-      r: s.peak.reasons[0] || "",
-      c: m ? flightCategory(parseVisib(m.visib), ceilingOf(m.clouds)) : hours[0].fltCat || null,
-    };
-    if (m) {
-      e.pl = plainMetar(m);
-      e.im = travelerImpact(s.now.level, m);
-      e.m = m.rawOb;
-      e.mt = new Date(obsMs).toISOString();
-    }
-    if (t) {
-      e.t = t.rawTAF;
-      e.ti = toMs(t.issueTime) != null ? new Date(toMs(t.issueTime)).toISOString() : null;
-    }
-    out.set(a.icao, e);
-  }
-  return out;
-}
+// computeGlobal() lives in core.mjs (pure, shared with the live relay worker).
+export { computeGlobal };
 
 // ---------- I/O ----------
 

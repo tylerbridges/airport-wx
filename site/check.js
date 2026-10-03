@@ -277,6 +277,24 @@ function searchChecks(add, list, error) {
   }
 }
 
+// live relay: the Cloudflare Worker named in data/config.json (README "Live relay"). Not configured is a warning.
+const LIVE_MAX_AGE = 3 * MIN;
+async function liveRelay(add) {
+  const cfg = await getJson("./data/config.json");
+  const url = cfg.ok && cfg.data && typeof cfg.data.liveUrl === "string" ? cfg.data.liveUrl.replace(/\/+$/, "") : null;
+  if (!url) { add("warn", "Live relay", "not configured (data/config.json has no liveUrl: add the Cloudflare secrets, README \"Live relay\")"); return; }
+  const h = await getJson(url + "/health");
+  add(h.ok && h.data && h.data.ok ? "pass" : "fail", "Live relay /health", h.ok ? `${url} · version ${h.data.version} · ${Math.round(h.ms)} ms` : `${url}: HTTP ${h.status || h.error}`);
+  const s = await getJson(url + "/status?ids=MSP");
+  if (!s.ok) { add("fail", "Live relay /status?ids=MSP", `HTTP ${s.status || s.error}`); return; }
+  const m = (s.data.sources || {}).metar;
+  const ap = (s.data.airports || []).find((a) => a.iata === "MSP");
+  const age = m && m.at ? Date.now() - Date.parse(m.at) : null;
+  const ok = !!(m && m.ok && m.live && !m.stale && age != null && age < LIVE_MAX_AGE && ap && ap.metar);
+  add(ok ? "pass" : "fail", "Live relay: MSP METAR fetched under 3 min ago",
+    !m ? "no metar source in the reply" : m.stale ? `live METAR failed (${m.liveError}); showing the build's` : `fetched ${age == null ? "?" : ago(age)}${ap && ap.metar ? `, observed ${ap.metar.obsTime}` : ", no METAR for MSP"} · ${Math.round(s.ms)} ms`);
+}
+
 async function runLive() {
   const add = group("Live data");
   const now = Date.now();
@@ -289,6 +307,7 @@ async function runLive() {
     for (const c of await checkData(st.data, { now, byIcao, list, wxBase: "./data/wx/", wxShift: (d) => d, mock: false })) add(c.status, c.label, c.detail);
   }
   searchChecks(group("Search"), list, error);
+  await liveRelay(group("Live relay")); // live relay
 
   const up = group("Uptime");
   const u = await getJson("./data/uptime.json");

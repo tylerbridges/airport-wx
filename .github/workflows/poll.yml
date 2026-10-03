@@ -37,6 +37,29 @@ jobs:
         id: poll
         run: node poller/poll.mjs
       - uses: actions/configure-pages@v5
+      # Live relay: tell the page where the Cloudflare Worker answers (site/data/config.json), only
+      # once its /health is ok; otherwise {"liveUrl":null} (the committed default). Never fails the deploy.
+      - name: Live relay URL for the page
+        continue-on-error: true
+        timeout-minutes: 2
+        env:
+          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          url=null
+          if [ -n "$CF_API_TOKEN" ] && [ -n "$CF_ACCOUNT_ID" ]; then
+            sub=$(curl -fsS --max-time 20 "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/workers/subdomain" \
+              -H "Authorization: Bearer $CF_API_TOKEN" | jq -r '.result.subdomain // empty') || sub=""
+            if [ -z "$sub" ]; then
+              echo "::warning::couldn't read the workers.dev subdomain; the page uses the build only"
+            elif curl -fsS --max-time 15 "https://airport-wx-live.$sub.workers.dev/health" | jq -e '.ok == true' > /dev/null; then
+              url="\"https://airport-wx-live.$sub.workers.dev\""
+            else
+              echo "::warning::live relay https://airport-wx-live.$sub.workers.dev/health isn't ok (not deployed yet?); the page uses the build only"
+            fi
+          fi
+          echo "{\"liveUrl\":$url}" > site/data/config.json
+          cat site/data/config.json
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
