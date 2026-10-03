@@ -1,4 +1,5 @@
 // site/search.js is browser ESM; import it through a data: URL so Node treats it as a module.
+// Uses a frozen fixture list (tools/fixtures/airports-all.json); the live site/data file is rebuilt weekly.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
@@ -8,7 +9,7 @@ import { fileURLToPath } from "node:url";
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const src = readFileSync(join(ROOT, "site/search.js"), "utf8");
 const S = await import("data:text/javascript;base64," + Buffer.from(src).toString("base64"));
-const list = S.decodeList(JSON.parse(readFileSync(join(ROOT, "site/data/airports-all.json"), "utf8")));
+const list = S.decodeList(JSON.parse(readFileSync(join(ROOT, "tools/fixtures/airports-all.json"), "utf8")));
 const codes = (q) => S.rank(q, list).map((a) => a.code);
 
 test("exact codes first (IATA, ICAO, any case)", () => {
