@@ -499,6 +499,7 @@
       h("div", { class: "aname" }, a.name),
       h("div", { class: "where" }, `${a.city}, ${a.state}`),
       h("div", { class: "reason" }, reason),
+      window.AWXDelay ? AWXDelay.delayLine(a) : null, // phase3 hook: chance of a real delay (site/delay.js)
       nowDiffers ? h("div", { class: "sub" }, "Now: " + LEVELS[a.now.level].label) : null,
       cardPrograms(a).length ? h("div", { class: "badges" }, faaBadges(a)) : null,
       timeline(a, false));
@@ -787,7 +788,7 @@
     const showBoxes = () => {
       sheetPick = null;
       sheet.querySelectorAll(".tl.big .s").forEach((b) => b.setAttribute("aria-pressed", "false"));
-      boxWrap.replaceChildren(h("div", { class: "two" }, nowBox(), peakBox()));
+      boxWrap.replaceChildren(window.AWXDelay ? AWXDelay.delayBlock(a, null) : "", h("div", { class: "two" }, nowBox(), peakBox())); // phase3 hook: "Will it cause delays?" above Now/Peak
     };
     const showHour = (i, btn) => {
       if (sheetPick === i && btn && btn.getAttribute("aria-pressed") === "true") { showBoxes(); return; }
@@ -795,7 +796,7 @@
       sheet.querySelectorAll(".tl.big .s").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
       const hr = a.hours[i];
       const th = lampThunderAt(a, Date.parse(hr.t));
-      boxWrap.replaceChildren(h("div", { class: "box hourbox" },
+      boxWrap.replaceChildren(window.AWXDelay ? AWXDelay.delayBlock(a, i) : "", h("div", { class: "box hourbox" }, // phase3 hook: delay block for the picked hour
         h("div", { class: "hb-top" },
           h("h4", {}, h("span", { class: "hb-time" }, cap(whenLabel(Date.parse(hr.t), tz)))),
           h("button", { type: "button", class: "backnow", onclick: showBoxes, "aria-label": "Back to now and peak" }, "Back to now")),

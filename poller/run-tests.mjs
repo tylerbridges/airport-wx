@@ -19,6 +19,9 @@ import "../tools/search.test.mjs";
 import "../tools/uptime-parse.test.mjs";
 // live relay
 import "../worker/worker.test.mjs";
+// phase3: delay model
+import "./delay.test.mjs";
+import "../tools/train.test.mjs";
 // trips
 import "./trips.test.mjs";
 import "./trip-risk.test.mjs";

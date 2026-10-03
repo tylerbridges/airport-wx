@@ -212,6 +212,7 @@ export function metarsFromIemCsv(text) {
     metar: findCol(h, ["metar", "raw", "raw_text"]),
     vsby: findCol(h, ["vsby", "visibility"]),
     sknt: findCol(h, ["sknt"]),
+    drct: findCol(h, ["drct"]),
     gust: findCol(h, ["gust", "gust_sknt"]),
     wxcodes: findCol(h, ["wxcodes", "presentwx"]),
   };
@@ -233,6 +234,7 @@ export function metarsFromIemCsv(text) {
     if (p?.wxString) for (const w of p.wxString.split(/\s+/)) wx.add(w);
     const colClouds = cloudsFromCols(row, idx);
     const cond = {
+      wdir: (idx.drct >= 0 ? num(row[idx.drct]) : null) ?? p?.wdir ?? null,
       wspd: num(row[idx.sknt]) ?? p?.wspd ?? null,
       wgst: num(row[idx.gust]) ?? p?.wgst ?? null,
       visib: num(row[idx.vsby]) ?? p?.visib ?? null,
@@ -365,11 +367,13 @@ export function tafsFromIemCsv(text, { station = null, ref = null } = {}) {
         taf = parseTaf(text, issueMs != null ? { issueTime: issueMs } : { ref: ref ?? Date.now() });
         if (taf && taf.validTimeFrom == null && issueMs != null && !taf.cancelled && !taf.nil) {
           // Group rows without the TAF header: rebuild "ICAO DDHHMMZ DDHH/DDHH" from the issue
-          // time (valid from the issue hour) and the latest group end column, else 30 h.
+          // time (valid from the issue hour) for 30 h, or to the latest group end column if later.
+          // (Only TEMPO/PROB rows carry an end, so it must not cut the validity short: before
+          // Phase 3 it did, and hours after a TAF's last TEMPO/PROB group went unscored.)
           const iEnd = findCol(h, ["end_valid", "fx_valid_end", "valid_end", "valid_to"]);
           const ends = iEnd >= 0 ? g.map((r) => parseTime(r[iEnd])).filter((x) => x != null) : [];
           const vFrom = Math.floor(issueMs / HOUR) * HOUR;
-          const vTo = ends.length ? Math.max(...ends) : vFrom + 30 * HOUR;
+          const vTo = Math.max(vFrom + 30 * HOUR, ...ends);
           taf = parseTaf(`${st || "XXXX"} ${ddhh(issueMs)}${mm(issueMs)}Z ${ddhh(vFrom)}/${ddhh(vTo, true)} ${text}`, { issueTime: issueMs });
           if (taf) taf.rawTAF = text;
         }
