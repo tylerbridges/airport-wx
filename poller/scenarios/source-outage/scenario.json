@@ -1,11 +1,11 @@
 {
   "title": "FAA status feed down",
-  "description": "The FAA NAS status request fails; everything else works. The page must say FAA status is unavailable.",
+  "description": "The FAA NAS status request fails; everything else works. The page must say FAA delay info is unavailable.",
   "omit": ["faa.xml"],
   "assert": [
     { "t": "source", "name": "faa", "ok": false },
     { "t": "source", "name": "metar", "ok": true },
     { "t": "check", "id": "sources", "expect": "fail" },
-    { "t": "rendered", "text": "FAA status unavailable" }
+    { "t": "rendered", "text": "FAA delay info unavailable" }
   ]
 }

@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-03T22:38:01.974Z",
+ "generated": "2026-10-03T23:09:28.804Z",
  "scenarios": [
   {
    "name": "airline-it-outage",
@@ -168,7 +168,7 @@
   {
    "name": "source-outage",
    "title": "FAA status feed down",
-   "description": "The FAA NAS status request fails; everything else works. The page must say FAA status is unavailable.",
+   "description": "The FAA NAS status request fails; everything else works. The page must say FAA delay info is unavailable.",
    "file": "source-outage.json",
    "wx": "source-outage/wx/",
    "lagMin": 0,
@@ -190,7 +190,7 @@
     },
     {
      "t": "rendered",
-     "text": "FAA status unavailable"
+     "text": "FAA delay info unavailable"
     }
    ]
   },
