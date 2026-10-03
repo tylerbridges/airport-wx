@@ -282,6 +282,9 @@ table.lt { border-collapse: collapse; font-size: 12px; }
 .tl.big .lens { top: -7px; bottom: -7px; }
 .tl.big .lens-seg { height: 44px; border-radius: 5px; }
 .bigwrap .ticks { height: 18px; margin-top: 8px; font-size: 12px; }
+/* sheet headers are drag handles at any scroll position (site/sheet.js) */
+.grab, .sh-head, .pn-head, .awx-ph, .awx-srch-head { touch-action: none; }
+.grab { padding: 4px 0; margin-top: -4px; box-sizing: content-box; }
 .nanote { margin-top: 4px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
 
 /* home: national strip, reorder */
@@ -685,9 +688,10 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 </div>
 <div class="sr" id="announce" aria-live="polite"></div>
 <script src="cats.js?v=1"></script><!-- build2b: disruption categories -->
+<script src="sheet.js?v=1"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="app.js?v=10" defer></script>
 <script type="module" src="searched.js?v=5"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=1"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
-<script type="module" src="nav.js?v=2"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
+<script type="module" src="nav.js?v=3"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
 </body>
 </html>

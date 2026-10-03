@@ -1316,6 +1316,13 @@
 
   // ---------- bottom sheet ----------
 
+  // build2b: drag to dismiss (header at any scroll position, content at the top), back gesture, scroll lock (site/sheet.js)
+  const noSheet = { opened() {}, closed() {}, isOpen: () => false };
+  const sheetCtl = window.AWXSheet ? AWXSheet.makeSheet($("sheet"), {
+    onClose: () => closeSheet(), header: ".grab, .sh-head", backdrop: $("backdrop"), noPull: ".tl.big, .tl-wrap, .lamp, .cw-bar",
+  }) : noSheet;
+  const panelCtl = window.AWXSheet ? AWXSheet.makeSheet($("panel"), { onClose: () => closePanel(), header: ".pn-head", backdrop: $("panelBackdrop") }) : noSheet;
+
   let lastFocus = null;
   function openSheet(iata) {
     if (panel.kind) closePanel(true);
@@ -1327,6 +1334,7 @@
     wrap.hidden = false;
     document.documentElement.classList.add("lock");
     renderSheet(false);
+    sheetCtl.opened();
     void wrap.offsetHeight; // reflow so the transition runs
     wrap.classList.add("open");
     const c = wrap.querySelector(".close");
@@ -1343,6 +1351,7 @@
     sheet.style.transform = "";
     sheet.style.transition = "";
     if (!panel.kind) document.documentElement.classList.remove("lock");
+    sheetCtl.closed();
     const done = () => { if (!state.openIata) wrap.hidden = true; };
     if (reduced()) done();
     else setTimeout(done, 300);
@@ -2058,37 +2067,6 @@
     el.textContent = `Runway ${best.id}: ${xc} kt crosswind${xc ? " from the " + (best.cross > 0 ? "right" : "left") : ""}, ${Math.abs(hw)} kt ${hw >= 0 ? "headwind" : "tailwind"}` + (best.gx != null && Math.round(best.gx) > xc ? ` (gusts ${Math.round(best.gx)} kt across)` : "");
   }
 
-  // swipe down to close (from the top of a sheet)
-  function wireSwipe(sheet, close) {
-    let d = null;
-    sheet.addEventListener("touchstart", (e) => {
-      if (e.touches.length !== 1 || e.target.closest(".tl.big, .tl-wrap, .drag")) { d = null; return; }
-      d = { y: e.touches[0].clientY, t: Date.now(), dy: 0, on: false, ok: sheet.scrollTop <= 0 };
-    }, { passive: true });
-    sheet.addEventListener("touchmove", (e) => {
-      if (!d || !d.ok) return;
-      const dy = e.touches[0].clientY - d.y;
-      if (!d.on && dy > 8) { d.on = true; sheet.style.transition = "none"; }
-      if (d.on) {
-        d.dy = Math.max(0, dy);
-        sheet.style.transform = `translateY(${d.dy}px)`;
-        if (e.cancelable) e.preventDefault();
-      }
-    }, { passive: false });
-    const end = () => {
-      if (!d) return;
-      const { on, dy, t } = d;
-      d = null;
-      if (!on) return;
-      sheet.style.transition = "";
-      const v = dy / Math.max(1, Date.now() - t);
-      if (dy > 110 || v > 0.6) close();
-      else sheet.style.transform = "";
-    };
-    sheet.addEventListener("touchend", end);
-    sheet.addEventListener("touchcancel", end);
-  }
-
   // ---------- panel: the national list (Settings is the nav shell's site/settings.js) ----------
 
   const panel = { kind: null };
@@ -2099,6 +2077,7 @@
     document.documentElement.classList.add("lock");
     renderNationalPanel();
     $("panel").scrollTop = 0;
+    panelCtl.opened();
     void wrap.offsetHeight;
     wrap.classList.add("open");
     const c = $("panel").querySelector(".close");
@@ -2111,6 +2090,7 @@
     wrap.classList.remove("open");
     $("panel").style.transform = "";
     if (!keepLock && !state.openIata) document.documentElement.classList.remove("lock");
+    panelCtl.closed();
     const done = () => { if (!panel.kind) wrap.hidden = true; };
     if (reduced()) done(); else setTimeout(done, 300);
   }
@@ -2139,8 +2119,6 @@
 
   // ---------- wiring ----------
 
-  wireSwipe($("sheet"), closeSheet);
-  wireSwipe($("panel"), () => closePanel());
   $("backdrop").addEventListener("click", closeSheet);
   $("panelBackdrop").addEventListener("click", () => closePanel());
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") { if (panel.kind) closePanel(); else closeSheet(); } });

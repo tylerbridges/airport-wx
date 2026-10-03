@@ -222,13 +222,17 @@ function buildSearch() {
     onToggleFav: (code) => { if (app()) app().toggleFav(code); if (srchOpts.onFavs) srchOpts.onFavs(); },
   });
   srch.addEventListener("keydown", (e) => { if (e.key === "Escape" && !e.defaultPrevented) { e.preventDefault(); closeSearch(); } });
+  // build2b hook: drag the header or pull at the top to close; back gesture; page scroll lock (site/sheet.js)
+  srchCtl = window.AWXSheet ? window.AWXSheet.makeSheet(srch, { onClose: () => closeSearch(), header: ".awx-srch-head" }) : null;
 }
+let srchCtl = null;
 export function openSearch(opts = {}) {
   if (!srch) buildSearch();
   srchOpts = opts;
   srchReturn = document.activeElement;
   srch.querySelector("#navSearchT").textContent = opts.title || "Search";
   srch.hidden = false;
+  if (srchCtl) srchCtl.opened(); // build2b hook
   void srch.offsetWidth;
   srch.classList.add("open");
   untrapSrch = trapFocus(srch);
@@ -239,6 +243,7 @@ export function openSearch(opts = {}) {
 function closeSearch(returnFocus = true) {
   if (!srch || srch.hidden) return;
   srch.classList.remove("open");
+  if (srchCtl) srchCtl.closed(); // build2b hook
   srchApi.close();
   srchApi.input.blur();
   if (untrapSrch) untrapSrch();

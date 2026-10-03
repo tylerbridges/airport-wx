@@ -424,7 +424,14 @@ function build() {
   wrap = h("div", { class: "awx-set-wrap", hidden: true }, h("div", { class: "awx-set-bd", onclick: () => close() }), sheet);
   wrap.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); } });
   document.body.append(wrap);
+  // build2b hook: drag the header (any page, any scroll position) or pull the content at the top to close the
+  // whole sheet; back gesture; page scroll lock (site/sheet.js)
+  sheetCtl = window.AWXSheet ? window.AWXSheet.makeSheet(sheet, {
+    onClose: () => close(), header: ".awx-ph", backdrop: wrap.querySelector(".awx-set-bd"), noPull: ".awx-favs",
+    scroller: (t) => (t.closest && t.closest(".awx-pb")) || (stack.length ? stack[stack.length - 1].el.querySelector(".awx-pb") : sheet),
+  }) : null;
 }
+let sheetCtl = null;
 
 function makePage(name, opts) {
   const def = PAGES[name] || PAGES.root;
@@ -484,6 +491,7 @@ export function openSettings(page, opts) {
   isOpen = true;
   wrap.hidden = false;
   document.documentElement.classList.add("awx-lock");
+  if (sheetCtl) sheetCtl.opened(); // build2b hook
   void wrap.offsetWidth;
   wrap.classList.add("open");
   untrap = trapFocus(sheet);
@@ -497,6 +505,7 @@ export function close(returnFocus = true) {
   isOpen = false;
   wrap.classList.remove("open");
   document.documentElement.classList.remove("awx-lock");
+  if (sheetCtl) sheetCtl.closed(); // build2b hook
   if (untrap) untrap();
   const done = () => { if (!isOpen) { wrap.hidden = true; stack.splice(0).forEach((p) => p.el.remove()); ctx.onToggle(false); } };
   if (reducedMotion()) done(); else setTimeout(done, 320);
