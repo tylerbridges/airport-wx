@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import {
   pointInRing, pointInPolygon, pointInGeometry, spcCategoryAt, convectiveSigmetsAt, decodeXml, elements, textOf,
-  compactDuration, formatFaaTime, parseFaaXml, normalizeAlerts, expandTemplate, pool, latestBy,
+  compactDuration, formatFaaTime, faaTimeMs, distToRingNm, pointNearGeometry, parseFaaXml, normalizeAlerts, expandTemplate, pool, latestBy,
 } from "./lib.mjs";
 import { assemble, run } from "./poll.mjs";
 
@@ -37,8 +37,23 @@ test("convective SIGMETs: only valid CONVECTIVE ones that contain the point", ()
   const ring = (lat0, lat1, lon0, lon1) => [{ lat: lat0, lon: lon0 }, { lat: lat0, lon: lon1 }, { lat: lat1, lon: lon1 }, { lat: lat1, lon: lon0 }];
   const base = { hazard: "CONVECTIVE", validTimeFrom: +NOW / 1000 - 600, validTimeTo: +NOW / 1000 + 600, rawAirSigmet: "X", coords: ring(27, 29, -83, -80) };
   const list = [base, { ...base, hazard: "TURB" }, { ...base, validTimeTo: +NOW / 1000 - 5 }, { ...base, validTimeFrom: +NOW / 1000 + 5 }, { ...base, coords: ring(40, 41, -90, -89) }];
-  assert.deepEqual(convectiveSigmetsAt(-81.3, 28.4, list, NOW), [{ hazard: "CONVECTIVE", raw: "X" }]);
+  assert.deepEqual(convectiveSigmetsAt(-81.3, 28.4, list, NOW), [{ hazard: "CONVECTIVE", raw: "X", validTo: new Date(+NOW + 600e3).toISOString() }]);
   assert.deepEqual(convectiveSigmetsAt(-81.3, 28.4, null, NOW), []);
+  // within 10 NM of the edge counts (29.1N is 6 NM north of the 29N edge); 20 NM out does not
+  assert.equal(convectiveSigmetsAt(-81.3, 29.1, [base], NOW).length, 1);
+  assert.equal(convectiveSigmetsAt(-81.3, 29.34, [base], NOW).length, 0);
+});
+
+test("convective SIGMET 80E (live, Oct 3 2026): CLT is a vertex of the polygon and counts as inside", () => {
+  // "FROM 30NNW CLT-20N CLT-CLT-30NNW SPA" as served by aviationweather.gov
+  const s80e = { hazard: "CONVECTIVE", validTimeFrom: 1791064500, validTimeTo: 1791071700, rawAirSigmet: "CONVECTIVE SIGMET 80E\nVALID UNTIL 2355Z\nNC\nFROM 30NNW CLT-20N CLT-CLT-30NNW SPA-30NNW CLT",
+    coords: [{ lon: -81.17, lat: 35.679 }, { lon: -80.93, lat: 35.553 }, { lon: -80.93, lat: 35.22 }, { lon: -82.17, lat: 35.489 }, { lon: -81.17, lat: 35.679 }] };
+  const at = new Date("2026-10-03T22:17:00Z");
+  assert.equal(pointInRing(-80.9431, 35.2140, s80e.coords.map((c) => [c.lon, c.lat])), false, "plain ray casting misses it");
+  assert.equal(convectiveSigmetsAt(-80.9431, 35.2140, [s80e], at).length, 1); // KCLT
+  assert.ok(distToRingNm(-80.9431, 35.2140, s80e.coords.map((c) => [c.lon, c.lat])) < 1);
+  assert.ok(pointNearGeometry(-80.9431, 35.2140, { type: "Polygon", coordinates: [s80e.coords.map((c) => [c.lon, c.lat])] }));
+  assert.equal(convectiveSigmetsAt(-84.4277, 33.6407, [s80e], at).length, 0); // ATL, far away
 });
 
 test("xml helpers", () => {
@@ -72,9 +87,13 @@ const XML = `<?xml version="1.0"?>
 test("FAA XML parser covers all four program types and ignores unknown ones", () => {
   const r = parseFaaXml(XML, { now: NOW, tzFor: () => "America/Los_Angeles" });
   assert.equal(r.updated, "Sat Oct 03 19:15:00 2026 GMT");
-  assert.deepEqual(r.byAirport.SFO, [{ type: "ground_stop", reason: "fog", detail: "until 5:30 PM PT", badge: "GROUND STOP" }]);
+  assert.deepEqual(r.byAirport.SFO, [{ type: "ground_stop", reason: "fog", detail: "until 5:30 PM PT", badge: "GROUND STOP", end: "2026-10-04T00:30:00.000Z" }]);
   assert.deepEqual(r.byAirport.EWR, [{ type: "ground_delay", reason: "wind", detail: "avg 52m, max 2h 8m", badge: "GDP avg 52m" }]);
-  assert.deepEqual(r.byAirport.JFK, [{ type: "delay", reason: "volume & wx", detail: "Departures 16–30m, increasing", badge: "DELAYS" }]);
+  assert.deepEqual(r.byAirport.JFK, [{ type: "delay", reason: "volume & wx", detail: "Departures 16–30m, increasing", badge: "DELAYS", trend: "increasing" }]);
+  assert.equal(faaTimeMs("5:30 pm EDT", "America/New_York", NOW), Date.parse("2026-10-03T21:30:00Z"));
+  assert.equal(faaTimeMs("1:15 am EDT", "America/New_York", NOW), Date.parse("2026-10-04T05:15:00Z")); // rolls to tomorrow
+  assert.equal(faaTimeMs("2130Z", "America/Chicago", NOW), Date.parse("2026-10-03T21:30:00Z"));
+  assert.equal(faaTimeMs("", "America/Chicago", NOW), null);
   assert.equal(r.byAirport.ANC[0].type, "closure");
   assert.equal(r.byAirport.ANC[0].detail, "until 9 PM AKT");
   assert.equal(r.byAirport.XXX, undefined);
@@ -113,6 +132,8 @@ test("fixture templates expand relative to now", () => {
   assert.equal(t("{{lu+0}}").slice(0, 12), " 19 20 21 22");
   assert.equal(t("{{lu+0}}").length, 75);
   assert.equal(expandTemplate("{{lc+0}}", new Date("2026-10-04T00:10:00Z")), "10/03/2026  2330");
+  assert.equal(t("{{ds-20}}"), "03/1900");
+  assert.equal(t("{{tcf+5}}"), "20261004_0000");
 });
 
 test("pool respects the concurrency limit and keeps order", async () => {
@@ -170,31 +191,46 @@ test("fixture run writes a schema-shaped status.json", async () => {
   assert.equal(by.DFW.spc, "ENH");
   assert.equal(by.DFW.alerts[0].event, "Severe Thunderstorm Warning");
   assert.equal(by.MCO.sigmets.length, 1);
-  assert.equal(by.MIA.now.level, 0); // SPC TSTM is informational only
+  assert.equal(by.MIA.now.level, 2); // possible ground stop (ops plan); SPC TSTM itself is informational only
+  assert.ok(!by.MIA.now.reasons.some((r) => /thunderstorms possible/i.test(r)));
   assert.equal(by.MIA.peak.level, 3);
   assert.equal(by.BOS.now.level, 3);
   assert.equal(by.EWR.faa[0].badge, "GDP avg 52m");
   assert.equal(by.PHX.now.level, 0);
   assert.ok(status.airports.length === 32);
-  // phase-1 sources
+  // phase-1 sources (real-format fixtures: LAMP LP1/CP1, AWC TCF times, ops plan)
   assert.equal(by.ATL.lamp.issued, "2026-10-03T18:30:00.000Z");
-  assert.equal(by.ATL.peak.level, 3);
-  assert.match(by.ATL.peak.reasons[0], /^Thunder chance 46% \(LAMP\) forecast/);
-  assert.equal(by.PHX.lamp, null);
+  assert.ok(by.ATL.lamp.hours.every((h) => h.probHrs === 1 && h.tstmProb != null && h.convProb != null));
+  assert.equal(by.HNL.lamp.hours[0].tstmProb, null); // Hawaii has no probability rows
+  assert.ok(by.IAH.hours.some((h) => h.reasons.some((r) => /^Thunder chance 2\d% \(LAMP\)$/.test(r))));
+  assert.equal(by.MCO.lamp.hours[0].convProb, 71); // CP1, the hour ending at the first column (before hour 0 here)
+  assert.equal(by.PHX.lamp.hours.length, 25);
   assert.equal(by.IAH.peak.level, 3);
   assert.match(by.IAH.peak.reasons[0], /^Thunderstorms, high coverage \(TCF\)/);
+  assert.equal(by.IAH.tcf[0].valid, "2026-10-03T23:00:00.000Z");
   assert.equal(by.BNA.now.level, 2);
   assert.match(by.BNA.now.reasons[0], /^Center weather advisory: thunderstorms until/);
   assert.equal(by.DEN.cwa[0].hazard, "TURB"); // stored, but no risk
   assert.ok(!by.DEN.now.reasons.some((r) => /Center weather/.test(r)));
-  // ATCSCC: deduped with NAS status at ORD/SFO, cancelled at BOS, adds a staffing ground stop at LAS
   assert.equal(by.ORD.now.reasons.filter((r) => /^Ground stop/.test(r)).length, 1);
   assert.match(by.ORD.now.reasons[0], /^Ground stop — weather \(thunderstorms\), until/);
-  assert.ok(by.ORD.atcscc[0].active);
-  assert.ok(!by.SFO.now.reasons.some((r) => /ATCSCC/.test(r)));
-  assert.ok(by.BOS.atcscc.every((a) => !a.active));
-  assert.equal(by.LAS.now.level, 4);
-  assert.match(by.LAS.now.reasons[0], /^Ground stop — air traffic control staffing \(ATC zero\), until 1:10 PM PT \(ATCSCC\)$/);
+  // FAA Command Center operations plan (the real page is the fixture)
+  assert.equal(disk.opsplan.plan.advisory, "072");
+  assert.equal(disk.opsplan.launches[0].name, "SPACEX SDA-T1A");
+  assert.deepEqual(disk.opsplan.staffing.map((x) => x.facility), ["ZOA"]);
+  assert.ok(by.ATL.atcscc.length === 0 && by.ATL.opsplan.items.some((x) => x.kind === "program"));
+  assert.ok(by.MCO.now.reasons.includes("FAA plans a possible ground stop until 7 PM (storms)"));
+  assert.ok(by.TPA.now.reasons.includes("FAA reports delays at MCO/TPA expected to continue"));
+  assert.match(by.BNA.now.reasons.join("|"), /Air traffic control staffing shortage until 8 PM — delays possible/);
+  assert.equal(by.SAN.now.level, 3); // ops-plan GDP (the fixture's NAS status has none at SAN)
+  assert.deepEqual(by.SAN.hours.slice(0, 7).map((h) => h.level), [3, 3, 3, 3, 3, 3, 0]); // until 0059Z
+  assert.ok(by.DEN.now.reasons.includes("Runway 16R/34L closed until Nov 4"));
+  assert.ok(by.JFK.opsplan.constraints[0].codes.includes("N90"));
+  assert.ok(by.PHL.opsplan.items.some((x) => x.ifr && /glideslope/.test(x.text)));
+  // NAS programs hold: EWR's GDP has no end (3 h), JFK's delays are increasing (5 h)
+  assert.ok(by.EWR.hours[3].reasons.some((r) => /^Ground delay program/.test(r)));
+  assert.ok(!by.EWR.hours[4].reasons.some((r) => /^Ground delay program/.test(r)));
+  assert.ok(by.JFK.hours[5].reasons.some((r) => /^Delays/.test(r)) && !by.JFK.hours[6].reasons.some((r) => /^Delays/.test(r)));
   // FAA closures: LAX is GA-only (informational), SEA a single runway (Low)
   assert.equal(by.LAX.faa[0].scope, "limited");
   assert.equal(by.LAX.faa[0].badge, null);
@@ -203,7 +239,7 @@ test("fixture run writes a schema-shaped status.json", async () => {
   assert.ok(by.SEA.now.reasons.includes("Runway 16L/34R closed"));
   assert.equal(by.SEA.now.level, 1);
   assert.equal(by.JFK.faa[0].cause, "volume");
-  assert.equal(by.FLL.now.level, 0);
+  assert.equal(by.FLL.now.level, 2); // possible ground stop (ops plan)
   assert.equal(by.FLL.spc, "TSTM");
   // reasons are deduped within a box
   for (const a of disk.airports) assert.equal(new Set(a.now.reasons).size, a.now.reasons.length);

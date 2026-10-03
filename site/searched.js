@@ -155,9 +155,11 @@ function starBtn(code) {
 function shell(a, kids, { dismiss } = {}) {
   return h("div", { class: "card xcard", "data-code": a.code },
     h("div", { class: "top" },
-      h("div", { style: "min-width:0" }, h("div", { class: "code" }, a.code), h("div", { class: "where" }, [placeLine(a), a.name].filter(Boolean).join(" · "))),
+      h("div", { class: "code" }, a.code),
       h("div", { class: "right" }, ...kids.right, starBtn(a.code),
         dismiss ? h("button", { type: "button", class: "star xclose", "aria-label": "Close " + a.code, onclick: (ev) => { ev.stopPropagation(); dismiss(); } }, "×") : null)),
+    a.name ? h("div", { class: "aname" }, a.name) : null,
+    placeLine(a) ? h("div", { class: "where" }, placeLine(a)) : null,
     ...kids.body);
 }
 

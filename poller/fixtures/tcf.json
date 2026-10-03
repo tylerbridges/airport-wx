@@ -1,15 +1,18 @@
 {
  "type": "FeatureCollection",
+ "validTimes": ["{{tcf+4}}", "{{tcf+6}}", "{{tcf+8}}"],
+ "issueTime": "{{tcf-1}}",
+ "canTimes": [],
  "features": [
   {
    "type": "Feature",
    "properties": {
-    "issueTime": "{{iso-60}}",
-    "validTime": "{{iso+240}}",
-    "fcstHr": 4,
-    "coverage": "High",
-    "confidence": "High",
-    "tops": "FL350-390"
+    "issueTime": "{{tcf-1}}",
+    "validTime": "{{tcf+4}}",
+    "coverage": "high",
+    "confidence": "high",
+    "tops": "390",
+    "data": "tcf"
    },
    "geometry": {
     "type": "Polygon",
@@ -42,12 +45,12 @@
   {
    "type": "Feature",
    "properties": {
-    "issueTime": "{{iso-60}}",
-    "validTime": "{{iso+360}}",
-    "fcstHr": 6,
-    "coverage": "Medium",
-    "confidence": "Low",
-    "tops": "FL300-340"
+    "issueTime": "{{tcf-1}}",
+    "validTime": "{{tcf+6}}",
+    "coverage": "medium",
+    "confidence": "low",
+    "tops": "340",
+    "data": "tcf"
    },
    "geometry": {
     "type": "Polygon",
@@ -80,12 +83,12 @@
   {
    "type": "Feature",
    "properties": {
-    "issueTime": "{{iso-60}}",
-    "validTime": "{{iso+480}}",
-    "fcstHr": 8,
-    "coverage": "High",
-    "confidence": "High",
-    "tops": "FL400+"
+    "issueTime": "{{tcf-1}}",
+    "validTime": "{{tcf+8}}",
+    "coverage": "high",
+    "confidence": "high",
+    "tops": ">400",
+    "data": "tcf"
    },
    "geometry": {
     "type": "Polygon",
@@ -118,10 +121,10 @@
   {
    "type": "Feature",
    "properties": {
-    "issueTime": "{{iso-60}}",
-    "validTime": "{{iso+240}}",
-    "coverage": "High",
-    "type": "line"
+    "issueTime": "{{tcf-1}}",
+    "validTime": "{{tcf+4}}",
+    "coverage": "high",
+    "data": "tcf"
    },
    "geometry": {
     "type": "LineString",

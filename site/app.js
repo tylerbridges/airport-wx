@@ -10,16 +10,15 @@
     { name: "High", label: "High" },
     { name: "Severe", label: "Severe" },
   ];
+  // plain names for failures ("FAA delay info unavailable") and what may be missing then
   const SOURCE_NAMES = {
-    faa: "FAA status", atcscc: "ATCSCC advisories", nws: "NWS alerts", spc: "SPC outlook", metar: "METAR", taf: "TAF",
-    sigmet: "SIGMETs", lamp: "LAMP guidance", tcf: "TFM convective forecast", cwa: "Center weather advisories",
+    faa: "FAA delay info", atcscc: "FAA traffic notices", nws: "Weather warnings", spc: "Storm outlook", metar: "Current weather",
+    taf: "Airport forecast", sigmet: "Thunderstorm alerts", lamp: "Hourly storm chances", tcf: "Storm forecast", cwa: "Center weather advisories",
   };
-  // short names for the sheet's "Checked …" line, and what may be missing when a source fails
-  const SOURCE_SHORT = { faa: "FAA", atcscc: "ATCSCC", nws: "NWS", spc: "SPC", metar: "METAR", taf: "TAF", sigmet: "SIGMETs", lamp: "LAMP", tcf: "TCF", cwa: "CWA" };
   const SOURCE_MISSING = {
     faa: "delays may be missing", atcscc: "ground stops may be missing", nws: "warnings may be missing",
     spc: "severe-storm risk may be missing", metar: "current conditions may be missing", taf: "forecast hours may be missing",
-    sigmet: "convective SIGMETs may be missing", lamp: "thunder chances may be missing", tcf: "convective forecasts may be missing",
+    sigmet: "thunderstorm alerts may be missing", lamp: "thunder chances may be missing", tcf: "storm forecasts may be missing",
     cwa: "center weather advisories may be missing",
   };
   const SPC_NAMES = { MRGL: "Marginal", SLGT: "Slight", ENH: "Enhanced", MDT: "Moderate", HIGH: "High" };
@@ -115,6 +114,50 @@
   }
 
   const refNow = () => (state.sample && state.data ? Date.parse(state.data.generated) : Date.now());
+
+  // ---------- plain wording (the data keeps aviation codes for history; the page shows plain English) ----------
+
+  const mph = (kt) => Math.round((Number(kt) * 1.15) / 5) * 5;
+  function visNum(v) {
+    let n = 0;
+    for (const p of String(v).trim().split(/\s+/)) {
+      if (p.includes("/")) { const [x, y] = p.split("/").map(Number); n += y ? x / y : 0; } else n += Number(p) || 0;
+    }
+    return n;
+  }
+  /** One risk reason in traveler wording; null when it isn't worth showing (ceilings of 1,000 ft and up). */
+  function plainReason(r, a) {
+    let s = String(r || "");
+    if (/^Convective SIGMET over airport/.test(s)) {
+      const ends = ((a && a.sigmets) || []).map((x) => Date.parse(x.validTo)).filter(Number.isFinite);
+      return "Thunderstorms over the airport" + (ends.length ? " until " + clock(Math.max(...ends), a.tz) : "");
+    }
+    const c = /^(Chance of )?[Cc]eiling ([\d,]+) ft(.*)$/.exec(s);
+    if (c) {
+      const ft = Number(c[2].replace(/,/g, ""));
+      if (ft >= 1000) return null;
+      const w = ft < 500 ? "very low clouds" : "low clouds";
+      return (c[1] ? "Chance of " + w : cap(w)) + c[3];
+    }
+    s = s.replace(/\b([Vv])isibility ((?:\d+ )?\d+(?:\/\d+)?) sm\b/g, (all, V, v) =>
+      visNum(v) < 1 ? (V === "V" ? "Poor visibility" : "poor visibility") : `${V}isibility about ${v} ${visNum(v) === 1 ? "mile" : "miles"}`);
+    s = s.replace(/\bThunderstorm gusts (\d+) kt\b/g, (all, n) => `Thunderstorm wind gusts to ${mph(n)} mph`);
+    s = s.replace(/\b([Gg])usts (\d+) kt\b/g, (all, G, n) => `${G === "G" ? "Wind gusts" : "wind gusts"} to ${mph(n)} mph`);
+    s = s.replace(/^Mist\b/, "Light fog / haze").replace(/\bmist\b/g, "light fog / haze");
+    s = s.replace(/^Center weather advisory: IFR conditions/, "Center weather advisory: low clouds or poor visibility");
+    s = s.replace(/^Thunderstorms, (\w+) coverage \(TCF\)/, "Thunderstorms forecast, $1 coverage");
+    s = s.replace(/ \((LAMP|TCF|ATCSCC)\)/g, "");
+    s = s.replace(/\b(\d+)h (\d+)m\b/g, "$1 hr $2 min").replace(/\b(\d+)h\b/g, "$1 hr").replace(/(\d)m\b/g, "$1 min");
+    return s;
+  }
+  const plainList = (arr, a) => uniq((arr || []).map((r) => plainReason(r, a)).filter(Boolean));
+  /** Badge words: "GDP avg 49m" -> "Arrival delays ~49 min". */
+  function badgeText(b) {
+    const s = String(b || "");
+    const g = /^GDP(?: avg (.+))?$/i.exec(s);
+    if (g) return g[1] ? "Arrival delays ~" + g[1].replace(/(\d+)h(\d+)m/, "$1 hr $2 min").replace(/(\d+)m$/, "$1 min").replace(/(\d+)h$/, "$1 hr") : "Arrival delays";
+    return { "GROUND STOP": "Ground stop", DELAYS: "Delays", CLOSED: "Closed", "RUNWAY CLOSED": "Runway closed" }[s.toUpperCase()] || s;
+  }
   const lv = (n) => "l" + Math.max(0, Math.min(4, n | 0));
 
   // ---------- data ----------
@@ -200,7 +243,7 @@
     loading = true;
     $("refresh").classList.add("spin");
     if (manual) checkVersion(); // live relay
-    let liveP = state.build ? loadLive() : null; // live relay: in parallel with the build once the airport list is known
+    const liveP = state.build ? loadLive() : null; // live relay: in parallel with the build once the airport list is known
     try {
       let data, sample = false;
       try {
@@ -336,7 +379,7 @@
     const cls = { ground_stop: "l4", closure: "l4", ground_delay: "l3", delay: "l2" };
     return cardPrograms(a)
       .sort((x, y) => (order[x.type] ?? 9) - (order[y.type] ?? 9))
-      .map((f) => h("span", { class: "badge " + (cls[f.type] || "l2") }, f.badge || f.type));
+      .map((f) => h("span", { class: "badge " + (cls[f.type] || "l2") }, badgeText(f.badge || f.type)));
   }
 
   // ---------- level spans ----------
@@ -369,23 +412,26 @@
     while (q + 1 < a.hours.length && a.hours[q + 1].level === a.peak.level) q++;
     const start = Date.parse(a.hours[p].t);
     const end = Date.parse(a.hours[q].t) + HOUR;
+    const day = (x) => fmt(tz, { year: "numeric", month: "numeric", day: "numeric" }, "ymd").format(x);
     const sa = clock(start, tz), sb = clock(end, tz);
-    const ma = sa.split(" ").pop(), mb = sb.split(" ").pop();
-    const range = ma === mb ? sa.slice(0, sa.lastIndexOf(" ")) + "–" + sb : sa + "–" + sb;
     const w = whenLabel(start, tz);
     const prefix = w.indexOf(" ") > 0 && !/^\d/.test(w) ? w.slice(0, w.indexOf(" ")) + " " : "";
-    return prefix + range;
+    // compress "4–7 PM" only on the same day and the same AM/PM half; else "11 PM – 1 AM tomorrow"
+    if (day(start) === day(end) && sa.split(" ").pop() === sb.split(" ").pop()) return prefix + sa.slice(0, sa.lastIndexOf(" ")) + "–" + sb;
+    if (day(start) === day(end)) return prefix + sa + " – " + sb;
+    const wb = whenLabel(end, tz);
+    return prefix + sa + " – " + (/^\d/.test(wb) ? wb : wb.slice(wb.indexOf(" ") + 1) + " " + wb.slice(0, wb.indexOf(" ")));
   }
   const uniq = (arr) => [...new Set(arr || [])];
 
   // ---------- LAMP ----------
 
-  /** LAMP 2-hour thunder probability covering the hour starting at ms (max of the periods). */
+  /** LAMP thunder probability (LP1: the hour ending at t; LP2: 2 hours) covering the hour starting at ms. */
   function lampThunderAt(a, ms) {
     let p = null;
     for (const x of (a.lamp && a.lamp.hours) || []) {
       const t = Date.parse(x.t);
-      if (x.tstmProb == null || !(t > ms && t <= ms + 2 * HOUR)) continue;
+      if (x.tstmProb == null || !(t > ms && t <= ms + (x.probHrs || 1) * HOUR)) continue;
       if (p == null || x.tstmProb > p) p = x.tstmProb;
     }
     return p;
@@ -405,7 +451,8 @@
     const t0 = Date.parse(hours[0].t);
     const frac = Math.max(0, Math.min(1, (refNow() - t0) / (hours.length * HOUR)));
     const segs = hours.map((hr, i) => {
-      const label = hourLabel(Date.parse(hr.t), tz) + ": " + LEVELS[hr.level].label;
+      const top = plainList(hr.reasons, a)[0];
+      const label = hourLabel(Date.parse(hr.t), tz) + ": " + LEVELS[hr.level].label + (top ? " — " + top : "");
       if (big) {
         return h("button", { type: "button", class: "s " + lv(hr.level), "aria-label": label, "aria-pressed": "false", "data-i": i,
           onclick: (e) => onPick && onPick(i, e.currentTarget) });
@@ -430,7 +477,7 @@
   function card(a) {
     const fav = state.favs.includes(a.iata);
     const later = laterPeak(a);
-    const reason = (later ? a.peak.reasons[0] : a.now.reasons[0]) || (a.peak.level ? "Elevated risk" : "No significant weather");
+    const reason = plainList(later ? a.peak.reasons : a.now.reasons, a)[0] || (a.peak.level ? "Minor weather conditions" : "No significant weather");
     const nowDiffers = later;
     const el = h("div", {
       class: "card", role: "button", tabindex: "0", "data-iata": a.iata,
@@ -439,9 +486,7 @@
       onkeydown: (e) => { if ((e.key === "Enter" || e.key === " ") && e.target === el) { e.preventDefault(); openSheet(a.iata); } },
     },
       h("div", { class: "top" },
-        h("div", { style: "min-width:0" },
-          h("div", { class: "code" }, a.iata),
-          h("div", { class: "where" }, `${a.city}, ${a.state} · ${a.name}`)),
+        h("div", { class: "code" }, a.iata),
         h("div", { class: "right" },
           pill(a.peak.level),
           h("button", {
@@ -449,6 +494,8 @@
             onclick: (e) => { e.stopPropagation(); toggleFav(a.iata); },
             onkeydown: (e) => e.stopPropagation(),
           }, starSvg()))),
+      h("div", { class: "aname" }, a.name),
+      h("div", { class: "where" }, `${a.city}, ${a.state}`),
       h("div", { class: "reason" }, reason),
       nowDiffers ? h("div", { class: "sub" }, "Now: " + LEVELS[a.now.level].label) : null,
       cardPrograms(a).length ? h("div", { class: "badges" }, faaBadges(a)) : null,
@@ -554,20 +601,50 @@
     return h("details", { class: "rawt" }, h("summary", {}, "Show raw"), h("pre", { class: "raw" }, text));
   }
 
-  function faaItem(f) {
+  /** Short plain cause for a NAS status reason: "RWY:Construction" -> "runway construction", "wind" -> "wind". */
+  function plainCause(f) {
+    const r = String(f.reason || "");
+    const detail = (r.split(/[/:]/).pop() || "").trim().toLowerCase();
+    if (f.cause === "runway" && detail && !/runway/.test(detail)) return "runway " + detail.replace(/^rwy\s*/, "");
+    const lab = f.causeLabel || "";
+    const m = /\(([^)]+)\)$/.exec(lab);
+    return m ? m[1] : lab || detail;
+  }
+  /** "Departures 31–45m, increasing; Arrivals 16–30m" -> "Departure delays 31–45 min, increasing; arrival delays 16–30 min". */
+  function delayText(detail) {
+    return String(detail || "").split("; ").map((part, i) => {
+      const m = /^(Arrivals\/Departures|Arrivals|Departures|Delays)\s*(.*)$/.exec(part);
+      if (!m) return part;
+      const who = { "Arrivals/Departures": "Arrival and departure delays", Arrivals: "Arrival delays", Departures: "Departure delays", Delays: "Delays" }[m[1]];
+      const rest = m[2].replace(/\b(\d+)h (\d+)m\b/g, "$1 hr $2 min").replace(/(\d)m\b/g, "$1 min");
+      const t = (who + (rest ? " " + rest : "")).trim();
+      return i ? t.charAt(0).toLowerCase() + t.slice(1) : t;
+    }).join("; ");
+  }
+
+  function faaItem(f, a) {
     if (f.type === "closure") {
       const info = f.scope === "limited" || f.active === false;
       const cls = f.scope === "runway" ? "l1" : "l4";
       return h("div", { class: "item" + (info ? " info" : "") },
-        !info && f.badge ? h("span", { class: "badge " + cls }, f.badge) : null,
+        !info && f.badge ? h("span", { class: "badge " + cls }, badgeText(f.badge)) : null,
         h("div", { class: info ? "muted" : "", style: info ? "" : "margin-top:4px" }, f.plain || [f.reason, f.detail].filter(Boolean).join(" · ")),
         f.reason ? rawToggle(f.reason) : null);
     }
-    const why = f.causeLabel ? cap(f.causeLabel) : f.reason ? cap(f.reason) : null;
+    const why = plainCause(f);
+    const until = /until [^,]+$/.exec(f.detail || "");
+    let text;
+    if (f.type === "delay") text = delayText(f.detail) + (why ? ` (${why})` : "");
+    else if (f.type === "ground_delay") {
+      const avg = /avg ([^,]+)/.exec(f.detail || ""), max = /max ([^,]+)/.exec(f.detail || "");
+      const d = (x) => x.replace(/\b(\d+)h (\d+)m\b/, "$1 hr $2 min").replace(/(\d)m\b/, "$1 min").replace(/(\d)h\b/, "$1 hr");
+      text = "Flights to " + a.iata + " are held before departure" + (avg ? `: about ${d(avg[1])} on average` : "") + (max ? `, up to ${d(max[1])}` : "") + (why ? ` (${why})` : "");
+    } else text = "Flights to " + a.iata + " are held at their departure airports" + (why ? ` (${why})` : "");
+    const end = f.end ? "until " + whenLabel(Date.parse(f.end), a.tz) : until ? until[0] : "until further notice";
     return h("div", { class: "item" },
-      h("span", { class: "badge " + (FAA_CLS[f.type] || "l2") }, f.badge || f.type),
-      h("div", { style: "margin-top:4px" }, [why, f.detail].filter(Boolean).join(" · ")),
-      f.reason && f.causeLabel && !f.causeLabel.toLowerCase().includes(f.reason.toLowerCase()) ? h("div", { class: "muted small" }, "FAA: " + f.reason) : null);
+      h("span", { class: "badge " + (FAA_CLS[f.type] || "l2") }, badgeText(f.badge || f.type)),
+      h("div", { style: "margin-top:4px" }, text + ", " + end + "."),
+      f.reason ? rawToggle("FAA: " + f.reason + (f.detail ? "\n" + f.detail : "")) : null);
   }
 
   function advItem(x, tz) {
@@ -579,9 +656,25 @@
     const cls = x.active ? ({ GS: "l4", GDP: "l3", AFP: "l2" }[x.type] || "l1") : "off";
     const name = { GS: "Ground stop", GDP: "Ground delay program", AFP: "Airspace flow program" }[x.type] || "Advisory";
     return h("div", { class: "item" },
-      h("span", { class: "badge " + cls }, x.type), " ", h("b", {}, name), h("span", { class: "muted" }, " · " + status),
+      h("span", { class: "badge " + cls }, name), h("span", { class: "muted" }, " " + status),
       x.causeLabel || x.causeText ? h("div", { style: "margin-top:4px" }, cap(x.causeLabel || x.causeText)) : null,
-      h("div", { class: "muted small" }, [x.title, x.issued ? "issued " + whenLabel(Date.parse(x.issued), tz) : null].filter(Boolean).join(" · ")));
+      x.issued ? h("div", { class: "muted small" }, "Issued " + whenLabel(Date.parse(x.issued), tz)) : null,
+      x.title ? rawToggle(x.title) : null);
+  }
+
+  /** The FAA Command Center operations plan's items for this airport, as plain sentences with the original line. */
+  function planItems(a) {
+    const op = a.opsplan;
+    if (!op || !(op.items || []).length) return [];
+    const order = { program: 0, note: 1, staffing: 2, constraint: 3, sir: 4 };
+    const items = [...op.items].sort((x, y) => (y.level - x.level) || ((order[x.kind] ?? 9) - (order[y.kind] ?? 9)));
+    const lead = h("div", { class: "muted small", style: "margin:0 0 2px" },
+      "From the FAA Command Center" + (op.plan && op.plan.issued ? " · plan issued " + whenLabel(Date.parse(op.plan.issued), a.tz) : ""));
+    return [lead, ...items.map((x) => h("div", { class: "item" + (x.level ? "" : " info") },
+      x.level ? h("span", { class: "badge " + lv(x.level) }, LEVELS[x.level].label) : null,
+      h("div", { class: x.level ? "" : "muted", style: x.level ? "margin-top:4px" : "" },
+        x.text + (x.ifr ? " — can slow landings in low clouds or poor visibility" : "") + "." + (x.dup ? " Also in Delays & closures above." : "")),
+      x.raw ? rawToggle(x.raw) : null))];
   }
 
   function lampTable(a) {
@@ -589,7 +682,7 @@
     const t0 = Date.parse(a.hours[0].t);
     const hrs = (a.lamp.hours || []).filter((x) => { const t = Date.parse(x.t); return t >= t0 && t < t0 + 24 * HOUR; });
     if (!hrs.length) return null;
-    const notable = hrs.some((x) => (x.tstmProb || 0) >= 10 || (x.pPrecip || 0) >= 30 || (x.gust || 0) >= 20 || (lampCat(x) && lampCat(x) !== "VFR"));
+    const notable = hrs.some((x) => (x.tstmProb || 0) >= 10 || (x.convProb || 0) >= 30 || (x.pPrecip || 0) >= 30 || (x.gust || 0) >= 20 || (lampCat(x) && lampCat(x) !== "VFR"));
     if (!notable) return null;
     const short = (ms) => hourLabel(ms, tz).replace(" AM", "a").replace(" PM", "p");
     const cell = (v, cls) => h("td", { class: cls || null }, v == null ? "" : String(v));
@@ -598,29 +691,59 @@
     const table = h("table", { class: "lt" },
       h("thead", {}, h("tr", {}, h("th", {}, ""), hrs.map((x) => h("th", {}, short(Date.parse(x.t)))))),
       h("tbody", {},
-        row("Thunder %", (x) => cell(x.tstmProb, tcls(x.tstmProb))),
+        hrs.some((x) => x.tstmProb != null) ? row("Thunder %", (x) => cell(x.tstmProb, tcls(x.tstmProb))) : null,
+        hrs.some((x) => x.convProb != null) ? row("Storm %", (x) => cell(x.convProb)) : null,
         row("Precip %", (x) => cell(x.pPrecip)),
         row("Gust kt", (x) => cell(x.gust ? x.gust : null)),
         row("Category", (x) => { const c = lampCat(x); return h("td", {}, c ? h("span", { class: "fcd " + c, title: c }, c[0]) : ""); })));
-    return [h("div", { class: "lamp" }, table), h("div", { class: "muted small", style: "margin:6px 4px 0" }, "Thunder %: chance of thunder in the 2 hours ending at that time.")];
+    const two = hrs.some((x) => x.probHrs === 2);
+    const note = hrs.some((x) => x.tstmProb != null)
+      ? `Thunder %: chance of lightning in the ${two ? "2 hours" : "hour"} ending at that time. Storm %: chance of thunderstorms nearby.`
+      : "No thunder chances are issued for this airport.";
+    return [h("div", { class: "lamp" }, table), h("div", { class: "muted small", style: "margin:6px 4px 0" }, note)];
   }
 
-  function checkedLine(a) {
+  function checkedLine() {
     const d = state.data;
     const src = (d && d.sources) || {};
     const warn = [];
-    const ok = [];
+    let any = false;
     for (const k of Object.keys(SOURCE_NAMES)) {
-      const s = src[k];
-      if (!s) continue;
-      if (!s.ok) { warn.push(`${SOURCE_NAMES[k]} unavailable — ${SOURCE_MISSING[k]}`); continue; }
-      ok.push(SOURCE_SHORT[k]);
-      if (s.error) warn.push(`${SOURCE_NAMES[k]} partly unavailable — ${SOURCE_MISSING[k]}`);
+      const x = src[k];
+      if (!x) continue;
+      if (!x.ok) { warn.push(`${SOURCE_NAMES[k]} unavailable — ${SOURCE_MISSING[k]}`); continue; }
+      any = true;
+      if (x.error) warn.push(`${SOURCE_NAMES[k]} partly unavailable — ${SOURCE_MISSING[k]}`);
     }
     const when = state.sample ? "sample data" : d ? ago(Math.max(0, Date.now() - Date.parse(d.generated))) : "";
     return h("div", { class: "checked" },
       warn.map((w) => h("p", { class: "warn" }, w)),
-      ok.length ? h("p", { class: "muted" }, `Checked ${ok.join(", ")}${when ? " · " + when : ""}`) : null);
+      any ? h("p", { class: "muted" }, `Checked FAA delays and NOAA weather${when ? " · " + when : ""}`) : null);
+  }
+
+  /** Coded aviation detail, collapsed at the bottom of the sheet (until the aviation view exists). */
+  function pilotDetails(a) {
+    const kids = [];
+    const sub = (t) => h("h4", { class: "pd-h" }, t);
+    if (a.metar) {
+      kids.push(sub("Current METAR"),
+        h("div", { class: "box" }, h("dl", { class: "kv", style: "margin:0" }, metarRows(a.metar))),
+        a.metar.obsTime ? h("div", { class: "muted small", style: "margin:6px 4px 0" }, "Observed " + ago(Math.max(0, refNow() - Date.parse(a.metar.obsTime)))) : null,
+        h("pre", { class: "raw", style: "margin-top:10px" }, a.metar.raw));
+    }
+    if (a.taf) kids.push(sub("TAF" + (a.taf.issued ? " · issued " + clock(Date.parse(a.taf.issued), a.tz) : "")), h("pre", { class: "raw" }, a.taf.raw));
+    const lt = a.lamp ? lampTable(a) : null;
+    if (lt) kids.push(sub("LAMP guidance · issued " + clock(Date.parse(a.lamp.issued), a.tz)), ...lt);
+    if (a.sigmets && a.sigmets.length) kids.push(sub("Convective SIGMETs"), ...a.sigmets.map((x) => h("pre", { class: "raw", style: "margin-top:6px" }, x.raw)));
+    if (a.cwa && a.cwa.length) kids.push(sub("Center weather advisories"), ...a.cwa.map((x) => h("div", { class: "item" },
+      h("b", {}, x.hazard ? "CWA · " + x.hazard : "CWA"),
+      x.validTo ? h("span", { class: "muted" }, " · until " + whenLabel(Date.parse(x.validTo), a.tz)) : null,
+      x.raw ? h("pre", { class: "raw", style: "margin-top:6px" }, x.raw) : null)));
+    if (a.tcf && a.tcf.length) kids.push(sub("TFM convective forecast"), ...a.tcf.map((x) => h("div", { class: "item" },
+      h("b", {}, cap(x.coverageRaw || x.coverage || "Unknown") + " coverage"),
+      h("span", { class: "muted" }, [x.valid && " · valid " + whenLabel(Date.parse(x.valid), a.tz), x.confidence && " · confidence " + String(x.confidence).toLowerCase(), x.tops && " · tops " + x.tops].filter(Boolean).join("")))));
+    if (!kids.length) return null;
+    return h("details", { class: "sec pilot" }, h("summary", {}, "Pilot details"), h("div", { class: "pd" }, ...kids));
   }
 
   let sheetPick = null; // hour index selected in the detail timeline
@@ -640,69 +763,63 @@
       const hr = a.hours[i];
       const th = lampThunderAt(a, Date.parse(hr.t));
       hourInfo.className = "hourinfo";
-      hourInfo.replaceChildren(
-        h("b", {}, hourLabel(Date.parse(hr.t), tz) + " "), pill(hr.level, true), hr.fltCat ? h("span", { class: "muted" }, " · " + hr.fltCat) : null,
-        th != null ? h("span", { class: "muted" }, ` · Thunder ${th}% (LAMP)`) : null,
-        h("div", { class: "muted", style: "margin-top:4px" }, hr.reasons.length ? uniq(hr.reasons).join(" · ") : "No significant weather")
-      );
+      const rs = plainList(hr.reasons, a);
+      hourInfo.replaceChildren(...[
+        h("b", {}, hourLabel(Date.parse(hr.t), tz) + " "), pill(hr.level, true),
+        th != null ? h("span", { class: "muted" }, ` · Thunder chance ${th}%`) : null,
+        h("div", { class: "muted", style: "margin-top:4px" }, rs.length ? rs.join(" · ") : hr.level ? "Minor weather conditions" : "No significant weather"),
+      ].filter(Boolean));
     };
 
-    const reasonsList = (arr) => uniq(arr).length
-      ? h("ul", { class: "reasons" }, uniq(arr).map((r) => h("li", {}, r)))
-      : h("div", { class: "muted", style: "font-size:14px" }, "No significant weather");
+    const reasonsList = (arr, level) => {
+      const rs = plainList(arr, a);
+      return rs.length ? h("ul", { class: "reasons" }, rs.map((r) => h("li", {}, r)))
+        : h("div", { class: "muted", style: "font-size:14px" }, level ? "Minor weather conditions" : "No significant weather");
+    };
 
     // One box while the level holds; a separate Peak box only when the peak is later and higher.
     const boxes = laterPeak(a)
       ? h("div", { class: "two" },
-          h("div", { class: "box" }, h("h4", {}, "Now ", pill(a.now.level, true)), reasonsList(a.now.reasons)),
-          h("div", { class: "box" }, h("h4", {}, "Peak " + peakRange(a) + " ", pill(a.peak.level, true)), reasonsList(a.peak.reasons)))
+          h("div", { class: "box" }, h("h4", {}, "Now ", pill(a.now.level, true)), reasonsList(a.now.reasons, a.now.level)),
+          h("div", { class: "box" }, h("h4", {}, "Peak " + peakRange(a) + " ", pill(a.peak.level, true)), reasonsList(a.peak.reasons, a.peak.level)))
       : h("div", { class: "box one" },
           h("h4", {}, pill(a.now.level, true), h("span", {}, "through " + whenLabel(levelEnd(a), tz))),
-          a.now.reasons.length ? reasonsList(a.now.reasons) : null);
+          a.now.reasons.length ? reasonsList(a.now.reasons, a.now.level) : null);
 
     const secs = [];
     const add = (cond, fn) => { if (cond) secs.push(fn()); };
-    add(a.faa && a.faa.length, () => section("FAA programs", ...a.faa.map(faaItem)));
-    add(a.atcscc && a.atcscc.length, () => section("ATCSCC advisories",
-      ...[...a.atcscc].sort((x, y) => (y.active ? 1 : 0) - (x.active ? 1 : 0)).map((x) => advItem(x, tz))));
-    add(a.alerts && a.alerts.length, () => section("NWS alerts", ...a.alerts.map((x) => h("div", { class: "item" }, h("b", {}, x.event),
+    add(a.faa && a.faa.length, () => section("Delays & closures", ...a.faa.map((f) => faaItem(f, a))));
+    const notices = [...[...(a.atcscc || [])].sort((x, y) => (y.active ? 1 : 0) - (x.active ? 1 : 0)).map((x) => advItem(x, tz)), ...planItems(a)];
+    add(notices.length, () => section("FAA traffic notices", ...notices));
+    add(a.alerts && a.alerts.length, () => section("Weather warnings", ...a.alerts.map((x) => h("div", { class: "item" }, h("b", {}, x.event),
       x.ends ? h("span", { class: "muted" }, " · until " + dayClock(Date.parse(x.ends), tz)) : null,
       x.headline ? h("div", { class: "muted", style: "font-size:13px;margin-top:2px" }, x.headline) : null))));
-    const lt = a.lamp ? lampTable(a) : null;
-    add(lt, () => section("LAMP guidance · issued " + clock(Date.parse(a.lamp.issued), tz), ...lt));
-    add(a.spc, () => section("SPC convective outlook",
+    add(a.sigmets && a.sigmets.length, () => section("Thunderstorms", h("div", { class: "item" }, plainReason("Convective SIGMET over airport", a) + ", or within 10 nautical miles.")));
+    add(a.spc, () => section("Storm outlook",
       a.spc === "TSTM"
         ? h("div", { class: "muted", style: "font-size:15px" }, "General thunderstorms possible in the area (no severe risk)")
         : h("div", { style: "font-size:15px;font-weight:600" }, (SPC_NAMES[a.spc] || a.spc) + " risk of severe storms",
-            h("span", { class: "muted", style: "font-weight:400" }, " · SPC Day 1 outlook"))));
-    add(a.tcf && a.tcf.length, () => section("TFM convective forecast", ...a.tcf.map((x) => h("div", { class: "item" },
-      h("b", {}, cap(x.coverage || x.coverageRaw || "Unknown") + " coverage"),
-      x.valid ? h("span", { class: "muted" }, " · valid " + whenLabel(Date.parse(x.valid), tz)) : null,
-      h("div", { class: "muted small" }, [x.confidence && "Confidence " + String(x.confidence).toLowerCase(), x.tops && "Tops " + x.tops].filter(Boolean).join(" · "))))));
-    add(a.sigmets && a.sigmets.length, () => section("Convective SIGMETs", ...a.sigmets.map((x) => h("div", { class: "item" }, h("b", {}, "Convective SIGMET"), h("pre", { class: "raw", style: "margin-top:6px" }, x.raw)))));
-    add(a.cwa && a.cwa.length, () => section("Center weather advisories", ...a.cwa.map((x) => h("div", { class: "item" },
-      h("b", {}, x.hazard ? "CWA · " + x.hazard : "CWA"),
-      x.validTo ? h("span", { class: "muted" }, " · until " + whenLabel(Date.parse(x.validTo), tz)) : null,
-      x.raw ? h("pre", { class: "raw", style: "margin-top:6px" }, x.raw) : null))));
-    add(a.metar, () => section("Current METAR",
-      h("div", { class: "box" }, h("dl", { class: "kv", style: "margin:0" }, metarRows(a.metar))),
-      a.metar.obsTime ? h("div", { class: "muted", style: "font-size:12px;margin:6px 4px 0" }, "Observed " + ago(Math.max(0, refNow() - Date.parse(a.metar.obsTime)))) : null,
-      h("pre", { class: "raw", style: "margin-top:10px" }, a.metar.raw)));
-    add(a.taf, () => section("TAF" + (a.taf.issued ? " · issued " + clock(Date.parse(a.taf.issued), tz) : ""), h("pre", { class: "raw" }, a.taf.raw)));
+            h("span", { class: "muted", style: "font-weight:400" }, " · today's outlook"))));
+    add(a.tcf && a.tcf.length, () => section("Storm forecast", ...a.tcf.map((x) => h("div", { class: "item" },
+      h("b", {}, "Thunderstorms, " + ({ high: "widespread", medium: "scattered", low: "isolated" }[x.coverage] || "some") + " coverage"),
+      x.valid ? h("span", { class: "muted" }, " · around " + whenLabel(Date.parse(x.valid), tz)) : null,
+      x.confidence ? h("div", { class: "muted small" }, "Forecaster confidence " + String(x.confidence).toLowerCase()) : null))));
+    const pd = pilotDetails(a);
+    if (pd) secs.push(pd);
 
     sheet.replaceChildren(
       h("div", { class: "grab", "aria-hidden": "true" }),
       h("div", { class: "sh-head" },
-        h("div", { style: "min-width:0" },
-          h("div", { class: "sh-code", id: "sheetTitle" }, a.iata),
-          h("div", { class: "muted", style: "font-size:14px;margin-top:6px" }, `${a.name} · ${a.city}, ${a.state}`)),
+        h("div", { class: "sh-code", id: "sheetTitle" }, a.iata),
         h("div", { class: "right", style: "gap:6px" },
           h("button", { type: "button", class: "star", "aria-pressed": String(fav), "aria-label": (fav ? "Remove " : "Add ") + a.iata + (fav ? " from" : " to") + " my airports", onclick: () => toggleFav(a.iata) }, starSvg()),
           h("button", { type: "button", class: "close", "aria-label": "Close", onclick: closeSheet }, closeSvg()))),
+      h("div", { class: "aname sh-aname" }, a.name),
+      h("div", { class: "where sh-where" }, `${a.city}, ${a.state}`),
       boxes,
       section("Next 24 hours (" + tzAbbr(t0, tz) + ")", timeline(a, true, showHour), hourInfo),
       ...secs,
-      checkedLine(a)
+      checkedLine()
     );
     if (keepScroll) {
       sheet.scrollTop = top;

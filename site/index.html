@@ -26,7 +26,7 @@
   --card-2: #2c2c2e;
   --seg-sel: #3a3a3c;
   --text: #fff;
-  --muted: #8e8e93;
+  --muted: #a1a1a6; /* >= 4.5:1 on --card and --card-2 */
   --line: rgba(255, 255, 255, .1);
   --backdrop: rgba(0, 0, 0, .55);
   --crit: #ff453a;
@@ -111,7 +111,10 @@ h1 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 800; letter-spa
 .card:active { transform: scale(.985); }
 .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .code { font-size: 46px; line-height: .95; font-weight: 800; letter-spacing: -.035em; }
-.where { margin-top: 6px; font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aname { margin-top: 8px; font-size: 16px; font-weight: 600; line-height: 1.25; overflow-wrap: anywhere; }
+.sh-aname { font-size: 17px; margin-top: 0; }
+.sh-where { margin-bottom: 16px; }
+.where { margin-top: 2px; font-size: 16px; line-height: 1.25; color: var(--muted); overflow-wrap: anywhere; }
 .right { display: flex; align-items: center; gap: 4px; flex: none; }
 .pill {
   display: inline-block; padding: 5px 12px; border-radius: 999px; font-size: 14px; font-weight: 700; letter-spacing: .01em;
@@ -119,7 +122,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 800; letter-spa
 }
 .pill.sm { padding: 3px 9px; font-size: 12px; }
 .l0 { --c: var(--l0); } .l1 { --c: var(--l1); } .l2 { --c: var(--l2); } .l3 { --c: var(--l3); } .l4 { --c: var(--l4); }
-.star { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; color: var(--muted); }
+.star { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; color: var(--muted); }
 .star svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; }
 .star[aria-pressed="true"] { color: var(--l2); }
 .star[aria-pressed="true"] svg { fill: currentColor; }
@@ -156,7 +159,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 800; letter-spa
 .grab { width: 40px; height: 5px; border-radius: 3px; background: var(--muted); opacity: .5; margin: 0 auto 6px; }
 .sh-head { position: sticky; top: -8px; z-index: 1; background: var(--card); padding: 4px 0 10px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .sh-code { font-size: 56px; line-height: .95; font-weight: 800; letter-spacing: -.04em; }
-.close { width: 36px; height: 36px; border-radius: 50%; background: var(--card-2); display: grid; place-items: center; flex: none; }
+.close { width: 44px; height: 44px; border-radius: 50%; background: var(--card-2); display: grid; place-items: center; flex: none; }
 .close svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2.4; fill: none; }
 .sec { margin-top: 20px; }
 .sec h3 { margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
@@ -191,6 +194,10 @@ table.lt { border-collapse: collapse; font-size: 12px; }
 .lt td.hot { color: var(--c); font-weight: 800; }
 .fcd { display: inline-block; width: 18px; height: 18px; line-height: 18px; border-radius: 5px; color: #fff; font-weight: 800; font-size: 11px; }
 .fcd.VFR { background: #1f9d43; } .fcd.MVFR { background: #2867d6; } .fcd.IFR { background: #d63a14; } .fcd.LIFR { background: #b02bd1; }
+details.pilot > summary { cursor: pointer; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 10px 0; }
+details.pilot .pd { padding-top: 4px; }
+.pd-h { margin: 14px 0 6px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.pd-h:first-child { margin-top: 0; }
 .checked { margin-top: 24px; font-size: 12.5px; }
 .checked p { margin: 3px 0; }
 .checked .warn { color: var(--l2); font-weight: 600; }
@@ -233,7 +240,7 @@ table.lt { border-collapse: collapse; font-size: 12px; }
   <div class="backdrop" id="backdrop"></div>
   <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle"></div>
 </div>
-<script src="app.js?v=4" defer></script>
+<script src="app.js?v=6" defer></script>
 <script type="module" src="searched.js?v=4"></script><!-- build2a hook -->
 </body>
 </html>

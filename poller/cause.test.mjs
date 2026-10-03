@@ -4,7 +4,7 @@ import { classifyCause, causePhrase, CAUSES } from "./cause.mjs";
 
 test("cause classes by keyword", () => {
   const cases = {
-    weather: ["WEATHER / THUNDERSTORMS", "WX:Low Ceilings", "thunderstorms", "wind", "low ceilings", "snow removal", "WEATHER / FOG", "TSTMS"],
+    weather: ["WEATHER / THUNDERSTORMS", "WX:Low Ceilings", "thunderstorms", "wind", "low ceilings", "snow removal", "WEATHER / FOG", "TSTMS", "VCTS", "LOW CIGS"],
     volume: ["VOLUME / VOLUME", "volume", "TM Initiatives:MIT:VOL", "DEMAND"],
     equipment: ["EQUIPMENT / OUTAGE", "EQUIPMENT:RWY 22R ILS OTS", "radar outage", "ILS out of service", "FREQUENCY ISSUES", "EQ:Comm outage"],
     staffing: ["STAFFING / STAFFING", "ATC STAFFING TRIGGER", "ATC ZERO", "STAFFING / ATC ZERO", "staffing"],

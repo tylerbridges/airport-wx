@@ -3,24 +3,26 @@
 // global.mjs. Moved here unchanged from poll.mjs (assemble) and global.mjs (computeGlobal); the
 // only addition is assemble's optional `over` hook (live relay).
 import {
-  buildHours, summarize, hoursOutput, compareAirports, parseVisib, ceilingOf, flightCategory, toMs,
+  buildHours, summarize, hoursOutput, compareAirports, parseVisib, ceilingOf, flightCategory, toMs, fmtClock, tzAbbr, opsPlanItems,
 } from "./risk.mjs";
 import { spcCategoryAt, convectiveSigmetsAt, normalizeAlerts, latestBy } from "./lib.mjs";
 import { tcfAt, cwaAt } from "./sources.mjs";
 import { classifyCause, causePhrase } from "./cause.mjs";
 import { plainMetar, travelerImpact } from "./plain.mjs";
+import { opsPlanFor } from "./opsplan.mjs";
 
 const HOUR = 3600e3;
 const ADV_KEYS = ["id", "type", "airport", "issued", "cause", "causeText", "title", "active", "cnx", "start", "end"];
 
 /**
  * status.json airports from parsed sources. over(a) (live relay) may return per-airport values that
- * replace the ones computed here: {faa, alerts, sigmets, spc, tcf, cwa} (already in output shape).
+ * replace the ones computed here: {faa, alerts, sigmets, spc, tcf, cwa, opsplan} (already in output shape).
  */
-export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc, nws, lamp = null, atcscc = null, tcf = null, cwa = null, over = null }) {
+export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc, nws, lamp = null, atcscc = null, tcf = null, cwa = null, plan = null, over = null }) {
   const metarBy = latestBy(metars, "icaoId", "obsTime");
   const tafBy = latestBy(tafs, "icaoId", "issueTime");
   const out = [];
+  const known = new Set(airports.map((a) => a.iata));
   for (const a of airports) {
     const o = (over && over(a)) || {}; // live relay
     const has = (k) => o[k] !== undefined;
@@ -35,6 +37,7 @@ export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc,
       // closures' reasons are NOTAM text: the page shows their plain-English summary instead
       const o = { type: f.type, reason: f.reason, detail: f.detail, badge: f.badge, cause, causeLabel: f.type === "closure" ? "" : causePhrase(cause, f.reason) };
       if (f.type === "closure") Object.assign(o, { scope: f.scope, active: f.active, plain: f.plain, runways: f.runways });
+      else Object.assign(o, { end: f.end ?? null, trend: f.trend ?? null });
       return o;
     });
     const alertsFull = has("alerts") ? o.alerts : nws ? normalizeAlerts(nws[a.iata], now) : [];
@@ -45,12 +48,28 @@ export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc,
       .map((x) => ({ ...Object.fromEntries(ADV_KEYS.map((k) => [k, x[k] ?? null])), causeLabel: causePhrase(x.cause, x.causeText) }));
     const tcfHere = has("tcf") ? o.tcf : tcf ? tcfAt(a.lon, a.lat, tcf, now) : [];
     const cwaHere = has("cwa") ? o.cwa : cwa ? cwaAt(a.lon, a.lat, cwa, now) : [];
+    const op = has("opsplan") ? o.opsplan : opsPlanFor(plan, a.iata, now, known);
+    // NAS status wins over the ops plan for the same program; when NAS gives no end, take the plan's
+    for (const f of faa) {
+      if (f.end || !(f.type === "ground_stop" || f.type === "ground_delay")) continue;
+      const want = f.type === "ground_stop" ? "GS" : "GDP";
+      const p = (op?.programs || []).find((x) => x.status === "active" && x.program === want && x.until);
+      if (p) {
+        f.end = p.until;
+        f.endFrom = "opsplan";
+        f.detail = [f.detail, `until ${fmtClock(p.until, a.tz, now)} ${tzAbbr(p.until, a.tz)}`].filter(Boolean).join(", ");
+      }
+    }
 
     const hours = buildHours({
       now, tz: a.tz, taf: t, metar: m, faa, sigmet: sigs.length > 0,
       alerts: alertsFull.map((x) => ({ event: x.event, onset: x.onset, ends: x.ends })), spc: spcCat,
-      atcscc: adv, lamp: lampSt, tcf: tcfHere, cwa: cwaHere,
+      atcscc: adv, lamp: lampSt, tcf: tcfHere, cwa: cwaHere, opsplan: op,
     });
+    // plain-English items for the sheet ("From the FAA Command Center"), same texts as the risk reasons
+    const opOut = op
+      ? { ...op, items: opsPlanItems(op, { faa, atcscc: adv, tz: a.tz, now }).map(({ kind, level, text, cause, until, raw, dup, ifr }) => ({ kind, level, text, cause, until, raw, dup, ifr })) }
+      : null;
     const { now: nowS, peak } = summarize(hours, a.tz);
 
     out.push({
@@ -79,6 +98,7 @@ export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc,
       lamp: lampSt,
       tcf: tcfHere,
       cwa: cwaHere,
+      opsplan: opOut,
     });
   }
   out.sort(compareAirports);

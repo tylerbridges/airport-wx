@@ -4,6 +4,7 @@
 import "./risk.test.mjs";
 import "./lib.test.mjs";
 import "./sources.test.mjs";
+import "./opsplan.test.mjs";
 import "./cause.test.mjs";
 import "./notam.test.mjs";
 import "./record.test.mjs";

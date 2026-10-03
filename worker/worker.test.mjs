@@ -29,7 +29,8 @@ async function call(path, { fail = [], origin = null, env = ENV(world), keep = f
     globalThis.fetch = realFetch;
   }
 }
-const buildAp = (iata) => world.status.airports.find((a) => a.iata === iata);
+const built = JSON.parse(world.statusText); // as served (undefined fields dropped)
+const buildAp = (iata) => built.airports.find((a) => a.iata === iata);
 
 // ---------- ids ----------
 
@@ -97,7 +98,7 @@ test("same inputs as the build -> the build's airports exactly (levels, hours, r
     assert.deepEqual(a.now, b.now, a.iata + " now");
     assert.deepEqual(a.peak, b.peak, a.iata + " peak");
     assert.deepEqual(a.hours, b.hours, a.iata + " hours");
-    for (const k of ["metar", "taf", "faa", "atcscc", "alerts", "spc", "sigmets", "lamp", "tcf", "cwa"]) assert.deepEqual(a[k], b[k], `${a.iata} ${k}`);
+    for (const k of ["metar", "taf", "faa", "atcscc", "alerts", "spc", "sigmets", "lamp", "tcf", "cwa", "opsplan"]) assert.deepEqual(a[k], b[k], `${a.iata} ${k}`);
   }
   for (const n of W.LIVE_SOURCES) assert.equal(r.body.sources[n].live, true, n);
   for (const n of W.BUILD_SOURCES) assert.equal(r.body.sources[n].from, "build", n);

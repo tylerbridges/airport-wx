@@ -52,7 +52,8 @@ const ID_KEYS = ["icaoId", "id", "station_id", "stationId", "icao", "ident"];
 
 /** Finds the station id key and how METAR/TAF capability is marked. Returns {idKey, mode, key, notes}. */
 export function detectStationFields(list) {
-  const sample = list.slice(0, 200);
+  // Scan the whole list: the AWC cache starts with buoys/ships whose ids and siteType are empty.
+  const sample = list;
   const keys = new Set(sample.flatMap((s) => Object.keys(s || {})));
   const idKey = ID_KEYS.find((k) => keys.has(k) && sample.some((s) => /^[A-Z0-9]{3,4}$/.test(String(s[k] || "")))) || null;
   // 1) an array/string field listing site types ("siteType": ["METAR", "TAF"] in the AWC API docs)

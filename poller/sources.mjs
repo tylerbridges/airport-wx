@@ -5,7 +5,7 @@
 // Several of these formats were written from documentation without seeing a live response
 // (the dev sandbox can't reach the hosts). Every parser returns empty results rather than
 // throwing on unexpected input; the poller saves raw samples so formats can be checked.
-import { pointInRing, pointInGeometry, decodeXml, attrOf } from "./lib.mjs";
+import { pointNearRing, pointNearGeometry, decodeXml, attrOf } from "./lib.mjs";
 import { toMs } from "./risk.mjs";
 import { classifyCause } from "./cause.mjs";
 
@@ -40,12 +40,16 @@ function lampInt(s) {
 }
 
 /**
- * Parse a LAMP bulletin (concatenated per-station blocks). Columns are located from the UTC
- * row: each value is the 3 characters ending where that row's hour number ends (MOS-style
- * right-justified fixed width, so "100100" is read as two values). Unknown rows are ignored.
+ * Parse a LAMP bulletin (concatenated per-station blocks, e.g. " KMSP   GFS LAMP GUIDANCE  10/03/2026  2130 UTC").
+ * Columns are located from the UTC row by character position: each value is the 3 characters ending
+ * where that row's hour number ends (right-justified fixed width, so "100100" is two values and
+ * sparse rows such as P06, which only has a value every 6th column, line up). Unknown rows are ignored.
+ * Real CONUS blocks have hourly P01/PC1/LP1/LC1/CP1/CC1 rows; some (e.g. Hawaii) have no probability
+ * rows at all, and there is no LP2/CP2 row. LP1/CP1 are used; LP2/CP2 only when LP1/CP1 are missing.
  * want: optional Set of ICAO ids to keep. Returns {stations: {ICAO: {issued, hours}}, blocks}.
- * hours: [{t, gust (kt, 0 = "NG"), tstmProb (LP2, 2-h ending at t), cig (1-8), vis (1-7),
- *          typ (R/S/Z), pFrz (POZ), pPrecip (PPO)}]; a field is null where the row is blank.
+ * hours: [{t, gust (kt, 0 = "NG"), tstmProb (LP1 lightning %, else LP2), convProb (CP1 convection %,
+ *          else CP2), probHrs (1 for LP1/CP1, 2 for LP2/CP2: the period ending at t), cig (1-8),
+ *          vis (1-7), typ (R/S/Z), pFrz (POZ), pPrecip (PPO)}]; a field is null where the row is blank.
  */
 export function parseLamp(text, want = null) {
   const lines = String(text ?? "").split(/\r?\n/);
@@ -96,10 +100,13 @@ export function parseLamp(text, want = null) {
         prev = t;
         const wgs = cell("WGS", k);
         const typ = cell("TYP", k);
+        const one = !!(rows.LP1 || rows.CP1);
         hours.push({
           t: iso(t),
           gust: wgs === "NG" ? 0 : lampInt(wgs),
-          tstmProb: lampInt(cell("LP2", k)),
+          tstmProb: lampInt(cell(rows.LP1 ? "LP1" : "LP2", k)),
+          convProb: lampInt(cell(rows.CP1 ? "CP1" : "CP2", k)),
+          probHrs: one ? 1 : rows.LP2 || rows.CP2 ? 2 : null,
           cig: lampInt(cell("CIG", k)),
           vis: lampInt(cell("VIS", k)),
           typ: /^[A-Z]$/.test(typ) ? typ : null,
@@ -369,22 +376,25 @@ function ringFromCoords(coords) {
   return ring.length >= 3 ? ring : null;
 }
 
-/** Does a feature / record (GeoJSON geometry, or coords as [{lat,lon}] or [[lon,lat]]) contain the point? */
+/**
+ * Does a feature / record (GeoJSON geometry, or coords as [{lat,lon}] or [[lon,lat]]) contain the point?
+ * Inside, on the edge, or within NEAR_NM (10 NM) of it counts, as for SIGMETs.
+ */
 export function shapeContains(lon, lat, item) {
   if (!item || typeof item !== "object") return false;
   const g = item.geometry || (item.type && item.coordinates ? item : null);
   if (g) {
-    if (g.type === "Polygon" || g.type === "MultiPolygon") return pointInGeometry(lon, lat, g);
+    if (g.type === "Polygon" || g.type === "MultiPolygon") return pointNearGeometry(lon, lat, g);
     return false;
   }
   const p = item.properties || item;
   const coords = p.coords || p.coordinates || item.coords;
   if (Array.isArray(coords) && coords.length && Array.isArray(coords[0]) && Array.isArray(coords[0][0])) {
     const ring = ringFromCoords(coords[0]);
-    return !!ring && pointInRing(lon, lat, ring);
+    return !!ring && pointNearRing(lon, lat, ring);
   }
   const ring = ringFromCoords(coords);
-  return !!ring && pointInRing(lon, lat, ring);
+  return !!ring && pointNearRing(lon, lat, ring);
 }
 
 function features(data) {
@@ -413,6 +423,13 @@ function scalars(p, max = 12) {
 
 // ---------- AWC TFM Convective Forecast ----------
 
+/** AWC TCF times are "YYYYMMDD_HHMM" (UTC), e.g. "20261004_0100"; ISO strings and epochs also accepted. */
+export function awcTime(v) {
+  const m = /^(\d{4})(\d{2})(\d{2})_?(\d{2})(\d{2})Z?$/.exec(String(v ?? "").trim());
+  if (m) return Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]));
+  return toMs(v);
+}
+
 /** high | medium | low | null from a TCF coverage value ("High", "MED", 40, ...). */
 export function tcfCoverage(v) {
   if (v == null || v === "") return null;
@@ -428,7 +445,11 @@ export function tcfCoverage(v) {
   return null;
 }
 
-/** TCF areas containing the point, not yet expired: [{valid, coverage, confidence, tops, props}]. */
+/**
+ * TCF areas containing the point, not yet expired: [{valid, coverage, confidence, tops, props}].
+ * Live AWC GeoJSON (Oct 2026): properties {validTime: "20261004_0100", issueTime: "20261003_2100",
+ * coverage: "sparse", confidence: "high", tops: "390" | ">400", labelpos: [lon, lat], data: "tcf"}.
+ */
 export function tcfAt(lon, lat, data, now = new Date()) {
   const out = [];
   for (const f of features(data)) {
@@ -436,7 +457,7 @@ export function tcfAt(lon, lat, data, now = new Date()) {
       if (!shapeContains(lon, lat, f)) continue;
       const p = f.properties || f;
       const validRaw = pickProp(p, ["validTime", "valid", "validTimeTo", "validTimeFrom", "fcstTime", "time"], /valid/i);
-      const validMs = toMs(validRaw);
+      const validMs = awcTime(validRaw);
       if (validMs != null && validMs < +now - HOUR) continue;
       const covRaw = pickProp(p, ["coverage", "cvg", "cov", "Coverage"], /cov|cvg/i);
       out.push({

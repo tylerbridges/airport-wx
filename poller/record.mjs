@@ -27,11 +27,22 @@ objects are left out, and timestamps are ISO 8601 shortened ("2026-10-03T22:00Z"
      airports: {IATA: {
        metar?: {obsTime, raw, fltCat, visib, ceiling, wx, wspd, wgst},
        faa?: [{type: ground_stop|ground_delay|delay|closure, cause, reason, detail, scope?, active?}],
-       atcscc?: [{id, type: GS|GDP|AFP|other, issued, cause, causeText, title, active, cnx, start, end}]}}}
+       atcscc?: [{id, type: GS|GDP|AFP|other, issued, cause, causeText, title, active, cnx, start, end}],
+       opsplan?: {staffing?, constraints?, programs?, sirs?, notes?}}},
+     opsplan?: {plan: {advisory, issued, eventTime, eventText, validEnd}, remarks, staffing, enroute: {constraints, active, planned},
+                cdrs, launches, afp: {active, planned}, sirs}}
 
 - \`metar\` is left out when its obsTime equals the last one recorded for that airport (no new report).
 - \`faa\` is the FAA NAS status program state at that poll; no \`faa\` key = no programs (unless "faa" is in \`down\`).
 - \`atcscc\` lists advisories that are active, or were issued since the previous line.
+- \`opsplan\` (top level: national items; per airport: that airport's items) is the FAA Command Center operations
+  plan (the DCC "OPERATIONS PLAN" advisory on fly.faa.gov/adv/advADB.jsp). It is written only on the first line
+  with a new plan (advisory number or issue time changed); expired items are left out. Per airport:
+  staffing [{kind, facility, detail, until, cause, raw}], constraints [{codes, reason, cause, raw}],
+  programs [{codes, program: GS|GDP|GS/GDP, status: active|possible, text, until, raw}],
+  sirs [{facility, item, status: closed|limited|out of service|construction|maintenance|other, what, runways, until, cause, raw}],
+  notes [{text, airports, continuing, raw}] (narrative sentences about delays/deviations naming the airport).
+  Nationally: staffing/sirs naming no airport (center areas), en route items, CDRS/SWAP, launches, AFPs.
 - \`cause\` classes: weather, volume, equipment, staffing, runway, security, airline, vip, space, other, unknown.
 - Closures carry \`scope\`: full (airport closed), runway (some runways), limited (closed only to some users, e.g. GA).
 
@@ -45,14 +56,15 @@ objects are left out, and timestamps are ISO 8601 shortened ("2026-10-03T22:00Z"
 
 - Written by the first poll of each UTC hour. \`hours\` are the site's rule-based risk levels
   (0 None … 4 Severe) for the 24 hours from issuedHour; \`reasons\` are the texts shown on the site.
-- LAMP: gust in kt (0 = "NG", no gust), tstmProb = LP2 (2-h thunder probability ending at t, every other hour),
+- LAMP: gust in kt (0 = "NG", no gust), tstmProb = LP1 (1-h lightning probability for the hour ending at t;
+  LP2 2-h when only that row exists: probHrs says which), convProb = CP1 (1-h convection probability),
   cig category 1–8 (1 <200 ft … 8 >12,000 ft/unlimited), vis category 1–7 (1 <1/2 mi … 7 >6 mi), typ R/S/Z,
   pFrz = POZ %, pPrecip = PPO %.
 
 ## raw/latest/ — format check
 
 The first 200 KB of each source's latest successful raw response (metar.json, taf.json, airsigmet.json, faa.xml,
-nws.json = one point's alerts, spc.geojson, lamp.txt + lamp-airports.txt, atcscc.html + atcscc-detail.html,
+nws.json = one point's alerts, spc.geojson, lamp.txt + lamp-airports.txt, atcscc.html (+ atcscc-detail.html if links were followed),
 tcf.json, cwa.json), overwritten every poll. \`sources.json\` has, per source: ok, error, http status, bytes,
 url, files and fileAt (when the files were captured; a source that failed keeps its previous files).
 `;
@@ -97,19 +109,23 @@ const secs = (s) => {
   return Number.isFinite(t) ? Math.floor(t / 1000) : null;
 };
 
-/** From truth lines (oldest first): previous t and the last recorded METAR obsTime per airport. */
+const planKey = (op) => (op?.plan ? `${op.plan.advisory}|${shortIso(op.plan.issued || "")}` : null);
+
+/** From truth lines (oldest first): previous t, the last recorded METAR obsTime per airport, the last ops plan key. */
 export function truthState(lines) {
   const lastObs = {};
   let t = null;
+  let lastPlan = null;
   for (let i = lines.length - 1; i >= 0; i--) {
     let j;
     try { j = JSON.parse(lines[i]); } catch { continue; }
     if (t == null && j.t) t = j.t;
+    if (lastPlan == null && j.opsplan?.plan) lastPlan = planKey(j.opsplan);
     for (const [iata, a] of Object.entries(j.airports || {})) {
       if (a?.metar?.obsTime && !(iata in lastObs)) lastObs[iata] = secs(a.metar.obsTime);
     }
   }
-  return { t, lastObs };
+  return { t, lastObs, lastPlan };
 }
 
 const downOf = (status) => Object.entries(status.sources || {}).filter(([, s]) => !s.ok).map(([n]) => n);
@@ -117,6 +133,7 @@ const downOf = (status) => Object.entries(status.sources || {}).filter(([, s]) =
 /** The truth line for a status.json, given truthState() of what's already recorded. */
 export function truthLine(status, prev = { t: null, lastObs: {} }) {
   const prevT = prev.t ? Date.parse(prev.t) : null;
+  const newPlan = !!status.opsplan?.plan && planKey(status.opsplan) !== prev.lastPlan;
   const airports = {};
   for (const a of status.airports || []) {
     const o = {};
@@ -128,10 +145,14 @@ export function truthLine(status, prev = { t: null, lastObs: {} }) {
     o.atcscc = (a.atcscc || [])
       .filter((x) => x.active || prevT == null || (Date.parse(x.issued) || 0) > prevT)
       .map(({ id, type, issued, cause, causeText, title, active, cnx, start, end }) => ({ id, type, issued, cause, causeText, title, active, cnx, start, end }));
+    if (newPlan && a.opsplan) {
+      const { staffing, constraints, programs, sirs, notes } = a.opsplan;
+      o.opsplan = { staffing, constraints, programs, sirs, notes };
+    }
     const c = compact(o);
     if (c) airports[a.iata] = c;
   }
-  return compact({ t: status.generated, down: downOf(status), airports }) || { t: shortIso(status.generated) };
+  return compact({ t: status.generated, down: downOf(status), airports, opsplan: newPlan ? status.opsplan : null }) || { t: shortIso(status.generated) };
 }
 
 export function issuedHourOf(status) {

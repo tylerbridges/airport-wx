@@ -10,6 +10,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseFaaXml, expandTemplate, pool } from "./lib.mjs";
 import { lampCycles, lampUrl, parseLamp, lampBlocks, ATCSCC_URL, collectAtcscc } from "./sources.mjs";
+import { parseOpsPlan, opsPlanNational } from "./opsplan.mjs";
 import { assemble } from "./core.mjs"; // live relay: pure assembly shared with worker/worker.mjs
 import { runGlobal } from "./global.mjs"; // build2a hook: global METAR/TAF shards for searched airports
 
@@ -158,9 +159,15 @@ function liveProviders(airports, now, raw) {
 async function atcsccFrom(html, getText, now, raw) {
   const r = await collectAtcscc(html, getText, { now });
   if (r.firstDetail != null) raw.save("atcscc", "atcscc-detail.html", r.firstDetail, {}, false);
-  raw.note("atcscc", { links: r.links, followed: r.followed, failed: r.failed, parsed: r.list.length });
+  // The page is "The Most Recent ATCSCC Advisory": usually the DCC operations plan.
+  let plan = null;
+  try { plan = parseOpsPlan(html); } catch { /* not a plan */ }
+  raw.note("atcscc", {
+    links: r.links, followed: r.followed, failed: r.failed, parsed: r.list.length,
+    opsplan: plan ? { advisory: plan.advisory, issued: plan.issued, staffing: plan.staffing.length, constraints: plan.constraints.length, programs: plan.programs.length, sirs: plan.sirs.length, launches: plan.launches.length } : null,
+  });
   if (r.followed && r.failed === r.followed && !r.list.length) throw new Error(`all ${r.failed} advisory pages failed: ${r.firstError}`);
-  return { list: r.list, partial: r.failed ? `${r.failed} of ${r.followed} advisory pages failed: ${r.firstError}` : null };
+  return { list: r.list, plan, partial: r.failed ? `${r.failed} of ${r.followed} advisory pages failed: ${r.firstError}` : null };
 }
 
 function fixtureProviders(airports, now, raw) {
@@ -247,7 +254,9 @@ export async function run({ fixtures = false, out = join(ROOT, "site/data/status
       metars: res.metar.data, tafs: res.taf.data, sigmets: res.sigmet.data,
       faaParsed, spc: res.spc.data, nws: res.nws.data?.map ?? null,
       lamp: res.lamp.data, atcscc: res.atcscc.data?.list ?? null, tcf: res.tcf.data, cwa: res.cwa.data,
+      plan: res.atcscc.data?.plan ?? null,
     }),
+    opsplan: opsPlanNational(res.atcscc.data?.plan ?? null, now),
   };
   await mkdir(dirname(out), { recursive: true });
   await writeFile(out, JSON.stringify(status) + "\n");

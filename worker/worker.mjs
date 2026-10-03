@@ -243,8 +243,9 @@ export function overlay({ now = new Date(), majors = [], others = [], build = nu
     let nwsFallback = 0;
     const over = (a) => {
       const b = buildBy.get(a.iata);
-      const o = { spc: b?.spc ?? null, tcf: b?.tcf || [], cwa: b?.cwa || [] };
-      if (!faaParsed) o.faa = b?.faa || [];
+      // the build's per-airport ops plan ({...plan items, items}) stands in for opsPlanFor(plan)
+      const o = { spc: b?.spc ?? null, tcf: b?.tcf || [], cwa: b?.cwa || [], opsplan: b?.opsplan ?? null };
+      if (!faaParsed) o.faa = (b?.faa || []).map((f) => ({ ...f })); // copies: assemble may add an ops-plan end
       if (!ok("sigmet")) o.sigmets = b?.sigmets || [];
       if (!nwsMap[a.iata]) { o.alerts = b?.alerts || []; nwsFallback++; }
       return o;

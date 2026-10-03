@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { expandTemplate } from "./lib.mjs";
 import {
-  lampCycles, lampUrl, parseLamp, lampBlocks, htmlToText, atcsccLinks, advType, parsePeriod, resolveDdhhmm,
+  awcTime, lampCycles, lampUrl, parseLamp, lampBlocks, htmlToText, atcsccLinks, advType, parsePeriod, resolveDdhhmm,
   parseAdvisory, inlineAdvisories, finalizeAtcscc, collectAtcscc, shapeContains, tcfCoverage, tcfAt, cwaAt,
 } from "./sources.mjs";
 
@@ -55,6 +59,47 @@ test("LAMP: columns aligned on the UTC row, sparse LP2, NG gusts, merged 100s, d
   assert.deepEqual(s.hours.map((h) => h.pFrz), [0, 0, 10, 20, 30, 40]);
   assert.equal(parseLamp(text).stations.KABE.hours[1].tstmProb, 99);
   assert.ok(lampBlocks(text, new Set(["KABE"])).startsWith(" KABE"));
+});
+
+// The real bulletin's 32 airport blocks (+1 other) captured 2026-10-03 (2130Z cycle); expands to the original at this time.
+const LAMP_CAPTURED = new Date("2026-10-03T22:17:00Z");
+const realLamp = async () => expandTemplate(await readFile(join(dirname(fileURLToPath(import.meta.url)), "fixtures/lamp.txt"), "utf8"), LAMP_CAPTURED);
+
+test("LAMP (real bulletin): LP1 -> tstmProb, CP1 -> convProb, hourly; P06 alignment; no-probability blocks", async () => {
+  const text = await realLamp();
+  assert.match(text, /^ KMSP {3}GFS LAMP GUIDANCE {2}10\/03\/2026 {2}2130 UTC/m);
+  assert.match(text, /^ LP1 {3}0 {2}2 {2}0 {2}0 {2}0 {2}1/m);
+  const all = parseLamp(text);
+  assert.equal(all.blocks, 33);
+  const r = parseLamp(text, new Set(["KMSP", "PHNL", "KIAH", "KCLT"]));
+  assert.deepEqual(Object.keys(r.stations).sort(), ["KCLT", "KIAH", "KMSP", "PHNL"]);
+  const msp = r.stations.KMSP;
+  assert.equal(msp.issued, "2026-10-03T21:30:00.000Z");
+  assert.equal(msp.hours.length, 25);
+  assert.equal(msp.hours[0].t, "2026-10-03T22:00:00.000Z");
+  assert.equal(msp.hours[24].t, "2026-10-04T22:00:00.000Z");
+  assert.deepEqual(msp.hours.slice(0, 8).map((h) => h.tstmProb), [0, 2, 0, 0, 0, 1, 0, 0]);
+  assert.deepEqual(msp.hours.slice(0, 6).map((h) => h.convProb), [21, 14, 20, 0, 0, 1]);
+  assert.ok(msp.hours.every((h) => h.tstmProb != null && h.convProb != null && h.probHrs === 1));
+  assert.deepEqual(msp.hours.slice(0, 5).map((h) => h.pPrecip), [13, 38, 38, 33, 8]);
+  assert.deepEqual(msp.hours.slice(20, 25).map((h) => h.gust), [0, 0, 0, 19, 0]);
+  assert.deepEqual(msp.hours.slice(0, 5).map((h) => h.cig), [7, 7, 6, 6, 7]);
+  const iah = r.stations.KIAH.hours;
+  assert.equal(Math.max(...iah.map((h) => h.tstmProb)), 22);
+  assert.equal(Math.max(...iah.map((h) => h.convProb)), 51);
+  // Hawaii: no P01/LP1/CP1 rows at all
+  const hnl = r.stations.PHNL;
+  assert.equal(hnl.hours.length, 25);
+  assert.ok(hnl.hours.every((h) => h.tstmProb === null && h.convProb === null && h.probHrs === null));
+  assert.deepEqual(hnl.hours.slice(0, 6).map((h) => h.gust), [20, 19, 19, 20, 20, 0]);
+});
+
+test("LAMP: LP2/CP2 used only when LP1/CP1 are missing", () => {
+  const utc = hrs(22, 4);
+  const both = parseLamp(block("KXXX", "10/03/2026  2130", utc, { LP1: [5, 6, 7, 8], LP2: [null, 90, null, 90], CP1: [50, 0, 0, 0] })).stations.KXXX.hours;
+  assert.deepEqual(both.map((h) => [h.tstmProb, h.convProb, h.probHrs]), [[5, 50, 1], [6, 0, 1], [7, 0, 1], [8, 0, 1]]);
+  const old = parseLamp(block("KXXX", "10/03/2026  2130", utc, { LP2: [null, 30, null, 45], CP2: [null, 60, null, 10] })).stations.KXXX.hours;
+  assert.deepEqual(old.map((h) => [h.tstmProb, h.convProb, h.probHrs]), [[null, null, 2], [30, 60, 2], [null, null, 2], [45, 10, 2]]);
 });
 
 test("LAMP: 2330 cycle starts on the next day; missing rows give nulls", () => {
@@ -222,6 +267,29 @@ test("TCF: point in polygon, tolerant property names, expired dropped, empty ok"
   assert.deepEqual(tcfAt(-95, 30, { features: [] }, NOW), []);
   assert.deepEqual(tcfAt(-95, 30, [], NOW), []);
   assert.deepEqual(tcfAt(-95, 30, "garbage", NOW), []);
+});
+
+test("TCF (real AWC format): YYYYMMDD_HHMM times, sparse coverage", () => {
+  assert.equal(awcTime("20261004_0100"), Date.parse("2026-10-04T01:00:00Z"));
+  assert.equal(awcTime("2026-10-04T01:00:00Z"), Date.parse("2026-10-04T01:00:00Z"));
+  assert.equal(awcTime(null), null);
+  // a feature exactly as served on 2026-10-03 (issued 2100Z), around Houston
+  const fc = { type: "FeatureCollection", validTimes: ["20261004_0100"], issueTime: "20261003_2100", canTimes: [], features: [
+    { type: "Feature", properties: { validTime: "20261004_0100", issueTime: "20261003_2100", coverage: "sparse", confidence: "high", tops: "390", labelpos: [-98.6, 30.1], data: "tcf" },
+      geometry: { type: "Polygon", coordinates: [[[-96.7, 30.3], [-96.2, 30.6], [-95.1, 30.8], [-93.9, 31.4], [-92.3, 31.6], [-91.7, 31.3], [-91.8, 30.9], [-92.7, 31], [-93.5, 30.8], [-94.1, 30], [-94.8, 29.2], [-95.8, 28.9], [-97, 29.2], [-96.9, 29.7], [-96.7, 30.3]]] } },
+  ] };
+  const out = tcfAt(-95.34, 29.98, fc, new Date("2026-10-03T22:17:00Z")); // IAH
+  assert.deepEqual(out.map((x) => [x.valid, x.coverage, x.coverageRaw, x.confidence, x.tops]), [["2026-10-04T01:00:00.000Z", "low", "sparse", "high", "390"]]);
+  assert.equal(out[0].props.labelpos, undefined);
+});
+
+test("CWA (real AWC format): string coords, epoch-second times, rawText", () => {
+  const rec = { cwsu: "ZJX", name: "Jacksonville", receiptTime: "2026-10-03T22:07:20.864Z", validTimeFrom: 1791065220, validTimeTo: 1791072420, seriesId: "502", hazard: "TS", qualifier: "EMBD", base: null, top: 38000, geom: null,
+    coords: [{ lat: "34.641", lon: "-80.160" }, { lat: "33.200", lon: "-77.287" }, { lat: "31.328", lon: "-81.110" }, { lat: "31.892", lon: "-82.926" }, { lat: "34.641", lon: "-80.160" }],
+    rawText: "FAUS25 KZJX 032207\nZJX5 CWA 032207 \nZJX CWA 502 VALID UNTIL 040007" };
+  const out = cwaAt(-81.2, 32.13, [rec], new Date("2026-10-03T22:17:00Z")); // Savannah, inside
+  assert.deepEqual(out, [{ hazard: "TS", validFrom: "2026-10-03T22:07:00.000Z", validTo: "2026-10-04T00:07:00.000Z", raw: rec.rawText }]);
+  assert.deepEqual(cwaAt(-80.94, 35.21, [rec], new Date("2026-10-03T22:17:00Z")), []); // CLT, outside
 });
 
 test("CWA: AWC JSON with coords, GeoJSON features, expired dropped", () => {
