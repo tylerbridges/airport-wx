@@ -179,7 +179,11 @@ pre.raw { margin: 0; font: 12.5px/1.45 var(--mono); white-space: pre-wrap; overf
 .item { padding: 8px 0; font-size: 14px; }
 .item + .item { border-top: 1px solid var(--line); }
 .item b { font-weight: 700; }
-.hourinfo { margin-top: 10px; font-size: 14px; min-height: 40px; }
+.hourbox h4 { margin: 0 0 6px; display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 700; }
+.hb-lvl { display: flex; align-items: center; gap: 10px; margin: 2px 0 8px; }
+.hb-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.backnow { min-height: 44px; padding: 0 14px; border-radius: 999px; background: var(--card); color: var(--text); font: inherit; font-size: 14px; font-weight: 600; border: 0; flex: none; }
+.hourbox .reasons { font-size: 15px; }
 .box.one h4 { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--muted); }
 .box.one h4 + .reasons { margin-top: 8px; }
 .small { font-size: 12.5px; margin-top: 2px; }
@@ -240,7 +244,7 @@ details.pilot .pd { padding-top: 4px; }
   <div class="backdrop" id="backdrop"></div>
   <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle"></div>
 </div>
-<script src="app.js?v=6" defer></script>
+<script src="app.js?v=7" defer></script>
 <script type="module" src="searched.js?v=4"></script><!-- build2a hook -->
 </body>
 </html>

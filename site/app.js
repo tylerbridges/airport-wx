@@ -755,36 +755,53 @@
     const tz = a.tz;
     const t0 = Date.parse(a.hours[0].t);
     const fav = state.favs.includes(a.iata);
-    const hourInfo = h("div", { class: "hourinfo muted", "aria-live": "polite" }, "Tap a bar for that hour.");
-
-    const showHour = (i, btn) => {
-      sheetPick = i;
-      sheet.querySelectorAll(".tl.big .s").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
-      const hr = a.hours[i];
-      const th = lampThunderAt(a, Date.parse(hr.t));
-      hourInfo.className = "hourinfo";
-      const rs = plainList(hr.reasons, a);
-      hourInfo.replaceChildren(...[
-        h("b", {}, hourLabel(Date.parse(hr.t), tz) + " "), pill(hr.level, true),
-        th != null ? h("span", { class: "muted" }, ` · Thunder chance ${th}%`) : null,
-        h("div", { class: "muted", style: "margin-top:4px" }, rs.length ? rs.join(" · ") : hr.level ? "Minor weather conditions" : "No significant weather"),
-      ].filter(Boolean));
-    };
-
+    // Now + Peak side by side; picking an hour swaps them for one full-width hour card.
+    const boxWrap = h("div", { class: "boxwrap", "aria-live": "polite" });
     const reasonsList = (arr, level) => {
       const rs = plainList(arr, a);
       return rs.length ? h("ul", { class: "reasons" }, rs.map((r) => h("li", {}, r)))
         : h("div", { class: "muted", style: "font-size:14px" }, level ? "Minor weather conditions" : "No significant weather");
     };
-
-    // One box while the level holds; a separate Peak box only when the peak is later and higher.
-    const boxes = laterPeak(a)
-      ? h("div", { class: "two" },
-          h("div", { class: "box" }, h("h4", {}, "Now ", pill(a.now.level, true)), reasonsList(a.now.reasons, a.now.level)),
-          h("div", { class: "box" }, h("h4", {}, "Peak " + peakRange(a) + " ", pill(a.peak.level, true)), reasonsList(a.peak.reasons, a.peak.level)))
-      : h("div", { class: "box one" },
-          h("h4", {}, pill(a.now.level, true), h("span", {}, "through " + whenLabel(levelEnd(a), tz))),
-          a.now.reasons.length ? reasonsList(a.now.reasons, a.now.level) : null);
+    const nowBox = () => h("div", { class: "box" },
+      h("h4", {}, "Now ", pill(a.now.level, true)),
+      h("div", { class: "muted small", style: "margin:-2px 0 6px" }, "through " + whenLabel(levelEnd(a), tz)),
+      reasonsList(a.now.reasons, a.now.level));
+    const peakBox = () => {
+      if (laterPeak(a)) {
+        return h("div", { class: "box" }, h("h4", {}, "Peak ", pill(a.peak.level, true)),
+          h("div", { class: "muted small", style: "margin:-2px 0 6px" }, peakRange(a)),
+          reasonsList(a.peak.reasons, a.peak.level));
+      }
+      // The peak is now: say so and what comes after, instead of repeating the Now reasons.
+      const endMs = levelEnd(a);
+      const nxt = a.hours.find((x) => Date.parse(x.t) >= endMs);
+      return h("div", { class: "box" }, h("h4", {}, "Peak ", pill(a.peak.level, true)),
+        h("div", { class: "muted small", style: "margin:-2px 0 6px" }, a.peak.level ? "Now" : "Next 24 hours"),
+        h("div", { style: "font-size:14px" },
+          !a.peak.level ? "Nothing expected"
+            : nxt ? (nxt.level ? "Highest right now. Eases to " + LEVELS[nxt.level].label + " after " : "Highest right now. Clear after ") + whenLabel(endMs, tz)
+            : "Highest right now, through the next 24 hours"));
+    };
+    const showBoxes = () => {
+      sheetPick = null;
+      sheet.querySelectorAll(".tl.big .s").forEach((b) => b.setAttribute("aria-pressed", "false"));
+      boxWrap.replaceChildren(h("div", { class: "two" }, nowBox(), peakBox()));
+    };
+    const showHour = (i, btn) => {
+      if (sheetPick === i && btn && btn.getAttribute("aria-pressed") === "true") { showBoxes(); return; }
+      sheetPick = i;
+      sheet.querySelectorAll(".tl.big .s").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
+      const hr = a.hours[i];
+      const th = lampThunderAt(a, Date.parse(hr.t));
+      boxWrap.replaceChildren(h("div", { class: "box hourbox" },
+        h("div", { class: "hb-top" },
+          h("h4", {}, h("span", { class: "hb-time" }, cap(whenLabel(Date.parse(hr.t), tz)))),
+          h("button", { type: "button", class: "backnow", onclick: showBoxes, "aria-label": "Back to now and peak" }, "Back to now")),
+        h("div", { class: "hb-lvl" }, pill(hr.level, true),
+          th != null && th > 0 ? h("span", { class: "muted small" }, `Thunder chance ${th}%`) : null),
+        reasonsList(hr.reasons, hr.level)));
+    };
+    showBoxes();
 
     const secs = [];
     const add = (cond, fn) => { if (cond) secs.push(fn()); };
@@ -816,8 +833,9 @@
           h("button", { type: "button", class: "close", "aria-label": "Close", onclick: closeSheet }, closeSvg()))),
       h("div", { class: "aname sh-aname" }, a.name),
       h("div", { class: "where sh-where" }, `${a.city}, ${a.state}`),
-      boxes,
-      section("Next 24 hours (" + tzAbbr(t0, tz) + ")", timeline(a, true, showHour), hourInfo),
+      boxWrap,
+      section("Next 24 hours (" + tzAbbr(t0, tz) + ")", timeline(a, true, showHour),
+        h("div", { class: "muted small", style: "margin-top:8px" }, "Tap an hour for details. Tap it again to go back.")),
       ...secs,
       checkedLine()
     );
