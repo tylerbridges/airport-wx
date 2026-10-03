@@ -233,6 +233,7 @@ details.pilot .pd { padding-top: 4px; }
   <div id="search"></div><!-- build2a hook: search (site/searched.js) -->
   <div class="seg" id="seg" role="tablist" aria-label="Filter airports"></div>
   <div id="banner"></div>
+  <section id="trips" aria-label="Your trips"></section><!-- trips hook: "Your trips" (site/trips.js) -->
   <div class="list" id="extra"></div><!-- build2a hook: searched / starred non-major airports -->
   <main class="list" id="list" role="tabpanel"></main>
   <div class="notes" id="notes"></div>
@@ -244,7 +245,8 @@ details.pilot .pd { padding-top: 4px; }
   <div class="backdrop" id="backdrop"></div>
   <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle"></div>
 </div>
-<script src="app.js?v=7" defer></script>
+<script src="app.js?v=8" defer></script>
 <script type="module" src="searched.js?v=4"></script><!-- build2a hook -->
+<script type="module" src="trips.js?v=1"></script><!-- trips hook -->
 </body>
 </html>

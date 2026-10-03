@@ -1,0 +1,11 @@
+{
+  "title": "Trip: tight connection at ORD (MSP→ORD→BZN)",
+  "description": "A calendar trip MSP→ORD→BZN with a 45-minute connection at ORD while ORD has a chance of thunderstorms (Moderate). BZN is not a major airport: it joins the full pipeline because it is on the trip.",
+  "assert": [
+    { "t": "level", "iata": "ORD", "of": "peak", "op": ">=", "v": 2 },
+    { "t": "tripAirport", "iata": "BZN" },
+    { "t": "trips", "count": 1, "configured": true },
+    { "t": "trip", "i": 0, "status": "Possible delays", "re": "^Tight connection at ORD: 45 min to make your .+ flight to BZN" },
+    { "t": "rendered", "text": "Tight connection at ORD" }
+  ]
+}

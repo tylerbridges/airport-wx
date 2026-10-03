@@ -4,6 +4,7 @@
 // Writes "CHECK PASS" or "CHECK FAIL n" plus one line per row into <pre id="result"> so headless
 // Chrome (--dump-dom) and the uptime workflow can read it. Warnings don't fail the check.
 import { loadAirports, rank } from "./search.js";
+import { tripChecks } from "./check-trips.js"; // trips hook
 
 const P = new URLSearchParams(location.search);
 const MOCK = P.get("mock") === "1";
@@ -89,7 +90,7 @@ async function checkData(data, ctx) {
   const noMetar = [];
   const noTaf = [];
   const tafUnknown = [];
-  for (const a of aps) {
+  for (const a of aps.filter((x) => !x.trip)) { // trips hook: trip-only airports are checked in the Trips group
     const obs = a.metar && Date.parse(a.metar.obsTime);
     if (!a.metar || !Number.isFinite(obs) || now - obs > METAR_MAX) noMetar.push(a.iata);
     const info = ctx.byIcao.get(a.icao);
@@ -308,6 +309,7 @@ async function runLive() {
   }
   searchChecks(group("Search"), list, error);
   await liveRelay(group("Live relay")); // live relay
+  await tripChecks(group("Trips"), { url: "./data/trips.json", data: st.ok ? st.data : null }); // trips hook
 
   const up = group("Uptime");
   const u = await getJson("./data/uptime.json");
@@ -361,6 +363,7 @@ async function runMock() {
       if (!r) continue;
       add(r.ok ? "pass" : "fail", `Expect: ${r.label}`, [r.ok ? "" : r.got, x.note && !r.ok ? `(${x.note})` : ""].filter(Boolean).join(" "));
     }
+    await tripChecks(add, { url: `./data/scenarios/${sc.name}/trips.json`, data, shift: (d) => shift(d, delta), asserts: sc.assert, mock: true }); // trips hook
     if (RENDER) {
       const expect = (sc.assert || []).filter((x) => x.t === "rendered");
       const r = await renderPage(`./index.html?test=${sc.name}`, expect);
