@@ -15,6 +15,7 @@ import { assemble } from "./core.mjs"; // live relay: pure assembly shared with 
 import { runGlobal } from "./global.mjs"; // build2a hook: global METAR/TAF shards for searched airports
 import { observedHours } from "./risk.mjs"; // build2b hook: observed past hours for the timeline
 import { modelInfo } from "./delay.mjs"; // phase3 hook: delay model
+import { prepareTrips } from "./trips-poll.mjs"; // trips hook: flight calendar -> trips.json + trip airports
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -246,7 +247,8 @@ async function writeRaw(dir, raw, sources) {
 }
 
 export async function run({ fixtures = false, out = join(ROOT, "site/data/status.json"), now = new Date(), rawDir = null } = {}) {
-  const airports = await loadAirports();
+  const trips = await prepareTrips({ fixtures, now }); // trips hook: reads the calendar (env FLIGHTY_ICS_URL), never throws
+  const airports = await trips.addAirports(await loadAirports()); // trips hook: trip airports join the full pipeline for this run
   const raw = makeRaw();
   const p = fixtures ? fixtureProviders(airports, now, raw) : liveProviders(airports, now, raw);
   const names = SOURCE_NAMES;
@@ -287,11 +289,13 @@ export async function run({ fixtures = false, out = join(ROOT, "site/data/status
     for (const m of hist.v || []) if (m && m.icaoId) (by.get(m.icaoId) || by.set(m.icaoId, []).get(m.icaoId)).push(m);
     for (const a of status.airports) a.observed = observedHours(by.get(a.icao) || [], now);
   }
+  trips.markAirports(status.airports); // trips hook: airports added for trips carry trip: true
   await mkdir(dirname(out), { recursive: true });
   await writeFile(out, JSON.stringify(status) + "\n");
   if (rawDir) {
     try { await writeRaw(rawDir, raw, status.sources); } catch (e) { console.error("raw samples not written: " + e.message); }
   }
+  await trips.finish({ out, rawDir }); // trips hook: site/data/trips.json (airports and times only) + redacted format sample
   const okCount = names.filter((n) => status.sources[n].ok).length;
   return { status, okCount, total: names.length, out, raw };
 }

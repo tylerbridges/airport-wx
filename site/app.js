@@ -427,6 +427,7 @@
     const ids = [];
     const tz = [];
     const add = (c) => { if (c && ids.length < LIVE_MAX && !ids.includes(c)) ids.push(c); };
+    for (const c of (window.AWXTrips && AWXTrips.liveIds ? AWXTrips.liveIds() : [])) if (majors.has(c)) add(c); // trips hook: trip airports first
     for (const c of state.favs) if (majors.has(c)) add(c);
     const extra = (window.AWXExtra && AWXExtra.liveIds && AWXExtra.liveIds()) || [];
     for (const x of extra) if (ids.length < LIVE_MAX && x.icao && !ids.includes(x.icao)) { add(x.icao); if (x.tz) tz.push(x.icao + ":" + x.tz); }
@@ -575,6 +576,7 @@
     renderNotes();
     if (state.openIata) renderSheet(true);
     if (window.AWXExtra) window.AWXExtra.render(); // build2a hook: search + searched/starred non-major airports (site/searched.js)
+    if (window.AWXTrips) window.AWXTrips.render(); // trips hook: "Your trips" (site/trips.js)
     if (panel.kind === "national") renderNationalPanel();
   }
 
@@ -593,8 +595,10 @@
   }
 
   /** My airports in the favourites' order; All / At risk sorted by level under the current settings. */
+  /** Airports for the lists and counts: trip-only airports stay off unless starred (trips hook). */
+  const listed = () => ((state.data && state.data.airports) || []).filter((a) => !a.trip || state.favs.includes(a.iata));
   function visibleAirports() {
-    const all = (state.data && state.data.airports) || [];
+    const all = listed();
     if (state.filter === "mine") {
       const by = new Map(all.map((a) => [a.iata, a]));
       return state.favs.map((c) => by.get(c)).filter(Boolean);
@@ -605,7 +609,7 @@
   }
 
   function renderSeg() {
-    const all = (state.data && state.data.airports) || [];
+    const all = listed(); // trips hook
     const counts = {
       mine: all.filter((a) => state.favs.includes(a.iata)).length,
       all: all.length,
@@ -1246,7 +1250,7 @@
     const d = state.data;
     if (!d) return null;
     const stops = [], closed = [], gdps = [], delays = [], storms = [];
-    for (const a of d.airports) {
+    for (const a of listed()) {
       const v = view(a);
       const has = (t) => (v.faa || []).some((f) => f.type === t && (t !== "closure" || ((f.scope || "full") === "full" && f.active !== false)));
       const advGS = (v.atcscc || []).some((x) => x.type === "GS" && x.active);
@@ -1821,6 +1825,7 @@
         dayBtn.textContent = sheetDay ? "‹ Today" : "Tomorrow ›";
         dayBtn.setAttribute("aria-pressed", String(sheetDay === 1));
         tlTitle.textContent = sheetDay ? "Tomorrow" : "Today";
+        if (window.AWXTrips) window.AWXTrips.decorateSheet(sheet, a); // trips hook: plane markers on the shown day
         requestAnimationFrame(placeLenses);
       } }, sheetDay ? "‹ Today" : "Tomorrow ›");
     const tlTitle = h("span", {}, sheetDay ? "Tomorrow" : "Today");
@@ -1888,6 +1893,7 @@
       hiddenNote,
       checkedLine(),
     ].filter(Boolean));
+    if (window.AWXTrips) window.AWXTrips.decorateSheet(sheet, a); // trips hook: "Your flight" row + plane markers
     if (keepScroll) {
       sheet.scrollTop = top;
       if (sheetPick != null && tlEl && tlEl._tl.slots[sheetPick]) { onPick(sheetPick); tlEl._tl.shown = sheetPick; }

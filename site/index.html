@@ -670,6 +670,7 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
   <div class="seg" id="seg" role="tablist" aria-label="Filter airports"></div>
   <div id="banner"></div>
   <div class="national" id="national" hidden></div><!-- build2b: national summary strip -->
+  <section id="trips" aria-label="Your trips"></section><!-- trips hook: "Your trips" (site/trips.js) -->
   <div class="list" id="extra"></div><!-- build2a hook: searched / starred non-major airports -->
   <main class="list" id="list" role="tabpanel"></main>
   <div class="notes" id="notes"></div>
@@ -689,9 +690,10 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <div class="sr" id="announce" aria-live="polite"></div>
 <script src="cats.js?v=1"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=1"></script><!-- build2b: shared sheet drag / back / scroll lock -->
-<script src="app.js?v=10" defer></script>
+<script src="app.js?v=11" defer></script>
 <script type="module" src="searched.js?v=5"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=1"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
+<script type="module" src="trips.js?v=2"></script><!-- trips hook -->
 <script type="module" src="nav.js?v=3"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
 </body>
 </html>

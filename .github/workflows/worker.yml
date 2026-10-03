@@ -62,6 +62,22 @@ jobs:
           node worker/pack.mjs dist --version "${GITHUB_SHA::7}"
           ls -la dist
 
+      # trips hook: the flight calendar link as a secret binding of the same name, only when the
+      # GitHub secret FLIGHTY_ICS_URL exists (README "Trips"). The value is never printed.
+      - name: Flight calendar binding
+        if: steps.secrets.outputs.ok == 'true'
+        env:
+          FLIGHTY_ICS_URL: ${{ secrets.FLIGHTY_ICS_URL }}
+        run: |
+          set -euo pipefail
+          if [ -n "$FLIGHTY_ICS_URL" ]; then
+            jq --arg v "$FLIGHTY_ICS_URL" '.bindings = ((.bindings // []) + [{"type": "secret_text", "name": "FLIGHTY_ICS_URL", "text": $v}])' \
+              dist/metadata.json > dist/metadata.tmp && mv dist/metadata.tmp dist/metadata.json
+            echo "FLIGHTY_ICS_URL added as a secret_text binding"
+          else
+            echo "FLIGHTY_ICS_URL secret not set; no flight calendar binding"
+          fi
+
       - name: Upload the Worker
         if: steps.secrets.outputs.ok == 'true'
         run: |

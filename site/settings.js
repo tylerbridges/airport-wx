@@ -353,7 +353,7 @@ function tripLabel(t, i) {
 function buildTrips(body, page, opts) {
   const status = valueRow("Status", "Checking…", { "data-id": "calstatus" });
   const steps = h("ol", { class: "awx-steps" },
-    h("li", {}, "In your flight app, turn on calendar sync to a dedicated calendar (only flights go in it)."),
+    h("li", {}, "In Flighty, turn on calendar sync to a dedicated calendar (only flights go in it)."), // trips hook: the user's wording
     h("li", {}, "In Calendar, share that calendar as a public calendar."),
     h("li", {}, "Copy the calendar's public link."),
     h("li", {}, "On GitHub, add the link as a repository secret named ", h("code", {}, "FLIGHTY_ICS_URL"), ". The next update reads it."));
@@ -367,13 +367,17 @@ function buildTrips(body, page, opts) {
     group("Connect your flight calendar", [h("div", { class: "awx-row awx-block" }, steps), linkRow(null, "Open GitHub secrets", SECRETS_URL, true)],
       "The secret stays private on GitHub. Only airports and flight times are published to this site.", { id: "awx-connect" }),
     group("Your trips", [
-      ...trips.map((t, i) => { const l = tripLabel(t, i); return h("div", { class: "awx-row" }, h("span", { class: "awx-ri" }, icon("plane")), h("span", { class: "awx-rt" }, l.title, l.sub ? h("small", {}, l.sub) : null)); }),
+      ...trips.map((t, i) => { const l = tripLabel(t, i); return T && T.openTrip && t.id // trips hook: a manual trip opens its sheet (Edit / Delete)
+        ? navRow("plane", h("span", {}, l.title, l.sub ? h("small", {}, l.sub) : null), null, () => { close(false); T.openTrip(t.id); })
+        : h("div", { class: "awx-row" }, h("span", { class: "awx-ri" }, icon("plane")), h("span", { class: "awx-rt" }, l.title, l.sub ? h("small", {}, l.sub) : null)); }),
       trips.length ? null : h("div", { class: "awx-row awx-off" }, "No trips added on this device"),
       addRow,
     ].filter(Boolean), canAdd ? null : "Adding trips by hand isn't available yet.", { id: "awx-addtrip" }),
   );
   // data/trips.json comes with site/trips.js (Build 4); without it there is nothing to read (and no 404 to log)
-  (T ? getJson("./data/trips.json") : Promise.resolve({ ok: false })).then((r) => {
+  if (T && T.calStatus) { // trips hook: status from site/trips.js (configured, last fetch ok, upcoming flights; scenario-aware)
+    T.ready().then(() => { const cs = T.calStatus(); const v = status.querySelector(".awx-rv"); v.textContent = cs.text; v.classList.toggle("awx-good", !!cs.connected); });
+  } else (T ? getJson("./data/trips.json") : Promise.resolve({ ok: false })).then((r) => {
     const v = status.querySelector(".awx-rv");
     const connected = r.ok && r.data && r.data.connected !== false && !r.data.error;
     v.textContent = connected ? `Connected · ${upcomingFlights(r.data)} upcoming flight${upcomingFlights(r.data) === 1 ? "" : "s"}` : "Not connected";
