@@ -13,6 +13,7 @@ import { lampCycles, lampUrl, parseLamp, lampBlocks, ATCSCC_URL, collectAtcscc }
 import { parseOpsPlan, opsPlanNational } from "./opsplan.mjs";
 import { assemble } from "./core.mjs"; // live relay: pure assembly shared with worker/worker.mjs
 import { runGlobal } from "./global.mjs"; // build2a hook: global METAR/TAF shards for searched airports
+import { modelInfo } from "./delay.mjs"; // phase3 hook: delay model
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -76,6 +77,18 @@ async function runSource(name, fn, raw) {
 
 export async function loadAirports() {
   return JSON.parse(await readFile(join(ROOT, "airports.json"), "utf8"));
+}
+
+/**
+ * phase3: the delay model files (site/data/model, or DELAY_MODEL_DIR): model.json (only once a trained
+ * model passed the safety gate), fallback.json (rule level -> historical rate, climatology) and
+ * analogs/<IATA>.json. Missing files are fine: no model -> fallback; neither -> no `delay` fields.
+ */
+export async function loadDelayModel(airports, dir = process.env.DELAY_MODEL_DIR ? resolve(process.env.DELAY_MODEL_DIR) : join(ROOT, "site/data/model")) {
+  const rd = async (f) => { try { return JSON.parse(await readFile(join(dir, f), "utf8")); } catch { return null; } };
+  const analogs = {};
+  for (const a of airports) { const x = await rd(`analogs/${a.iata}.json`); if (x) analogs[a.iata] = x; }
+  return { model: await rd("model.json"), fallback: await rd("fallback.json"), analogs, icaoOf: Object.fromEntries(airports.map((a) => [a.iata, a.icao])) };
 }
 
 // ---------- input providers (live vs fixtures) ----------
@@ -246,15 +259,18 @@ export async function run({ fixtures = false, out = join(ROOT, "site/data/status
   }
   for (const n of ["nws", "atcscc"]) if (res[n].meta.ok && res[n].data.partial) res[n].meta.error = res[n].data.partial;
 
+  const delay = await loadDelayModel(airports); // phase3 hook
   const status = {
     generated: now.toISOString(),
     sources: Object.fromEntries(names.map((n) => [n, res[n].meta])),
+    delayModel: modelInfo(delay.model, delay.fallback), // phase3 hook
     airports: assemble({
       airports, now,
       metars: res.metar.data, tafs: res.taf.data, sigmets: res.sigmet.data,
       faaParsed, spc: res.spc.data, nws: res.nws.data?.map ?? null,
       lamp: res.lamp.data, atcscc: res.atcscc.data?.list ?? null, tcf: res.tcf.data, cwa: res.cwa.data,
       plan: res.atcscc.data?.plan ?? null,
+      delay, // phase3 hook
     }),
     opsplan: opsPlanNational(res.atcscc.data?.plan ?? null, now),
   };

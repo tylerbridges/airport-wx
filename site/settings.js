@@ -369,7 +369,8 @@ function buildTrips(body, page, opts) {
       addRow,
     ].filter(Boolean), canAdd ? null : "Adding trips by hand isn't available yet.", { id: "awx-addtrip" }),
   );
-  getJson("./data/trips.json").then((r) => {
+  // data/trips.json comes with site/trips.js (Build 4); without it there is nothing to read (and no 404 to log)
+  (T ? getJson("./data/trips.json") : Promise.resolve({ ok: false })).then((r) => {
     const v = status.querySelector(".awx-rv");
     const connected = r.ok && r.data && r.data.connected !== false && !r.data.error;
     v.textContent = connected ? `Connected · ${upcomingFlights(r.data)} upcoming flight${upcomingFlights(r.data) === 1 ? "" : "s"}` : "Not connected";

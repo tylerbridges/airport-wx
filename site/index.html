@@ -436,6 +436,7 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
   <main class="list" id="list" role="tabpanel"></main>
   <div class="notes" id="notes"></div>
   <p class="xfoot"><a href="check.html">Checks</a></p><!-- build2a hook: link to the check page (moves to settings later) -->
+  <p class="xfoot"><a href="accuracy.html">How accurate are the delay chances?</a></p><!-- phase3 hook -->
   <noscript><p class="empty">This page needs JavaScript.</p></noscript>
 </div>
 
@@ -443,8 +444,9 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
   <div class="backdrop" id="backdrop"></div>
   <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle"></div>
 </div>
-<script src="app.js?v=8" defer></script>
+<script src="app.js?v=9" defer></script>
 <script type="module" src="searched.js?v=4"></script><!-- build2a hook -->
+<script type="module" src="delay.js?v=1"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="nav.js?v=1"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
 </body>
 </html>
