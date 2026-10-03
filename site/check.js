@@ -201,6 +201,195 @@ async function renderPage(url, expect = []) {
   return { ready, errors, results, cards };
 }
 
+// ---------- build2b: app UI checks (settings, filters, modes, timeline) ----------
+
+/** Loads url in a hidden 390 px frame, waits for cards, runs fn(win, doc), removes the frame. */
+async function withPage(url, fn) {
+  const holder = document.getElementById("frames");
+  const f = document.createElement("iframe");
+  f.src = url;
+  holder.append(f);
+  const t0 = Date.now();
+  let doc = null;
+  try {
+    while (Date.now() - t0 < 15000) {
+      await sleep(100);
+      try { doc = f.contentDocument; } catch { doc = null; }
+      const list = doc && doc.getElementById("list");
+      if (list && list.querySelector(".card") && f.contentWindow.AWXApp && f.contentWindow.AWXApp.state.loaded) break;
+    }
+    await sleep(300);
+    return await fn(f.contentWindow, doc);
+  } finally {
+    f.remove();
+  }
+}
+const frameSleep = (w, ms) => new Promise((r) => w.setTimeout(r, ms));
+// Aviation codes that must not reach Traveler mode outside Pilot details: flight categories, coded weather groups,
+// TAF change groups, Zulu times, knots, and the report names.
+export const AVIATION_CODES = /\b(VFR|MVFR|IFR|LIFR|METAR|TAF|SIGMET|LAMP|TCF|CWA|TEMPO|PROB[34]0|BECMG|NOSIG|CLSD|(?:FEW|SCT|BKN|OVC)\d{3}|\d{4}Z|\d{3}°?\s?\d+G?\d*\s?kt|kt)\b/;
+
+async function uiChecks(add, scenario) {
+  const KEY = "awx-settings";
+  const saved = localStorage.getItem(KEY);
+  const savedFavs = localStorage.getItem("awx-favs");
+  const url = scenario ? `./index.html?test=${scenario}` : "./index.html";
+  const set = (o) => localStorage.setItem(KEY, JSON.stringify(o));
+  try {
+    // settings persist (written through prefs.js in one page load, read back in the next)
+    set({});
+    await withPage(url, async (w) => { w.AWXPrefs.setPref("mode", "aviation"); w.AWXPrefs.setPref("show", { wind: false }); w.AWXPrefs.setPref("clock", 24); w.AWXPrefs.setPref("timeRef", "mine"); });
+    await withPage(url, async (w) => {
+      const p = w.AWXPrefs.getPrefs();
+      const ok = p.mode === "aviation" && p.show.wind === false && p.show.storms === true && p.clock === 24 && p.timeRef === "mine";
+      add(ok ? "pass" : "fail", "Settings persist across reloads (localStorage awx-settings via prefs.js)", ok ? "mode, show, clock, timeRef" : JSON.stringify(p));
+    });
+
+    // a hidden category never hides a ground stop: every category off
+    set({ show: Object.fromEntries(["storms", "winter", "wind", "fog", "heat", "faa", "atc", "runways", "vip", "space", "tstm"].map((k) => [k, false])) });
+    await withPage(url, async (w, doc) => {
+      const A = w.AWXApp;
+      const gs = A.state.data.airports.filter((a) => (a.faa || []).some((f) => f.type === "ground_stop") || (a.atcscc || []).some((x) => x.type === "GS" && x.active));
+      if (!gs.length) { add("info", "Hidden categories never hide a ground stop", "no ground stop in this data"); return; }
+      const bad = [];
+      for (const a of gs) {
+        const v = A.view(a);
+        if (v.now.level < 4 || !v.now.reasons.some((r) => /^Ground stop/.test(r))) bad.push(`${a.iata} level ${v.now.level}`);
+        A.openSheet(a.iata);
+        await frameSleep(w, 50);
+        const t = doc.getElementById("sheet").innerText;
+        if (!/Ground stop/.test(t)) bad.push(`${a.iata} sheet has no ground stop`);
+        A.closeSheet();
+      }
+      add(bad.length ? "fail" : "pass", "With every disruption type hidden, ground stops still show and still set Severe", bad.join("; ") || gs.map((a) => a.iata).join(", "));
+    });
+
+    // Traveler mode: no aviation codes outside Pilot details (home cards and every sheet)
+    set({ mode: "traveler" });
+    await withPage(url, async (w, doc) => {
+      const A = w.AWXApp;
+      const hits = [];
+      const scan = (text, where) => { const m = AVIATION_CODES.exec(text); if (m) hits.push(`${where}: "${m[0]}" in "${text.slice(Math.max(0, m.index - 30), m.index + 30).replace(/\s+/g, " ")}"`); };
+      A.state.filter = "all";
+      A.render();
+      await frameSleep(w, 50);
+      scan(doc.getElementById("list").innerText, "home");
+      for (const a of A.state.data.airports) {
+        A.openSheet(a.iata);
+        await frameSleep(w, 20);
+        const sh = doc.getElementById("sheet").cloneNode(true);
+        sh.querySelectorAll(".pilot, details:not([open]) > :not(summary), .bx-layer:not(.on)").forEach((e) => e.remove());
+        scan(sh.textContent, a.iata);
+        A.closeSheet();
+      }
+      add(hits.length ? "fail" : "pass", "Traveler mode shows no aviation codes outside Pilot details", hits.slice(0, 4).join("; ") || `home + ${A.state.data.airports.length} sheets`);
+    });
+
+    // Aviation mode shows a flight category
+    set({ mode: "aviation" });
+    await withPage(url, async (w, doc) => {
+      const A = w.AWXApp;
+      const a = A.state.data.airports.find((x) => x.metar && x.metar.fltCat) || A.state.data.airports[0];
+      A.openSheet(a.iata);
+      await frameSleep(w, 50);
+      const fc = [...doc.querySelectorAll("#sheet .boxwrap .fc, #sheet .cw .fc")].map((e) => e.textContent).filter((t) => /^(VFR|MVFR|IFR|LIFR)$/.test(t));
+      const pilotOpen = !!doc.querySelector("#sheet details.pilot[open]");
+      add(fc.length && pilotOpen ? "pass" : "fail", "Aviation mode shows flight categories and opens Pilot details", `${a.iata}: ${fc.slice(0, 3).join(", ") || "none"}; Pilot details ${pilotOpen ? "open" : "closed"}`);
+    });
+
+    // Timeline: local midnight, dimmed past hours, lens on the current hour, no "ET"/"CT", sheet card swap without layout shift
+    set({});
+    await withPage(url, async (w, doc) => {
+      const A = w.AWXApp;
+      const wraps = [...doc.querySelectorAll("#list .tl-wrap")];
+      const notMid = wraps.filter((el) => {
+        const t = Number(el.dataset.start);
+        const p = new Intl.DateTimeFormat("en-US", { timeZone: el.dataset.tz, hour: "numeric", minute: "numeric", hourCycle: "h23" }).formatToParts(t);
+        return Number(p.find((x) => x.type === "hour").value) % 24 !== 0 || Number(p.find((x) => x.type === "minute").value) !== 0 || el.querySelector(".ticks span").textContent !== "12a";
+      });
+      add(wraps.length && !notMid.length ? "pass" : "fail", "Timelines start at local midnight (12a)", `${wraps.length - notMid.length} of ${wraps.length}`);
+      const undim = wraps.filter((el) => {
+        const segs = [...el.querySelectorAll(".tl .s")];
+        const cur = segs.findIndex((s) => s.classList.contains("cur"));
+        // past = every hour before the current one: marked and drawn below full strength (lower than the same level later)
+        return cur < 0 || segs.slice(0, cur).some((s) => {
+          const op = Number(w.getComputedStyle(s).opacity);
+          const twin = segs.slice(cur).find((x) => x.className.replace(/ (cur|tick)/g, "") === s.className.replace(" past", ""));
+          return !s.classList.contains("past") || op >= 1 || (twin && op >= Number(w.getComputedStyle(twin).opacity));
+        });
+      });
+      add(!undim.length ? "pass" : "fail", "Past hours are dimmed", undim.length ? `${undim.length} timelines with undimmed past hours` : "all past hours dimmed");
+      const off = wraps.map((el) => {
+        const cur = el.querySelector(".tl .s.cur"), lens = el.querySelector(".lens");
+        if (!cur || !lens || lens.hidden) return 99;
+        const a = cur.getBoundingClientRect(), b = lens.getBoundingClientRect();
+        return Math.abs(a.left + a.width / 2 - (b.left + b.width / 2));
+      });
+      add(off.length && Math.max(...off) <= 1.5 ? "pass" : "fail", "The lens is centred on the current hour", `max offset ${Math.max(...off).toFixed(2)} px`);
+      const tzText = wraps.filter((el) => /\b(ET|CT|MT|PT|AKT|HT)\b/.test(el.querySelector(".ticks").textContent));
+      add(!tzText.length ? "pass" : "fail", "No ET/CT-style zone label in the timeline", tzText.length ? `${tzText.length} timelines` : "none");
+      // sheet: tapping an hour (keyboard) and Back to now leave the next section unchanged
+      const a = A.state.data.airports[0];
+      A.openSheet(a.iata);
+      await frameSleep(w, 450);
+      const sheetEl = doc.getElementById("sheet");
+      const rect = () => { const n = doc.querySelector("#sheet .boxwrap").nextElementSibling; return `${n.offsetTop},${n.offsetHeight},${sheetEl.scrollTop}`; };
+      const bar = doc.querySelector("#sheet .bigwrap");
+      bar.focus({ preventScroll: true });
+      const r0 = rect();
+      const shifts = [];
+      for (let i = 0; i < 6; i++) {
+        bar.dispatchEvent(new w.KeyboardEvent("keydown", { key: i < 3 ? "ArrowRight" : "ArrowLeft", bubbles: true }));
+        await frameSleep(w, 30);
+        if (rect() !== r0) shifts.push(rect());
+      }
+      const shown = doc.querySelector("#sheet .bx-layer.on").dataset.layer !== "rest";
+      const back = doc.querySelector("#sheet .bx-layer.on .backnow");
+      if (back) back.click();
+      await frameSleep(w, 30);
+      if (rect() !== r0) shifts.push("after Back to now " + rect());
+      add(shown && !shifts.length ? "pass" : "fail", "Picking hours and Back to now don't move the section below the card (0 px)", shifts.join("; ") || `${r0} unchanged`);
+      // the three rest layouts: split (later, higher peak), single (now is the peak), clear
+      const counts = { split: 0, single: 0, clear: 0 };
+      const wrong = [];
+      for (const x of A.state.data.airports) {
+        A.openSheet(x.iata);
+        await frameSleep(w, 10);
+        const v = A.view(x);
+        const want = w.AWXCats.restLayout(v.now.level, v.peak.level, v.peak.level > v.now.level && v.peak.at !== v.hours[0].t);
+        const rest = doc.querySelector('#sheet .bx-layer[data-layer="rest"]');
+        const got = rest.querySelector(".two") ? "split" : /^Clear through/.test(rest.querySelector(".sc-when").textContent) ? "clear" : "single";
+        counts[got]++;
+        if (got !== want) wrong.push(`${x.iata} ${got} (want ${want})`);
+      }
+      A.closeSheet();
+      add(wrong.length ? "fail" : "pass", "Sheet shows Now | Peak, one Now · Peak card, or a Clear card as the levels say", wrong.join("; ") || `split ${counts.split}, single ${counts.single}, clear ${counts.clear}`);
+    });
+
+    // switching the Times setting changes the labels
+    await withPage(url, async (w, doc) => {
+      const A = w.AWXApp;
+      const mine = w.Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const off = (tz) => new Date().toLocaleString("en-US", { timeZone: tz, hour: "numeric", hour12: false });
+      const a = A.state.data.airports.find((x) => off(x.tz) !== off(mine));
+      if (!a) { add("info", "Times setting changes the labels", "every airport is in this device's zone"); return; }
+      const read = () => { A.openSheet(a.iata); const t = doc.querySelector("#sheet .sh-where").textContent + " | " + doc.querySelector("#sheet .bigwrap").dataset.start + " | " + doc.querySelector('#sheet .bx-layer[data-layer="rest"] .sc-when').textContent; A.closeSheet(); return t; };
+      const before = read();
+      w.AWXPrefs.setPref("timeRef", "mine");
+      await frameSleep(w, 50);
+      const after = read();
+      w.AWXPrefs.setPref("timeRef", "airport");
+      const ok = before !== after && /Times in /.test(after);
+      add(ok ? "pass" : "fail", "Switching Times to My time zone changes the timeline and labels", `${a.iata}: ${before} → ${after}`);
+    });
+  } catch (e) {
+    add("fail", "App UI checks ran", String((e && e.stack) || e));
+  } finally {
+    if (saved == null) localStorage.removeItem(KEY); else localStorage.setItem(KEY, saved);
+    if (savedFavs == null) localStorage.removeItem("awx-favs"); else localStorage.setItem("awx-favs", savedFavs);
+  }
+}
+
 // ---------- scenario assertions ----------
 
 function evalAssert(x, data, checks, shards) {
@@ -327,11 +516,13 @@ async function runLive() {
       const r = await renderPage(url);
       rr(r.ready && !r.errors.length ? "pass" : "fail", `Render ${label}`, !r.ready ? "cards never appeared" : r.errors.length ? r.errors.join(" | ") : `${r.cards} cards, no errors`);
     }
+    await uiChecks(group("App: settings, modes, timeline (390 px, hidden frame)"), null); // build2b
   }
 }
 
 async function runMock() {
   const now = Date.now();
+  if (RENDER) await uiChecks(group("App: settings, modes, timeline (thunderstorm-ground-stop, 390 px)"), "thunderstorm-ground-stop"); // build2b
   const idx = await getJson("./data/scenarios/index.json");
   const { list, byIcao, error } = await airportList();
   searchChecks(group("Search"), list, error);
