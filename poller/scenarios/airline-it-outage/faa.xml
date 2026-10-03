@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AIRPORT_STATUS_INFORMATION>
+  <Update_Time>{{iso+0}}</Update_Time>
+  <Dtd_File>http://www.fly.faa.gov/AirportStatus.dtd</Dtd_File>
+  <Delay_type>
+    <Name>Ground Stop Programs</Name>
+    <Ground_Stop_List>
+      <Program>
+        <ARPT>ATL</ARPT>
+        <Reason>COMPANY REQUEST / IT OUTAGE</Reason>
+        <End_Time>{{clock+90 America/New_York}}</End_Time>
+      </Program>
+    </Ground_Stop_List>
+  </Delay_type>
+</AIRPORT_STATUS_INFORMATION>

@@ -172,7 +172,7 @@
     try {
       let data, sample = false;
       try {
-        data = await getJson("./data/status.json");
+        data = window.AWXTest && AWXTest.name ? AWXTest.rebase(await getJson(AWXTest.url)) : await getJson("./data/status.json"); // build2a hook: ?test=<scenario> (site/testmode.js)
       } catch (e) {
         if (e.status !== 404) throw e;
         data = await getJson("./data/sample.json");
@@ -202,6 +202,7 @@
     renderList();
     renderNotes();
     if (state.openIata) renderSheet(true);
+    if (window.AWXExtra) window.AWXExtra.render(); // build2a hook: search + searched/starred non-major airports (site/searched.js)
   }
 
   function renderHeader() {
@@ -245,6 +246,7 @@
     const b = $("banner");
     const kids = [];
     if (state.sample) kids.push(h("div", { class: "banner" }, h("b", {}, "Sample data. "), "Live data isn't available yet; this is a frozen example snapshot."));
+    if (window.AWXTest && AWXTest.name) kids.push(h("div", { class: "banner" }, h("b", {}, "Test scenario: " + ((state.data && state.data.scenario && state.data.scenario.title) || AWXTest.name) + " "), "(not live)")); // build2a hook
     b.replaceChildren(...kids);
   }
 
@@ -788,6 +790,7 @@
   setInterval(() => { if (document.visibilityState === "visible") load(false); }, REFRESH_MS);
   setInterval(renderHeader, 30e3);
 
+  window.AWXApp = { state, openSheet, toggleFav, render }; // build2a hook: used by site/searched.js
   render();
   load(false);
 })();

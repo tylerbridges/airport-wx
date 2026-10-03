@@ -1,0 +1,10 @@
+{
+  "title": "ATC staffing ground stop at EWR",
+  "description": "Clear weather everywhere; the FAA stops traffic to EWR for air traffic control staffing.",
+  "assert": [
+    { "t": "level", "iata": "EWR", "of": "now", "op": "==", "v": 4 },
+    { "t": "faa", "iata": "EWR", "type": "ground_stop" },
+    { "t": "faa", "iata": "EWR", "type": "ground_stop", "cause": "staffing", "note": "needs FAA cause classification (cause.mjs, other branch)" },
+    { "t": "level", "iata": "JFK", "of": "peak", "op": "==", "v": 0 }
+  ]
+}

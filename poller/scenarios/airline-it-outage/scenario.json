@@ -1,0 +1,9 @@
+{
+  "title": "Airline IT outage at ATL",
+  "description": "Company-request ground stop at ATL during an airline IT outage; weather is fine.",
+  "assert": [
+    { "t": "level", "iata": "ATL", "of": "now", "op": "==", "v": 4 },
+    { "t": "faa", "iata": "ATL", "type": "ground_stop" },
+    { "t": "faa", "iata": "ATL", "type": "ground_stop", "cause": "airline", "note": "needs FAA cause classification (cause.mjs, other branch)" }
+  ]
+}

@@ -4,6 +4,10 @@ A static page showing weather and delay risk at ~32 major US airports: big airpo
 
 Every poll's predictions and observed outcomes are also recorded to the `history` branch (see "History") so a later phase can verify and train a model.
 
+## Product goal
+
+A user should feel confident they're aware of any potential disruption, weather or not. Clean by default (traveler language), detail behind toggles (aviation mode), and never silently wrong (a source failure or stale data is always stated).
+
 ## Architecture
 
 aviationweather.gov does not send CORS headers, so a browser can't call it. Instead:
@@ -125,3 +129,47 @@ node --test poller/        # or: node poller/run-tests.mjs
 ```
 
 `--fixtures` reads `poller/fixtures/` instead of the network. Fixture files are templates: tokens like `{{+90}}` (epoch seconds, 90 min from now), `{{h+3}}` (top of the hour + 3 h), `{{iso-10}}`, `{{z-12}}`, `{{dh+3}}` and `{{clock+95 America/Chicago}}` are expanded to the current time so the data always looks current. `--out <path>` changes the output file; the committed `site/data/sample.json` is `node poller/poll.mjs --fixtures --out site/data/sample.json`.
+
+## Plain English (`poller/plain.mjs`)
+
+Pure ESM with no imports, used by the poller and (as the byte-identical copy `site/plain.js`) by the page. Approach: one source file, committed copy; `poller/plain.test.mjs` fails if the copy drifts (`cp poller/plain.mjs site/plain.js`).
+
+- `plainMetar(metar)`, `plainTafHour(fcstGroup)`: traveler sentences in mph, miles and plain cloud words ("Rain and low clouds", "Thunderstorms with heavy rain", "Gusts to 40 mph", "Fog — visibility under 1 mile"; TEMPO = "At times …", PROB30 = "30% chance of …"). Accepts AWC JSON or the status.json `metar` shape.
+- `travelerImpact(level, conditions)`: what it means for flights, worded as possible/likely, never certain ("Arrivals are often slowed in these conditions; delays of 30+ min possible", "Storms can pause departures and arrivals (ground stops) — expect delays", "Strong crosswinds may cause delays or diversions", "De-icing and slower operations — delays likely", "Flights operating normally"). FAA programs in `conditions.faa` take precedence; GA-only (`scope: limited`) closures don't count.
+- `plainSigmet(s, {tz})` / `plainCwa(c, {tz})`: "Area of severe thunderstorms moving east at 25 mph, tops to 45,000 ft, until 9 PM" (movement is the direction storms move toward). The CWA text field name is unverified (`cwaText`, `rawText`, `text` or `raw` are tried).
+- `plainAlert(alert, {tz, now})`: "Winter Storm Warning until Sun 6 AM", "Wind Advisory, 2–8 PM".
+- `aviationLines(metar | fcst)`: pilot lines for aviation mode (flight category, ceiling ft AGL, visibility sm, wind dir/speed/gust kt, decoded weather codes, cloud layers, temp/dew point).
+
+Not yet wired into status.json's own fields (that happens when the app gets aviation mode); `poller/global.mjs` already uses it for searched airports.
+
+## Search and the full airport list
+
+- `tools/build-airports.mjs` downloads OurAirports `airports.csv` + `runways.csv` and AWC's `stations.cache.json.gz`, and writes `site/data/airports-all.json`: every airport worldwide with scheduled airline service, plus every US airport (incl. PR, GU, VI, AS, MP, UM) of type small/medium/large with an ICAO or GPS code; no heliports, seaplane bases, balloonports or closed airports. Rows: `[iata, icao, name, city, country, region (iso_region), lat, lon, tz index, scheduled, hasMetar, hasTaf, type L/M/S, runways [[ids, headingTrue]]]` with the field names in `f` and the zone names in `tz`. If the file would exceed ~1.5 MB it is split: `airports-all.json` = core (scheduled + every US airport with a METAR), `airports-extra.json` = the rest, loaded only when the core has no match.
+- AWC station field names are unverified: the script detects the station id key and the field marking TAF/METAR sites (the AWC API documents `siteType: ["METAR","TAF"]`; a boolean `*taf*` field is also accepted) and logs a sample record and the counts. OurAirports columns are checked by name (`icao_code` preferred, else `gps_code`).
+- Time zones come from a small built-in table (`tools/airport-tz.mjs`): one zone per single-zone country, region tables for the US, Canada, Mexico, Brazil and Australia, longitude bands elsewhere (Russia, Indonesia, …). Airports within ~50 km of a zone line can get the neighbouring zone (e.g. Crossville TN, NW Ontario, the Navajo Nation); unknown countries get no zone (UTC). A proper tz lookup can replace it later.
+- `.github/workflows/airports.yml` rebuilds it weekly (Monday 06:17 UTC) and on manual dispatch, committing to main only if the content changed. The committed file until then is the small fixture build (`node tools/build-airports.mjs --fixtures`, from `tools/fixtures/`; its runway headings are approximate).
+- `site/search.js` (`mountSearch(container, {onPick, getFavs, onToggleFav})`): 17 px search field, typeahead over IATA/ICAO/city/name, accent-insensitive, up to 8 Flighty-style rows (big code, city and name, star), keyboard (↑ ↓ Enter Esc) and VoiceOver combobox/listbox roles, recent picks in localStorage (`awx-recent`), list lazy-loaded on first focus. Ranking: exact code; alias table (NYC → JFK/LGA/EWR, Chicago → ORD/MDW, DC → DCA/IAD/BWI, Bay Area → SFO/OAK/SJC, London, …; 4+ letters match alias prefixes); scheduled service first; larger types first; then code prefix, city word prefix, name word prefix.
+- `site/searched.js` wires it into the page: a major opens its normal sheet; any other airport gets a card from the global shards with "Weather forecast only — FAA programs and alerts shown for major airports" (US) or "Weather only — FAA/NWS data covers U.S. airports" (international); an airport with no METAR/TAF says "No weather reports from this airport — check the nearest major airport" and links the nearest airport with reports. Starred non-major airports share the `awx-favs` list and show on My airports.
+
+## Global weather (`poller/global.mjs`)
+
+Every poll also downloads AWC's global bulk caches (`metars.cache.csv.gz`, `tafs.cache.xml.gz`) and scores every airport in the airport list that has a METAR or TAF with the risk.mjs METAR + TAF rules (no FAA/NWS/SPC). Output: `site/data/wx/<first letter of ICAO>.json` = `{generated, h0, a: {ICAO: {n, p, pt, h, r, c, pl, im, m, mt, t, ti}}}` (now/peak level, peak hour, 24 hourly levels with "-" for hours no report covers, top reason, flight category, plain-English now, traveler impact, METAR raw/time, TAF raw/issue time) and `site/data/wx/index.json` (per-file ok/http/bytes/ms, counts, letters). Only the raw report text is needed from the caches (CSV `raw_text`, XML `<raw_text>`; re-parsed with `poller/taf-parse.mjs`), so other column/element names don't matter; the header and first record are logged and the first 20 KB of each file is listed in the raw `sources.json` (`globalMetars`, `globalTafs`) so it lands in `raw/latest/` on the history branch. A failure never stops the main poll. Hook: one `runGlobal()` call in `poll.mjs` (`// build2a hook`); env `GLOBAL_WX=0` skips it, `GLOBAL_WX_OUT` changes the output dir.
+
+## Test scenarios
+
+`poller/scenarios/_base/` is a complete quiet fixture set (same layout as `poller/fixtures/`); each `poller/scenarios/<name>/` holds `scenario.json` (title, description, assertions, optional `omit` files to make a source fail and `lagMin` to make the data stale) plus only the files that differ (metar/taf merged by `icaoId`, nws by key, other files replace the base). `node tools/build-scenarios.mjs [names]` runs `node poller/poll.mjs --fixtures` per scenario with `FIXTURES_DIR` (the one-line `// build2a hook` in poll.mjs) and writes `site/data/scenarios/<name>.json`, `<name>/wx/` and `index.json` (assertions). Scenarios: thunderstorm-ground-stop (ORD), atc-staffing-ground-stop (EWR, cause staffing), airline-it-outage (ATL, company request), lax-ga-only-closure (the real LAX GA-only NOTAM; must not be Severe), full-closure (MCO), winter-storm-gdp (DEN), source-outage (FAA feed fails), stale-data (50 min old), all-clear (also asserts the global shards: EGLL international with METAR + TAF, KFCM METAR only, Y49 no reports).
+
+Open `index.html?test=<name>` to see one: the page shows "Test scenario: … (not live)" and `site/testmode.js` shifts every time in the file so the scenario always looks current.
+
+## Check page (`site/check.html`)
+
+`check.html` checks the live data; `check.html?mock=1` runs every scenario instead (`&render=0` skips render tests). Rows: freshness (warn > 15 min, fail > 20 min), each source (ok/error plus HTTP status, bytes and time when the file carries them), a METAR under 2 h old at every airport and a TAF wherever the airport list says the airport issues one, plausible values (temp −60..60 °C, wind/gust 0..150 kt, visibility ≥ 0, ceiling ≥ 0), a cause class on every FAA program, no raw coded text in traveler fields (reasons, `faa.plain`, `faa.causeLabel`), the global run's freshness and that airports with a METAR have a shard entry under 2 h old (live: 95%, scenarios: 100%), search ranking, the scenario assertions (mock), and a render test that loads `index.html` and every `?test=` scenario in a hidden 390 px iframe and fails on any uncaught error, rejection or console.error (captured by `site/testmode.js`). Uptime: if `data/uptime.json` exists (`{sources: {name: {d1: {ok, total}, d7: {ok, total}}}}`, written later by the history job) it shows 24 h and 7 d success per source, else "not yet available". "Copy report" copies the text report; the summary is in `<pre id="result">` as `CHECK PASS` or `CHECK FAIL n` plus one line per check, for `--dump-dom`. Linked from the bottom of the app ("Checks").
+
+## Uptime monitor
+
+`.github/workflows/uptime.yml` runs every 30 min and on dispatch: headless Chrome dumps the live `check.html` (`--virtual-time-budget=30000`, plus `--no-sandbox` for the runner), `tools/uptime-parse.mjs` reads `#result` and separately checks `data/status.json` freshness (≤ 20 min) fetched with curl. On failure it opens one issue "Uptime: check failing" (or comments on the open one at most every 6 h) with the report; on success it comments "Recovered at …" and closes it. GitHub REST API via curl and `GITHUB_TOKEN` (`issues: write`). Parsing is unit-tested against saved DOM samples in `tools/fixtures/uptime/`.
+
+## Home-screen install
+
+`site/manifest.webmanifest` (name "Airport Status", short name "Airports", standalone, theme/background `#0b0b0c`, start_url `./`, icons `site/icons/icon-180.png`, `icon-192.png`, `icon-512.png`, `icon-maskable-512.png` (maskable), `favicon.svg`) and one marked block in `index.html`'s `<head>`: manifest link, favicons, apple-touch-icon, apple-mobile-web-app-capable, black-translucent status bar. The existing light/dark `theme-color` metas are kept.
+

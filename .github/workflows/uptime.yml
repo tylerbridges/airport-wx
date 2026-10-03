@@ -1,0 +1,92 @@
+name: Uptime monitor
+
+# Every 30 min: load the live check page in headless Chrome and read its #result, and check
+# data/status.json freshness independently with curl. On failure open one issue titled
+# "Uptime: check failing" (or comment on the open one, at most every 6 h); when it passes again,
+# comment "Recovered at …" and close it. REST API via curl + GITHUB_TOKEN; parsing in
+# tools/uptime-parse.mjs (unit-tested with saved DOM samples).
+on:
+  schedule:
+    - cron: "7,37 * * * *"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+concurrency:
+  group: uptime
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SITE: https://tylerbridges.github.io/airport-wx
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      API: ${{ github.api_url }}/repos/${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Load check page and status.json
+        run: |
+          set -u
+          ts="$(date +%s)"
+          # --no-sandbox: Ubuntu 24.04 runners restrict the user namespaces Chrome's sandbox needs.
+          timeout 120 google-chrome --headless=new --disable-gpu --no-sandbox --virtual-time-budget=30000 \
+            --dump-dom "$SITE/check.html?ts=$ts" > dom.html 2> chrome.log || echo "chrome exited $?"
+          curl -sS --max-time 30 -o status.json "$SITE/data/status.json?ts=$ts" || echo "curl failed"
+          node tools/uptime-parse.mjs check dom.html status.json > result.json
+          cat result.json | head -c 2000; echo
+      - name: Open, update or close the uptime issue
+        run: |
+          set -eu
+          auth=(-H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28")
+          ok="$(node -e 'console.log(JSON.parse(require("fs").readFileSync("result.json","utf8")).ok)')"
+          head="$(node -e 'console.log(JSON.parse(require("fs").readFileSync("result.json","utf8")).head)')"
+          now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          echo "ok=$ok: $head"
+          curl -fsS "${auth[@]}" "$API/issues?state=open&per_page=100" > issues.json
+          num="$(node tools/uptime-parse.mjs find-issue issues.json)"
+          last=0
+          if [ -n "$num" ]; then
+            curl -fsS "${auth[@]}" "$API/issues/$num" > issue.json
+            curl -fsS "${auth[@]}" "$API/issues/$num/comments?per_page=100" > comments.json
+            last="$(node tools/uptime-parse.mjs last-activity issue.json comments.json)"
+          fi
+          action="$(OK="$ok" NUM="$num" LAST="$last" node -e '
+            import("./tools/uptime-parse.mjs").then(({ decide }) =>
+              console.log(decide({ ok: process.env.OK === "true", issueNumber: process.env.NUM, lastMs: Number(process.env.LAST) }).action))')"
+          echo "issue=${num:-none} action=$action"
+          report() {
+            {
+              echo "$1"
+              echo
+              echo "**$head**"
+              echo
+              echo "Check page: $SITE/check.html · run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+              echo
+              echo '```'
+              node -e 'console.log(JSON.parse(require("fs").readFileSync("result.json","utf8")).report || "(no report: the page did not render #result)")'
+              echo '```'
+            } > body.md
+            node tools/uptime-parse.mjs body body.md > body.json
+          }
+          case "$action" in
+            open)
+              report "The live check failed at $now."
+              node -e 'const b=JSON.parse(require("fs").readFileSync("body.json","utf8")); b.title="Uptime: check failing"; console.log(JSON.stringify(b))' > new.json
+              curl -fsS "${auth[@]}" -X POST "$API/issues" -d @new.json > /dev/null
+              echo "opened issue" ;;
+            comment)
+              report "Still failing at $now."
+              curl -fsS "${auth[@]}" -X POST "$API/issues/$num/comments" -d @body.json > /dev/null
+              echo "commented on #$num" ;;
+            close)
+              node -e 'console.log(JSON.stringify({ body: "Recovered at " + process.argv[1] + ": " + process.argv[2] }))' "$now" "$head" > body.json
+              curl -fsS "${auth[@]}" -X POST "$API/issues/$num/comments" -d @body.json > /dev/null
+              curl -fsS "${auth[@]}" -X PATCH "$API/issues/$num" -d '{"state":"closed","state_reason":"completed"}' > /dev/null
+              echo "closed #$num" ;;
+            *) echo "nothing to do" ;;
+          esac
+          [ "$ok" = "true" ] || { echo "::error::$head"; exit 1; }

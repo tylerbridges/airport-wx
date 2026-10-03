@@ -20,6 +20,7 @@ import {
 import { classifyCause, causePhrase } from "./cause.mjs";
 import { parseOpsPlan, opsPlanFor, opsPlanNational } from "./opsplan.mjs";
 import { opsPlanItems } from "./risk.mjs";
+import { runGlobal } from "./global.mjs"; // build2a hook: global METAR/TAF shards for searched airports
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -178,7 +179,7 @@ async function atcsccFrom(html, getText, now, raw) {
 }
 
 function fixtureProviders(airports, now, raw) {
-  const dir = join(HERE, "fixtures");
+  const dir = process.env.FIXTURES_DIR ? resolve(process.env.FIXTURES_DIR) : join(HERE, "fixtures"); // build2a hook: scenario fixture sets
   const want = new Set(airports.map((a) => a.icao));
   const read = async (name) => expandTemplate(await readFile(join(dir, name), "utf8"), now);
   const fx = async (source, file, rawFile = file) => {
@@ -368,6 +369,7 @@ async function main() {
     out: oi >= 0 ? resolve(args[oi + 1]) : undefined,
     rawDir: rawArg === "none" ? null : rawArg ? resolve(rawArg) : DEFAULT_RAW_DIR,
   });
+  await runGlobal({ fixtures: args.includes("--fixtures"), rawDir: rawArg === "none" ? null : rawArg ? resolve(rawArg) : DEFAULT_RAW_DIR }); // build2a hook: writes site/data/wx/ (never throws)
   for (const [n, s] of Object.entries(status.sources)) console.log(`${s.ok ? "ok  " : "FAIL"} ${n}${s.error ? ": " + s.error : ""}`);
   const top = status.airports.filter((a) => a.peak.level >= 3).length;
   console.log(`wrote ${out}: ${status.airports.length} airports, ${top} at High/Severe peak, ${okCount}/${total} sources ok`);

@@ -7,7 +7,17 @@
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
 <title>Airport Status</title>
-<link rel="icon" href="data:,">
+<!-- build2a hook: home-screen install, icons, error capture + ?test= scenarios -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Airports">
+<script src="testmode.js"></script>
+<!-- /build2a hook -->
 <style>
 :root {
   color-scheme: dark light;
@@ -212,10 +222,13 @@ details.pilot .pd { padding-top: 4px; }
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg>
     </button>
   </header>
+  <div id="search"></div><!-- build2a hook: search (site/searched.js) -->
   <div class="seg" id="seg" role="tablist" aria-label="Filter airports"></div>
   <div id="banner"></div>
+  <div class="list" id="extra"></div><!-- build2a hook: searched / starred non-major airports -->
   <main class="list" id="list" role="tabpanel"></main>
   <div class="notes" id="notes"></div>
+  <p class="xfoot"><a href="check.html">Checks</a></p><!-- build2a hook: link to the check page (moves to settings later) -->
   <noscript><p class="empty">This page needs JavaScript.</p></noscript>
 </div>
 
@@ -223,6 +236,7 @@ details.pilot .pd { padding-top: 4px; }
   <div class="backdrop" id="backdrop"></div>
   <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle"></div>
 </div>
-<script src="app.js?v=3" defer></script>
+<script src="app.js?v=4" defer></script>
+<script type="module" src="searched.js?v=3"></script><!-- build2a hook -->
 </body>
 </html>
