@@ -1738,7 +1738,8 @@
       "+" + (rs.length - max) + " more") : null;
     // delay chance (Phase 3 hours[].delay: p 0..1, minutes); hidden when absent
     const dp = o.delay && Number.isFinite(Number(o.delay.p)) ? Math.round(Number(o.delay.p) * 100) : null;
-    const delay = dp != null ? h("div", { class: "sc-delay" }, `${dp}% chance of delays` + (o.delay.minutes ? ` · about ${Math.round(o.delay.minutes)} min` : "")) : null;
+    const happening = dp != null && dp >= 99 && /^(ground_stop|ground_delay|delay)$/.test(o.delay.override || "");
+    const delay = dp != null ? h("div", { class: "sc-delay" }, (happening ? "Delays happening now" : `${dp}% chance of delays`) + (o.delay.minutes ? ` · about ${Math.round(o.delay.minutes)} min` : "")) : null;
     return h("div", { class: "box sc" + (o.full ? " full" : ""), "data-kind": o.kind },
       h("div", { class: "sc-h" },
         h("h4", {}, h("span", { class: "sc-label" }, o.label), o.level != null ? pill(o.level, true) : null),
