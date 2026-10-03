@@ -9,7 +9,7 @@ import { readFile, writeFile, mkdir, rm } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
-  buildHours, summarize, hoursOutput, compareAirports, parseVisib, ceilingOf, flightCategory, toMs,
+  buildHours, summarize, hoursOutput, compareAirports, parseVisib, ceilingOf, flightCategory, toMs, fmtClock, tzAbbr,
 } from "./risk.mjs";
 import {
   parseFaaXml, spcCategoryAt, convectiveSigmetsAt, normalizeAlerts, expandTemplate, pool, latestBy,
@@ -18,6 +18,8 @@ import {
   lampCycles, lampUrl, parseLamp, lampBlocks, ATCSCC_URL, collectAtcscc, tcfAt, cwaAt,
 } from "./sources.mjs";
 import { classifyCause, causePhrase } from "./cause.mjs";
+import { parseOpsPlan, opsPlanFor, opsPlanNational } from "./opsplan.mjs";
+import { opsPlanItems } from "./risk.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -164,9 +166,15 @@ function liveProviders(airports, now, raw) {
 async function atcsccFrom(html, getText, now, raw) {
   const r = await collectAtcscc(html, getText, { now });
   if (r.firstDetail != null) raw.save("atcscc", "atcscc-detail.html", r.firstDetail, {}, false);
-  raw.note("atcscc", { links: r.links, followed: r.followed, failed: r.failed, parsed: r.list.length });
+  // The page is "The Most Recent ATCSCC Advisory": usually the DCC operations plan.
+  let plan = null;
+  try { plan = parseOpsPlan(html); } catch { /* not a plan */ }
+  raw.note("atcscc", {
+    links: r.links, followed: r.followed, failed: r.failed, parsed: r.list.length,
+    opsplan: plan ? { advisory: plan.advisory, issued: plan.issued, staffing: plan.staffing.length, constraints: plan.constraints.length, programs: plan.programs.length, sirs: plan.sirs.length, launches: plan.launches.length } : null,
+  });
   if (r.followed && r.failed === r.followed && !r.list.length) throw new Error(`all ${r.failed} advisory pages failed: ${r.firstError}`);
-  return { list: r.list, partial: r.failed ? `${r.failed} of ${r.followed} advisory pages failed: ${r.firstError}` : null };
+  return { list: r.list, plan, partial: r.failed ? `${r.failed} of ${r.followed} advisory pages failed: ${r.firstError}` : null };
 }
 
 function fixtureProviders(airports, now, raw) {
@@ -217,10 +225,11 @@ function fixtureProviders(airports, now, raw) {
 
 const ADV_KEYS = ["id", "type", "airport", "issued", "cause", "causeText", "title", "active", "cnx", "start", "end"];
 
-export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc, nws, lamp = null, atcscc = null, tcf = null, cwa = null }) {
+export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc, nws, lamp = null, atcscc = null, tcf = null, cwa = null, plan = null }) {
   const metarBy = latestBy(metars, "icaoId", "obsTime");
   const tafBy = latestBy(tafs, "icaoId", "issueTime");
   const out = [];
+  const known = new Set(airports.map((a) => a.iata));
   for (const a of airports) {
     let m = metarBy.get(a.icao) || null;
     const obsMs = m ? toMs(m.obsTime) : null;
@@ -233,6 +242,7 @@ export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc,
       // closures' reasons are NOTAM text: the page shows their plain-English summary instead
       const o = { type: f.type, reason: f.reason, detail: f.detail, badge: f.badge, cause, causeLabel: f.type === "closure" ? "" : causePhrase(cause, f.reason) };
       if (f.type === "closure") Object.assign(o, { scope: f.scope, active: f.active, plain: f.plain, runways: f.runways });
+      else Object.assign(o, { end: f.end ?? null, trend: f.trend ?? null });
       return o;
     });
     const alertsFull = nws ? normalizeAlerts(nws[a.iata], now) : [];
@@ -243,12 +253,28 @@ export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc,
       .map((x) => ({ ...Object.fromEntries(ADV_KEYS.map((k) => [k, x[k] ?? null])), causeLabel: causePhrase(x.cause, x.causeText) }));
     const tcfHere = tcf ? tcfAt(a.lon, a.lat, tcf, now) : [];
     const cwaHere = cwa ? cwaAt(a.lon, a.lat, cwa, now) : [];
+    const op = opsPlanFor(plan, a.iata, now, known);
+    // NAS status wins over the ops plan for the same program; when NAS gives no end, take the plan's
+    for (const f of faa) {
+      if (f.end || !(f.type === "ground_stop" || f.type === "ground_delay")) continue;
+      const want = f.type === "ground_stop" ? "GS" : "GDP";
+      const p = (op?.programs || []).find((x) => x.status === "active" && x.program === want && x.until);
+      if (p) {
+        f.end = p.until;
+        f.endFrom = "opsplan";
+        f.detail = [f.detail, `until ${fmtClock(p.until, a.tz, now)} ${tzAbbr(p.until, a.tz)}`].filter(Boolean).join(", ");
+      }
+    }
 
     const hours = buildHours({
       now, tz: a.tz, taf: t, metar: m, faa, sigmet: sigs.length > 0,
       alerts: alertsFull.map((x) => ({ event: x.event, onset: x.onset, ends: x.ends })), spc: spcCat,
-      atcscc: adv, lamp: lampSt, tcf: tcfHere, cwa: cwaHere,
+      atcscc: adv, lamp: lampSt, tcf: tcfHere, cwa: cwaHere, opsplan: op,
     });
+    // plain-English items for the sheet ("From the FAA Command Center"), same texts as the risk reasons
+    const opOut = op
+      ? { ...op, items: opsPlanItems(op, { faa, atcscc: adv, tz: a.tz, now }).map(({ kind, level, text, cause, until, raw, dup, ifr }) => ({ kind, level, text, cause, until, raw, dup, ifr })) }
+      : null;
     const { now: nowS, peak } = summarize(hours, a.tz);
 
     out.push({
@@ -277,6 +303,7 @@ export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc,
       lamp: lampSt,
       tcf: tcfHere,
       cwa: cwaHere,
+      opsplan: opOut,
     });
   }
   out.sort(compareAirports);
@@ -318,7 +345,9 @@ export async function run({ fixtures = false, out = join(ROOT, "site/data/status
       metars: res.metar.data, tafs: res.taf.data, sigmets: res.sigmet.data,
       faaParsed, spc: res.spc.data, nws: res.nws.data?.map ?? null,
       lamp: res.lamp.data, atcscc: res.atcscc.data?.list ?? null, tcf: res.tcf.data, cwa: res.cwa.data,
+      plan: res.atcscc.data?.plan ?? null,
     }),
+    opsplan: opsPlanNational(res.atcscc.data?.plan ?? null, now),
   };
   await mkdir(dirname(out), { recursive: true });
   await writeFile(out, JSON.stringify(status) + "\n");

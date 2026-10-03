@@ -127,17 +127,40 @@ test("record end to end from a fixture poll (README, truth, forecast, raw sample
     assert.equal(out.readme.written, true);
     assert.match(await readFile(join(work, "history/README.md"), "utf8"), /truth\/YYYY\/MM\/DD\.jsonl/);
     const raw = (await readdir(join(work, "history/raw/latest"))).sort();
-    for (const f of ["metar.json", "taf.json", "airsigmet.json", "faa.xml", "nws.json", "spc.geojson", "lamp.txt", "lamp-airports.txt", "atcscc.html", "atcscc-detail.html", "tcf.json", "cwa.json", "sources.json"]) {
+    for (const f of ["metar.json", "taf.json", "airsigmet.json", "faa.xml", "nws.json", "spc.geojson", "lamp.txt", "lamp-airports.txt", "atcscc.html", "tcf.json", "cwa.json", "sources.json"]) {
       assert.ok(raw.includes(f), f);
     }
     const truth = JSON.parse((await readFile(join(work, "history/truth/2026/10/03.jsonl"), "utf8")).trim());
-    assert.equal(truth.airports.LAS.atcscc[0].cause, "staffing");
+    // the ops plan is recorded on the first line that has it: nationally and per airport
+    assert.equal(truth.opsplan.plan.advisory, "072");
+    assert.equal(truth.opsplan.launches[0].name, "SPACEX SDA-T1A");
+    assert.equal(truth.airports.BNA.opsplan.staffing[0].cause, "staffing");
+    assert.equal(truth.airports.BNA.opsplan.staffing[0].until, "2026-10-04T01:00Z");
+    assert.equal(truth.airports.DEN.opsplan.sirs[0].until, "2026-11-05T00:00Z");
+    assert.deepEqual(truth.airports.MCO.opsplan.programs.map((p) => [p.program, p.status]), [["GS", "possible"]]);
     assert.equal(truth.airports.ORD.faa[0].cause, "weather");
     assert.equal(truth.airports.LAX.faa[0].scope, "limited");
     const fc = JSON.parse((await readFile(join(work, "history/forecast/2026/10/03.jsonl"), "utf8")).trim());
     assert.equal(fc.airports.ATL.hours.length, 24);
     assert.ok(fc.airports.ATL.lamp.hours.length > 20);
+    assert.equal(fc.airports.ATL.lamp.hours[0].probHrs, 1);
   } finally {
     await rm(work, { recursive: true, force: true });
   }
+});
+
+test("truth line: the ops plan is written once per plan (advisory + issue time)", () => {
+  const op = { plan: { advisory: "072", issued: "2026-10-03T21:28:00.000Z" }, launches: [{ name: "SPACEX" }] };
+  const mk = (generated, opsplan) => ({ ...status(generated, "2026-10-03T18:51:00.000Z"), opsplan,
+    airports: [{ iata: "BNA", faa: [], atcscc: [], hours: [], opsplan: { staffing: [{ facility: "BNA", until: "2026-10-04T01:00:00.000Z" }], items: [{ text: "x" }] } }] });
+  const l1 = truthLine(mk("2026-10-03T22:00:00.000Z", op));
+  assert.equal(l1.opsplan.plan.advisory, "072");
+  assert.deepEqual(l1.airports.BNA.opsplan, { staffing: [{ facility: "BNA", until: "2026-10-04T01:00Z" }] }); // items (display text) not recorded
+  const prev = truthState([JSON.stringify(l1)]);
+  assert.equal(prev.lastPlan, "072|2026-10-03T21:28Z");
+  const l2 = truthLine(mk("2026-10-03T22:05:00.000Z", op), prev);
+  assert.equal(l2.opsplan, undefined);
+  assert.equal(l2.airports?.BNA?.opsplan, undefined);
+  const l3 = truthLine(mk("2026-10-03T23:30:00.000Z", { ...op, plan: { advisory: "074", issued: "2026-10-03T23:28:00.000Z" } }), prev);
+  assert.equal(l3.opsplan.plan.advisory, "074");
 });

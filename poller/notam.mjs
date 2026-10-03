@@ -138,10 +138,21 @@ export function describeClosure(text, { tz = "America/New_York", now = new Date(
   const when = detail ? detail.charAt(0).toUpperCase() + detail.slice(1) + "." : "";
   const body = notamBody(text).toUpperCase();
   let plain;
-  if (scope === "limited" && /\b(GA|NON\s+SKED|TRANSIENT|PRIVATE)\b/.test(body)) {
-    const ppr = /\b(\d+)\s*HR\s+PPR\b/.exec(body);
-    const unless = ppr ? ` unless approved ${ppr[1]} hours ahead` : /\bPPR\b/.test(body) ? " unless approved in advance" : "";
+  const ppr = /\b(\d+)\s*HR\s+PPR\b/.exec(body);
+  const unless = ppr ? ` unless approved ${ppr[1]} hours ahead` : /\bPPR\b/.test(body) ? " unless approved in advance" : "";
+  const nonSked = /\bNON\s+SKED\b/.test(body);
+  const span = /\bWINGSPAN\s+(?:MORE\s+THAN|GREATER\s+THAN|OVER|ABV|GT)\s+(\d+)\s*FT\b/.exec(body);
+  const sized = span || /\b(TAIL\s+HGT|WINGSPAN|WEIGHT|GROSS\s+WT|LENGTH)\b/.test(body);
+  if (scope === "limited" && sized) {
+    // size-limited, e.g. "CLSD TO NON SKED ACFT WINGSPAN MORE THAN 214FT AND TAIL HGT MORE THAN 66FT" (PHL)
+    const huge = span && Number(span[1]) >= 200;
+    const who = huge ? "very large" : "large";
+    const size = huge ? " (747-8/A380 size)" : span ? ` (wingspan over ${span[1]} ft)` : "";
+    plain = `Closed to ${who}${nonSked ? " non-scheduled" : ""} aircraft${size}${unless}.${nonSked ? " Airline flights aren't affected." : ""}`;
+  } else if (scope === "limited" && /\b(GA|TRANSIENT|PRIVATE)\b/.test(body)) {
     plain = `Closed to private (non-scheduled, general aviation) flights${unless}. Airline flights aren't affected.`;
+  } else if (scope === "limited" && nonSked) {
+    plain = `Closed to non-scheduled flights${unless}. Scheduled airline flights aren't affected.`;
   } else if (scope === "runway") {
     const ids = runways.join(", ");
     const rest = translateNotam(text).replace(/^Runway\s+\S+\s+closed\s*/i, "").trim();

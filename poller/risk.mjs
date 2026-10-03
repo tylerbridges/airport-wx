@@ -114,13 +114,21 @@ export function tzAbbr(date, tz) {
   return map[n] || n;
 }
 
-/** "4–7 PM" or "11 AM–2 PM" for [start, end). */
-export function fmtRange(start, end, tz) {
-  const a = fmtClock(start, tz);
+const localDay = (ms, tz) => dtf(tz, { year: "numeric", month: "numeric", day: "numeric" }, "ymd").format(new Date(ms));
+
+/**
+ * [start, end) as "4–7 PM" (same day, same AM/PM half), "11 AM – 2 PM" (same day), or across days
+ * "11 PM – 1 AM tomorrow" / "Sat 11 PM – 1 AM Sun". With ref, a start on another day than ref gets its weekday.
+ */
+export function fmtRange(start, end, tz, ref = null) {
+  const a = fmtClock(start, tz, ref ?? start);
   const b = fmtClock(end, tz);
-  const ma = a.split(" ").pop();
-  const mb = b.split(" ").pop();
-  return ma === mb ? `${a.slice(0, a.lastIndexOf(" "))}–${b}` : `${a}–${b}`;
+  const sameDay = localDay(start, tz) === localDay(end, tz);
+  if (sameDay && a.split(" ").pop() === b.split(" ").pop()) return `${a.slice(0, a.lastIndexOf(" "))}–${b}`;
+  if (sameDay) return `${a} – ${b}`;
+  const r = ref ?? start;
+  const tomorrow = localDay(end, tz) === localDay(+new Date(r) + 24 * HOUR, tz) && localDay(start, tz) === localDay(r, tz);
+  return `${a} – ${b} ${tomorrow ? "tomorrow" : dtf(tz, { weekday: "short" }, "wd").format(new Date(end))}`;
 }
 
 // ---------- level mappings ----------
@@ -218,10 +226,12 @@ const lowerFirstChar = (s) => (s ? s.replace(/(^|; )([A-Z])(?=[a-z])/g, (m, a, b
  */
 export function assessFaa(f) {
   const cause = f.type === "closure" ? closureCause(f) : causePhrase(f.cause, f.reason);
-  const join = (name, detail) => [name + (cause ? " — " + cause : ""), detail].filter(Boolean).join(", ");
+  // programs without a stated end: "until further notice"
+  const open = PROGRAMS.has(f.type) && toMs(f.end) == null && !/\buntil\b/i.test(f.detail || "");
+  const join = (name, detail) => [name + (cause ? " — " + cause : ""), detail, open ? "until further notice" : ""].filter(Boolean).join(", ");
   switch (f.type) {
     case "ground_stop":
-      return { level: 4, text: cause ? join("Ground stop", f.detail) : `Ground stop${f.detail ? " " + f.detail : ""}`, fixed: true };
+      return { level: 4, text: cause ? join("Ground stop", f.detail) : `Ground stop${f.detail ? " " + f.detail : open ? " until further notice" : ""}`, fixed: true };
     case "closure": {
       if (f.active === false || f.scope === "limited") return null;
       if (f.scope === "runway") {
@@ -231,12 +241,25 @@ export function assessFaa(f) {
       return { level: 4, text: cause ? join("Airport closed", f.detail) : `Airport closed${f.detail ? " " + f.detail : ""}`, fixed: true };
     }
     case "ground_delay":
-      return { level: 3, text: cause ? join("Ground delay program", f.detail) : `Ground delay program${f.detail ? " (" + f.detail + ")" : ""}`, fixed: true };
+      return { level: 3, text: cause ? join("Ground delay program", f.detail) : `Ground delay program${f.detail ? " (" + f.detail + ")" : ""}${open ? ", until further notice" : ""}`, fixed: true };
     case "delay":
-      return { level: 2, text: cause ? join("Delays", lowerFirstChar(f.detail)) : `Delays${f.detail ? ": " + f.detail : ""}`, fixed: true };
+      return { level: 2, text: cause ? join("Delays", lowerFirstChar(f.detail)) : `Delays${f.detail ? ": " + f.detail : ""}${open ? ", until further notice" : ""}`, fixed: true };
     default:
       return null;
   }
+}
+
+const PROGRAMS = new Set(["ground_stop", "ground_delay", "delay"]);
+/** Program with no stated end: held 3 h, 5 h when its delays are increasing. */
+export const OPEN_PROGRAM_HOURS = 3;
+export const OPEN_PROGRAM_HOURS_INCREASING = 5;
+
+/** Hours an active FAA program scores: [now, its end), or a default span when it has none. Closures: hour 0. */
+export function faaSpan(f, now) {
+  if (!PROGRAMS.has(f.type)) return null;
+  const end = toMs(f.end);
+  if (end != null) return Math.max(end, +now);
+  return +now + (f.trend === "increasing" ? OPEN_PROGRAM_HOURS_INCREASING : OPEN_PROGRAM_HOURS) * HOUR;
 }
 
 // Closure reasons are NOTAM text: name a cause only when the text says one (e.g. "snow removal").
@@ -263,10 +286,122 @@ export function assessAtcscc(a, faa, tz, now = new Date()) {
   return { level: kind === "ground_stop" ? 4 : 3, text, fixed: true };
 }
 
-/** LAMP 2-hour thunderstorm probability (%) -> level: >= 40 High, 20-39 Moderate. */
+/** LAMP thunder (LP1 1-h lightning, else LP2) probability (%) -> level: >= 40 High, 20-39 Moderate. */
 export function lampThunderLevel(p) {
   const n = num(p);
   return n == null ? 0 : n >= 40 ? 3 : n >= 20 ? 2 : 0;
+}
+
+/** LAMP CP1 convection probability (%) >= 50 -> Moderate (used only when the thunder chance is lower). */
+export function lampConvLevel(p) {
+  const n = num(p);
+  return n != null && n >= 50 ? 2 : 0;
+}
+
+// ---------- FAA Command Center operations plan ----------
+
+const PLAN_PHRASES = [
+  [/\bVCTS\b/, "nearby storms", "storms"],
+  [/\b(TS|TSTMS?|TSRA|THUNDERSTORMS?|CONVECT\w*|CB)\b/, "thunderstorms", "storms"],
+  [/\b(WINDS?|CROSSWINDS?|GUSTS?|WIND SHEAR)\b/, "wind", "wind"],
+  [/\b(LOW CIGS?|CIGS?|CEILINGS?|LOW CLOUDS?)\b/, "low clouds", "low clouds"],
+  [/\b(LOW VIS\w*|VIS|VISIBILITY|FOG)\b/, "low visibility", "low visibility"],
+  [/\b(SNOW|ICE|ICING|FREEZING|DEICING|DE-ICING)\b/, "winter weather", "winter weather"],
+  [/\b(VOL|VOLUME|DEMAND)\b/, "heavy traffic", "heavy traffic"],
+  [/\b(RWY|RUNWAYS?|CONSTRUCTION|CONFIG\w*)\b/, "runway work", "runway work"],
+  [/\b(EQUIP\w*|OUTAGE|RADAR|ILS)\b/, "an equipment outage", "equipment outage"],
+];
+/** Terminal-constraint reason ("VCTS", "WIND", "LOW CIGS") -> {long, short} plain words. */
+export function constraintPhrase(reason) {
+  const s = String(reason ?? "").toUpperCase();
+  for (const [re, long, short] of PLAN_PHRASES) if (re.test(s)) return { long, short };
+  const w = s.trim().toLowerCase();
+  return w ? { long: w, short: w } : null;
+}
+
+const MONTH_DAY = (tz) => dtf(tz, { month: "short", day: "numeric" }, "md");
+/** " until 7 PM" (within a day), " until Nov 4" (later; the airport's local date), "" if none. */
+function untilText(ms, tz, now) {
+  if (ms == null || !Number.isFinite(ms)) return "";
+  if (ms - +now <= 24 * HOUR) return ` until ${fmtClock(ms, tz, now)}`;
+  return ` until ${clean(MONTH_DAY(tz).format(new Date(ms)))}`;
+}
+const normRwy = (r) => String(r).toUpperCase().replace(/(^|\/)0(\d)/g, "$1$2");
+const PROGRAM_NAME = { GS: "ground stop", GDP: "ground delay program", "GS/GDP": "ground stop or delay program" };
+
+/**
+ * Items for one airport's slice of the ATCSCC operations plan (op = opsPlanFor(...)): [{kind, level,
+ * text, cause, until, raw, at, from, to, dup?, ifr?}]. `at` says which hours the item scores:
+ * "now" = hour 0 only, "span" = hours before `to`, "ifr" = Low only in hours before `to` whose
+ * flight category is IFR/LIFR (level 0 = informational otherwise). Rules (README "Risk levels"):
+ * active GS/GDP Severe/High unless NAS status or an active ATCSCC advisory already has it (then dup,
+ * level 0); possible GS/GDP Moderate; staffing trigger Moderate; terminal constraint alone Low;
+ * SIR runway closure/construction Low (never more); glideslope/ILS out of service or limited ops: "ifr";
+ * a narrative sentence naming the airport with DELAY/DEVIATION Moderate until the plan's valid end.
+ */
+export function opsPlanItems(op, { faa = [], atcscc = [], tz = "UTC", now = new Date() } = {}) {
+  if (!op) return [];
+  const out = [];
+  const active = (t) => (faa || []).some((f) => f.type === (t === "GS" ? "ground_stop" : "ground_delay"))
+    || (atcscc || []).some((a) => a.active && a.type === t);
+  const con = (op.constraints || [])[0];
+  const ph = con ? constraintPhrase(con.reason) : null;
+  const conCause = con ? classifyCause(con.reason) : "unknown";
+  for (const p of op.programs || []) {
+    const name = PROGRAM_NAME[p.program];
+    if (!name) continue;
+    const to = toMs(p.until) ?? Infinity;
+    const from = toMs(p.from) ?? -Infinity;
+    const until = untilText(toMs(p.until), tz, now);
+    if (p.status === "active") {
+      const dup = p.program === "GS/GDP" ? active("GS") || active("GDP") : active(p.program);
+      const text = name.charAt(0).toUpperCase() + name.slice(1) + until + (ph ? ` (${ph.short})` : "");
+      out.push({ kind: "program", level: dup ? 0 : p.program === "GS" ? 4 : 3, text, cause: conCause, until: p.until, raw: p.raw, at: "span", from, to, ...(dup ? { dup: true } : {}) });
+    } else {
+      const text = `FAA plans a possible ${name}${until} (${ph ? ph.short : "conditions"})`;
+      out.push({ kind: "program", level: 2, text, cause: conCause, until: p.until, raw: p.raw, at: "span", from, to });
+    }
+  }
+  // narrative: "ZJX REPORTS THAT TPA AND MCO ARE STILL EXPERIENCING SOME DEVIATIONS …, AND DELAYS WILL CONTINUE"
+  const validEnd = toMs(op.plan?.validEnd);
+  for (const n of op.notes || []) {
+    const where = (n.airports || []).join("/");
+    const text = `FAA reports delays${where ? " at " + where : ""}${n.continuing ? " expected to continue" : ""}`;
+    const to = validEnd != null && validEnd > +now ? validEnd : +now + 2 * HOUR;
+    out.push({ kind: "note", level: 2, text, cause: classifyCause(n.raw), until: null, raw: n.raw, at: "span", from: -Infinity, to });
+  }
+  for (const s of op.staffing || []) {
+    const text = `Air traffic control staffing shortage${untilText(toMs(s.until), tz, now)} — delays possible`;
+    out.push({ kind: "staffing", level: 2, text, cause: "staffing", until: s.until, raw: s.raw, at: "span", from: -Infinity, to: toMs(s.until) ?? Infinity });
+  }
+  // a terminal constraint alone is Low; with a program it only names the program's cause
+  if (!out.some((x) => x.kind === "program")) {
+    for (const c of op.constraints || []) {
+      const w = constraintPhrase(c.reason);
+      out.push({ kind: "constraint", level: 1, text: `FAA reports ${w ? w.long : "conditions"} affecting arrivals`, cause: c.cause || classifyCause(c.reason), until: null, raw: c.raw, at: "now", from: -Infinity, to: Infinity });
+    }
+  }
+  const nasRwys = new Set((faa || []).filter((f) => f.type === "closure").flatMap((f) => f.runways || []).map(normRwy));
+  for (const s of op.sirs || []) {
+    const to = toMs(s.until) ?? Infinity;
+    const until = untilText(toMs(s.until), tz, now);
+    const rw = (s.runways || []).map(normRwy);
+    const rwName = rw.length > 1 ? `Runways ${rw.slice(0, -1).join(", ")} and ${rw[rw.length - 1]}` : rw.length ? `Runway ${rw[0]}` : "";
+    const base = { kind: "sir", cause: s.cause, until: s.until, raw: s.raw, from: -Infinity, to };
+    if (rw.length && (s.status === "closed" || s.status === "construction") && s.what === "runway") {
+      const dup = rw.every((r) => nasRwys.has(r));
+      const text = `${rwName} ${s.status === "closed" ? "closed" : "construction"}${until}`;
+      out.push({ ...base, level: dup ? 0 : 1, text, at: "now", ...(dup ? { dup: true } : {}) });
+    } else if (rw.length && (s.what === "glideslope" || s.what === "ils" || s.status === "limited" || s.status === "out of service")) {
+      const what = s.what === "glideslope" ? "glideslope out of service" : s.what === "ils" ? "ILS out of service" : s.status === "limited" ? "limited operations" : "out of service";
+      out.push({ ...base, level: 0, text: `${rwName} ${what}${until}`, at: "ifr", ifr: true });
+    } else {
+      const what = s.what === "taxiway" && !rw.length ? `Taxiway ${s.status === "closed" ? "closures" : s.status}`
+        : String(s.item || "").toLowerCase().replace(/^./, (c) => c.toUpperCase());
+      out.push({ ...base, level: 0, text: `${what}${until}`, at: "none" });
+    }
+  }
+  return out;
 }
 
 /** TCF coverage over the airport: high -> High, medium -> Moderate. */
@@ -416,18 +551,33 @@ export function nextUtcHour(now, hour) {
  */
 export function buildHours({
   now = new Date(), tz, taf = null, metar = null, faa = [], sigmet = false, alerts = [], spc = null,
-  atcscc = [], lamp = null, tcf = [], cwa = [], count = 24,
+  atcscc = [], lamp = null, tcf = [], cwa = [], opsplan = null, count = 24,
 }) {
   const start = Math.floor(+now / HOUR) * HOUR;
   const spcEnd = nextUtcHour(now, 12);
   const alertItems = alerts.map((a) => assessAlert(a, now, tz)).filter(Boolean);
   const cwaItems = (cwa || []).map((c) => assessCwa(c, now, tz)).filter(Boolean);
   const spcLvl = spcLevel(spc);
-  // LAMP LP2 is a 2-hour probability for the period ending at its column time.
+  // LAMP LP1/CP1 are 1-hour probabilities (LP2/CP2: 2-hour) for the period ending at the column time.
   const thunder = [];
+  const conv = [];
   for (const x of lamp?.hours || []) {
     const t = toMs(x.t);
-    if (t != null && num(x.tstmProb) != null) thunder.push({ from: t - 2 * HOUR, to: t, p: Number(x.tstmProb) });
+    if (t == null) continue;
+    const span = (num(x.probHrs) || 1) * HOUR;
+    if (num(x.tstmProb) != null) thunder.push({ from: t - span, to: t, p: Number(x.tstmProb) });
+    if (num(x.convProb) != null) conv.push({ from: t - span, to: t, p: Number(x.convProb) });
+  }
+  const planItems = opsPlanItems(opsplan, { faa, atcscc, tz, now });
+  // FAA programs and active ATCSCC GS/GDP score every hour until their end (closures: hour 0 only)
+  const progItems = [];
+  for (const f of faa) {
+    const it = assessFaa(f);
+    if (it) progItems.push({ ...it, to: faaSpan(f, now) });
+  }
+  for (const a of atcscc || []) {
+    const it = assessAtcscc(a, faa, tz, now);
+    if (it) progItems.push({ ...it, to: toMs(a.end) });
   }
   const tcfItems = [];
   for (const x of tcf || []) {
@@ -442,7 +592,8 @@ export function buildHours({
     const t1 = t0 + HOUR;
     let items = [];
     let fltCat = null;
-    if (taf) {
+    // hour 0: the observation wins; the TAF only fills in when there is no current METAR
+    if (taf && !(i === 0 && metar)) {
       const th = tafHour(taf, t0, t1);
       if (th) { items.push(...th.items); fltCat = th.fltCat; }
     }
@@ -451,16 +602,9 @@ export function buildHours({
         items.push(...assessConditions(metar).map((x) => ({ ...x, fc: false })));
         fltCat = metar.fltCat || flightCategory(parseVisib(metar.visib), ceilingOf(metar.clouds));
       }
-      for (const f of faa) {
-        const it = assessFaa(f);
-        if (it) items.push(it);
-      }
-      for (const a of atcscc || []) {
-        const it = assessAtcscc(a, faa, tz, now);
-        if (it) items.push(it);
-      }
       if (sigmet) items.push({ level: 3, text: "Convective SIGMET over airport", fixed: true });
     }
+    for (const x of progItems) if (i === 0 || (x.to != null && x.to > t0)) items.push({ level: x.level, text: x.text, fixed: true });
     for (const a of alertItems) if (a.from < t1 && a.to > t0) items.push({ level: a.level, text: a.text, fixed: true });
     for (const c of cwaItems) if (c.from < t1 && c.to > t0) items.push({ level: c.level, text: c.text, fixed: true });
     if (spcLvl && t0 < spcEnd) items.push({ level: spcLvl, text: spcText(spc), fixed: true });
@@ -468,6 +612,15 @@ export function buildHours({
     for (const x of thunder) if (x.from < t1 && x.to > t0 && (p == null || x.p > p)) p = x.p;
     const tl = lampThunderLevel(p);
     if (tl) items.push({ level: tl, text: `Thunder chance ${p}% (LAMP)`, fc: true });
+    let cp = null;
+    for (const x of conv) if (x.from < t1 && x.to > t0 && (cp == null || x.p > cp)) cp = x.p;
+    const cl = lampConvLevel(cp);
+    if (cl > tl) items.push({ level: cl, text: "Storms likely nearby (LAMP)", fc: true });
+    for (const x of planItems) {
+      if (!(x.to > t0 && x.from < t1)) continue;
+      if (x.at === "now" ? i === 0 && x.level : x.at === "span" ? x.level : false) items.push({ level: x.level, text: x.text, fixed: true });
+      else if (x.at === "ifr" && (fltCat === "IFR" || fltCat === "LIFR")) items.push({ level: 1, text: x.text, fixed: true });
+    }
     for (const x of tcfItems) if (x.from < t1 && x.to > t0) items.push({ level: x.level, text: x.text, fc: true });
     items = dedupe(items);
     hours.push({ t: new Date(t0), items, level: levelOf(items), fltCat });
@@ -488,7 +641,7 @@ export function windowize(hours, idx, item, tz) {
   if (a === 0 && b === hours.length - 1) return `${item.text}${fc} for the next ${hours.length} hours`;
   if (a === 0) return `${item.text}${fc} until ${fmtClock(end, tz)}`;
   if (b === hours.length - 1) return `${item.text} forecast from ${fmtClock(hours[a].t, tz)}`;
-  return `${item.text} forecast ${fmtRange(hours[a].t, end, tz)}`;
+  return `${item.text} forecast ${fmtRange(hours[a].t, end, tz, hours[0].t)}`;
 }
 
 // Reasons of one kind that can come from both the METAR and the TAF: show one per box.

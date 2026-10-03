@@ -92,3 +92,16 @@ test("FAA XML: the live LAX closure parses as limited with no CLOSED badge", () 
   assert.equal(r.byAirport.BUF[0].badge, "CLOSED");
   assert.equal(r.byAirport.BUF[0].scope, "full");
 });
+
+test("size-limited closures (live PHL NOTAM) aren't called general aviation", () => {
+  const PHL = "!PHL 09/263 PHL AD AP CLSD TO NON SKED ACFT WINGSPAN MORE THAN 214FT AND TAIL HGT MORE THAN 66FT. 2609301806-2610311200";
+  const d = describeClosure(PHL, { tz: "America/New_York", now: new Date("2026-10-03T22:17:00Z") });
+  assert.equal(d.scope, "limited");
+  assert.equal(d.plain, "Closed to very large non-scheduled aircraft (747-8/A380 size). Airline flights aren't affected. Through Oct 31.");
+  assert.doesNotMatch(d.plain, /general aviation/);
+  const small = describeClosure("!X 1/1 X AD AP CLSD TO ACFT WINGSPAN MORE THAN 118FT 2609301806-2610311200", { now: new Date("2026-10-03T22:17:00Z") });
+  assert.equal(small.plain, "Closed to large aircraft (wingspan over 118 ft). Through Oct 31.");
+  // NON SKED alone is not general aviation either
+  const ns = describeClosure("!X 1/1 X AD AP CLSD TO NON SKED ACFT EXC PPR 2609301806-2610311200", { now: new Date("2026-10-03T22:17:00Z") });
+  assert.equal(ns.plain, "Closed to non-scheduled flights unless approved in advance. Scheduled airline flights aren't affected. Through Oct 31.");
+});
