@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AIRPORT_STATUS_INFORMATION>
+  <Update_Time>{{iso+0}}</Update_Time>
+  <Dtd_File>http://www.fly.faa.gov/AirportStatus.dtd</Dtd_File>
+  <Delay_type>
+    <Name>Airport Closures</Name>
+    <Airport_Closure_List>
+      <Airport>
+        <ARPT>LAX</ARPT>
+        <Reason>!LAX 05/277 LAX AD AP CLSD TO NON SKED TRANSIENT GA ACFT EXC 24HR PPR CTC ATLANTIC AVIATION 310-258-9884 OR SIGNATURE AVIATION 310-410-9605 2605271826-2705281600</Reason>
+        <Start>{{clock-600 America/Los_Angeles}}</Start>
+        <Reopen>{{clock+1440 America/Los_Angeles}}</Reopen>
+      </Airport>
+    </Airport_Closure_List>
+  </Delay_type>
+</AIRPORT_STATUS_INFORMATION>

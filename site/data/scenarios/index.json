@@ -1,0 +1,293 @@
+{
+ "generated": "2026-10-03T22:26:12.587Z",
+ "scenarios": [
+  {
+   "name": "airline-it-outage",
+   "title": "Airline IT outage at ATL",
+   "description": "Company-request ground stop at ATL during an airline IT outage; weather is fine.",
+   "file": "airline-it-outage.json",
+   "wx": "airline-it-outage/wx/",
+   "lagMin": 0,
+   "assert": [
+    {
+     "t": "level",
+     "iata": "ATL",
+     "of": "now",
+     "op": "==",
+     "v": 4
+    },
+    {
+     "t": "faa",
+     "iata": "ATL",
+     "type": "ground_stop"
+    },
+    {
+     "t": "faa",
+     "iata": "ATL",
+     "type": "ground_stop",
+     "cause": "airline",
+     "note": "needs FAA cause classification (cause.mjs, other branch)"
+    }
+   ]
+  },
+  {
+   "name": "all-clear",
+   "title": "All clear",
+   "description": "Quiet weather everywhere, no FAA programs, every source up. Includes the global shards: EGLL (international, METAR + TAF), KFCM (small US, METAR only) and Y49 (no reports).",
+   "file": "all-clear.json",
+   "wx": "all-clear/wx/",
+   "lagMin": 0,
+   "assert": [
+    {
+     "t": "allLevels",
+     "max": 0
+    },
+    {
+     "t": "shard",
+     "icao": "EGLL",
+     "has": [
+      "m",
+      "t"
+     ]
+    },
+    {
+     "t": "shard",
+     "icao": "KFCM",
+     "has": [
+      "m"
+     ],
+     "lacks": [
+      "t"
+     ]
+    },
+    {
+     "t": "noShard",
+     "icao": "Y49"
+    },
+    {
+     "t": "rendered",
+     "text": "Test scenario"
+    }
+   ]
+  },
+  {
+   "name": "atc-staffing-ground-stop",
+   "title": "ATC staffing ground stop at EWR",
+   "description": "Clear weather everywhere; the FAA stops traffic to EWR for air traffic control staffing.",
+   "file": "atc-staffing-ground-stop.json",
+   "wx": "atc-staffing-ground-stop/wx/",
+   "lagMin": 0,
+   "assert": [
+    {
+     "t": "level",
+     "iata": "EWR",
+     "of": "now",
+     "op": "==",
+     "v": 4
+    },
+    {
+     "t": "faa",
+     "iata": "EWR",
+     "type": "ground_stop"
+    },
+    {
+     "t": "faa",
+     "iata": "EWR",
+     "type": "ground_stop",
+     "cause": "staffing",
+     "note": "needs FAA cause classification (cause.mjs, other branch)"
+    },
+    {
+     "t": "level",
+     "iata": "JFK",
+     "of": "peak",
+     "op": "==",
+     "v": 0
+    }
+   ]
+  },
+  {
+   "name": "full-closure",
+   "title": "MCO closed for a hurricane",
+   "description": "Full airport closure NOTAM at MCO with a Hurricane Warning and hurricane-force gusts.",
+   "file": "full-closure.json",
+   "wx": "full-closure/wx/",
+   "lagMin": 0,
+   "assert": [
+    {
+     "t": "level",
+     "iata": "MCO",
+     "of": "now",
+     "op": "==",
+     "v": 4
+    },
+    {
+     "t": "faa",
+     "iata": "MCO",
+     "type": "closure"
+    },
+    {
+     "t": "reason",
+     "iata": "MCO",
+     "re": "Airport closed"
+    }
+   ]
+  },
+  {
+   "name": "lax-ga-only-closure",
+   "title": "LAX closed to transient GA only",
+   "description": "The real May 2026 NOTAM closing LAX to non-scheduled transient general aviation. Airline flights are unaffected, so LAX must not show Severe.",
+   "file": "lax-ga-only-closure.json",
+   "wx": "lax-ga-only-closure/wx/",
+   "lagMin": 0,
+   "assert": [
+    {
+     "t": "level",
+     "iata": "LAX",
+     "of": "now",
+     "op": "<=",
+     "v": 1,
+     "note": "needs NOTAM closure scope (limited) from the other branch"
+    },
+    {
+     "t": "level",
+     "iata": "LAX",
+     "of": "peak",
+     "op": "<=",
+     "v": 1,
+     "note": "needs NOTAM closure scope (limited) from the other branch"
+    },
+    {
+     "t": "noReason",
+     "iata": "LAX",
+     "re": "Airport closed",
+     "note": "needs NOTAM closure scope (limited) from the other branch"
+    }
+   ]
+  },
+  {
+   "name": "source-outage",
+   "title": "FAA status feed down",
+   "description": "The FAA NAS status request fails; everything else works. The page must say FAA status is unavailable.",
+   "file": "source-outage.json",
+   "wx": "source-outage/wx/",
+   "lagMin": 0,
+   "assert": [
+    {
+     "t": "source",
+     "name": "faa",
+     "ok": false
+    },
+    {
+     "t": "source",
+     "name": "metar",
+     "ok": true
+    },
+    {
+     "t": "check",
+     "id": "sources",
+     "expect": "fail"
+    },
+    {
+     "t": "rendered",
+     "text": "FAA status unavailable"
+    }
+   ]
+  },
+  {
+   "name": "stale-data",
+   "title": "Stale data (poller stopped 50 min ago)",
+   "description": "The last successful poll was 50 minutes ago. The page must flag it as stale.",
+   "file": "stale-data.json",
+   "wx": "stale-data/wx/",
+   "lagMin": 50,
+   "assert": [
+    {
+     "t": "check",
+     "id": "freshness",
+     "expect": "fail"
+    },
+    {
+     "t": "rendered",
+     "selector": ".updated.stale"
+    }
+   ]
+  },
+  {
+   "name": "thunderstorm-ground-stop",
+   "title": "Thunderstorm ground stop at ORD",
+   "description": "Severe thunderstorms over Chicago: FAA ground stop at ORD, convective SIGMET, Severe Thunderstorm Warning, SPC Enhanced risk.",
+   "file": "thunderstorm-ground-stop.json",
+   "wx": "thunderstorm-ground-stop/wx/",
+   "lagMin": 0,
+   "assert": [
+    {
+     "t": "level",
+     "iata": "ORD",
+     "of": "now",
+     "op": "==",
+     "v": 4
+    },
+    {
+     "t": "faa",
+     "iata": "ORD",
+     "type": "ground_stop"
+    },
+    {
+     "t": "faa",
+     "iata": "ORD",
+     "type": "ground_stop",
+     "cause": "weather",
+     "note": "needs FAA cause classification (cause.mjs, other branch)"
+    },
+    {
+     "t": "level",
+     "iata": "MDW",
+     "of": "now",
+     "op": ">=",
+     "v": 3
+    },
+    {
+     "t": "level",
+     "iata": "ATL",
+     "of": "peak",
+     "op": "==",
+     "v": 0
+    },
+    {
+     "t": "rendered",
+     "text": "Test scenario"
+    }
+   ]
+  },
+  {
+   "name": "winter-storm-gdp",
+   "title": "Winter storm ground delay at DEN",
+   "description": "Heavy snow and blowing snow at DEN with a ground delay program and a Winter Storm Warning.",
+   "file": "winter-storm-gdp.json",
+   "wx": "winter-storm-gdp/wx/",
+   "lagMin": 0,
+   "assert": [
+    {
+     "t": "level",
+     "iata": "DEN",
+     "of": "now",
+     "op": ">=",
+     "v": 3
+    },
+    {
+     "t": "faa",
+     "iata": "DEN",
+     "type": "ground_delay"
+    },
+    {
+     "t": "faa",
+     "iata": "DEN",
+     "type": "ground_delay",
+     "cause": "weather",
+     "note": "needs FAA cause classification (cause.mjs, other branch)"
+    }
+   ]
+  }
+ ]
+}

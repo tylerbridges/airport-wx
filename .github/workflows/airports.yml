@@ -1,0 +1,43 @@
+name: Airport list
+
+# Weekly rebuild of the searchable airport list (site/data/airports-all.json and, when it is
+# split, airports-extra.json) from OurAirports + AWC's station list. Commits to main only when
+# the content changed (the "generated" stamp alone doesn't count).
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: airports
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unit tests
+        run: node poller/run-tests.mjs
+      # Logs the CSV headers and a sample AWC station record: the TAF/METAR field names are
+      # detected at run time and are not verified anywhere else.
+      - name: Build airport list
+        run: node tools/build-airports.mjs
+      - name: Commit if changed
+        run: |
+          set -eu
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A site/data/airports-all.json site/data/airports-extra.json 2>/dev/null || git add -A site/data/airports-all.json
+          if git diff --cached --quiet; then echo "airport list unchanged"; exit 0; fi
+          git commit -q -m "Update airport list ($(date -u +%F))"
+          for i in 1 2 3; do
+            if git push origin HEAD:main; then exit 0; fi
+            echo "push rejected; rebasing on main and retrying"
+            git pull --rebase -q origin main
+          done
+          exit 1

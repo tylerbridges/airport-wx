@@ -13,6 +13,7 @@ import {
 import {
   parseFaaXml, spcCategoryAt, convectiveSigmetsAt, normalizeAlerts, expandTemplate, pool, latestBy,
 } from "./lib.mjs";
+import { runGlobal } from "./global.mjs"; // build2a hook: global METAR/TAF shards for searched airports
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -80,7 +81,7 @@ function liveProviders(airports) {
 }
 
 function fixtureProviders(airports, now) {
-  const dir = join(HERE, "fixtures");
+  const dir = process.env.FIXTURES_DIR ? resolve(process.env.FIXTURES_DIR) : join(HERE, "fixtures"); // build2a hook: scenario fixture sets
   const read = async (name) => expandTemplate(await readFile(join(dir, name), "utf8"), now);
   return {
     metar: async () => JSON.parse(await read("metar.json")),
@@ -192,6 +193,7 @@ async function main() {
     fixtures: args.includes("--fixtures"),
     out: oi >= 0 ? resolve(args[oi + 1]) : undefined,
   });
+  await runGlobal({ fixtures: args.includes("--fixtures") }); // build2a hook: writes site/data/wx/ (never throws)
   for (const [n, s] of Object.entries(status.sources)) console.log(`${s.ok ? "ok  " : "FAIL"} ${n}${s.error ? ": " + s.error : ""}`);
   const top = status.airports.filter((a) => a.peak.level >= 3).length;
   console.log(`wrote ${out}: ${status.airports.length} airports, ${top} at High/Severe peak, ${okCount}/${total} sources ok`);

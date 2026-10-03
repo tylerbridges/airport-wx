@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AIRPORT_STATUS_INFORMATION>
+  <Update_Time>{{iso+0}}</Update_Time>
+  <Dtd_File>http://www.fly.faa.gov/AirportStatus.dtd</Dtd_File>
+  <Delay_type>
+    <Name>Airport Closures</Name>
+    <Airport_Closure_List>
+      <Airport>
+        <ARPT>MCO</ARPT>
+        <Reason>!MCO 10/045 MCO AD AP CLSD 2610031800-2610051200</Reason>
+        <Start>{{clock-120 America/New_York}}</Start>
+        <Reopen>{{clock+1200 America/New_York}}</Reopen>
+      </Airport>
+    </Airport_Closure_List>
+  </Delay_type>
+</AIRPORT_STATUS_INFORMATION>
