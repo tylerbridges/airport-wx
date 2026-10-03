@@ -6,8 +6,18 @@
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
-<title>Airport Weather</title>
-<link rel="icon" href="data:,">
+<title>Airport Status</title>
+<!-- build2a hook: home-screen install, icons, error capture + ?test= scenarios -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Airports">
+<script src="testmode.js"></script>
+<!-- /build2a hook -->
 <style>
 :root {
   color-scheme: dark light;
@@ -166,6 +176,23 @@ pre.raw { margin: 0; font: 12.5px/1.45 var(--mono); white-space: pre-wrap; overf
 .item + .item { border-top: 1px solid var(--line); }
 .item b { font-weight: 700; }
 .hourinfo { margin-top: 10px; font-size: 14px; min-height: 40px; }
+.box.one h4 { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; color: var(--muted); }
+.box.one h4 + .reasons { margin-top: 8px; }
+.small { font-size: 12.5px; margin-top: 2px; }
+.badge.off { --c: var(--muted); }
+details.rawt summary { margin-top: 6px; font-size: 12.5px; color: var(--muted); cursor: pointer; width: max-content; }
+details.rawt pre { margin-top: 6px; }
+.lamp { overflow-x: auto; overscroll-behavior-x: contain; background: var(--card-2); border-radius: 14px; padding: 6px 0; }
+table.lt { border-collapse: collapse; font-size: 12px; }
+.lt th, .lt td { padding: 4px 5px; text-align: center; white-space: nowrap; min-width: 28px; }
+.lt th { color: var(--muted); font-weight: 600; }
+.lt tbody th, .lt thead th:first-child { position: sticky; left: 0; background: var(--card-2); text-align: left; padding-left: 12px; }
+.lt td.hot { color: var(--c); font-weight: 800; }
+.fcd { display: inline-block; width: 18px; height: 18px; line-height: 18px; border-radius: 5px; color: #fff; font-weight: 800; font-size: 11px; }
+.fcd.VFR { background: #1f9d43; } .fcd.MVFR { background: #2867d6; } .fcd.IFR { background: #d63a14; } .fcd.LIFR { background: #b02bd1; }
+.checked { margin-top: 24px; font-size: 12.5px; }
+.checked p { margin: 3px 0; }
+.checked .warn { color: var(--l2); font-weight: 600; }
 .tl.big { height: 22px; }
 .tl.big .s { cursor: pointer; }
 .tl.big .s[aria-pressed="true"] { outline: 2px solid var(--text); outline-offset: 1px; }
@@ -184,17 +211,20 @@ pre.raw { margin: 0; font: 12.5px/1.45 var(--mono); white-space: pre-wrap; overf
 <div class="wrap">
   <header>
     <div>
-      <h1>Airport Weather</h1>
+      <h1>Airport Status</h1>
       <div class="updated" id="updated" aria-live="polite">Loading…</div>
     </div>
     <button class="refresh" id="refresh" type="button" aria-label="Refresh">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg>
     </button>
   </header>
+  <div id="search"></div><!-- build2a hook: search (site/searched.js) -->
   <div class="seg" id="seg" role="tablist" aria-label="Filter airports"></div>
   <div id="banner"></div>
+  <div class="list" id="extra"></div><!-- build2a hook: searched / starred non-major airports -->
   <main class="list" id="list" role="tabpanel"></main>
   <div class="notes" id="notes"></div>
+  <p class="xfoot"><a href="check.html">Checks</a></p><!-- build2a hook: link to the check page (moves to settings later) -->
   <noscript><p class="empty">This page needs JavaScript.</p></noscript>
 </div>
 
@@ -202,6 +232,7 @@ pre.raw { margin: 0; font: 12.5px/1.45 var(--mono); white-space: pre-wrap; overf
   <div class="backdrop" id="backdrop"></div>
   <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle"></div>
 </div>
-<script src="app.js?v=1" defer></script>
+<script src="app.js?v=3" defer></script>
+<script type="module" src="searched.js?v=3"></script><!-- build2a hook -->
 </body>
 </html>

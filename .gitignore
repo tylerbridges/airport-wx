@@ -2,6 +2,9 @@
 site/data/status.json
 node_modules/
 .DS_Store
+# raw response samples written by poller/poll.mjs; the workflow copies them to the history branch
+.cache/
+# local checkout of the history branch (the workflow uses ./history)
+/history/
 # generated each poll run by poller/global.mjs (build2a)
 site/data/wx/
-.cache/

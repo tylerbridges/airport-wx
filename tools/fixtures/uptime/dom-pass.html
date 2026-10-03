@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<meta name="robots" content="noindex">
+<title>Checks · Airport Status</title>
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<style>
+:root {
+  color-scheme: dark light;
+  --bg: #000; --card: #1c1c1e; --card-2: #2c2c2e; --text: #fff; --muted: #8e8e93; --line: rgba(255,255,255,.1);
+  --ok: #30d158; --warn: #ffb020; --fail: #ff453a; --info: #2ec4d6;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", Roboto, system-ui, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: light) {
+  :root { --bg: #f2f2f7; --card: #fff; --card-2: #f2f2f7; --text: #000; --muted: #6c6c70; --line: rgba(0,0,0,.1);
+    --ok: #1f9d43; --warn: #b86e00; --fail: #d70015; --info: #0f8da0; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.4 var(--font); -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 720px; margin: 0 auto; padding: calc(env(safe-area-inset-top) + 14px) 16px 40px; }
+header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+h1 { margin: 0; font-size: 30px; font-weight: 800; letter-spacing: -.03em; }
+.sub { color: var(--muted); font-size: 14px; margin-top: 2px; }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; }
+button, .btn { font: inherit; font-size: 14px; font-weight: 600; color: var(--text); background: var(--card); border: 0; border-radius: 10px; padding: 9px 12px; cursor: pointer; text-decoration: none; }
+.summary { border-radius: 16px; padding: 14px 16px; margin: 6px 0 14px; background: var(--card); font-size: 18px; font-weight: 800; border-left: 6px solid var(--muted); }
+.summary.pass { border-color: var(--ok); } .summary.fail { border-color: var(--fail); } .summary.warn { border-color: var(--warn); }
+h2 { margin: 22px 4px 8px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.group { background: var(--card); border-radius: 16px; overflow: hidden; }
+.row { display: grid; grid-template-columns: 56px 1fr; gap: 10px; padding: 10px 14px; align-items: start; }
+.row + .row { border-top: 1px solid var(--line); }
+.st { font-size: 11px; font-weight: 800; letter-spacing: .06em; border-radius: 6px; padding: 3px 0; text-align: center; color: var(--c); background: color-mix(in srgb, var(--c) 18%, transparent); }
+.st.pass { --c: var(--ok); } .st.warn { --c: var(--warn); } .st.fail { --c: var(--fail); } .st.info { --c: var(--info); }
+.lbl { font-weight: 600; }
+.det { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+pre#result { white-space: pre-wrap; font: 12px/1.45 var(--mono); background: var(--card); border-radius: 14px; padding: 12px; margin-top: 18px; overflow-wrap: anywhere; }
+#frames { position: absolute; left: -10000px; top: 0; width: 390px; height: 844px; overflow: hidden; }
+#frames iframe { width: 390px; height: 844px; border: 0; }
+a { color: var(--info); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Checks</h1>
+      <div class="sub" id="mode">Live data</div>
+    </div>
+    <div class="btns">
+      <button type="button" id="copy">Copy report</button>
+      <a class="btn" id="toggle" href="check.html?mock=1">Run scenarios</a>
+      <a class="btn" href="./">App</a>
+    </div>
+  </header>
+  <div class="summary pass" id="summary" aria-live="polite">All checks pass</div>
+  <div id="groups"><section><h2>Live data</h2><div class="group"><div class="row"><span class="st pass">PASS</span><div><div class="lbl">status.json loads</div><div class="det">102 KB in 18 ms, 32 airports</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Freshness</div><div class="det">generated just now (2026-10-03T22:33:16.153Z); warn &gt; 15 min, fail &gt; 20 min</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Source: METAR</div><div class="det">ok</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Source: TAF</div><div class="det">ok</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Source: SIGMETs</div><div class="det">ok</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Source: FAA NAS status</div><div class="det">ok</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Source: NWS alerts</div><div class="det">ok</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Source: SPC outlook</div><div class="det">ok</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Source: LAMP</div><div class="det">ok</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Source: ATCSCC advisories</div><div class="det">ok</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Source: TCF</div><div class="det">ok</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Source: CWAs</div><div class="det">ok</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">All sources</div><div class="det">10 ok</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">METAR under 2 h old at every airport</div><div class="det">32 airports</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">TAF where the airport issues one</div><div class="det">all present</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Values plausible (temp −60..60 °C, wind 0..150 kt, visibility ≥ 0, ceiling ≥ 0)</div><div class="det">ok</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Every FAA program has a cause class</div><div class="det">7 programs</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">No raw coded text in traveler fields</div><div class="det">clean</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Global weather run</div><div class="det">52 airports, 52 METARs, 50 TAFs</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Global weather freshness</div><div class="det">generated just now</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Source: Global METAR cache</div><div class="det">ok · 9 KB · 5 ms</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Source: Global TAF cache</div><div class="det">ok · 35 KB · 5 ms</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Airports with a METAR have a shard entry under 2 h old</div><div class="det">52 of 52 (100.0%; need 95%)</div></div></div></div></section><section><h2>Search</h2><div class="group"><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Airport list loads</div><div class="det">53 airports in the core file</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Search "ORD": exact IATA first</div><div class="det">ORD</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Search "KORD": exact ICAO first</div><div class="det">ORD</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Search "nyc": alias NYC → JFK/LGA/EWR</div><div class="det">JFK, LGA, EWR</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Search "chicago": Chicago → ORD, MDW first</div><div class="det">ORD, MDW</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Search "hagatna": accent-insensitive (Hagåtña → GUM)</div><div class="det">GUM</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Search "london": London → LHR first</div><div class="det">LHR, LGW</div></div></div></div></section><section><h2>Uptime</h2><div class="group"><div class="row"><span class="st info">INFO</span><div><div class="lbl">Uptime by source</div><div class="det">not yet available</div></div></div></div></section><section><h2>Render test (390 px, hidden frame)</h2><div class="group"><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Render index.html</div><div class="det">4 cards, no errors</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Render ?test=airline-it-outage</div><div class="det">4 cards, no errors</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Render ?test=all-clear</div><div class="det">4 cards, no errors</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Render ?test=atc-staffing-ground-stop</div><div class="det">4 cards, no errors</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Render ?test=full-closure</div><div class="det">4 cards, no errors</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Render ?test=lax-ga-only-closure</div><div class="det">4 cards, no errors</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Render ?test=source-outage</div><div class="det">4 cards, no errors</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Render ?test=stale-data</div><div class="det">4 cards, no errors</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Render ?test=thunderstorm-ground-stop</div><div class="det">4 cards, no errors</div></div></div><div class="row"><span class="st pass">PASS</span><div><div class="lbl">Render ?test=winter-storm-gdp</div><div class="det">4 cards, no errors</div></div></div></div></section></div>
+  <pre id="result">CHECK PASS (live, 2026-10-03T22:33:23.679Z, 41 checks, 0 warnings)
+PASS [Live data] status.json loads — 102 KB in 18 ms, 32 airports
+PASS [Live data] Freshness — generated just now (2026-10-03T22:33:16.153Z); warn &gt; 15 min, fail &gt; 20 min
+PASS [Live data] Source: METAR — ok
+PASS [Live data] Source: TAF — ok
+PASS [Live data] Source: SIGMETs — ok
+PASS [Live data] Source: FAA NAS status — ok
+PASS [Live data] Source: NWS alerts — ok
+PASS [Live data] Source: SPC outlook — ok
+PASS [Live data] Source: LAMP — ok
+PASS [Live data] Source: ATCSCC advisories — ok
+PASS [Live data] Source: TCF — ok
+PASS [Live data] Source: CWAs — ok
+PASS [Live data] All sources — 10 ok
+PASS [Live data] METAR under 2 h old at every airport — 32 airports
+PASS [Live data] TAF where the airport issues one — all present
+PASS [Live data] Values plausible (temp −60..60 °C, wind 0..150 kt, visibility ≥ 0, ceiling ≥ 0) — ok
+PASS [Live data] Every FAA program has a cause class — 7 programs
+PASS [Live data] No raw coded text in traveler fields — clean
+PASS [Live data] Global weather run — 52 airports, 52 METARs, 50 TAFs
+PASS [Live data] Global weather freshness — generated just now
+PASS [Live data] Source: Global METAR cache — ok · 9 KB · 5 ms
+PASS [Live data] Source: Global TAF cache — ok · 35 KB · 5 ms
+PASS [Live data] Airports with a METAR have a shard entry under 2 h old — 52 of 52 (100.0%; need 95%)
+PASS [Search] Airport list loads — 53 airports in the core file
+PASS [Search] Search "ORD": exact IATA first — ORD
+PASS [Search] Search "KORD": exact ICAO first — ORD
+PASS [Search] Search "nyc": alias NYC → JFK/LGA/EWR — JFK, LGA, EWR
+PASS [Search] Search "chicago": Chicago → ORD, MDW first — ORD, MDW
+PASS [Search] Search "hagatna": accent-insensitive (Hagåtña → GUM) — GUM
+PASS [Search] Search "london": London → LHR first — LHR, LGW
+PASS [Render test (390 px, hidden frame)] Render index.html — 4 cards, no errors
+PASS [Render test (390 px, hidden frame)] Render ?test=airline-it-outage — 4 cards, no errors
+PASS [Render test (390 px, hidden frame)] Render ?test=all-clear — 4 cards, no errors
+PASS [Render test (390 px, hidden frame)] Render ?test=atc-staffing-ground-stop — 4 cards, no errors
+PASS [Render test (390 px, hidden frame)] Render ?test=full-closure — 4 cards, no errors
+PASS [Render test (390 px, hidden frame)] Render ?test=lax-ga-only-closure — 4 cards, no errors
+PASS [Render test (390 px, hidden frame)] Render ?test=source-outage — 4 cards, no errors
+PASS [Render test (390 px, hidden frame)] Render ?test=stale-data — 4 cards, no errors
+PASS [Render test (390 px, hidden frame)] Render ?test=thunderstorm-ground-stop — 4 cards, no errors
+PASS [Render test (390 px, hidden frame)] Render ?test=winter-storm-gdp — 4 cards, no errors
+INFO [Uptime] Uptime by source — not yet available</pre>
+</div>
+<div id="frames" aria-hidden="true"></div>
+<script src="testmode.js"></script>
+<script type="module" src="check.js"></script>
+
+
+</body></html>

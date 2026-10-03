@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   parseVisib, fmtVis, ceilingOf, flightCategory, parseWx, assessConditions, assessFaa, assessAlert, alertLevel,
-  spcLevel, buildHours, summarize, tafHour, levelOf, nextUtcHour, fmtClock, fmtRange, tzAbbr, compareAirports, hoursOutput,
+  spcLevel, spcText, assessAtcscc, assessCwa, cwaKind, lampThunderLevel, tcfLevel, uniqueItems, buildHours, summarize, tafHour, levelOf, nextUtcHour, fmtClock, fmtRange, tzAbbr, compareAirports, hoursOutput,
 } from "./risk.mjs";
 
 const lvl = (c) => levelOf(assessConditions(c));
@@ -112,7 +112,12 @@ test("NWS alert levels", () => {
 });
 
 test("SPC levels", () => {
-  assert.deepEqual(["TSTM", "MRGL", "SLGT", "ENH", "MDT", "HIGH", null].map(spcLevel), [1, 1, 2, 3, 4, 4, 0]);
+  assert.deepEqual(["TSTM", "MRGL", "SLGT", "ENH", "MDT", "HIGH", null].map(spcLevel), [0, 1, 2, 3, 4, 4, 0]);
+  assert.equal(spcText("SLGT"), "Slight risk of severe storms");
+  assert.equal(spcText("HIGH"), "High risk of severe storms");
+  assert.equal(spcText("TSTM"), "General thunderstorms possible in the area (no severe risk)");
+  // TSTM never colours the timeline
+  assert.ok(buildHours({ now: NOW, tz: "America/New_York", spc: "TSTM" }).every((h) => h.level === 0 && !h.items.length));
 });
 
 test("time formatting in airport zones", () => {
@@ -261,4 +266,85 @@ test("assessAlert text: current and upcoming", () => {
   const fut = assessAlert({ event: "Wind Advisory", onset: +NOW + 3 * 3600e3, ends: +NOW + 6 * 3600e3 }, NOW, "America/New_York");
   assert.equal(fut.text, "Wind Advisory 6:20 PM to 9:20 PM");
   assert.equal(assessAlert({ event: "Heat Advisory" }, NOW, "America/New_York"), null);
+});
+
+test("FAA programs score by type whatever the cause; reasons name the cause", () => {
+  const gs = (reason, cause) => assessFaa({ type: "ground_stop", reason, cause, detail: "until 7:30 PM ET" });
+  assert.equal(gs("STAFFING / ATC ZERO").text, "Ground stop — air traffic control staffing (ATC zero), until 7:30 PM ET");
+  assert.equal(gs("COMPANY REQUEST / IT OUTAGE").text, "Ground stop — airline request (IT outage), until 7:30 PM ET");
+  assert.equal(gs("thunderstorms", "weather").text, "Ground stop — weather (thunderstorms), until 7:30 PM ET");
+  for (const r of ["STAFFING", "SECURITY", "VIP MOVEMENT", "SPACE LAUNCH", "EQUIPMENT / OUTAGE", "VOLUME / VOLUME", "WEATHER / WIND"]) assert.equal(gs(r).level, 4, r);
+  assert.equal(assessFaa({ type: "ground_delay", reason: "VOLUME / VOLUME", detail: "avg 52m" }).text, "Ground delay program — high traffic volume, avg 52m");
+  assert.equal(assessFaa({ type: "ground_delay", reason: "SECURITY", detail: "avg 52m" }).level, 3);
+  assert.equal(assessFaa({ type: "delay", reason: "volume", detail: "Arrivals 31–45m; Departures 16–30m" }).text, "Delays — high traffic volume, arrivals 31–45m; departures 16–30m");
+  assert.equal(assessFaa({ type: "closure", reason: "snow removal", scope: "full", detail: "until 9 PM ET" }).text, "Airport closed — weather (snow removal), until 9 PM ET");
+});
+
+test("ATCSCC ground stops / GDPs: active only, deduped against NAS status", () => {
+  const gs = { type: "GS", active: true, end: "2026-10-03T20:30:00Z", cause: "staffing", causeText: "STAFFING / STAFFING" };
+  const it = assessAtcscc(gs, [], "America/New_York", NOW);
+  assert.equal(it.level, 4);
+  assert.equal(it.text, "Ground stop — air traffic control staffing, until 4:30 PM ET (ATCSCC)");
+  assert.equal(assessAtcscc(gs, [{ type: "ground_stop" }], "America/New_York", NOW), null);
+  assert.equal(assessAtcscc({ ...gs, active: false }, [], "America/New_York", NOW), null);
+  assert.equal(assessAtcscc({ ...gs, type: "GDP" }, [], "America/New_York", NOW).level, 3);
+  assert.equal(assessAtcscc({ ...gs, type: "GDP" }, [{ type: "ground_delay" }], "America/New_York", NOW), null);
+  assert.equal(assessAtcscc({ ...gs, type: "AFP" }, [], "America/New_York", NOW), null);
+  const hours = buildHours({ now: NOW, tz: "America/New_York", atcscc: [gs] });
+  assert.equal(hours[0].level, 4);
+  assert.equal(hours[1].level, 0);
+});
+
+test("LAMP thunder: >= 40 High, 20-39 Moderate, over the 2 hours ending at the column time", () => {
+  assert.deepEqual([null, 0, 19, 20, 39, 40, 90].map(lampThunderLevel), [0, 0, 0, 2, 2, 3, 3]);
+  const t = (h) => new Date(Math.floor(+NOW / 3600e3) * 3600e3 + h * 3600e3).toISOString();
+  const lamp = { hours: [{ t: t(2), tstmProb: 25 }, { t: t(3), tstmProb: null }, { t: t(6), tstmProb: 45 }] };
+  const hours = buildHours({ now: NOW, tz: "America/New_York", lamp });
+  assert.deepEqual(hours.slice(0, 7).map((h) => h.level), [2, 2, 0, 0, 3, 3, 0]);
+  assert.equal(hours[4].items[0].text, "Thunder chance 45% (LAMP)");
+  const s = summarize(hours, "America/New_York");
+  assert.equal(s.peak.reasons[0], "Thunder chance 45% (LAMP) forecast 7–9 PM");
+});
+
+test("TCF: high coverage High, medium Moderate, within an hour of the valid time", () => {
+  assert.deepEqual(["high", "medium", "low", null].map(tcfLevel), [3, 2, 0, 0]);
+  const v = new Date(Math.floor(+NOW / 3600e3) * 3600e3 + 4 * 3600e3).toISOString();
+  const hours = buildHours({ now: NOW, tz: "America/Chicago", tcf: [{ valid: v, coverage: "high" }, { valid: v, coverage: "medium" }] });
+  assert.deepEqual(hours.slice(2, 6).map((h) => h.level), [0, 3, 3, 0]);
+  assert.ok(hours[3].items.some((i) => i.text === "Thunderstorms, high coverage (TCF)"));
+});
+
+test("CWA: convection or IFR -> Moderate during its validity; other hazards nothing", () => {
+  assert.equal(cwaKind({ hazard: "TS" }), "convection");
+  assert.equal(cwaKind({ hazard: "IFR" }), "ifr");
+  assert.equal(cwaKind({ hazard: "LIFR" }), "ifr");
+  assert.equal(cwaKind({ hazard: "TURB", raw: "TURB ASSOC WITH TS" }), null);
+  assert.equal(cwaKind({ raw: "AREA SCT TSTMS MOV FROM 24025KT" }), "convection");
+  assert.equal(cwaKind({ raw: "AREA IFR CIG BLW 010" }), "ifr");
+  assert.equal(cwaKind({ raw: "MOD TURB" }), null);
+  const c = { hazard: "TS", validFrom: new Date(+NOW + 2 * 3600e3).toISOString(), validTo: new Date(+NOW + 4 * 3600e3).toISOString() };
+  const it = assessCwa(c, NOW, "America/New_York");
+  assert.equal(it.text, "Center weather advisory: thunderstorms 5:20 PM to 7:20 PM");
+  const hours = buildHours({ now: NOW, tz: "America/New_York", cwa: [c] });
+  assert.deepEqual(hours.slice(0, 6).map((h) => h.level), [0, 0, 2, 2, 2, 0]);
+  assert.equal(assessCwa({ hazard: "ICE" }, NOW, "America/New_York"), null);
+});
+
+test("reasons: one Visibility/Ceiling/Gusts per box (highest, observed on a tie), no duplicates", () => {
+  const items = [
+    { level: 1, text: "Visibility 5 sm", fc: true },
+    { level: 1, text: "Visibility 4 sm", fc: false },
+    { level: 3, text: "Ceiling 400 ft", fc: true },
+    { level: 1, text: "Ceiling 2,500 ft", fc: false },
+    { level: 1, text: "Rain", fc: true },
+    { level: 1, text: "Rain", fc: false },
+  ];
+  assert.deepEqual(uniqueItems(items).map((i) => i.text), ["Ceiling 400 ft", "Visibility 4 sm", "Rain"]);
+  const hours = buildHours({
+    now: NOW, tz: "America/New_York", taf: taf([{ ...vfr, visib: 5 }]),
+    metar: { wxString: null, visib: 5, clouds: [], wspd: 5, wgst: null },
+  });
+  const s = summarize(hours, "America/New_York");
+  assert.deepEqual(s.now.reasons, ["Visibility 5 sm"]);
+  assert.equal(s.peak.reasons.length, 1);
 });

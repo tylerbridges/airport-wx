@@ -9,7 +9,8 @@
 // Column and element names in the cache files are unverified: only the raw report text is
 // required (CSV column "raw_text", XML element <raw_text>), which is re-parsed by taf-parse.mjs,
 // so the scoring doesn't depend on the other columns. A header and first record are logged and
-// the first 20 KB of each file is saved to .cache/raw/ (global-metars.csv, global-tafs.xml).
+// the first 20 KB of each file is saved to the raw dir (.cache/raw/global-metars.csv, global-tafs.xml)
+// and listed in its sources.json, so poller/record.mjs copies them to raw/latest on the history branch.
 import { readFile, writeFile, mkdir, rm } from "node:fs/promises";
 import { gunzipSync } from "node:zlib";
 import { dirname, join, resolve } from "node:path";
@@ -118,7 +119,7 @@ function latest(list, key, timeKey) {
 
 /**
  * airports: [{icao, tz}] -> Map(icao -> compact entry)
- *   {n: now level, p: peak level, pt: peak hour ISO, h: "0123…" (24 hourly levels), r: top reason,
+ *   {n: now level, p: peak level, pt: peak hour ISO, h: "0123…" (24 hourly levels, "-" = no data), r: top reason,
  *    pl: plain-English now, im: traveler impact, c: flight category,
  *    m: METAR raw, mt: METAR time ISO, t: TAF raw, ti: TAF issue ISO}
  */
@@ -146,7 +147,7 @@ export function computeGlobal({ airports, metars, tafs, now = new Date() }) {
       n: s.now.level,
       p: s.peak.level,
       pt: s.peak.at,
-      h: hours.map((x) => x.level).join(""),
+      h: hours.map((x) => (x.fltCat ? x.level : "-")).join(""), // "-" = hour not covered by a METAR or TAF
       r: s.peak.reasons[0] || "",
       c: m ? flightCategory(parseVisib(m.visib), ceilingOf(m.clouds)) : hours[0].fltCat || null,
     };
@@ -202,6 +203,20 @@ async function fetchGz(url) {
   }
 }
 
+/** Adds the samples to poll.mjs's raw sources.json so poller/record.mjs copies them to raw/latest. */
+async function noteRaw(rawDir, index, samples) {
+  if (!rawDir) return;
+  const p = join(rawDir, "sources.json");
+  try {
+    const meta = JSON.parse(await readFile(p, "utf8"));
+    for (const [name, s] of Object.entries(index.sources)) {
+      const key = name === "metars" ? "globalMetars" : "globalTafs";
+      meta[key] = { ...s, url: GLOBAL_URLS[name], files: samples[name] ? [samples[name]] : [] };
+    }
+    await writeFile(p, JSON.stringify(meta, null, 1) + "\n");
+  } catch { /* poll.mjs wrote no raw samples this run (--raw none) */ }
+}
+
 /**
  * Fetch (or read fixtures), score and write the shards. Options default from env:
  *   FIXTURES_DIR (fixture mode dir, default poller/fixtures), GLOBAL_WX_OUT (default site/data/wx),
@@ -211,10 +226,11 @@ export async function runGlobal({
   fixtures = false, now = new Date(),
   fixturesDir = process.env.FIXTURES_DIR ? resolve(process.env.FIXTURES_DIR) : join(HERE, "fixtures"),
   outDir = process.env.GLOBAL_WX_OUT ? resolve(process.env.GLOBAL_WX_OUT) : join(ROOT, "site/data/wx"),
-  dataDir = join(ROOT, "site/data"), rawDir = join(ROOT, ".cache/raw"), log = console.log,
+  dataDir = join(ROOT, "site/data"), rawDir = null, log = console.log,
 } = {}) {
   if (process.env.GLOBAL_WX === "0") return null;
   const index = { generated: now.toISOString(), ok: false, sources: {}, airports: 0, letters: [] };
+  const samples = {};
   try {
     const airports = await loadSearchAirports(dataDir);
     const get = async (name, file) => {
@@ -224,10 +240,14 @@ export async function runGlobal({
           ? { text: expandTemplate(await readFile(join(fixturesDir, file), "utf8"), now), http: null, bytes: null }
           : await fetchGz(GLOBAL_URLS[name]);
         index.sources[name] = { ok: true, at: new Date().toISOString(), error: null, http: r.http, bytes: r.bytes ?? Buffer.byteLength(r.text), ms: r.ms ?? Date.now() - t0 };
-        try {
-          await mkdir(rawDir, { recursive: true });
-          await writeFile(join(rawDir, `global-${name}${file.slice(file.lastIndexOf("."))}`), r.text.slice(0, 20 * 1024));
-        } catch { /* sample only */ }
+        if (rawDir) {
+          try {
+            const sample = `global-${name}${file.slice(file.lastIndexOf("."))}`;
+            await mkdir(rawDir, { recursive: true });
+            await writeFile(join(rawDir, sample), r.text.slice(0, 20 * 1024));
+            samples[name] = sample;
+          } catch { /* sample only */ }
+        }
         return r.text;
       } catch (e) {
         index.sources[name] = { ok: false, at: new Date().toISOString(), error: String(e.message || e), http: e.http ?? null };
@@ -264,6 +284,7 @@ export async function runGlobal({
     index.letters = [...shards.keys()].sort();
     index.h0 = h0;
     await writeFile(join(outDir, "index.json"), JSON.stringify(index) + "\n");
+    await noteRaw(rawDir, index, samples);
     log(`global: ${entries.size} of ${airports.length} listed airports scored (${metars.length} METARs, ${tafs.length} TAFs) -> ${outDir}`);
   } catch (e) {
     index.error = String(e?.message || e);

@@ -74,7 +74,7 @@ async function buildOne(name) {
   await writeFile(out, JSON.stringify(status) + "\n");
   const lines = r.stdout.trim().split("\n");
   console.log(`${name}: ${lines[lines.length - 1]}`);
-  for (const l of lines.filter((x) => /^FAIL|global/.test(x))) console.log(`  ${l}`);
+  for (const l of lines.filter((x) => /^FAIL|^global:/.test(x))) console.log(`  ${l}`);
   return {
     name, title: meta.title, description: meta.description || "", file: `${name}.json`, wx: `${name}/wx/`,
     lagMin: meta.lagMin || 0, assert: meta.assert || [],

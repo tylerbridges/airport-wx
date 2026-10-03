@@ -1,14 +1,16 @@
 name: Poll and deploy
 
+# Only main triggers this; the bot's pushes to the `history` branch don't (GITHUB_TOKEN pushes never
+# start workflows anyway).
 on:
   schedule:
-    - cron: "*/10 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
   push:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write # push to the history branch
   pages: write
   id-token: write
 
@@ -30,7 +32,9 @@ jobs:
       - name: Unit tests
         run: node --test poller/
       # Exits 0 unless every source failed, so a partial outage still deploys.
+      # Also writes raw response samples to .cache/raw for the history step.
       - name: Poll sources and compute risk
+        id: poll
         run: node poller/poll.mjs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
@@ -38,3 +42,33 @@ jobs:
           path: site
       - id: deployment
         uses: actions/deploy-pages@v4
+
+      # ---- History (branch `history`): after the deploy, never fails the job (continue-on-error). ----
+      # Runs whenever the poll succeeded, even if the deploy failed.
+      # On the very first run the branch doesn't exist, so this checkout fails harmlessly and the
+      # next step starts an orphan branch.
+      - name: Check out history branch
+        if: ${{ !cancelled() && steps.poll.outcome == 'success' }}
+        continue-on-error: true
+        timeout-minutes: 3
+        uses: actions/checkout@v4
+        with:
+          ref: history
+          path: history
+      - name: Prepare history branch
+        id: history_prep
+        if: ${{ !cancelled() && steps.poll.outcome == 'success' }}
+        continue-on-error: true
+        timeout-minutes: 3
+        run: bash poller/history.sh prepare history "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+      - name: Record history
+        if: ${{ !cancelled() && steps.history_prep.outcome == 'success' }}
+        continue-on-error: true
+        timeout-minutes: 3
+        run: node poller/record.mjs history/
+      # Pushes whatever was recorded, even if one part of the record step failed.
+      - name: Push history
+        if: ${{ !cancelled() && steps.history_prep.outcome == 'success' }}
+        continue-on-error: true
+        timeout-minutes: 3
+        run: bash poller/history.sh push history

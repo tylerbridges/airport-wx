@@ -62,7 +62,8 @@ export function rank(query, list, { limit = MAX } = {}) {
   if (!q) return [];
   const Q = q.replace(/ /g, "").toUpperCase();
   const qw = q.split(" ");
-  const alias = ALIASES[q] || null;
+  // exact alias, or (4+ letters) the first alias the query is a prefix of: "lond" -> london
+  const alias = ALIASES[q] || (q.length >= 4 ? ALIASES[Object.keys(ALIASES).find((k) => k.startsWith(q))] : null) || null;
   const hits = [];
   for (const a of list) {
     let exact = 0;
@@ -151,7 +152,7 @@ const CSS = `
 .awx-s{position:relative;margin:0 0 14px}
 .awx-s input{width:100%;font:inherit;font-size:17px;line-height:1.2;color:var(--text,#fff);background:var(--card,#1c1c1e);border:0;border-radius:12px;padding:11px 14px 11px 38px;outline:none;-webkit-appearance:none;appearance:none}
 .awx-s input:focus-visible{outline:2px solid var(--l1,#2ec4d6);outline-offset:1px}
-.awx-s .ico{position:absolute;left:12px;top:12px;width:18px;height:18px;color:var(--muted,#8e8e93);pointer-events:none}
+.awx-s .ico{position:absolute;left:12px;top:12px;width:18px;height:18px;color:var(--muted,#8e8e93);fill:none;stroke:currentColor;stroke-width:2.2;pointer-events:none}
 .awx-s ul{list-style:none;margin:6px 0 0;padding:4px 0;background:var(--card,#1c1c1e);border-radius:16px;max-height:70vh;overflow:auto}
 .awx-s ul[hidden]{display:none}
 .awx-s li{display:flex;align-items:center;gap:12px;padding:8px 6px 8px 14px;cursor:pointer;min-height:52px}

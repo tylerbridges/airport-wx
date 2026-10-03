@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-03T22:26:12.587Z",
+ "generated": "2026-10-03T22:32:41.246Z",
  "scenarios": [
   {
    "name": "airline-it-outage",
@@ -205,6 +205,11 @@
     {
      "t": "check",
      "id": "freshness",
+     "expect": "fail"
+    },
+    {
+     "t": "check",
+     "id": "wxFreshness",
      "expect": "fail"
     },
     {

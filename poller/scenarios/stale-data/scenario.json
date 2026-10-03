@@ -3,7 +3,19 @@
   "description": "The last successful poll was 50 minutes ago. The page must flag it as stale.",
   "lagMin": 50,
   "assert": [
-    { "t": "check", "id": "freshness", "expect": "fail" },
-    { "t": "rendered", "selector": ".updated.stale" }
+    {
+      "t": "check",
+      "id": "freshness",
+      "expect": "fail"
+    },
+    {
+      "t": "check",
+      "id": "wxFreshness",
+      "expect": "fail"
+    },
+    {
+      "t": "rendered",
+      "selector": ".updated.stale"
+    }
   ]
 }
