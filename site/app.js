@@ -898,6 +898,7 @@
   setInterval(() => { if (document.visibilityState === "visible") checkVersion(); }, 10 * 60e3); // live relay: self-update
 
   window.AWXApp = { state, openSheet, toggleFav, render }; // build2a hook: used by site/searched.js
+  window.AWXApp.setFavs = (list) => { state.favs = list.filter((x) => typeof x === "string"); saveFavs(); render(); }; // nav hook: Settings → Your airports (site/settings.js)
   if (!testMode()) liveConfig(); // live relay: read data/config.json on load
   render();
   load(false);

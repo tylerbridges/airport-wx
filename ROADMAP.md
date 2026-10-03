@@ -8,6 +8,7 @@ Product goal: a traveler should feel confident they know about any disruption at
 - Build 4: trips (manual + Flighty calendar), per-flight concerns.
 
 ## Queued
+- Map tab (a "Coming soon" placeholder in the tab bar today): disruption risk across your airports and trips on a map.
 - NOTAMs and FAA flight restrictions (TFRs), hub cascade warnings, 3-day range, delay-cause chips.
 - Morning brief, per-airport change log, "what it means for me".
 - Radar loop in the airport sheet; TSA wait / terminal / lounge info research.

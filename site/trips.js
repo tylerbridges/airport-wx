@@ -220,10 +220,13 @@ function tripCard(trip) {
   return el;
 }
 
-function render() {
-  const box = document.getElementById("trips");
-  if (!box) return;
+let tabBox = null; // the nav shell's Trips tab (site/nav.js calls render(container))
+function render(container) {
+  if (container && container.nodeType) tabBox = container;
   loadCal(false);
+  if (tabBox) renderTab(tabBox);
+  const box = document.getElementById("trips");
+  if (!box) { refreshOpen(); return; }
   const trips = allTrips();
   if (!trips.length) { box.replaceChildren(); renderFoot(); refreshOpen(); return; }
   box.replaceChildren(
@@ -231,17 +234,51 @@ function render() {
       h("h2", {}, "Your trips"),
       h("div", { class: "trips-b" },
         h("button", { type: "button", class: "tadd", onclick: () => openEdit(null) }, "Add a trip"),
-        h("button", { type: "button", class: "tgear", "aria-label": "Trips settings", onclick: openSettings }, svg("M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.6 7.6 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.6 7.6 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 1.7-1l2.4 1 2-3.4z", "gear")))),
+        h("button", { type: "button", class: "tgear", "aria-label": "Trips settings", onclick: () => openTripSettings() }, svg("M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.6 7.6 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.6 7.6 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 1.7-1l2.4 1 2-3.4z", "gear")))),
     h("div", { class: "tlist" }, trips.map(tripCard)));
   renderFoot();
   refreshOpen();
 }
 
-/** "Trips" link at the bottom of the page (opens the Trips settings even when there are no trips). */
+/** The Trips tab: every trip, "Add a trip", and the calendar line; an empty state when there are none. */
+function renderTab(box) {
+  const trips = allTrips();
+  const cs = calStatus();
+  if (!trips.length) {
+    box.replaceChildren(h("div", { class: "awx-empty ttab-empty" },
+      h("div", { class: "awx-empty-ico" }, svg(PLANE, "tempty", 45)),
+      h("h2", {}, "No trips yet"),
+      h("p", {}, cs.connected ? "Your flight calendar is connected but has no flights in the next 7 days. Add a flight to watch for disruptions at both ends."
+        : "Add a flight to watch for disruptions at both ends, or connect your flight calendar to bring trips in automatically."),
+      h("button", { type: "button", class: "awx-btn primary", onclick: () => openEdit(null) }, "Add a trip"),
+      cs.connected ? null : h("button", { type: "button", class: "awx-btn", onclick: () => openTripSettings("connect") }, "Connect your flight calendar")));
+    return;
+  }
+  box.replaceChildren(
+    h("div", { class: "trips-h ttab-h" },
+      h("span", { class: "tcal-line" + (cs.warn ? " warn" : "") }, cs.connected ? "From your flight calendar" + calAgo() : cs.warn ? cs.text : "Flight calendar not connected"),
+      h("div", { class: "trips-b" },
+        h("button", { type: "button", class: "tadd", onclick: () => openEdit(null) }, "Add a trip"),
+        h("button", { type: "button", class: "tgear", "aria-label": "Trips settings", onclick: () => openTripSettings() }, svg("M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.6 7.6 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.6 7.6 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 1.7-1l2.4 1 2-3.4z", "gear")))),
+    h("div", { class: "tlist" }, trips.map(tripCard)));
+}
+const calAgo = () => { const g = S.cal && Date.parse(S.cal.generated); return g ? " · updated " + ago(Math.max(0, nowMs() - g)) : ""; };
+
+/** Settings → Trips & flight calendar (site/settings.js through the nav shell), else this file's own Trips sheet. */
+function openTripSettings(focus) {
+  if (window.AWXNav && typeof window.AWXNav.openSettings === "function") {
+    if (S.view) closeTrip();
+    window.AWXNav.openSettings("trips", focus ? { focus } : undefined);
+    return;
+  }
+  openSettings();
+}
+
+/** "Trips" link at the bottom of the page when there is no nav shell (opens the Trips sheet even without trips). */
 function renderFoot() {
   const foot = document.querySelector(".xfoot");
-  if (!foot || foot.querySelector(".tfoot")) return;
-  foot.prepend(h("button", { type: "button", class: "tfoot", onclick: openSettings }, "Trips"), " · ");
+  if (!foot || foot.querySelector(".tfoot") || document.body.classList.contains("awx-nav-on")) return;
+  foot.prepend(h("button", { type: "button", class: "tfoot", onclick: () => openTripSettings() }, "Trips"), " · ");
 }
 
 // ---------- airport sheet: "Your flight" + plane markers ----------
@@ -353,8 +390,7 @@ function drawView(keep) {
 
 function sourceLine(trip) {
   if (trip.source === "manual") return "Added by you · saved on this device only";
-  const g = S.cal && Date.parse(S.cal.generated);
-  return "From your flight calendar" + (g ? " · updated " + ago(Math.max(0, nowMs() - g)) : "");
+  return "From your flight calendar" + calAgo();
 }
 
 function levelBox(title, sub, at, note) {
@@ -560,13 +596,15 @@ function editView(id) {
 
 // ---------- settings ----------
 
+/** Flight calendar status: {connected, ok, warn, text} ("Connected · 3 upcoming flights" / "Not connected"). */
 function calStatus() {
   const c = S.cal;
-  if (S.calFailed && !c) return { ok: false, text: "Couldn't check — trip data didn't load" };
-  if (!c || !c.configured) return { ok: false, text: "Not connected" };
-  if (c.ok === false) return { ok: false, warn: true, text: "Connected · couldn't read it on the last update" + (c.error ? ` (${c.error})` : "") };
-  const n = (c.trips || []).reduce((k, t) => k + t.legs.length, 0);
-  return { ok: true, text: `Connected · ${n} upcoming flight${n === 1 ? "" : "s"}` };
+  if (S.calFailed && !c) return { connected: false, ok: false, warn: true, text: "Couldn't check — trip data didn't load" };
+  if (!c || !c.configured) return { connected: false, ok: false, text: "Not connected" };
+  if (c.ok === false) return { connected: true, ok: false, warn: true, text: "Connected · couldn't read it on the last update" + (c.error ? ` (${c.error})` : "") };
+  const now = nowMs();
+  const n = (c.trips || []).reduce((k, t) => k + t.legs.filter((l) => Date.parse(l.arr) > now).length, 0);
+  return { connected: true, ok: true, text: `Connected · ${n} upcoming flight${n === 1 ? "" : "s"}` };
 }
 
 function settingsView() {
@@ -607,7 +645,7 @@ const CSS = `
 .trips-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 4px 8px}
 .trips-h h2{margin:0;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .trips-b{display:flex;align-items:center;gap:6px}
-.tadd{min-height:36px;padding:0 14px;border-radius:999px;background:var(--card);font-size:14px;font-weight:600;color:var(--l1)}
+.tadd{white-space:nowrap;flex:none;min-height:36px;padding:0 14px;border-radius:999px;background:var(--card);font-size:14px;font-weight:600;color:var(--l1)}
 .tgear{width:36px;height:36px;border-radius:50%;background:var(--card);display:grid;place-items:center;color:var(--muted)}
 .tgear svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8}
 .tlist{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
@@ -681,6 +719,10 @@ const CSS = `
 .tman{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .tman .tbtns{margin-top:0;flex:none}
 .tfoot{color:var(--muted);font-size:13px;text-decoration:underline;padding:0}
+.ttab-h{margin-top:4px}
+.tcal-line{font-size:13px;color:var(--muted);min-width:0}
+.tcal-line.warn{color:var(--l2);font-weight:600}
+.ttab-empty .tempty{width:38px;height:38px;fill:currentColor}
 @media (max-width:380px){.troute .tc{font-size:34px}.troute.big .tc{font-size:38px}}
 `;
 
@@ -694,7 +736,12 @@ function init() {
   }, true);
   window.addEventListener("storage", (e) => { if (e.key === KEY) { S.manual = loadManual(); render(); } });
   window.AWXTrips = {
-    render, decorateSheet, liveIds, openTrip, openEdit, openSettings,
+    render, decorateSheet, liveIds, openTrip, openEdit, openSettings: openTripSettings,
+    // site/settings.js (Settings → Trips & flight calendar) and site/nav.js (Trips tab)
+    openAdd: () => openEdit(null),
+    calStatus,
+    ready: () => (S.loading || (S.calAt ? Promise.resolve() : loadCal(true))),
+    list: () => S.manual.map((t) => ({ id: t.id, from: t.legs[0].from, to: t.legs[t.legs.length - 1].to, dep: t.legs[0].dep, name: t.legs.length > 1 ? "via " + t.legs.slice(1).map((l) => l.from).join(", ") : "" })),
     _state: () => ({ cal: S.cal, manual: S.manual, trips: allTrips().map((t) => ({ id: t.id, source: t.source, ...resultOf(t) })) }),
   };
   render();
