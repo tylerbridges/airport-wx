@@ -1,0 +1,145 @@
+name: Backtest baseline
+
+# Manual run: replays historical TAFs (IEM) through poller/risk.mjs and verifies them against
+# METARs (IEM) and BTS On-Time departures. Report goes to the `history` branch (reports/)
+# and to a workflow artifact.
+on:
+  workflow_dispatch:
+    inputs:
+      months:
+        description: "How many of the latest BTS-published months to test"
+        required: false
+        default: "2"
+      airports:
+        description: "all, or comma-separated IATA/ICAO codes from airports.json"
+        required: false
+        default: "all"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: backtest
+  cancel-in-progress: false
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Unit tests
+        run: node poller/run-tests.mjs
+
+      # Probe the current month and the 5 before it (newest first) for a published BTS zip
+      # (checked by its "PK" magic bytes), keep the latest N, download and unzip them.
+      # Any failure here only drops the disruption part; the weather part still runs.
+      - name: Find and download BTS On-Time months
+        id: bts
+        env:
+          N_MONTHS: ${{ inputs.months }}
+        run: |
+          set -u
+          n="${N_MONTHS:-2}"
+          case "$n" in ''|*[!0-9]*) n=2 ;; esac
+          [ "$n" -ge 1 ] || n=1
+          mkdir -p bts
+          base="$(date -u +%Y-%m-01)"
+          found=()
+          for k in 0 1 2 3 4 5; do
+            [ "${#found[@]}" -ge "$n" ] && break
+            y="$(date -u -d "$base -$k month" +%Y)"
+            m="$(date -u -d "$base -$k month" +%-m)"
+            url="https://transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_${y}_${m}.zip"
+            magic="$(curl -sSL --max-time 90 -r 0-3 "$url" 2>/dev/null | head -c 2 || true)"
+            if [ "$magic" = "PK" ]; then
+              echo "BTS published: ${y}-${m}"
+              found+=("$(date -u -d "$base -$k month" +%Y-%m)|$url")
+            else
+              echo "BTS not published (or unreachable): ${y}-${m}"
+            fi
+          done
+          months=()
+          files=()
+          for ((i=${#found[@]}-1; i>=0; i--)); do   # oldest first
+            ym="${found[$i]%%|*}"
+            url="${found[$i]#*|}"
+            months+=("$ym")
+            if curl -fsSL --retry 3 --retry-delay 20 --max-time 1500 -o "bts/$ym.zip" "$url" \
+               && unzip -o -q "bts/$ym.zip" -d "bts/$ym"; then
+              csv="$(find "bts/$ym" -maxdepth 1 -iname '*.csv' | head -n 1)"
+              if [ -n "$csv" ]; then
+                mv "$csv" "bts/bts-$ym.csv"
+                files+=("$PWD/bts/bts-$ym.csv")
+                echo "BTS $ym: $(wc -l < "bts/bts-$ym.csv") lines"
+              else
+                echo "::warning::BTS $ym zip had no CSV"
+              fi
+            else
+              echo "::warning::BTS $ym download or unzip failed"
+            fi
+            rm -rf "bts/$ym.zip" "bts/$ym"
+          done
+          [ "${#found[@]}" -eq 0 ] && echo "::warning::No BTS month found; weather-only backtest of the last $n complete months"
+          echo "months=$(IFS=,; echo "${months[*]-}")" >> "$GITHUB_OUTPUT"
+          echo "files=$(IFS=,; echo "${files[*]-}")" >> "$GITHUB_OUTPUT"
+          echo "count=$n" >> "$GITHUB_OUTPUT"
+
+      - name: Run backtest
+        env:
+          MONTHS: ${{ steps.bts.outputs.months }}
+          FILES: ${{ steps.bts.outputs.files }}
+          COUNT: ${{ steps.bts.outputs.count }}
+          AIRPORTS: ${{ inputs.airports }}
+        run: |
+          args=(--months-count "${COUNT:-2}" --airports "${AIRPORTS:-all}" --out out/reports)
+          [ -n "$MONTHS" ] && args+=(--months "$MONTHS")
+          [ -n "$FILES" ] && args+=(--bts "$FILES")
+          node tools/backtest.mjs "${args[@]}"
+          ls -la out/reports out/reports/samples
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backtest-reports
+          path: out/reports
+          if-no-files-found: warn
+
+      # Commit reports/ to the `history` branch (checked out in ./history; created as an
+      # orphan branch if missing). If the push is rejected because another workflow moved
+      # or created the branch, fetch it, re-apply the reports on top once, and push again.
+      - name: Commit reports to history branch
+        env:
+          MONTHS: ${{ steps.bts.outputs.months }}
+        run: |
+          set -eu
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          fetch_history() { git fetch --no-tags --depth=1 origin +refs/heads/history:refs/remotes/origin/history; }
+          if fetch_history; then
+            git worktree add -B history history origin/history
+          else
+            git worktree add --detach history
+            git -C history checkout --orphan history
+            git -C history rm -rfq --ignore-unmatch .
+            git -C history clean -fdxq
+          fi
+          commit() {
+            mkdir -p history/reports
+            cp -R out/reports/. history/reports/
+            git -C history add reports
+            if git -C history diff --cached --quiet; then echo "nothing new to commit"; return 1; fi
+            git -C history commit -q -m "Backtest baseline $(date -u +%F) (${MONTHS:-last complete months})"
+          }
+          commit || exit 0
+          if ! git -C history push origin HEAD:history; then
+            echo "push rejected; fetching history and retrying once"
+            fetch_history
+            git -C history reset -q --hard origin/history
+            commit || exit 0
+            git -C history push origin HEAD:history
+          fi
