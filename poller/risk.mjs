@@ -1,5 +1,6 @@
 // Pure risk-scoring functions. No I/O, no globals except Intl. Documented in README.
 // Levels: 0 None, 1 Low, 2 Moderate, 3 High, 4 Severe.
+import { causePhrase, classifyCause } from "./cause.mjs";
 
 export const LEVEL_NAMES = ["None", "Low", "Moderate", "High", "Severe"];
 const HOUR = 3600e3;
@@ -124,15 +125,16 @@ export function fmtRange(start, end, tz) {
 
 // ---------- level mappings ----------
 
-export const SPC_LEVEL = { TSTM: 1, MRGL: 1, SLGT: 2, ENH: 3, MDT: 4, HIGH: 4 };
-const SPC_NAME = { TSTM: "General thunderstorm", MRGL: "Marginal", SLGT: "Slight", ENH: "Enhanced", MDT: "Moderate", HIGH: "High" };
+// TSTM (general thunderstorms) is informational only: it never sets a level.
+export const SPC_LEVEL = { TSTM: 0, MRGL: 1, SLGT: 2, ENH: 3, MDT: 4, HIGH: 4 };
+const SPC_NAME = { MRGL: "Marginal", SLGT: "Slight", ENH: "Enhanced", MDT: "Moderate", HIGH: "High" };
 
 export function spcLevel(cat) {
   return SPC_LEVEL[String(cat || "").toUpperCase()] || 0;
 }
 export function spcText(cat) {
   const c = String(cat).toUpperCase();
-  return c === "TSTM" ? "SPC general thunderstorm outlook" : `SPC ${SPC_NAME[c] || c} risk of severe storms`;
+  return c === "TSTM" ? "General thunderstorms possible in the area (no severe risk)" : `${SPC_NAME[c] || c} risk of severe storms`;
 }
 
 const ALERT_LEVEL = [
@@ -206,15 +208,104 @@ export function assessConditions(c) {
   return dedupe(items);
 }
 
+// "Arrivals 31–45m; Departures 16–30m" -> "arrivals 31–45m; departures 16–30m"
+const lowerFirstChar = (s) => (s ? s.replace(/(^|; )([A-Z])(?=[a-z])/g, (m, a, b) => a + b.toLowerCase()) : s);
+
+/**
+ * FAA NAS status program -> reason item. The level comes from the program type alone; the cause
+ * (f.cause class + f.reason text) only names it. Closures: scope "full" is Severe, "runway" Low,
+ * "limited" (closed only to some users, e.g. GA) and not-yet/no-longer active ones add nothing.
+ */
 export function assessFaa(f) {
-  const d = f.detail ? " " + f.detail : "";
+  const cause = f.type === "closure" ? closureCause(f) : causePhrase(f.cause, f.reason);
+  const join = (name, detail) => [name + (cause ? " — " + cause : ""), detail].filter(Boolean).join(", ");
   switch (f.type) {
-    case "ground_stop": return { level: 4, text: `Ground stop${d}`, fixed: true };
-    case "closure": return { level: 4, text: `Airport closed${d}`, fixed: true };
-    case "ground_delay": return { level: 3, text: `Ground delay program${f.detail ? " (" + f.detail + ")" : ""}`, fixed: true };
-    case "delay": return { level: 2, text: `Delays${f.detail ? ": " + f.detail : ""}`, fixed: true };
-    default: return null;
+    case "ground_stop":
+      return { level: 4, text: cause ? join("Ground stop", f.detail) : `Ground stop${f.detail ? " " + f.detail : ""}`, fixed: true };
+    case "closure": {
+      if (f.active === false || f.scope === "limited") return null;
+      if (f.scope === "runway") {
+        const ids = (f.runways || []).join(", ");
+        return { level: 1, text: ids ? `${(f.runways || []).length > 1 ? "Runways" : "Runway"} ${ids} closed` : "Runway closed", fixed: true };
+      }
+      return { level: 4, text: cause ? join("Airport closed", f.detail) : `Airport closed${f.detail ? " " + f.detail : ""}`, fixed: true };
+    }
+    case "ground_delay":
+      return { level: 3, text: cause ? join("Ground delay program", f.detail) : `Ground delay program${f.detail ? " (" + f.detail + ")" : ""}`, fixed: true };
+    case "delay":
+      return { level: 2, text: cause ? join("Delays", lowerFirstChar(f.detail)) : `Delays${f.detail ? ": " + f.detail : ""}`, fixed: true };
+    default:
+      return null;
   }
+}
+
+// Closure reasons are NOTAM text: name a cause only when the text says one (e.g. "snow removal").
+function closureCause(f) {
+  const body = String(f.reason || "").replace(/^\s*!\S+\s+\d+\/\d+\s+\S+\s+/, "");
+  const c = f.cause && f.cause !== "other" && f.cause !== "unknown" ? f.cause : classifyCause(body);
+  if (c === "other" || c === "unknown" || /\bCLSD\b/i.test(body)) return "";
+  return causePhrase(c, body);
+}
+
+/**
+ * Active ATCSCC ground stop / GDP advisory -> reason item, unless the NAS status already lists the
+ * same program for the airport (faa: [{type}]). a: {type: GS|GDP, active, end, cause, causeText}.
+ */
+export function assessAtcscc(a, faa, tz, now = new Date()) {
+  if (!a || !a.active) return null;
+  const kind = a.type === "GS" ? "ground_stop" : a.type === "GDP" ? "ground_delay" : null;
+  if (!kind || (faa || []).some((f) => f.type === kind)) return null;
+  const cause = causePhrase(a.cause, a.causeText);
+  const end = toMs(a.end);
+  const until = end != null ? `until ${fmtClock(end, tz, now)} ${tzAbbr(end, tz)}` : "";
+  const name = kind === "ground_stop" ? "Ground stop" : "Ground delay program";
+  const text = [name + (cause ? " — " + cause : ""), until].filter(Boolean).join(", ") + " (ATCSCC)";
+  return { level: kind === "ground_stop" ? 4 : 3, text, fixed: true };
+}
+
+/** LAMP 2-hour thunderstorm probability (%) -> level: >= 40 High, 20-39 Moderate. */
+export function lampThunderLevel(p) {
+  const n = num(p);
+  return n == null ? 0 : n >= 40 ? 3 : n >= 20 ? 2 : 0;
+}
+
+/** TCF coverage over the airport: high -> High, medium -> Moderate. */
+export function tcfLevel(coverage) {
+  return coverage === "high" ? 3 : coverage === "medium" ? 2 : 0;
+}
+
+/**
+ * convection | ifr | null for a CWA {hazard, raw}. An explicit hazard decides; only when it is
+ * missing is the text searched.
+ */
+export function cwaKind(c) {
+  const hz = String(c?.hazard ?? "").trim().toUpperCase();
+  if (hz) {
+    if (/^(TS|TSTMS?|CONV\w*|THUNDER\w*|CB)\b/.test(hz)) return "convection";
+    if (/^L?IFR\b/.test(hz)) return "ifr";
+    return null;
+  }
+  const t = String(c?.raw ?? "").toUpperCase();
+  if (/\b(TS|TSRA|TSTMS?|THUNDERSTORMS?|CONVECTIVE|CONVECTION)\b/.test(t)) return "convection";
+  if (/\bL?IFR\b/.test(t)) return "ifr";
+  return null;
+}
+
+function windowText(base, from, to, now, tz) {
+  if (from > +now + 5 * 60e3 && Number.isFinite(to)) return `${base} ${fmtClock(from, tz, now)} to ${fmtClock(to, tz, now)}`;
+  if (from > +now + 5 * 60e3) return `${base} from ${fmtClock(from, tz, now)}`;
+  if (Number.isFinite(to)) return `${base} until ${fmtClock(to, tz, now)}`;
+  return base;
+}
+
+/** CWA for convection or IFR -> Moderate over its valid period. */
+export function assessCwa(c, now, tz) {
+  const kind = cwaKind(c);
+  if (!kind) return null;
+  const from = toMs(c.validFrom) ?? -Infinity;
+  const to = toMs(c.validTo) ?? Infinity;
+  const base = `Center weather advisory: ${kind === "convection" ? "thunderstorms" : "IFR conditions"}`;
+  return { level: 2, text: windowText(base, from, to, now, tz), fixed: true, from, to };
 }
 
 /** alert: {event, onset, ends}. Returns {level, text, fixed, from, to} or null. */
@@ -223,11 +314,7 @@ export function assessAlert(a, now, tz) {
   if (!level) return null;
   const from = toMs(a.onset) ?? -Infinity;
   const to = toMs(a.ends) ?? Infinity;
-  let text = a.event;
-  if (from > +now + 5 * 60e3 && Number.isFinite(to)) text += ` ${fmtClock(from, tz, now)} to ${fmtClock(to, tz, now)}`;
-  else if (from > +now + 5 * 60e3) text += ` from ${fmtClock(from, tz, now)}`;
-  else if (Number.isFinite(to)) text += ` until ${fmtClock(to, tz, now)}`;
-  return { level, text, fixed: true, from, to };
+  return { level, text: windowText(a.event, from, to, now, tz), fixed: true, from, to };
 }
 
 // ---------- merging / sorting ----------
@@ -323,14 +410,32 @@ export function nextUtcHour(now, hour) {
 /**
  * Build the per-hour risk rows (internal form, items kept so reasons can be summarised).
  * Inputs (all optional except tz): raw API-shaped metar & taf records, faa entries
- * [{type, detail}], sigmet (bool: convective SIGMET over the airport), alerts
- * [{event, onset, ends}], spc category string.
+ * [{type, detail, reason, cause, scope, active}], sigmet (bool: convective SIGMET over the airport),
+ * alerts [{event, onset, ends}], spc category string, atcscc advisories [{type, active, end, cause,
+ * causeText}], lamp {hours: [{t, tstmProb}]}, tcf [{valid, coverage}], cwa [{hazard, validFrom, validTo, raw}].
  */
-export function buildHours({ now = new Date(), tz, taf = null, metar = null, faa = [], sigmet = false, alerts = [], spc = null, count = 24 }) {
+export function buildHours({
+  now = new Date(), tz, taf = null, metar = null, faa = [], sigmet = false, alerts = [], spc = null,
+  atcscc = [], lamp = null, tcf = [], cwa = [], count = 24,
+}) {
   const start = Math.floor(+now / HOUR) * HOUR;
   const spcEnd = nextUtcHour(now, 12);
   const alertItems = alerts.map((a) => assessAlert(a, now, tz)).filter(Boolean);
+  const cwaItems = (cwa || []).map((c) => assessCwa(c, now, tz)).filter(Boolean);
   const spcLvl = spcLevel(spc);
+  // LAMP LP2 is a 2-hour probability for the period ending at its column time.
+  const thunder = [];
+  for (const x of lamp?.hours || []) {
+    const t = toMs(x.t);
+    if (t != null && num(x.tstmProb) != null) thunder.push({ from: t - 2 * HOUR, to: t, p: Number(x.tstmProb) });
+  }
+  const tcfItems = [];
+  for (const x of tcf || []) {
+    const t = toMs(x.valid);
+    const level = tcfLevel(x.coverage);
+    if (t == null || !level) continue;
+    tcfItems.push({ from: t - HOUR, to: t + HOUR, level, text: `Thunderstorms, ${x.coverage} coverage (TCF)` });
+  }
   const hours = [];
   for (let i = 0; i < count; i++) {
     const t0 = start + i * HOUR;
@@ -350,10 +455,20 @@ export function buildHours({ now = new Date(), tz, taf = null, metar = null, faa
         const it = assessFaa(f);
         if (it) items.push(it);
       }
+      for (const a of atcscc || []) {
+        const it = assessAtcscc(a, faa, tz, now);
+        if (it) items.push(it);
+      }
       if (sigmet) items.push({ level: 3, text: "Convective SIGMET over airport", fixed: true });
     }
     for (const a of alertItems) if (a.from < t1 && a.to > t0) items.push({ level: a.level, text: a.text, fixed: true });
+    for (const c of cwaItems) if (c.from < t1 && c.to > t0) items.push({ level: c.level, text: c.text, fixed: true });
     if (spcLvl && t0 < spcEnd) items.push({ level: spcLvl, text: spcText(spc), fixed: true });
+    let p = null;
+    for (const x of thunder) if (x.from < t1 && x.to > t0 && (p == null || x.p > p)) p = x.p;
+    const tl = lampThunderLevel(p);
+    if (tl) items.push({ level: tl, text: `Thunder chance ${p}% (LAMP)`, fc: true });
+    for (const x of tcfItems) if (x.from < t1 && x.to > t0) items.push({ level: x.level, text: x.text, fc: true });
     items = dedupe(items);
     hours.push({ t: new Date(t0), items, level: levelOf(items), fltCat });
   }
@@ -376,23 +491,48 @@ export function windowize(hours, idx, item, tz) {
   return `${item.text} forecast ${fmtRange(hours[a].t, end, tz)}`;
 }
 
+// Reasons of one kind that can come from both the METAR and the TAF: show one per box.
+const KIND = /^(Visibility|Ceiling|Gusts) /;
+
+/**
+ * Items for display: exact duplicates dropped, and only one Visibility / Ceiling / Gusts item
+ * (the highest level; the observed one on a tie). Levels are unaffected (computed from all items).
+ */
+export function uniqueItems(items) {
+  const sorted = [...items].sort((a, b) => b.level - a.level || (a.fc ? 1 : 0) - (b.fc ? 1 : 0));
+  const texts = new Set();
+  const kinds = new Set();
+  const out = [];
+  for (const it of sorted) {
+    if (texts.has(it.text)) continue;
+    const k = KIND.exec(it.text)?.[1];
+    if (k && kinds.has(k)) continue;
+    texts.add(it.text);
+    if (k) kinds.add(k);
+    out.push(it);
+  }
+  return out;
+}
+
+const uniqueStrings = (arr) => [...new Set(arr)];
+
 /** now = hour 0; peak = max over hours (earliest hour of that max). */
 export function summarize(hours, tz) {
   let peakIdx = 0;
   hours.forEach((h, i) => { if (h.level > hours[peakIdx].level) peakIdx = i; });
   const ph = hours[peakIdx];
   return {
-    now: { level: hours[0].level, reasons: hours[0].items.map((i) => i.text) },
+    now: { level: hours[0].level, reasons: uniqueItems(hours[0].items).map((i) => i.text) },
     peak: {
       level: ph.level,
       at: ph.t.toISOString(),
-      reasons: ph.items.map((i) => windowize(hours, peakIdx, i, tz)),
+      reasons: uniqueStrings(uniqueItems(ph.items).map((i) => windowize(hours, peakIdx, i, tz))),
     },
   };
 }
 
 export function hoursOutput(hours) {
-  return hours.map((h) => ({ t: h.t.toISOString(), level: h.level, reasons: h.items.map((i) => i.text), fltCat: h.fltCat }));
+  return hours.map((h) => ({ t: h.t.toISOString(), level: h.level, reasons: uniqueItems(h.items).map((i) => i.text), fltCat: h.fltCat }));
 }
 
 export function compareAirports(a, b) {

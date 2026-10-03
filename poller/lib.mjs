@@ -1,5 +1,6 @@
 // Parsing and geometry helpers for the poller. Pure (no network), unit-tested in lib.test.mjs.
 import { fmtClock, tzAbbr, toMs } from "./risk.mjs";
+import { describeClosure } from "./notam.mjs";
 
 // ---------- geometry ----------
 
@@ -141,7 +142,9 @@ function adSummary(list) {
 /**
  * Parse the FAA airport-status XML.
  * Returns {updated, byAirport: {SFO: [{type, reason, detail, badge}]}}.
- * Types: ground_stop, ground_delay, delay, closure.
+ * Types: ground_stop, ground_delay, delay, closure. Closures also carry {scope: full|runway|limited,
+ * active, plain (plain-English summary), runways} from notam.mjs; badge is null for limited ones.
+ * Program cause classes are added by the caller (classifyCause on reason).
  */
 export function parseFaaXml(xml, { now = new Date(), tzFor = () => "America/New_York" } = {}) {
   const byAirport = {};
@@ -155,8 +158,15 @@ export function parseFaaXml(xml, { now = new Date(), tzFor = () => "America/New_
       for (const e of elements(dt.body, "Airport")) {
         const arpt = textOf(e.body, "ARPT");
         const tz = tzFor(arpt);
+        const reason = textOf(e.body, "Reason");
         const reopen = formatFaaTime(textOf(e.body, "Reopen"), tz, now);
-        push(arpt, { type: "closure", reason: textOf(e.body, "Reason"), detail: reopen ? `until ${reopen}` : "", badge: "CLOSED" });
+        // The reason is usually NOTAM text: scope (full / runway / limited) and times come from it.
+        const d = describeClosure(reason, { tz, now, reopen });
+        push(arpt, {
+          type: "closure", reason, detail: d.detail,
+          badge: d.scope === "full" ? "CLOSED" : d.scope === "runway" ? "RUNWAY CLOSED" : null,
+          scope: d.scope, active: d.active, plain: d.plain, runways: d.runways,
+        });
       }
     } else if (/ground stop/.test(name)) {
       for (const e of elements(dt.body, "Program")) {
@@ -217,15 +227,34 @@ export function normalizeAlerts(fc, now = new Date()) {
  *   {{clock+90 America/Chicago}}   "5:30 pm CDT" style clock text in that zone
  *   {{z-12}}      METAR/TAF style DDHHMM (UTC), minutes from now
  *   {{dh+3}}      TAF style DDHH (UTC), top of the current hour + 3 hours
+ *   {{mdy+0}}     MM/DD/YYYY (UTC), minutes from now
+ *   {{sig-20}}    ATCSCC signature time YY/MM/DD HH:MM (UTC), minutes from now
+ *   {{lc+0}}      LAMP header "MM/DD/YYYY  HH30" of the newest HH:30 cycle at or before now, + hours
+ *   {{lu+0}}      that cycle's LAMP UTC row: 25 hour columns, 3 characters each, from the next hour
  */
 export function expandTemplate(text, now = new Date()) {
   const HOUR = 3600e3;
-  return text.replace(/\{\{(dh|h|iso|clock|z)?([+-]\d+)(?:\s+([A-Za-z_/]+))?\}\}/g, (_, kind, n, tz) => {
+  const p2 = (x) => String(x).padStart(2, "0");
+  const cycle = (k) => {
+    let t = Math.floor(+now / HOUR) * HOUR + 30 * 60e3;
+    if (t > +now) t -= HOUR;
+    return new Date(t + k * HOUR);
+  };
+  return text.replace(/\{\{(dh|h|iso|clock|z|mdy|sig|lc|lu)?([+-]\d+)(?:\s+([A-Za-z_/]+))?\}\}/g, (_, kind, n, tz) => {
     const k = Number(n);
-    const p2 = (x) => String(x).padStart(2, "0");
     if (kind === "dh") { const d = new Date(Math.floor(+now / HOUR) * HOUR + k * HOUR); return p2(d.getUTCDate()) + p2(d.getUTCHours()); }
     if (kind === "z") { const d = new Date(+now + k * 60e3); return p2(d.getUTCDate()) + p2(d.getUTCHours()) + p2(d.getUTCMinutes()); }
     if (kind === "h") return String(Math.floor((Math.floor(+now / HOUR) * HOUR + k * HOUR) / 1000));
+    if (kind === "mdy") { const d = new Date(+now + k * 60e3); return `${p2(d.getUTCMonth() + 1)}/${p2(d.getUTCDate())}/${d.getUTCFullYear()}`; }
+    if (kind === "sig") {
+      const d = new Date(+now + k * 60e3);
+      return `${p2(d.getUTCFullYear() % 100)}/${p2(d.getUTCMonth() + 1)}/${p2(d.getUTCDate())} ${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}`;
+    }
+    if (kind === "lc") { const d = cycle(k); return `${p2(d.getUTCMonth() + 1)}/${p2(d.getUTCDate())}/${d.getUTCFullYear()}  ${p2(d.getUTCHours())}30`; }
+    if (kind === "lu") {
+      const d = cycle(k);
+      return Array.from({ length: 25 }, (_, i) => p2((d.getUTCHours() + 1 + i) % 24).padStart(3, " ")).join("");
+    }
     const t = +now + k * 60e3;
     if (kind === "iso") return new Date(t).toISOString();
     if (kind === "clock") {

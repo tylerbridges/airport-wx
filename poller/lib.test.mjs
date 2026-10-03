@@ -107,6 +107,12 @@ test("fixture templates expand relative to now", () => {
   assert.equal(t("{{z-5}}"), "031915");
   assert.equal(t("{{dh+6}}"), "0401");
   assert.equal(t("{{clock+40 America/Chicago}}"), "3:00 pm CDT");
+  assert.equal(t("{{mdy+0}}"), "10/03/2026");
+  assert.equal(t("{{sig-25}}"), "26/10/03 18:55");
+  assert.equal(t("{{lc+0}}"), "10/03/2026  1830");
+  assert.equal(t("{{lu+0}}").slice(0, 12), " 19 20 21 22");
+  assert.equal(t("{{lu+0}}").length, 75);
+  assert.equal(expandTemplate("{{lc+0}}", new Date("2026-10-04T00:10:00Z")), "10/03/2026  2330");
 });
 
 test("pool respects the concurrency limit and keeps order", async () => {
@@ -141,10 +147,10 @@ test("fixture run writes a schema-shaped status.json", async () => {
   const here = dirname(fileURLToPath(import.meta.url));
   const out = join(process.env.TMPDIR || "/tmp", `awx-test-${process.pid}.json`);
   const { status, okCount } = await run({ fixtures: true, out, now: NOW });
-  assert.equal(okCount, 6);
+  assert.equal(okCount, 10);
   const disk = JSON.parse(await readFile(out, "utf8"));
   assert.equal(disk.generated, NOW.toISOString());
-  assert.deepEqual(Object.keys(disk.sources).sort(), ["faa", "metar", "nws", "sigmet", "spc", "taf"]);
+  assert.deepEqual(Object.keys(disk.sources).sort(), ["atcscc", "cwa", "faa", "lamp", "metar", "nws", "sigmet", "spc", "taf", "tcf"]);
   for (const s of Object.values(disk.sources)) assert.deepEqual(Object.keys(s).sort(), ["at", "error", "ok"]);
   assert.equal(disk.airports.length, 32);
   const by = Object.fromEntries(disk.airports.map((a) => [a.iata, a]));
@@ -164,11 +170,43 @@ test("fixture run writes a schema-shaped status.json", async () => {
   assert.equal(by.DFW.spc, "ENH");
   assert.equal(by.DFW.alerts[0].event, "Severe Thunderstorm Warning");
   assert.equal(by.MCO.sigmets.length, 1);
-  assert.equal(by.MIA.now.level, 1);
+  assert.equal(by.MIA.now.level, 0); // SPC TSTM is informational only
   assert.equal(by.MIA.peak.level, 3);
   assert.equal(by.BOS.now.level, 3);
   assert.equal(by.EWR.faa[0].badge, "GDP avg 52m");
   assert.equal(by.PHX.now.level, 0);
   assert.ok(status.airports.length === 32);
+  // phase-1 sources
+  assert.equal(by.ATL.lamp.issued, "2026-10-03T18:30:00.000Z");
+  assert.equal(by.ATL.peak.level, 3);
+  assert.match(by.ATL.peak.reasons[0], /^Thunder chance 46% \(LAMP\) forecast/);
+  assert.equal(by.PHX.lamp, null);
+  assert.equal(by.IAH.peak.level, 3);
+  assert.match(by.IAH.peak.reasons[0], /^Thunderstorms, high coverage \(TCF\)/);
+  assert.equal(by.BNA.now.level, 2);
+  assert.match(by.BNA.now.reasons[0], /^Center weather advisory: thunderstorms until/);
+  assert.equal(by.DEN.cwa[0].hazard, "TURB"); // stored, but no risk
+  assert.ok(!by.DEN.now.reasons.some((r) => /Center weather/.test(r)));
+  // ATCSCC: deduped with NAS status at ORD/SFO, cancelled at BOS, adds a staffing ground stop at LAS
+  assert.equal(by.ORD.now.reasons.filter((r) => /^Ground stop/.test(r)).length, 1);
+  assert.match(by.ORD.now.reasons[0], /^Ground stop — weather \(thunderstorms\), until/);
+  assert.ok(by.ORD.atcscc[0].active);
+  assert.ok(!by.SFO.now.reasons.some((r) => /ATCSCC/.test(r)));
+  assert.ok(by.BOS.atcscc.every((a) => !a.active));
+  assert.equal(by.LAS.now.level, 4);
+  assert.match(by.LAS.now.reasons[0], /^Ground stop — air traffic control staffing \(ATC zero\), until 1:10 PM PT \(ATCSCC\)$/);
+  // FAA closures: LAX is GA-only (informational), SEA a single runway (Low)
+  assert.equal(by.LAX.faa[0].scope, "limited");
+  assert.equal(by.LAX.faa[0].badge, null);
+  assert.equal(by.LAX.now.level, 2); // unchanged by the closure
+  assert.ok(!by.LAX.now.reasons.some((r) => /closed/i.test(r)));
+  assert.ok(by.SEA.now.reasons.includes("Runway 16L/34R closed"));
+  assert.equal(by.SEA.now.level, 1);
+  assert.equal(by.JFK.faa[0].cause, "volume");
+  assert.equal(by.FLL.now.level, 0);
+  assert.equal(by.FLL.spc, "TSTM");
+  // reasons are deduped within a box
+  for (const a of disk.airports) assert.equal(new Set(a.now.reasons).size, a.now.reasons.length);
+  assert.equal(by.ORD.now.reasons.filter((r) => /^Visibility/.test(r)).length, 1);
   assert.ok(here);
 });

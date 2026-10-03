@@ -2,3 +2,7 @@
 // (Node 22 treats the directory as a module path; Node 20 scans it for *.test.mjs).
 import "./risk.test.mjs";
 import "./lib.test.mjs";
+import "./sources.test.mjs";
+import "./cause.test.mjs";
+import "./notam.test.mjs";
+import "./record.test.mjs";
