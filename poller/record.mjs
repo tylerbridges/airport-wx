@@ -241,7 +241,13 @@ export async function record({ dir, statusFile = join(ROOT, "site/data/status.js
   });
   await step("truth", () => recordTruth(dir, status));
   await step("forecast", () => recordForecast(dir, status));
-  await step("raw", () => recordRaw(dir, rawDir, status));
+  // Raw samples only once per UTC hour (or when missing) so the branch doesn't grow by ~MBs per poll.
+  await step("raw", async () => {
+    let prev = null;
+    try { prev = JSON.parse(await readFile(join(dir, "raw", "latest", "sources.json"), "utf8")).generated; } catch { /* first run */ }
+    if (prev && String(prev).slice(0, 13) === String(status.generated).slice(0, 13)) return { skipped: "this hour" };
+    return recordRaw(dir, rawDir, status);
+  });
   return { out, errors };
 }
 
