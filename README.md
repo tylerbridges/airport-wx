@@ -86,6 +86,17 @@ Note on size: raw/latest changes every poll, so its old versions accumulate in t
 
 Repo Settings -> Pages -> Source: **GitHub Actions**. Then run the "Poll and deploy" workflow once (Actions tab -> Run workflow).
 
+## Backtest (baseline accuracy)
+
+`.github/workflows/backtest.yml` (manual: Actions -> "Backtest baseline" -> Run workflow; inputs `months`, default 2, and `airports`, default `all`) replays history through the TAF rules in `poller/risk.mjs`:
+
+- Period: the latest `months` months with a published BTS On-Time zip (current month and the 5 before it are probed); if none is found, the last complete months, weather only.
+- Forecasts: historical TAFs from IEM (`cgi-bin/request/taf.py`), parsed by `poller/taf-parse.mjs` into AWC JSON shape and scored per hour with `tafHour`, at lead buckets 0-3, 3-6, 6-12 and 12-24 h (latest TAF issued at or before H - lead). TAF rules only: no FAA/NWS/SPC/SIGMET history.
+- Truth: IEM METAR/SPECI (`asos.py`) scored with the same `assessConditions` thresholds (max over the hour), and BTS departures per local scheduled hour (disrupted = >= 20% of departures 15+ min late with weather/NAS delay, or >= 5% weather cancellations; >= 5 departures).
+- Output: `reports/baseline-YYYY-MM-DD.md` + `.json` and `reports/samples/` (first 50 KB of the raw IEM TAF/METAR CSVs and the BTS header) committed to the `history` branch and uploaded as an artifact. POD/FAR/CSI/bias per level threshold and phenomenon, confusion matrices, disruption reliability table, persistence and climatology baselines.
+
+Locally: `node tools/backtest.mjs --fixtures` (reads `tools/fixtures/`, writes to the system temp dir unless `--out`). `node poller/run-tests.mjs` runs all unit tests, including `tools/`.
+
 ## Local development
 
 ```
