@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<title>Airport Weather</title>
+<link rel="icon" href="data:,">
+<style>
+:root {
+  color-scheme: dark light;
+  --bg: #000;
+  --card: #1c1c1e;
+  --card-2: #2c2c2e;
+  --seg-sel: #3a3a3c;
+  --text: #fff;
+  --muted: #8e8e93;
+  --line: rgba(255, 255, 255, .1);
+  --backdrop: rgba(0, 0, 0, .55);
+  --crit: #ff453a;
+  --l0: #30d158;
+  --l1: #2ec4d6;
+  --l2: #ffb020;
+  --l3: #ff5a36;
+  --l4: #c04dff;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Inter, "Segoe UI", Roboto, system-ui, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f2f2f7;
+    --card: #fff;
+    --card-2: #f2f2f7;
+    --seg-sel: #fff;
+    --text: #000;
+    --muted: #6c6c70;
+    --line: rgba(0, 0, 0, .1);
+    --backdrop: rgba(0, 0, 0, .35);
+    --crit: #d70015;
+    --l0: #1f9d43;
+    --l1: #0f8da0;
+    --l2: #b86e00;
+    --l3: #d63a14;
+    --l4: #9a2fd1;
+  }
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html { background: var(--bg); }
+html.lock { overflow: hidden; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.35 var(--font);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+button:focus-visible, .card:focus-visible { outline: 2px solid var(--l1); outline-offset: 2px; }
+
+.wrap {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: calc(env(safe-area-inset-top) + 14px) calc(env(safe-area-inset-right) + 16px) calc(env(safe-area-inset-bottom) + 32px) calc(env(safe-area-inset-left) + 16px);
+}
+header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+h1 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 800; letter-spacing: -.03em; }
+.updated { margin-top: 4px; font-size: 14px; color: var(--muted); }
+.updated.stale { color: var(--crit); font-weight: 600; }
+.refresh {
+  flex: none; width: 44px; height: 44px; border-radius: 50%;
+  background: var(--card); display: grid; place-items: center;
+}
+.refresh svg { width: 20px; height: 20px; }
+.refresh.spin svg { animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.seg {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px;
+  background: var(--card); border-radius: 12px; margin-bottom: 14px;
+}
+.seg button { padding: 8px 2px; border-radius: 10px; font-size: 14px; white-space: nowrap; font-weight: 600; color: var(--muted); }
+.seg button[aria-selected="true"] { background: var(--seg-sel); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, .25); }
+.seg .n { font-weight: 500; opacity: .7; margin-left: 2px; }
+
+.banner { background: var(--card); border-radius: 14px; padding: 10px 14px; margin-bottom: 12px; font-size: 14px; border-left: 4px solid var(--l2); }
+.notes { margin: 14px 4px 0; font-size: 13px; color: var(--muted); }
+.notes p { margin: 2px 0; }
+.empty { text-align: center; color: var(--muted); padding: 40px 16px; }
+.empty button { margin-top: 12px; padding: 10px 18px; border-radius: 12px; background: var(--card); font-weight: 600; color: var(--text); }
+
+.list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.card {
+  background: var(--card); border-radius: 24px; padding: 16px 16px 14px; cursor: pointer;
+  transition: transform .12s ease;
+}
+.card:active { transform: scale(.985); }
+.top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.code { font-size: 46px; line-height: .95; font-weight: 800; letter-spacing: -.035em; }
+.where { margin-top: 6px; font-size: 13px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.right { display: flex; align-items: center; gap: 4px; flex: none; }
+.pill {
+  display: inline-block; padding: 5px 12px; border-radius: 999px; font-size: 14px; font-weight: 700; letter-spacing: .01em;
+  color: var(--c); background: color-mix(in srgb, var(--c) 18%, transparent);
+}
+.pill.sm { padding: 3px 9px; font-size: 12px; }
+.l0 { --c: var(--l0); } .l1 { --c: var(--l1); } .l2 { --c: var(--l2); } .l3 { --c: var(--l3); } .l4 { --c: var(--l4); }
+.star { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; color: var(--muted); }
+.star svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.star[aria-pressed="true"] { color: var(--l2); }
+.star[aria-pressed="true"] svg { fill: currentColor; }
+.reason { margin-top: 12px; font-size: 16px; font-weight: 600; line-height: 1.3; }
+.sub { margin-top: 2px; font-size: 13px; color: var(--muted); }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.badge {
+  padding: 3px 8px; border-radius: 7px; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--c); background: color-mix(in srgb, var(--c) 18%, transparent);
+}
+
+.tl-wrap { margin-top: 14px; }
+.tl { position: relative; display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; height: 12px; }
+.tl .s { border-radius: 3px; background: var(--c); min-width: 0; padding: 0; }
+.tl .s.l0 { opacity: .4; }
+.tl .nowm { position: absolute; top: -4px; bottom: -4px; width: 3px; margin-left: -1.5px; border-radius: 2px; background: var(--text); box-shadow: 0 0 0 1.5px var(--card); pointer-events: none; }
+.ticks { position: relative; height: 16px; margin-top: 6px; font-size: 11px; color: var(--muted); }
+.ticks span { position: absolute; top: 0; white-space: nowrap; }
+.ticks .tz { right: 0; opacity: .8; }
+
+/* bottom sheet */
+.sheet-wrap { position: fixed; inset: 0; z-index: 10; }
+.sheet-wrap[hidden] { display: none; }
+.backdrop { position: absolute; inset: 0; background: var(--backdrop); opacity: 0; transition: opacity .25s ease; }
+.sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; max-width: 560px; margin: 0 auto;
+  max-height: 92vh; max-height: 92dvh; overflow-y: auto; overscroll-behavior: contain;
+  background: var(--card); border-radius: 28px 28px 0 0;
+  padding: 8px calc(env(safe-area-inset-right) + 18px) calc(env(safe-area-inset-bottom) + 28px) calc(env(safe-area-inset-left) + 18px);
+  transform: translateY(100%); transition: transform .28s cubic-bezier(.2, .8, .2, 1);
+}
+.sheet-wrap.open .backdrop { opacity: 1; }
+.sheet-wrap.open .sheet { transform: none; }
+.grab { width: 40px; height: 5px; border-radius: 3px; background: var(--muted); opacity: .5; margin: 0 auto 6px; }
+.sh-head { position: sticky; top: -8px; z-index: 1; background: var(--card); padding: 4px 0 10px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.sh-code { font-size: 56px; line-height: .95; font-weight: 800; letter-spacing: -.04em; }
+.close { width: 36px; height: 36px; border-radius: 50%; background: var(--card-2); display: grid; place-items: center; flex: none; }
+.close svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2.4; fill: none; }
+.sec { margin-top: 20px; }
+.sec h3 { margin: 0 0 8px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.box { background: var(--card-2); border-radius: 16px; padding: 12px 14px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.two .box h4 { margin: 0 0 6px; display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.reasons { margin: 0; padding: 0; list-style: none; font-size: 14px; }
+.reasons li { padding: 3px 0; }
+.reasons li + li { border-top: 1px solid var(--line); }
+.muted { color: var(--muted); }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 8px 16px; font-size: 15px; }
+.kv dt { color: var(--muted); }
+.kv dd { margin: 0; text-align: right; font-weight: 600; }
+.fc { display: inline-block; padding: 1px 8px; border-radius: 6px; font-weight: 800; font-size: 13px; color: #fff; }
+.fc.VFR { background: #1f9d43; } .fc.MVFR { background: #2867d6; } .fc.IFR { background: #d63a14; } .fc.LIFR { background: #b02bd1; }
+pre.raw { margin: 0; font: 12.5px/1.45 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--card-2); border-radius: 14px; padding: 12px; user-select: text; }
+.item { padding: 8px 0; font-size: 14px; }
+.item + .item { border-top: 1px solid var(--line); }
+.item b { font-weight: 700; }
+.hourinfo { margin-top: 10px; font-size: 14px; min-height: 40px; }
+.tl.big { height: 22px; }
+.tl.big .s { cursor: pointer; }
+.tl.big .s[aria-pressed="true"] { outline: 2px solid var(--text); outline-offset: 1px; }
+@media (max-width: 380px) {
+  .code { font-size: 40px; }
+  .sh-code { font-size: 48px; }
+  .two { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet, .backdrop, .card { transition: none; }
+  .refresh.spin svg { animation-duration: 2s; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Airport Weather</h1>
+      <div class="updated" id="updated" aria-live="polite">Loading…</div>
+    </div>
+    <button class="refresh" id="refresh" type="button" aria-label="Refresh">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.6-5.9"/><path d="M20 4v5h-5"/></svg>
+    </button>
+  </header>
+  <div class="seg" id="seg" role="tablist" aria-label="Filter airports"></div>
+  <div id="banner"></div>
+  <main class="list" id="list" role="tabpanel"></main>
+  <div class="notes" id="notes"></div>
+  <noscript><p class="empty">This page needs JavaScript.</p></noscript>
+</div>
+
+<div class="sheet-wrap" id="sheetWrap" hidden>
+  <div class="backdrop" id="backdrop"></div>
+  <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle"></div>
+</div>
+<script src="app.js?v=1" defer></script>
+</body>
+</html>
