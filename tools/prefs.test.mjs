@@ -2,11 +2,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+import { createRequire } from "node:module";
+
 const store = {};
 globalThis.localStorage ??= { getItem: (k) => store[k] ?? null, setItem: (k, v) => { store[k] = String(v); } };
-globalThis.addEventListener ??= () => {};
-globalThis.window ??= globalThis;
-const P = await import("../site/prefs.js");
+const P = createRequire(import.meta.url)("../site/prefs.js"); // classic script, require()-able
 
 test("prefs: defaults, validation, persistence, notifications", () => {
   assert.deepEqual(P.getPrefs(), { ...P.DEFAULTS, show: { ...P.DEFAULTS.show } });

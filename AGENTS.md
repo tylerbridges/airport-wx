@@ -28,7 +28,8 @@ airport-wx: a static page showing major-weather and delay risk at major US airpo
 
 ## How the site works
 
-- `site/index.html` (markup + all CSS) loads `cats.js` (disruption categories, pure), `prefs.js` (settings state, ES module, also `window.AWXPrefs`), `app.js` (everything rendered; classic script) and `searched.js` (search + non-major airports). Bump `?v=` on each file you change.
+- Navigation shell (README "Navigation and Settings"): `site/nav.js` (glass tab bar Airports / Trips / Map with the hash as state, round search button, header buttons, menu popover, theme) and `site/settings.js` (Settings sheet and its pages), shared helpers in `site/navui.js`, check-page assertions in `site/navcheck.js`. Settings read and write only `site/prefs.js`; favourites stay in `awx-favs` (changed through `AWXApp.setFavs`). Existing ids are kept, so `app.js` and `searched.js` don't know about the shell; its hooks are marked `nav hook`.
+- `site/index.html` (markup + all CSS) loads `cats.js` (disruption categories, pure), `prefs.js` (settings state, classic script in `<head>`, `window.AWXPrefs`), `app.js` (everything rendered; classic script) and `searched.js` (search + non-major airports). Bump `?v=` on each file you change.
 - Settings state belongs to `site/prefs.js` (`getPrefs/setPref/onPrefs/DEFAULTS`, localStorage `awx-settings`); never write that key elsewhere. Ground stops and full closures can't be hidden.
 - Category/level/impact rules for the page are in `site/cats.js` and must read back every poller reason (`tools/cats.test.mjs`); add a pattern there when `poller/risk.mjs` gets a new reason text.
 - Timelines are the local calendar day; past hours come from `observed` (poll.mjs `// build2b hook`), the rest from `hours`. The sheet's card stack keeps one footprint (all states in one grid cell): don't add content that changes its height on hour taps.

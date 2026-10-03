@@ -4,6 +4,7 @@
 // Writes "CHECK PASS" or "CHECK FAIL n" plus one line per row into <pre id="result"> so headless
 // Chrome (--dump-dom) and the uptime workflow can read it. Warnings don't fail the check.
 import { loadAirports, rank } from "./search.js";
+import { navChecks } from "./navcheck.js"; // nav hook
 
 const P = new URLSearchParams(location.search);
 const MOCK = P.get("mock") === "1";
@@ -517,6 +518,7 @@ async function runLive() {
       rr(r.ready && !r.errors.length ? "pass" : "fail", `Render ${label}`, !r.ready ? "cards never appeared" : r.errors.length ? r.errors.join(" | ") : `${r.cards} cards, no errors`);
     }
     await uiChecks(group("App: settings, modes, timeline (390 px, hidden frame)"), null); // build2b
+    await navChecks(group("Navigation (390 px, hidden frame)"), "./index.html"); // nav hook
   }
 }
 
@@ -527,6 +529,7 @@ async function runMock() {
   const { list, byIcao, error } = await airportList();
   searchChecks(group("Search"), list, error);
   if (!idx.ok) { group("Scenarios")("fail", "data/scenarios/index.json loads", `HTTP ${idx.status || idx.error}`); return; }
+  if (RENDER) await navChecks(group("Navigation (390 px, hidden frame)"), "./index.html?test=all-clear"); // nav hook
   for (const sc of idx.data.scenarios) {
     const add = group(`Scenario: ${sc.name} — ${sc.title}`);
     const got = await getJson(`./data/scenarios/${sc.file}`);

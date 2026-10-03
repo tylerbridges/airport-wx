@@ -21,12 +21,6 @@
     sigmet: "thunderstorm alerts may be missing", lamp: "thunder chances may be missing", tcf: "storm forecasts may be missing",
     cwa: "center weather advisories may be missing",
   };
-  // Settings → Data & checks: where each source comes from
-  const SOURCE_ORIGIN = {
-    faa: "FAA NAS status", atcscc: "FAA Command Center", nws: "National Weather Service alerts", spc: "NOAA Storm Prediction Center",
-    metar: "Airport weather reports (aviationweather.gov)", taf: "Airport forecasts (aviationweather.gov)", sigmet: "Thunderstorm advisories (aviationweather.gov)",
-    lamp: "NWS hourly guidance (LAMP)", tcf: "Aviation storm forecast (aviationweather.gov)", cwa: "Center weather advisories (aviationweather.gov)",
-  };
   const SPC_NAMES = { MRGL: "Marginal", SLGT: "Slight", ENH: "Enhanced", MDT: "Moderate", HIGH: "High" };
   const FAV_KEY = "awx-favs";
   const DEFAULT_FAVS = ["MSP", "ORD", "DEN", "ATL"];
@@ -81,30 +75,10 @@
     syncPrefs();
     fmtCache.clear();
     viewCache = new WeakMap();
-    applyTheme();
     render();
-    if (panel.kind === "settings") renderSettings();
   });
-  /** UI setter in the internal shape -> prefs.js. */
-  function setSetting(k, v) {
-    if (k === "hide") PREFS.setPref("show", Object.fromEntries(CATS.KEYS.map((c) => [c, !v[c]])));
-    else if (k === "tz") PREFS.setPref("timeRef", v === "mine" ? "mine" : "airport");
-    else if (k === "clock") PREFS.setPref("clock", Number(v));
-    else PREFS.setPref(k, v);
-  }
   const aviation = () => S.mode === "aviation";
-  function applyTheme() {
-    const root = document.documentElement;
-    if (S.theme === "auto") root.removeAttribute("data-theme");
-    else root.setAttribute("data-theme", S.theme);
-    for (const m of document.querySelectorAll('meta[name="theme-color"]')) {
-      if (!m.dataset.media) m.dataset.media = m.getAttribute("media") || "";
-      if (S.theme === "auto") m.setAttribute("media", m.dataset.media);
-      else if (m.dataset.media.includes(S.theme)) m.removeAttribute("media");
-      else m.setAttribute("media", "not all");
-    }
-  }
-  applyTheme();
+  // the theme (data-theme on :root) is applied by index.html's pre-paint script and the nav shell (site/nav.js)
 
   // ---------- helpers ----------
 
@@ -173,19 +147,7 @@
     else state.favs.push(iata);
     saveFavs();
     render();
-    if (panel.kind === "settings") renderSettings();
   }
-  /** Move a favourite to a new index in state.favs (home reorder, settings list). */
-  function moveFav(code, to) {
-    const i = state.favs.indexOf(code);
-    if (i < 0) return;
-    state.favs.splice(i, 1);
-    state.favs.splice(Math.max(0, Math.min(state.favs.length, to)), 0, code);
-    saveFavs();
-    render();
-    if (panel.kind === "settings") renderSettings();
-  }
-
   // ---------- time (build2b: display zone, 12/24-hour, US zone abbreviations) ----------
 
   const fmtCache = new Map();
@@ -2127,7 +2089,7 @@
     sheet.addEventListener("touchcancel", end);
   }
 
-  // ---------- panels: settings (temporary UI, see window.__awxOpenSettings) and the national list ----------
+  // ---------- panel: the national list (Settings is the nav shell's site/settings.js) ----------
 
   const panel = { kind: null };
   function openPanel(kind) {
@@ -2135,7 +2097,7 @@
     const wrap = $("panelWrap");
     wrap.hidden = false;
     document.documentElement.classList.add("lock");
-    if (kind === "settings") renderSettings(); else renderNationalPanel();
+    renderNationalPanel();
     $("panel").scrollTop = 0;
     void wrap.offsetHeight;
     wrap.classList.add("open");
@@ -2175,77 +2137,6 @@
       !s.line ? h("p", { class: "muted" }, "Nothing affecting flights nationally right now.") : null].filter(Boolean));
   }
 
-  /** Temporary settings sheet (the navigation shell's site/settings.js replaces it); every control writes prefs.js. */
-  function renderSettings() {
-    const p = $("panel");
-    const seg = (label, key, opts) => h("div", { class: "srow" }, h("span", {}, label),
-      h("div", { class: "sseg", role: "radiogroup", "aria-label": label }, opts.map(([v, t]) => h("button", { type: "button", role: "radio", "aria-checked": String(S[key] === v), onclick: () => setSetting(key, v) }, t))));
-    const sw = (label, on, onToggle, disabled) => h("div", { class: "srow" + (disabled ? " locked" : "") }, h("span", {}, label),
-      h("button", { type: "button", role: "switch", class: "switch", "aria-checked": String(on), "aria-label": label, disabled: disabled || null, onclick: onToggle }, disabled ? h("span", { class: "always" }, "Always shown") : null));
-    const grp = (title, rows, foot) => h("div", { class: "sgrp" }, title ? h("h3", {}, title) : null, h("div", { class: "glist" }, rows), foot ? h("p", { class: "sfoot" }, foot) : null);
-    const favRows = state.favs.map((c, i) => h("div", { class: "srow fav", "data-code": c },
-      h("button", { type: "button", class: "drag", "aria-label": `Reorder ${c} (arrow keys)`, onkeydown: (e) => { if (e.key === "ArrowUp" || e.key === "ArrowDown") { e.preventDefault(); moveFav(c, i + (e.key === "ArrowUp" ? -1 : 1)); const b = $("panel").querySelector(`.fav[data-code="${c}"] .drag`); if (b) b.focus(); } } }, icon(ICONS.grip)),
-      h("span", { class: "fcode" }, c),
-      h("button", { type: "button", class: "del", "aria-label": `Remove ${c}`, onclick: () => toggleFav(c) }, icon(ICONS.trash))));
-    const d = state.data;
-    const srcRows = Object.keys(SOURCE_NAMES).map((k) => {
-      const x = d && d.sources && d.sources[k];
-      return h("div", { class: "srow" }, h("span", {}, SOURCE_ORIGIN[k]), h("span", { class: x && !x.ok ? "bad" : "muted" }, !x ? "—" : !x.ok ? "Unavailable" : x.at ? ago(Math.max(0, Date.now() - Date.parse(x.at))) : "OK"));
-    });
-    const liveTxt = state.sample ? "Sample data" : testMode() ? "Off (test scenario)" : live.url === null ? "Not configured" : live.failed ? "Unavailable — showing the last build" : d && d.live ? "Live · " + ago(Math.max(0, Date.now() - Date.parse(d.live))) : "Waiting";
-    p.replaceChildren(panelHead("Settings"),
-      grp("Mode", [seg("Mode", "mode", [["traveler", "Traveler"], ["aviation", "Aviation"]])], "Aviation adds flight categories, ceilings, visibility, winds in knots and Zulu times."),
-      grp("Show these disruptions", [
-        ...CATS.KEYS.map((k) => sw(CATS.LABELS[k], !S.hide[k], () => setSetting("hide", Object.assign({}, S.hide, { [k]: !S.hide[k] })))),
-        sw("Ground stops & airport closures", true, null, true)],
-        "Ground stops and full airport closures stop flights, so they can't be hidden."),
-      grp("Display", [
-        seg("Appearance", "theme", [["auto", "Auto"], ["light", "Light"], ["dark", "Dark"]]),
-        seg("Time", "clock", [["12", "12-hour"], ["24", "24-hour"]]),
-        seg("Times", "tz", [["local", "Each airport's local time"], ["mine", "My time zone"]]),
-        seg("Airport codes", "codes", [["iata", "IATA"], ["icao", "ICAO"]])]),
-      grp("Your airports", favRows.length ? favRows : [h("div", { class: "srow" }, h("span", { class: "muted" }, "No saved airports"))], "Drag to reorder; the home list follows this order."),
-      grp("Data & checks", [
-        h("div", { class: "srow" }, h("span", {}, "Last updated"), h("span", { class: "muted" }, d ? ago(Math.max(0, Date.now() - Date.parse(d.generated))) : "—")),
-        h("div", { class: "srow" }, h("span", {}, "Live relay"), h("span", { class: "muted" }, liveTxt)),
-        h("a", { class: "srow link", href: "check.html" }, h("span", {}, "Run checks"), h("span", { "aria-hidden": "true" }, "›")),
-        ...srcRows]),
-      grp("About", [h("div", { class: "srow" }, h("span", {}, "Version"), h("span", { class: "muted" }, "v" + APP_V))]));
-    wireFavDrag(p);
-  }
-  /** Drag handles in Settings → Your airports. */
-  function wireFavDrag(p) {
-    for (const hdl of p.querySelectorAll(".fav .drag")) {
-      hdl.addEventListener("pointerdown", (e) => {
-        const row = hdl.closest(".fav");
-        const list = row.parentElement;
-        try { hdl.setPointerCapture(e.pointerId); } catch (x) { /* ignore */ }
-        row.classList.add("dragging");
-        const mv = (ev) => {
-          const rows = [...list.querySelectorAll(".fav")];
-          for (const r of rows) {
-            if (r === row) continue;
-            const b = r.getBoundingClientRect();
-            if (ev.clientY < b.top + b.height / 2 && rows.indexOf(r) < rows.indexOf(row)) { list.insertBefore(row, r); break; }
-            if (ev.clientY > b.top + b.height / 2 && rows.indexOf(r) > rows.indexOf(row)) { list.insertBefore(row, r.nextSibling); }
-          }
-        };
-        const upd = () => {
-          hdl.removeEventListener("pointermove", mv);
-          hdl.removeEventListener("pointerup", upd);
-          hdl.removeEventListener("pointercancel", upd);
-          row.classList.remove("dragging");
-          const order = [...list.querySelectorAll(".fav")].map((r) => r.dataset.code);
-          if (order.join() !== state.favs.join()) { state.favs = order; saveFavs(); render(); renderSettings(); }
-        };
-        hdl.addEventListener("pointermove", mv);
-        hdl.addEventListener("pointerup", upd);
-        hdl.addEventListener("pointercancel", upd);
-        e.preventDefault();
-      });
-    }
-  }
-
   // ---------- wiring ----------
 
   wireSwipe($("sheet"), closeSheet);
@@ -2267,7 +2158,6 @@
   setInterval(() => { if (state.data && state.data.live && document.visibilityState === "visible") renderHeader(); }, 10e3); // live relay: "Live · 40 s ago"
   setInterval(() => { if (document.visibilityState === "visible") checkVersion(); }, 10 * 60e3); // live relay: self-update
 
-  window.__awxOpenSettings = () => openPanel("settings"); // build2b: temporary hook until site/settings.js (navigation shell) lands
   window.AWXApp = {
     state, openSheet, closeSheet, toggleFav, render, // build2a hook: used by site/searched.js
     // build2b: for site/searched.js, the settings UI and check.js
@@ -2275,6 +2165,7 @@
     timeline: (a) => timeline(a, {}), // a status.json-shaped airport (searched.js builds one from a shard entry)
     version: APP_V,
   };
+  window.AWXApp.setFavs = (list) => { state.favs = list.filter((x) => typeof x === "string"); saveFavs(); render(); }; // nav hook: Settings → Your airports (site/settings.js)
   if (!testMode()) liveConfig(); // live relay: read data/config.json on load
   render();
   load(false);
