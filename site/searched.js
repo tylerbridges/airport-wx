@@ -124,17 +124,19 @@ async function shardFor(icao) {
 
 // ---------- cards ----------
 
-function timeline(e, h0, tz) {
+/** build2b: the app's day timeline (12 AM–12 AM, lens, scrubbing) from a shard entry: forecast levels only, no observed hours. */
+function timeline(e, h0, tz, code) {
   const t0 = Date.parse(h0);
   const levels = String(e.h || "").split("").map((c) => (c === "-" ? null : Number(c)));
-  const frac = Math.max(0, Math.min(1, (Date.now() - t0) / (levels.length * HOUR)));
-  const segs = levels.map((l) => h("span", { class: l == null ? "s nd" : "s " + lv(l) }));
-  const tl = h("div", { class: "tl", role: "img", "aria-label": `Next 24 hours: peak ${LEVELS[e.p] || "Clear"}` }, segs,
-    h("span", { class: "nowm", style: `left:${(frac * 100).toFixed(2)}%` }));
-  const ticks = h("div", { class: "ticks", "aria-hidden": "true" });
-  for (let i = 0; i < levels.length; i += 6) ticks.append(h("span", { style: `left:${(i / levels.length) * 100}%` }, i === 0 ? "Now" : hourLabel(t0 + i * HOUR, tz)));
-  ticks.append(h("span", { class: "tz" }, tzName(t0, tz)));
-  return h("div", { class: "tl-wrap" }, tl, ticks);
+  const pt = e.pt ? Date.parse(e.pt) : null;
+  const hours = levels.map((l, i) => ({ t: new Date(t0 + i * HOUR).toISOString(), level: l, reasons: t0 + i * HOUR === pt && e.r ? [e.r] : [] }));
+  if (!hours.length || !app() || !app().timeline) return null;
+  const a = {
+    iata: code, icao: null, tz, hours, observed: [], metar: null, faa: [], nowText: e.pl || null,
+    now: { level: e.n || 0, reasons: [] }, peak: { level: e.p || 0, at: e.pt || hours[0].t, reasons: e.r ? [e.r] : [] },
+  };
+  if (a.hours[0].level == null) a.hours[0] = { ...a.hours[0], level: e.n || 0 };
+  return app().timeline(a);
 }
 
 function scopeNote(a) {
@@ -155,7 +157,7 @@ function starBtn(code) {
 function shell(a, kids, { dismiss } = {}) {
   return h("div", { class: "card xcard", "data-code": a.code },
     h("div", { class: "top" },
-      h("div", { class: "code" }, a.code),
+      h("div", { class: "code" }, app() && app().prefs && app().prefs.getPrefs().codes === "icao" && a.icao ? a.icao : a.code), // build2b: Airport codes setting
       h("div", { class: "right" }, ...kids.right, starBtn(a.code),
         dismiss ? h("button", { type: "button", class: "star xclose", "aria-label": "Close " + a.code, onclick: (ev) => { ev.stopPropagation(); dismiss(); } }, "×") : null)),
     a.name ? h("div", { class: "aname" }, a.name) : null,
@@ -189,14 +191,14 @@ function card(a, shard, opts) {
   const details = expanded ? h("div", { class: "xdet" },
     e.pl ? h("div", {}, h("b", {}, "Now: "), e.pl) : h("div", { class: "muted" }, "No recent observation (METAR)"),
     e.im ? h("div", {}, h("b", {}, "What it means: "), e.im) : null,
-    e.mt ? h("div", { class: "muted small" }, "Observed " + ago(Math.max(0, Date.now() - Date.parse(e.mt))) + " · " + clock(Date.parse(e.mt), tz) + " " + tzName(Date.parse(e.mt), tz)) : null,
+    e.mt ? h("div", { class: "muted small" }, "Observed " + ago(Math.max(0, Date.now() - Date.parse(e.mt))) + " · " + clock(Date.parse(e.mt), tz) + " " + (app() && app().zoneAbbr ? app().zoneAbbr(Date.parse(e.mt), tz) : tzName(Date.parse(e.mt), tz))) : null,
     e.m ? h("pre", { class: "raw" }, e.m) : null,
     e.t ? h("pre", { class: "raw" }, e.t) : h("div", { class: "muted small" }, "No TAF (forecast) issued for this airport"),
   ) : null;
   return shell(a, { right: [h("span", { class: "pill " + lv(e.p) }, LEVELS[e.p] || "Clear")], body: [
     h("div", { class: "reason" }, reason),
     e.n !== e.p ? h("div", { class: "sub" }, "Now: " + (LEVELS[e.n] || "Clear")) : null,
-    timeline(e, (lw && app().state.liveH0) || shard.data.h0 || e.pt, tz),
+    timeline(e, (lw && app().state.liveH0) || shard.data.h0 || e.pt, tz, a.code),
     h("div", { class: "sub xnote" }, scopeNote(a)),
     stale ? h("div", { class: "sub crit" }, "Weather data updated " + ago(Date.now() - genMs)) : null,
     !e.t ? h("div", { class: "sub" }, "No forecast (TAF) for this airport — only current conditions are known (grey hours)") : null,
@@ -229,6 +231,7 @@ async function render() {
   if (seq !== renderSeq) return;
   const cards = items.filter(Boolean).map(({ a, shard }) => card(a, shard, a.code === picked ? { dismiss: () => { picked = null; savePicked(); render(); } } : undefined));
   box.replaceChildren(...cards);
+  if (app() && app().placeLenses) requestAnimationFrame(app().placeLenses); // build2b
   fixEmpty(cards.length > 0 && st.filter === "mine");
 }
 
@@ -278,7 +281,13 @@ function init() {
     const codes = [picked, ...(((app() && app().state.favs) || []))].filter((c) => c && !majors.has(c));
     return [...new Set(codes)].map(byCode).filter((a) => a && a.icao).map((a) => ({ icao: a.icao, tz: a.tz || null }));
   };
-  window.AWXExtra = { render: () => { render(); }, pick, _shardFor: shardFor, liveIds };
+  // build2b: runway headings for the Current weather card's crosswind line (same cached airport list as search)
+  const runways = async (icao, iata) => {
+    const list = airportsLoaded() || (await loadAirports());
+    const a = list.find((x) => icao && x.icao === icao) || list.find((x) => x.code === iata);
+    return a ? a.runways : null;
+  };
+  window.AWXExtra = { render: () => { render(); }, pick, _shardFor: shardFor, liveIds, runways };
   render();
 }
 
