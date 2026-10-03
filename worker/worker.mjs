@@ -19,7 +19,7 @@ export const AWC = "https://aviationweather.gov/api/data";
 export const FAA_URL = "https://nasstatus.faa.gov/api/airport-status-information";
 export const BUILD_BASE = "https://tylerbridges.github.io/airport-wx/data/";
 export const MAX_IDS = 12;
-export const TTL = { live: 60e3, build: 120e3, response: 30e3 };
+export const TTL = { live: 60e3, build: 120e3, response: 30e3, model: 6 * 3600e3 }; // model: phase3 delay model files
 export const LIVE_SOURCES = ["metar", "taf", "sigmet", "faa", "nws"];
 export const BUILD_SOURCES = ["spc", "lamp", "atcscc", "tcf", "cwa"];
 const HOUR = 3600e3;
@@ -171,6 +171,20 @@ async function http(url, { timeout, headers = {} } = {}) {
 }
 
 const jsonList = (t) => (t.trim() ? JSON.parse(t) : []);
+// phase3 hook: delay model files from the Pages site (data/model/), kept 6 h; a 404 (e.g. no
+// model.json before the first trained model passes the gate) is cached as null, not retried per request.
+const modelFile = (url, env) => cached(url, TTL.model, async () => {
+  try { return await http(url, { timeout: TIMEOUT.build }); } catch (e) { if (/HTTP 404/.test(String(e?.message))) return "null"; throw e; }
+}, JSON.parse, env);
+export async function loadDelay(base, iatas, env) {
+  const [model, fallback, ...an] = await Promise.all([
+    modelFile(base + "model/model.json", env), modelFile(base + "model/fallback.json", env),
+    ...iatas.map((i) => modelFile(`${base}model/analogs/${i}.json`, env)),
+  ]);
+  const analogs = {};
+  iatas.forEach((i, k) => { if (an[k].ok && an[k].value) analogs[i] = an[k].value; });
+  return { model: model.ok ? model.value : null, fallback: fallback.ok ? fallback.value : null, analogs };
+}
 const live = (url, parse, env, headers) => cached(url, TTL.live, () => http(url, { timeout: TIMEOUT.live, headers }), parse, env);
 const fromBuild = (url, env) => cached(url, TTL.build, () => http(url, { timeout: TIMEOUT.build }), JSON.parse, env);
 
@@ -202,7 +216,7 @@ function awcTafFromStatus(icao, t) {
  *        nws.value = {IATA: alerts GeoJSON | null (that point failed)}
  * Returns {sources, airports, wx, h0}.
  */
-export function overlay({ now = new Date(), majors = [], others = [], build = null, shards = {}, src = {} }) {
+export function overlay({ now = new Date(), majors = [], others = [], build = null, shards = {}, src = {}, delay = null }) {
   const buildBy = new Map((build?.airports || []).map((a) => [a.iata, a]));
   const ok = (n) => !!src[n]?.ok;
   const bsrc = build?.sources || {};
@@ -250,12 +264,22 @@ export function overlay({ now = new Date(), majors = [], others = [], build = nu
       if (!nwsMap[a.iata]) { o.alerts = b?.alerts || []; nwsFallback++; }
       return o;
     };
+    // phase3 hook: delay model; hubs not requested use the build's TAF
+    const icaoOf = Object.fromEntries([...(build?.airports || []), ...majors].map((a) => [a.iata, a.icao]));
+    const scoring = delay && (delay.model || delay.fallback)
+      ? { ...delay, icaoOf, hubTaf: (iata) => awcTafFromStatus(icaoOf[iata], buildBy.get(iata)?.taf) } : null;
     const out = assemble({
       airports: majors, now, metars, tafs, sigmets: ok("sigmet") ? src.sigmet.value : null, faaParsed,
-      spc: null, nws: nwsMap, lamp: { stations }, atcscc: adv, tcf: null, cwa: null, over,
+      spc: null, nws: nwsMap, lamp: { stations }, atcscc: adv, tcf: null, cwa: null, over, delay: scoring,
     });
     // Fields the relay doesn't recompute (added to status.json later) carry over from the build.
     airports = out.map((a) => ({ ...(buildBy.get(a.iata) || {}), ...a }));
+    if (!scoring) { // phase3: model files unavailable -> the build's delay numbers for the same hours
+      for (const a of airports) {
+        const bh = new Map((buildBy.get(a.iata)?.hours || []).map((h) => [h.t, h.delay]));
+        a.hours = a.hours.map((h) => (h.delay || !bh.get(h.t) ? h : { ...h, delay: bh.get(h.t) }));
+      }
+    }
     if (src.nws) {
       if (!ok("nws")) sources.nws = staleMeta("nws", src.nws.error);
       else sources.nws = { ok: true, at: new Date(src.nws.at).toISOString(), error: nwsFallback ? `${nwsFallback} of ${majors.length} point requests failed; the build's alerts are shown there` : null, live: true, ...(nwsFallback ? { stale: true } : {}) };
@@ -341,8 +365,10 @@ export async function liveStatus({ ids, tz = {}, env = {}, now = new Date() }) {
       return res.some((r) => r.ok) ? { ok: true, value, at } : { ok: false, error: `all ${res.length} requests failed: ${firstErr}`, at: Date.now() };
     })());
   }
+  const delayP = majors.length ? loadDelay(base, majors.map((a) => a.iata), env) : null; // phase3 hook
   await Promise.all(jobs);
   if (!build) build = await buildP;
+  const delay = delayP ? await delayP : null;
 
   // Shards only when a live METAR/TAF request failed for airports outside the curated list.
   const shards = {};
@@ -354,7 +380,7 @@ export async function liveStatus({ ids, tz = {}, env = {}, now = new Date() }) {
     }));
   }
 
-  const o = overlay({ now, majors, others, build: build.ok ? build.value : null, shards, src });
+  const o = overlay({ now, majors, others, build: build.ok ? build.value : null, shards, src, delay });
   const fetched = Object.values(src);
   const allFailed = !build.ok && fetched.every((r) => !r.ok);
   const body = {

@@ -24,6 +24,8 @@ airport-wx: a static page showing major-weather and delay risk at major US airpo
 
 - Live relay (README "Live relay"): `worker/worker.mjs` is a Cloudflare Worker that overlays fresh METAR/TAF/SIGMET/FAA/NWS on the last build. `.github/workflows/worker.yml` deploys it on every push to main that touches `worker/**`, `poller/**` or `airports.json` (and on manual dispatch); it skips with a notice until the repo secrets `CLOUDFLARE_API_TOKEN` (Account → Workers Scripts → Edit) and `CLOUDFLARE_ACCOUNT_ID` exist (Settings → Secrets and variables → Actions). The poll workflow then writes `site/data/config.json` with the relay URL (committed default `{"liveUrl":null}`). Modules the worker imports (`poller/core.mjs` and what it imports) must stay pure: no `node:` imports (`worker/pack.mjs` refuses them). Test locally with `node worker/dev.mjs serve`.
 
+- Delay model (README "Delay model"): features live in `poller/delay.mjs` (shared by training, the poller, the relay and the page's data). After changing features, `SPEC`, the target, `poller/risk.mjs` rules or `tafHourParts`, run the "Train delay model" workflow (`.github/workflows/train.yml`) so `site/data/model/` matches; bump `SPEC` when old models can't be scored correctly (they then fall back). Never commit or ship a `model.json` that failed the safety gate (test Brier skill vs climatology > 0 and better than the rule-level mapping); only the workflow writes `site/data/model/`. `node tools/train.mjs --fixtures` must keep running end to end. UI is in `site/delay.js`, `site/accuracy.html`, `site/accuracy.js`; app.js/index.html only carry `phase3 hook` lines.
+
 ## Checks before publishing
 
 1. `node poller/run-tests.mjs` — all pass.

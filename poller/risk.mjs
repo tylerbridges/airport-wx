@@ -495,7 +495,13 @@ function merge(a, g) {
  * state at the hour's midpoint; TEMPO/PROB groups overlapping the hour are overlays.
  * Returns {items, fltCat} or null if the TAF doesn't cover the hour.
  */
-export function tafHour(taf, t0, t1) {
+/**
+ * The TAF's conditions for the hour [t0, t1), before scoring: the prevailing state (base + FM/BECMG
+ * at the hour's midpoint) and the TEMPO/PROB overlays overlapping the hour, each already merged onto
+ * the state. Returns {state, overlays: [{kind: "TEMPO"|"PROB", prob, cond}]} or null if the TAF
+ * doesn't cover the hour. Shared by tafHour and the delay model's features (poller/delay.mjs).
+ */
+export function tafHourParts(taf, t0, t1) {
   const vFrom = toMs(taf.validTimeFrom);
   const vTo = toMs(taf.validTimeTo);
   const mid = (t0 + t1) / 2;
@@ -512,16 +518,27 @@ export function tafHour(taf, t0, t1) {
     if (ch.eff > mid) break;
     state = ch.kind === "FM" ? pick(ch.g) : merge(state, ch.g);
   }
-  const baseItems = assessConditions(state).map((i) => ({ ...i, fc: true }));
-  const have = new Set(baseItems.map((i) => i.text));
-  const items = [...baseItems];
+  const overlays = [];
   for (const { g, kind } of groups) {
     if (kind !== "TEMPO" && kind !== "PROB") continue;
     const gf = toMs(g.timeFrom);
     const gt = toMs(g.timeTo);
     if (gf == null || gt == null || !(gf < t1 && gt > t0)) continue;
-    const prob = num(g.probability) != null && Number(g.probability) > 0;
-    for (const it of assessConditions(merge(state, g))) {
+    overlays.push({ kind, prob: num(g.probability), cond: merge(state, g) });
+  }
+  return { state, overlays };
+}
+
+export function tafHour(taf, t0, t1) {
+  const parts = tafHourParts(taf, t0, t1);
+  if (!parts) return null;
+  const { state } = parts;
+  const baseItems = assessConditions(state).map((i) => ({ ...i, fc: true }));
+  const have = new Set(baseItems.map((i) => i.text));
+  const items = [...baseItems];
+  for (const { prob: pv, cond } of parts.overlays) {
+    const prob = pv != null && pv > 0;
+    for (const it of assessConditions(cond)) {
       if (have.has(it.text)) continue;
       if (prob) {
         const level = it.level - 1;

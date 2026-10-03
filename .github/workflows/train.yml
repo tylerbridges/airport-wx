@@ -1,0 +1,173 @@
+name: Train delay model
+
+# Retrains the delay model (README "Delay model"): BTS On-Time months + IEM historical TAFs/METARs ->
+# tools/train-data.mjs -> tools/train.mjs. Commits site/data/model/ to main (model.json only when the
+# safety gate passes) and the report to the `history` branch (reports/model-YYYY-MM-DD.md/.json).
+on:
+  workflow_dispatch:
+    inputs:
+      months:
+        description: "How many of the latest BTS-published months to use (24 = two winters)"
+        required: false
+        default: "24"
+      airports:
+        description: "all, or comma-separated IATA codes from airports.json"
+        required: false
+        default: "all"
+      test_months:
+        description: "Newest months held out for testing (extended back to include a winter month)"
+        required: false
+        default: "4"
+      lamp:
+        description: "Also use IEM LAMP thunder/convection chances (format unverified; slow)"
+        type: boolean
+        required: false
+        default: false
+      publish:
+        description: "Commit site/data/model/ to main (the gate still decides model.json)"
+        type: boolean
+        required: false
+        default: true
+  schedule:
+    - cron: "17 6 22 * *" # monthly on the 22nd, after BTS usually publishes a new month
+
+permissions:
+  contents: write
+
+concurrency:
+  group: train
+  cancel-in-progress: false
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    env:
+      MONTHS: ${{ inputs.months || '24' }}
+      AIRPORTS: ${{ inputs.airports || 'all' }}
+      TEST_MONTHS: ${{ inputs.test_months || '4' }}
+      LAMP: ${{ inputs.lamp && '1' || '' }}
+      PUBLISH: ${{ github.event_name == 'schedule' && 'true' || inputs.publish }}
+      NODE_OPTIONS: --max-old-space-size=6144 # ~370k airport-hour records x 4 lead buckets in memory
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Unit tests
+        run: node poller/run-tests.mjs
+
+      # Our own history log (FAA programs, ops plans) for how often a "possible ground stop" happened.
+      - name: History log (program rates)
+        continue-on-error: true
+        run: |
+          git fetch --no-tags --depth=1 origin +refs/heads/history:refs/remotes/origin/history
+          git worktree add --detach hist origin/history
+          ls hist/truth | head
+
+      # Newest published BTS month first (probe up to 14 months back by the zip's "PK" bytes), then the
+      # N months ending there. Each zip is streamed into tools/train-data.mjs (no unzipped CSV on disk).
+      - name: BTS On-Time months -> per airport-hour aggregates
+        id: bts
+        run: |
+          set -u
+          n="$MONTHS"; case "$n" in ''|*[!0-9]*) n=24 ;; esac
+          base="$(date -u +%Y-%m-01)"
+          url_for() { echo "https://transtats.bts.gov/PREZIP/On_Time_Reporting_Carrier_On_Time_Performance_1987_present_$1_$2.zip"; }
+          newest=""
+          for k in $(seq 0 14); do
+            y="$(date -u -d "$base -$k month" +%Y)"; m="$(date -u -d "$base -$k month" +%-m)"
+            magic="$(curl -sSL --max-time 90 -r 0-3 "$(url_for "$y" "$m")" 2>/dev/null | head -c 2 || true)"
+            if [ "$magic" = "PK" ]; then newest="$k"; echo "newest BTS month: $y-$m"; break; fi
+            echo "not published (or unreachable): $y-$m"
+          done
+          [ -n "$newest" ] || { echo "::error::no BTS month found"; exit 1; }
+          mkdir -p data
+          ok=0
+          for ((k=newest+n-1; k>=newest; k--)); do
+            ym="$(date -u -d "$base -$k month" +%Y-%m)"; y="${ym%-*}"; m="$((10#${ym#*-}))"
+            if curl -fsSL --retry 3 --retry-delay 20 --max-time 1500 -o bts.zip "$(url_for "$y" "$m")" \
+               && unzip -p bts.zip '*.csv' | node tools/train-data.mjs bts --month "$ym" --file - --out data --airports "$AIRPORTS"; then
+              ok=$((ok+1))
+            else
+              echo "::warning::BTS $ym download, unzip or parse failed"
+            fi
+            rm -f bts.zip
+          done
+          echo "BTS months aggregated: $ok of $n"
+          [ "$ok" -ge 6 ] || { echo "::error::fewer than 6 BTS months"; exit 1; }
+
+      - name: Historical TAFs/METARs (IEM) -> training records
+        run: |
+          args=(build --out data --airports "$AIRPORTS")
+          [ -n "$LAMP" ] && args+=(--lamp)
+          node tools/train-data.mjs "${args[@]}"
+          ls -la data data/samples
+
+      - name: Fit, calibrate, validate, gate
+        run: |
+          hist=(); [ -d hist/truth ] && hist=(--history hist)
+          node tools/train.mjs --data data --out out/model --reports out/reports --prev site/data/model --test-months "$TEST_MONTHS" "${hist[@]}"
+          mkdir -p out/reports/samples-train
+          cp data/samples/* out/reports/samples-train/ 2>/dev/null || true
+          cp data/meta.json out/reports/train-meta-$(date -u +%F).json
+          ls -la out/model out/reports
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: delay-model
+          path: |
+            out
+            data/samples
+            data/meta.json
+            data/dataset.jsonl.gz
+          if-no-files-found: warn
+
+      # model.json only exists in out/model when the gate passed; otherwise the previous one stays.
+      - name: Commit site/data/model to main
+        if: ${{ env.PUBLISH == 'true' }}
+        run: |
+          set -eu
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          apply() {
+            mkdir -p site/data/model
+            cp out/model/fallback.json out/model/report.json site/data/model/
+            [ -f out/model/model.json ] && cp out/model/model.json site/data/model/
+            rm -rf site/data/model/analogs && cp -R out/model/analogs site/data/model/analogs
+            git add -A site/data/model
+            if git diff --cached --quiet; then echo "nothing new"; return 1; fi
+            deployed="$(node -e 'console.log(require("./out/model/report.json").deployed ? "deployed" : "NOT deployed (gate failed)")')"
+            git commit -q -m "Delay model $(date -u +%F): $deployed"
+          }
+          apply || exit 0
+          for i in 1 2 3; do
+            git push origin HEAD:main && exit 0
+            git fetch origin main && git reset -q --hard origin/main && apply || exit 0
+          done
+          exit 1
+
+      - name: Commit report to history branch
+        run: |
+          set -eu
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          fetch_history() { git fetch --no-tags --depth=1 origin +refs/heads/history:refs/remotes/origin/history; }
+          rm -rf history
+          if fetch_history; then git worktree add -B history-reports history origin/history; else echo "no history branch; skipping"; exit 0; fi
+          commit() {
+            mkdir -p history/reports
+            cp -R out/reports/. history/reports/
+            git -C history add reports
+            if git -C history diff --cached --quiet; then echo "nothing new to commit"; return 1; fi
+            git -C history commit -q -m "Delay model report $(date -u +%F)"
+          }
+          commit || exit 0
+          if ! git -C history push origin HEAD:history; then
+            fetch_history
+            git -C history reset -q --hard origin/history
+            commit || exit 0
+            git -C history push origin HEAD:history
+          fi
