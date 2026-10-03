@@ -308,6 +308,7 @@ async function runLive() {
   }
   searchChecks(group("Search"), list, error);
   await liveRelay(group("Live relay")); // live relay
+  try { await (await import("./movement.js")).checkRow(group("Movement feed")); } catch (e) { group("Movement feed")("warn", "Movement feed", "check failed: " + (e.message || e)); } // movement hook
 
   const up = group("Uptime");
   const u = await getJson("./data/uptime.json");

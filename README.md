@@ -35,6 +35,8 @@ A Cloudflare Worker ("Live relay" below) can add fresher data on top: when `data
 - AWC TFM Convective Forecast: https://aviationweather.gov/api/data/tcf?format=geojson (Mar–Oct; empty/204 is normal). Live properties: `validTime`/`issueTime` as "YYYYMMDD_HHMM" (UTC), `coverage` ("sparse" → low; "medium"; "high"/"solid" → high), `confidence`, `tops` ("390", ">400"). Areas containing the airport (or within 10 NM of the edge), with valid time, coverage, confidence and tops.
 - AWC Center Weather Advisories: https://aviationweather.gov/api/data/cwa?format=json. Live records: `hazard` ("TS"), `qualifier`, `validTimeFrom`/`validTimeTo` (epoch seconds), `coords` [{lat, lon} as strings], `rawText`. Advisories whose polygon contains the airport or passes within 10 NM of it.
 
+- Aircraft movement (ADS-B, see "Movement"): [adsb.fi](https://adsb.fi) open data (primary), [ADSB.lol](https://adsb.lol) (fallback; data © ADSB.lol contributors, [ODbL 1.0](https://opendatacommons.org/licenses/odbl/1-0/)).
+
 Requests send `User-Agent: airport-wx (github.com/tylerbridges/airport-wx)`, time out after 20 s, and fail independently; a failed source is listed in `sources` and never stops the poll.
 
 LAMP, ATCSCC, TCF and CWA were first written from documentation; on Oct 3 2026 they were checked against real responses from `raw/latest/` on the `history` branch (LAMP: LP1/CP1 instead of LP2; ATCSCC: the page is the operations plan; TCF: "YYYYMMDD_HHMM" times; CWA matched). The fixtures `lamp.txt`, `atcscc.html`, `tcf.json` and `cwa.json` are those real formats, with only their times turned into template tokens. Parsers return empty results on anything unexpected.
@@ -124,10 +126,44 @@ The workflow keeps a `history` branch (orphan; created on the first run) with:
 - `forecast/YYYY/MM/DD.jsonl`: one line per UTC hour (the first poll of the hour) with the predictions: TAF, LAMP, SPC, TCF, CWA, NWS alerts and the 24 hourly risk levels and reasons.
 - `raw/latest/`: the first 200 KB of each source's latest raw response, overwritten every poll, plus `sources.json` (ok, error, http status, bytes, url, when captured). This is the place to check live formats.
 - `README.md` describing all of it (written on first creation from `poller/record.mjs`).
+- `movement/`: ADS-B traffic state, baseline and one log line per run (see "Movement"; `movement/README.md` describes the files).
 
 Lines are compact JSON (nulls/empties dropped, ISO times shortened). Locally: `node poller/poll.mjs --fixtures && node poller/record.mjs /tmp/history` (raw samples go to `.cache/raw`; `--raw <dir>` changes that). `poller/history.sh prepare|push` is the git side the workflow runs; it never creates an orphan branch unless the remote positively has no `history` branch, and on a rejected push rebases once and retries.
 
 Note on size: raw/latest changes every poll, so its old versions accumulate in the branch's git history (a few hundred KB compressed per poll at most).
+
+## Movement
+
+"Is this airport actually moving?" from free community ADS-B feeds: `poller/movement.mjs` (collector, run from `poll.mjs` next to the other sources; also `node poller/movement.mjs [--fixtures]` on its own), `site/movement.js` (page), `poller/movement.test.mjs`. Aircraft data: **[adsb.fi](https://adsb.fi)** (primary) and **[ADSB.lol](https://adsb.lol)** (fallback; © ADSB.lol contributors, ODbL 1.0). Movement figures computed from ADSB.lol data (`movement.json`, the history log) are offered under the same ODbL 1.0 licence.
+
+Sources (checked 2026-10-03; the sandbox couldn't reach the feeds or their websites, only their GitHub docs):
+
+| Feed | Endpoint | Limits | Use allowed | Attribution |
+|---|---|---|---|---|
+| adsb.fi ([docs](https://github.com/adsbfi/opendata)) | `https://opendata.adsb.fi/api/v3/lat/{lat}/lon/{lon}/dist/{nm}` (up to 250 NM; the v2 lat/lon/dist form still works but is deprecated and answers in a different format) | 1 request/s on public endpoints; 400/401/403/404/429 replies count toward the limit and repeated invalid requests get a temporary IP block | "personal, non-commercial use only"; no resale/licensing; automated polling not excluded | "You must cite adsb.fi and include a link to our home page" |
+| ADSB.lol ([API source](https://github.com/adsblol/api), [docs page](https://github.com/adsblol/website/blob/main/content/en/docs/open-data/api.md)) | `https://api.adsb.lol/v2/point/{lat}/{lon}/{radius}` (radius capped at 250 NM in the source) | "dynamic based on the environment load"; no key today, "in the future, you will require an API key" (by feeding) | "The API is available to everyone"; "You can use the API for free" | ODbL 1.0 (attribution + share-alike for derived databases) |
+| airplanes.live | `https://api.airplanes.live/v2/point/{lat}/{lon}/{radius}` | Unverified (its API guide couldn't be reached) | Unverified | Unverified — not used |
+
+Replies are ADSBexchange-v2 style (`ac: [{hex, flight, lat, lon, alt_baro (ft or "ground"), alt_geom, gs, track, track_rate, baro_rate, geom_rate, category, seen, seen_pos}]`, field meanings from [readsb's README-json](https://github.com/wiedehopf/readsb/blob/dev/README-json.md)); the parser also accepts `aircraft: [...]`.
+
+Each poll: one snapshot within 15 NM of each of the 32 airports, sequentially, at least 1.1 s apart per feed, 60 s budget (whatever didn't fit goes first next run; `state.next`); a failed adsb.fi request is retried on ADSB.lol, and after 3 adsb.fi failures in a row ADSB.lol goes first. That is 32 requests per run, ~9,200 a day at one run per 5 minutes. Dropped: non-ICAO (`~`) addresses, surface vehicles and obstacles (category C*), gliders/balloons/UAVs (B*), positions over 60 s old.
+
+Classification against the field (height above field = `alt_baro` + METAR altimeter correction − field elevation; elevation from `airports-all.json` if it gets an elevation column, else the METAR `elev`, else the last known, else 0 ft, which the run log names):
+- Ground: "ground", or under 100 ft above the field within 3.5 NM. Taxiing 5–40 kt, stationary under 5, landing/takeoff roll over 40. Ground aircraft farther out belong to another airport and are ignored.
+- Departing: within 8 NM, under 4,000 ft, climbing over 500 fpm, track within 90° of the bearing away from the field.
+- Arriving: within 12 NM, under 4,000 ft, descending over 300 fpm, track within 90° of the bearing to the field.
+- Holding: within 40 NM at 4,000–20,000 ft and turning: the feed's `track_rate` at least 1.5°/s, else a 45°+ heading change since the last snapshot (≤ 15 min old) with under 40% of the expected progress. With 15 NM snapshots only holds close in are seen.
+- Takeoff: a hex departing or on the ground (moving, and not just landed) last time that is departing, airborne or gone now. Landing: arriving last time and on the ground or gone now, or first seen on the landing roll. A parked aircraft that disappears (transponder off) is not a takeoff; a go-around isn't a departure.
+
+Rates: each departure/arrival hex is counted once per hour. `depHr`/`arrHr` = unique hexes over the last 60 minutes ÷ coverage (snapshots in that hour ÷ 12, capped at 1). Finished clock hours with coverage ≥ 0.5 become baseline samples per airport × hour of week (local time, 0 = Sunday 00), newest 4 kept, with departures per hub airline. Baseline, first available: our own log (median, at least 3 samples) → BTS scheduled departures for that hour of week, if the Phase 3 output in `site/data/model/` has them (`schedule.json`, or a `sched`/`schedule` object `{IATA: {dep: [168 or 24], arr}}` in `model.json`/`fallback.json`; none today) → none ("Learning normal traffic (N of 21 days)"). `index` = depHr ÷ baseline depHr (null under 3 departures/hr normal).
+
+`site/data/movement.json` (git-ignored, written every run): `{v, generated, run: {ok, airports, of, ms, outOfTime, src, errors, failed}, sources, learning: {since, days, of}, airports: {IATA: {depHr, arrHr, taxiOut, holding, asOf, coverage, n, raw: {dep, arr}, baseline: {depHr, arrHr, n, source: "own"|"bts"|null}, index, sentence, stale?, elev?}}, airlineAlerts: [{airline, name, hubs, sentence}]}`. Sentences: "Departures 38/hr vs 61 normal (↓38%)" when the index is under 0.7 or over 1.3, "Moving normally", "Limited data this hour (5 of 12 checks)" under 0.6 coverage, "Learning normal traffic (N of 21 days)".
+
+Airline alerts: a carrier (`AIRLINES` in `poller/movement.mjs`: majors with hubs, plus regional and cargo codes) whose departures were under 30% of its own baseline at 3+ of its hubs in each of the last 2 finished hours (coverage ≥ 0.6, its baseline ≥ 3/hr there).
+
+Page (`site/movement.js`, `window.AWXMovement`): the card line "Departures running 38% below normal" (only with an index under 0.7 or over 1.3, coverage ≥ 0.6, a baseline and data under 20 minutes old); the sheet card "Traffic right now" (departures and arrivals per hour as bars with a tick at normal, taxiing out, holding nearby, as-of time, source line "From community ADS-B receivers (adsb.fi) · baseline: our log, 12 days"); airline alerts as a banner above the list (or in `#natstrip` when that exists). `SOURCES` is exported for Settings → Data & checks; `check.html` shows a "Movement feed" row (warns, never fails).
+
+History (`movement/` on the `history` branch): the workflow copies `state.json`/`baseline.json` to `.cache/movement/` before the poll and `node poller/movement.mjs record history/` writes them back with one log line per run (`movement/YYYY/MM/DD.jsonl`: `{t, src, skip?, airports: {IATA: {dep, arr, taxi, ground, holding, coverage, byAirline}}}`, dep/arr = first counted that run). Both steps are `continue-on-error`. Fixtures: `poller/fixtures/movement/` (ORD snapshots 5 minutes apart, moved to every airport, plus `seed.json` with a seeded history: ORD below normal, LAS above, ANC/HNL learning, a United alert).
 
 ## One-time setup
 

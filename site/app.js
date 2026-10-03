@@ -327,6 +327,7 @@
     const kids = [];
     if (state.sample) kids.push(h("div", { class: "banner" }, h("b", {}, "Sample data. "), "Live data isn't available yet; this is a frozen example snapshot."));
     if (window.AWXTest && AWXTest.name) kids.push(h("div", { class: "banner" }, h("b", {}, "Test scenario: " + ((state.data && state.data.scenario && state.data.scenario.title) || AWXTest.name) + " "), "(not live)")); // build2a hook
+    const mvAlert = window.AWXMovement && state.data ? AWXMovement.alerts() : null; if (mvAlert) kids.push(mvAlert); // movement hook: airline alerts (into #natstrip instead when it exists)
     b.replaceChildren(...kids);
   }
 
@@ -497,6 +498,7 @@
       h("div", { class: "aname" }, a.name),
       h("div", { class: "where" }, `${a.city}, ${a.state}`),
       h("div", { class: "reason" }, reason),
+      window.AWXMovement ? AWXMovement.line(a) : null, // movement hook: "Departures running 38% below normal" (site/movement.js)
       window.AWXDelay ? AWXDelay.delayLine(a) : null, // phase3 hook: chance of a real delay (site/delay.js)
       nowDiffers ? h("div", { class: "sub" }, "Now: " + LEVELS[a.now.level].label) : null,
       cardPrograms(a).length ? h("div", { class: "badges" }, faaBadges(a)) : null,
@@ -809,6 +811,8 @@
     add(a.faa && a.faa.length, () => section("Delays & closures", ...a.faa.map((f) => faaItem(f, a))));
     const notices = [...[...(a.atcscc || [])].sort((x, y) => (y.active ? 1 : 0) - (x.active ? 1 : 0)).map((x) => advItem(x, tz)), ...planItems(a)];
     add(notices.length, () => section("FAA traffic notices", ...notices));
+    const mvCard = window.AWXMovement ? AWXMovement.card(a) : null; // movement hook: "Traffic right now" (site/movement.js)
+    if (mvCard) secs.push(mvCard); // movement hook
     add(a.alerts && a.alerts.length, () => section("Weather warnings", ...a.alerts.map((x) => h("div", { class: "item" }, h("b", {}, x.event),
       x.ends ? h("span", { class: "muted" }, " · until " + dayClock(Date.parse(x.ends), tz)) : null,
       x.headline ? h("div", { class: "muted", style: "font-size:13px;margin-top:2px" }, x.headline) : null))));

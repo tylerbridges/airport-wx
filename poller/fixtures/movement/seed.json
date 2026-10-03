@@ -1,0 +1,9 @@
+{
+  "_comment": "Fixture history for poller/movement.mjs fixtureRun(): field elevations (ft, from AWC METAR elev), baseline departures/hr, today's multiplier (ORD below normal, LAS above), airports still learning, and an airline-alert case (United at 20% of normal at 4 hubs for the last 2 hours).",
+  "days": 12,
+  "elev": {"ATL": 1014, "DFW": 551, "DEN": 5433, "ORD": 663, "LAX": 98, "JFK": 10, "LAS": 2172, "MCO": 89, "MIA": 3, "CLT": 732, "SEA": 377, "PHX": 1109, "EWR": 7, "SFO": 7, "IAH": 89, "BOS": 13, "FLL": 3, "MSP": 837, "LGA": 30, "DTW": 630, "PHL": 7, "SLC": 4219, "DCA": 13, "SAN": 10, "BWI": 138, "TPA": 7, "AUS": 486, "IAD": 295, "BNA": 551, "MDW": 610, "HNL": 7, "ANC": 128},
+  "baseDep": {"default": 30, "ORD": 61, "ATL": 70, "DFW": 64, "DEN": 60},
+  "mult": {"ORD": 0.45, "LAS": 1.5},
+  "learning": ["ANC", "HNL"],
+  "airline": {"UAL": {"hubs": {"ORD": 22, "DEN": 18, "IAH": 15, "EWR": 14}, "now": 0.2}}
+}
