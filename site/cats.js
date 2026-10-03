@@ -181,7 +181,13 @@
       var dep = /Departures|Arrivals\/Departures/i.test(dly), arr = /Arrivals/i.test(dly);
       return (dep && arr ? "Both directions delayed" : dep ? "Departures delayed" : arr ? "Arrivals delayed" : "Delays reported") + " (FAA)";
     }
-    var R = (reasons || []).map(function (t) { var c = reason(t); return { t: String(t), cat: c.cat, level: c.level || 0 }; });
+    // outlooks (SPC) describe the region's risk, not this airport's operations
+    var R = (reasons || []).map(function (t) { var c = reason(t); return { t: String(t), cat: c.cat, level: c.level || 0, src: c.src }; })
+      .filter(function (x) { return x.src !== "SPC"; });
+    for (var i = 0; i < R.length; i++) {
+      var fm = /^FAA reports (.+?) affecting arrivals/.exec(R[i].t);
+      if (fm && !R.some(function (x) { return x.cat === "storms" && x.level >= 2; })) return "Arrivals likely slowed (FAA: " + fm[1] + ")";
+    }
     var any = function (cat, min) { return R.some(function (x) { return x.cat === cat && x.level >= min; }); };
     if (any("storms", 2)) return "Departures likely held (storms)";
     if (any("winter", 2)) return "Both directions likely slowed (de-icing, snow or ice)";

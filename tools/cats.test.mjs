@@ -72,6 +72,8 @@ test("cats: departure vs arrival impact", () => {
   assert.equal(C.impact([], [{ type: "delay", detail: "Arrivals 31–45m, steady; Departures 16–30m, decreasing" }]), "Both directions delayed (FAA)");
   assert.equal(C.impact([], [{ type: "closure" }]), "No flights in or out (airport closed)");
   assert.equal(C.impact(["Rain", "Mist"], []), null);
+  assert.equal(C.impact(["Slight risk of severe storms"], []), null, "an outlook alone says nothing about operations");
+  assert.equal(C.impact(["Slight risk of severe storms", "FAA reports nearby storms affecting arrivals"], []), "Arrivals likely slowed (FAA: nearby storms)");
 });
 
 test("cats: sheet rest layout — split, single (now is the peak), clear", () => {
