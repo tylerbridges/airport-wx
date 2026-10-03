@@ -17,5 +17,8 @@ import "../tools/build-airports.test.mjs";
 import "../tools/build-scenarios.test.mjs";
 import "../tools/search.test.mjs";
 import "../tools/uptime-parse.test.mjs";
+// build2b
+import "../tools/cats.test.mjs";
+import "../tools/prefs.test.mjs";
 // live relay
 import "../worker/worker.test.mjs";
