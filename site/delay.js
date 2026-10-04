@@ -14,7 +14,7 @@ const STYLE = `
 .dl-block { background: var(--card-2); border-radius: 16px; padding: 12px 14px; margin-bottom: 10px; }
 .dl-block h3 { margin: 0 0 6px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .dl-main { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.dl-big { font-size: 28px; line-height: 1.1; font-weight: 800; letter-spacing: -.02em; }
+.dl-big { font-size: 21px; line-height: 1.2; font-weight: 800; letter-spacing: -.02em; }
 .dl-what { font-size: 15px; font-weight: 600; }
 .dl-usual-b { margin-top: 4px; font-size: 14px; color: var(--muted); }
 .dl-min, .dl-now, .dl-faa { margin-top: 6px; font-size: 14px; }
