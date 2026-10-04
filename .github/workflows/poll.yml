@@ -44,6 +44,15 @@ jobs:
             done
           fi
           ls -l .cache/movement
+      # notams hook: NOTAM/TFR replies kept between runs (poller/notices-poll.mjs refreshes each airport's NOTAMs
+      # at most every 30 min and reuses them for up to 3 h). A new key per run saves; the prefix restores the latest.
+      - name: Notice cache
+        continue-on-error: true
+        uses: actions/cache@v4
+        with:
+          path: .cache/notices
+          key: notices-${{ github.run_id }}
+          restore-keys: notices-
       # Exits 0 unless every source failed, so a partial outage still deploys.
       # Also writes raw response samples to .cache/raw for the history step.
       - name: Poll sources and compute risk
@@ -52,6 +61,9 @@ jobs:
           # trips hook: the flight calendar link (README "Trips"). Empty when the secret isn't set
           # (trips.json says "not configured"); the poller never logs or publishes it.
           FLIGHTY_ICS_URL: ${{ secrets.FLIGHTY_ICS_URL }}
+          # notams hook: optional FAA NOTAM API key (README "Notices"); without it the public NOTAM Search is tried
+          FAA_NOTAM_CLIENT_ID: ${{ secrets.FAA_NOTAM_CLIENT_ID }}
+          FAA_NOTAM_CLIENT_SECRET: ${{ secrets.FAA_NOTAM_CLIENT_SECRET }}
         run: node poller/poll.mjs
       - uses: actions/configure-pages@v5
       # Live relay: tell the page where the Cloudflare Worker answers (site/data/config.json), only
