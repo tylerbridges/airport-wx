@@ -35,6 +35,9 @@ airport-wx is the Airports app: a static page showing major-weather and delay ri
 - Category/level/impact rules for the page are in `site/cats.js` and must read back every poller reason (`tools/cats.test.mjs`); add a pattern there when `poller/risk.mjs` gets a new reason text.
 - Timelines are the local calendar day; past hours come from `observed` (poll.mjs `// build2b hook`), the rest from `hours`. The sheet's card stack keeps one footprint (all states in one grid cell): don't add content that changes its height on hour taps.
 - Traveler mode must show no aviation codes outside Pilot details (the check page scans every sheet).
+- New sheets use `site/sheet.js` `makeSheet` (drag / back / scroll lock); don't hand-roll swipe code.
+- Delay chances reach Traveler users only as words from `site/delay.js` `likelihood()`; never print a raw % outside Aviation mode and the accuracy page.
+- The app is "Airports"; its identity (runway mark, `--brand` amber, own tab glyphs) is ours: no "Flighty" in UI labels (setup steps may name it).
 
 ## Checks before publishing
 
