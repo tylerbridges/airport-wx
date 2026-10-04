@@ -1797,6 +1797,8 @@
     const notices = [...[...(v.atcscc || [])].filter((x) => aviation() || !x.cnx && (x.active || Date.parse(x.start) > refNow())).sort((x, y) => (y.active ? 1 : 0) - (x.active ? 1 : 0)).map((x) => advItem(x, a)),
       ...planItems(aviation() ? v : { ...v, opsplan: v.opsplan ? { ...v.opsplan, items: (v.opsplan.items || []).filter((x) => x.level > 0 && !x.dup) } : null }, a)];
     add(notices.length, () => section("FAA traffic notices", "tower", notices, { key: "atcscc" }));
+    const nts = window.AWXNotices ? safeCall(() => AWXNotices.section(v, a, { h, section, aviation: aviation(), retime: (t) => retime(t, a), hidden: isHidden, now: refNow(), sources: state.data.noticeSources || {} })) : null; // notams hook: "Notices" (site/notices.js)
+    if (nts) secs.push(nts);
     add(a.metar, () => currentWeather(a));
     add(v.alerts && v.alerts.length, () => section("Weather warnings", "alert", v.alerts.map((x) => h("div", { class: "item" }, h("b", {}, x.event),
       x.ends ? h("span", { class: "muted" }, " · until " + dayClock(Date.parse(x.ends), tz)) : null,

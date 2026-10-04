@@ -17,6 +17,7 @@ import { observedHours } from "./risk.mjs"; // build2b hook: observed past hours
 import { modelInfo } from "./delay.mjs"; // phase3 hook: delay model
 import { prepareTrips } from "./trips-poll.mjs"; // trips hook: flight calendar -> trips.json + trip airports
 import { startMovement } from "./movement.mjs"; // movement hook: ADS-B departure/arrival rates -> site/data/movement.json
+import { fetchNotices } from "./notices-poll.mjs"; // notams hook: NOTAMs + TFRs (README "Notices")
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -254,6 +255,7 @@ export async function run({ fixtures = false, out = join(ROOT, "site/data/status
   const p = fixtures ? fixtureProviders(airports, now, raw) : liveProviders(airports, now, raw);
   const names = SOURCE_NAMES;
   const histP = p.metarHistory().then((v) => ({ v }), (e) => ({ e })); // build2b hook: in parallel with the sources
+  const noticesP = fetchNotices({ airports, fixtures, now, raw }); // notams hook: in parallel with the sources, never throws
   const res = Object.fromEntries(await Promise.all(names.map(async (n) => [n, await runSource(n, p[n], raw)])));
 
   const tzByIata = Object.fromEntries(airports.map((a) => [a.iata, a.tz]));
@@ -268,9 +270,11 @@ export async function run({ fixtures = false, out = join(ROOT, "site/data/status
   for (const n of ["nws", "atcscc"]) if (res[n].meta.ok && res[n].data.partial) res[n].meta.error = res[n].data.partial;
 
   const delay = await loadDelayModel(airports); // phase3 hook
+  const notices = await noticesP; // notams hook
   const status = {
     generated: now.toISOString(),
     sources: Object.fromEntries(names.map((n) => [n, res[n].meta])),
+    noticeSources: notices.sources, // notams hook: {notam, tfr} kept apart from `sources` (a missing FAA key mustn't fail the checks)
     delayModel: modelInfo(delay.model, delay.fallback), // phase3 hook
     airports: assemble({
       airports, now,
@@ -279,6 +283,7 @@ export async function run({ fixtures = false, out = join(ROOT, "site/data/status
       lamp: res.lamp.data, atcscc: res.atcscc.data?.list ?? null, tcf: res.tcf.data, cwa: res.cwa.data,
       plan: res.atcscc.data?.plan ?? null,
       delay, // phase3 hook
+      notices: notices.data, // notams hook
     }),
     opsplan: opsPlanNational(res.atcscc.data?.plan ?? null, now),
   };
@@ -294,7 +299,7 @@ export async function run({ fixtures = false, out = join(ROOT, "site/data/status
   await mkdir(dirname(out), { recursive: true });
   await writeFile(out, JSON.stringify(status) + "\n");
   if (rawDir) {
-    try { await writeRaw(rawDir, raw, status.sources); } catch (e) { console.error("raw samples not written: " + e.message); }
+    try { await writeRaw(rawDir, raw, { ...status.sources, ...status.noticeSources }); } catch (e) { console.error("raw samples not written: " + e.message); } // notams hook: notam/tfr samples too
   }
   await trips.finish({ out, rawDir }); // trips hook: site/data/trips.json (airports and times only) + redacted format sample
   const okCount = names.filter((n) => status.sources[n].ok).length;
@@ -315,6 +320,7 @@ async function main() {
   if (movement) await movement.finish({ metars }); // movement hook
   await runGlobal({ fixtures: args.includes("--fixtures"), rawDir: rawArg === "none" ? null : rawArg ? resolve(rawArg) : DEFAULT_RAW_DIR }); // build2a hook: writes site/data/wx/ (never throws)
   for (const [n, s] of Object.entries(status.sources)) console.log(`${s.ok ? "ok  " : "FAIL"} ${n}${s.error ? ": " + s.error : ""}`);
+  for (const [n, s] of Object.entries(status.noticeSources || {})) console.log(`${s.ok ? "ok  " : "warn"} ${n}${s.error ? ": " + s.error : ""}`); // notams hook
   const top = status.airports.filter((a) => a.peak.level >= 3).length;
   console.log(`wrote ${out}: ${status.airports.length} airports, ${top} at High/Severe peak, ${okCount}/${total} sources ok`);
   if (okCount === 0) {
