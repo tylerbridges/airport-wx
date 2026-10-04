@@ -23,6 +23,7 @@ const W = typeof window !== "undefined" ? window : {};
 // ---------- pure helpers (Node-testable) ----------
 
 const DATE = /^\d{4}-\d\d-\d\d$/;
+export const ACCESS_MAX = 60; // the access summary is one short line
 const URLRE = /^https:\/\/[^\s/]+\.[^\s]+$/;
 /** Problems in a lounges.json ([] when well-formed). iatas: optional Set of airports that must all be present. */
 export function loungeProblems(doc, iatas = null) {
@@ -45,7 +46,7 @@ export function loungeProblems(doc, iatas = null) {
       if (!["high", "low"].includes(l.confidence)) out.push(`${w}: confidence must be high or low`);
       if (l.verified != null && !DATE.test(l.verified)) out.push(`${w}: verified isn't YYYY-MM-DD`);
       if (l.confidence === "high" && l.verified == null) out.push(`${w}: high confidence needs a verified date`);
-      if (typeof l.access === "string" && (l.access.length > 140 || /%/.test(l.access))) out.push(`${w}: access line too long or has %`);
+      if (typeof l.access === "string" && (l.access.length > ACCESS_MAX || /%/.test(l.access))) out.push(`${w}: access line too long or has %`);
     });
   }
   return out.slice(0, 5);
@@ -194,7 +195,7 @@ function drawing(t, opts) {
   for (const l of t.lounges || []) gL.append(s("rect", { x: l.x - opts.dot * 1.6, y: -l.y - opts.dot * 1.6, width: opts.dot * 3.2, height: opts.dot * 3.2, rx: opts.dot * 0.6, transform: `rotate(45 ${l.x} ${-l.y})`, "data-x": l.x, "data-y": -l.y, "vector-effect": "non-scaling-stroke" }, s("title", {}, l.name)));
   svg.append(gRw, gT, gG, gL);
   if (opts.letters) {
-    const gC = s("g", { class: "tm-conc", "font-size": opts.dot * 5.5 });
+    const gC = s("g", { class: "tm-conc", "font-size": opts.letters });
     (t.groups || []).forEach((grp, i) => {
       const m = /^Concourse ([A-Z]{1,2})$/.exec(grp.name);
       const gs = (t.gates || []).filter((g) => g.g === i);
@@ -213,7 +214,9 @@ function mapCard(a, t) {
   const e = extent(t);
   if (!e) return null;
   const box = fitBox(e, 16 / 10);
-  const svg = drawing(t, { box, dot: box[2] / 170, letters: true });
+  const k = box[2] / 340; // metres per CSS pixel at the card's usual width
+  const dot = Math.max(1.1, Math.min(2.6, (gateSpacing(t.gates) / k) * 0.28)) * k;
+  const svg = drawing(t, { box, dot, letters: 13 * k });
   const nG = (t.gates || []).length, nC = (t.groups || []).filter((g) => /^Concourse /.test(g.name)).length;
   const bits = [nC > 1 ? `${nC} concourses` : null, nG ? `${nG} gates` : null, (t.lounges || []).length ? "lounges in amber" : null].filter(Boolean).join(" · ");
   const open = (ev) => { if (ev.target.closest && ev.target.closest("a")) return; openViewer(a, t); };
@@ -229,11 +232,12 @@ function mapCard(a, t) {
 function loungeCard(a, list) {
   const now = Date.now();
   const groups = loungeGroups(list);
-  return section("Lounges", ICON_SOFA, groups.map((g) => h("div", { class: "item ln-grp" },
+  const allCheck = list.every((l) => needsCheck(l, now)); // then one line for the card instead of one per entry
+  return section("Lounges", ICON_SOFA, [allCheck ? h("div", { class: "ln-all" }, "Check before you go: lounges, hours and access rules change.") : null, ...groups.map((g) => h("div", { class: "item ln-grp" },
     h("div", { class: "subt" }, g.terminal),
     ...g.items.map((l) => h("div", { class: "ln" },
       h("div", { class: "ln-n" }, h("b", {}, l.name), l.area || l.side === "landside" ? h("span", { class: "muted" }, " · " + [l.area, l.side === "landside" ? "before security" : null].filter(Boolean).join(" · ")) : null),
-      h("div", { class: "ln-a" }, l.access, needsCheck(l, now) ? h("span", { class: "ln-chk" }, " · Check before you go") : null))))), "Curated", "ln-sec");
+      h("div", { class: "ln-a" }, l.access, !allCheck && needsCheck(l, now) ? h("span", { class: "ln-chk" }, " · Check before you go") : null)))))], "Curated", "ln-sec");
 }
 
 function place(sheet, sec) {
@@ -335,7 +339,7 @@ function openViewer(a, t) {
     raf = 0;
     const k = vb[2] / sw; // metres per CSS pixel
     svg.setAttribute("viewBox", vb.join(" "));
-    const dot = Math.max(3.2 * k, 1);
+    const dot = Math.max(1.4, Math.min(3.6, (spacing / k) * 0.28)) * k;
     for (const c of svg.querySelectorAll(".tm-gates circle")) c.setAttribute("r", dot);
     for (const r of svg.querySelectorAll(".tm-lounges rect")) {
       const x = +r.dataset.x, y = +r.dataset.y;
@@ -344,8 +348,8 @@ function openViewer(a, t) {
     const showLabels = spacing / k >= 26;
     gLab.setAttribute("font-size", 10.5 * k);
     gLab.setAttribute("visibility", showLabels ? "visible" : "hidden");
-    for (const x of gLab.children) x.setAttribute("dy", -6 * k);
-    gConc.setAttribute("font-size", (showLabels ? 13 : 15) * k);
+    for (const x of gLab.children) x.setAttribute("dy", (x.classList.contains("on") ? -15 : -6) * k);
+    gConc.setAttribute("font-size", 15 * k);
     gConc.setAttribute("visibility", showLabels ? "hidden" : "visible");
     gLn.setAttribute("font-size", 11 * k);
     gLn.setAttribute("visibility", spacing / k >= 18 ? "visible" : "hidden");
@@ -508,7 +512,7 @@ export async function checkRow(add, opts = {}) {
 
 // ---------- styles ----------
 
-const CSS = `
+const STYLE = `
 .tm-card { display: block; margin: 10px 0 0; cursor: pointer; border-radius: 12px; }
 .tm-card:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .tm-card .tm-svg { display: block; width: 100%; aspect-ratio: 16 / 10; height: auto; border-radius: 12px; background: var(--card); }
@@ -517,7 +521,7 @@ const CSS = `
 .tm-svg .tm-gates circle { fill: var(--text); opacity: .8; }
 .tm-svg .tm-gates circle.on { fill: var(--brand); opacity: 1; }
 .tm-svg .tm-lounges rect { fill: var(--brand); stroke: var(--card); stroke-width: 1.5; }
-.tm-svg .tm-conc text { fill: var(--muted); font-weight: 800; font-family: var(--font); }
+.tm-svg .tm-conc text { fill: var(--text); font-weight: 800; font-family: var(--font); paint-order: stroke; stroke: var(--card); stroke-width: .3em; stroke-linejoin: round; }
 .tm-svg .tm-labels text { fill: var(--text); font-weight: 600; font-family: var(--font); paint-order: stroke; stroke: var(--card); stroke-width: .35em; stroke-linejoin: round; }
 .tm-svg .tm-labels text.on { fill: var(--brand); font-weight: 800; }
 .tm-svg .tm-lnl text { fill: var(--brand); font-weight: 700; font-family: var(--font); paint-order: stroke; stroke: var(--card); stroke-width: .35em; stroke-linejoin: round; dominant-baseline: central; }
@@ -531,8 +535,9 @@ const CSS = `
 .ln { padding: 4px 0; }
 .ln + .ln { border-top: 1px dashed var(--line); }
 .ln-n { font-size: 14.5px; line-height: 1.3; }
-.ln-a { font-size: 13px; line-height: 1.35; color: var(--muted); margin-top: 1px; }
+.ln-a { font-size: 12.5px; line-height: 1.35; color: var(--muted); margin-top: 1px; }
 .ln-chk { color: var(--brand); font-weight: 600; white-space: nowrap; }
+.ln-all { padding: 10px 0 2px; font-size: 13px; font-weight: 600; color: var(--brand); }
 .tm-wrap { z-index: 13; }
 .tm-sheet.sheet { top: max(env(safe-area-inset-top), 10px); max-height: none; display: flex; flex-direction: column; overflow: hidden; padding-bottom: calc(env(safe-area-inset-bottom) + 12px); }
 .tm-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding: 2px 0 8px; touch-action: none; }
@@ -545,7 +550,7 @@ const CSS = `
 .tm-msg.miss { color: var(--muted); font-weight: 500; }
 .tm-stage { position: relative; flex: 1; min-height: 200px; border-radius: 16px; overflow: hidden; background: var(--card-2); }
 .tm-stage .tm-svg { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
-.tm-stage .tm-svg .tm-lounges rect, .tm-stage .tm-svg .tm-labels text, .tm-stage .tm-svg .tm-lnl text { stroke: var(--card-2); }
+.tm-stage .tm-svg .tm-lounges rect, .tm-stage .tm-svg .tm-labels text, .tm-stage .tm-svg .tm-lnl text, .tm-stage .tm-svg .tm-conc text { stroke: var(--card-2); }
 .tm-zbar { position: absolute; right: 8px; bottom: 8px; display: grid; gap: 6px; }
 .tm-z { width: 44px; height: 44px; border-radius: 12px; background: var(--card); color: var(--text); font-size: 22px; font-weight: 600; line-height: 1; box-shadow: 0 1px 4px rgba(0, 0, 0, .25); }
 .tm-z:disabled { opacity: .4; }
@@ -556,7 +561,7 @@ const CSS = `
 const api = { decorateSheet, checkRow, loungeProblems, staleLounges, findGate, gateInfo, _state: () => S, _open: (iata) => { const t = S.files.get(iata); const A = W.AWXApp; const a = A && A.state.data && A.state.data.airports.find((x) => x.iata === iata); if (t && a) openViewer(a, t); return !!(t && a); }, _find: (q) => S.viewer && S.viewer.find && S.viewer.find(q) };
 // Only the main page draws (check.html imports this module for checkRow).
 if (typeof document !== "undefined" && document.getElementById("list")) {
-  if (!document.getElementById("awx-tm-css")) document.head.append(h("style", { id: "awx-tm-css" }, CSS));
+  if (!document.getElementById("awx-tm-css")) document.head.append(h("style", { id: "awx-tm-css" }, STYLE));
   W.AWXTerminals = api;
   loadBase().then(() => {
     const A = W.AWXApp;

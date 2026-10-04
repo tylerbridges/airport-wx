@@ -139,7 +139,7 @@ test("lounges: lounges.json is well-formed for all 32 airports", () => {
   const st = staleLounges(doc, Date.parse("2026-10-04T00:00:00Z"));
   assert.ok(st.total > 0);
   for (const ap of Object.values(doc.airports)) for (const l of ap.lounges) {
-    assert.ok(!/%/.test(l.access) && l.access.length <= 140, l.access);
+    assert.ok(!/%/.test(l.access) && l.access.length <= 60, l.access);
     if (l.confidence === "low" || !l.verified) assert.equal(needsCheck(l), true);
   }
   const groups = loungeGroups(doc.airports.ORD.lounges);
