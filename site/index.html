@@ -189,7 +189,9 @@ h1 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 800; letter-spa
 }
 .sheet-wrap.open .backdrop { opacity: 1; }
 .sheet-wrap.open .sheet { transform: none; }
-.grab { width: 40px; height: 5px; border-radius: 3px; background: var(--muted); opacity: .5; margin: 0 auto 6px; }
+.grab { position: relative; width: 100%; height: 24px; margin: -4px auto 2px; cursor: grab; }
+.grab::before { content: ""; position: absolute; top: 6px; left: 50%; transform: translateX(-50%); width: 48px; height: 5px; border-radius: 999px; background: var(--muted); opacity: .85; }
+.grab:active { cursor: grabbing; }
 .sh-head { position: sticky; top: -8px; z-index: 5; background: var(--card); padding: 4px 0 10px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
 .sh-code { font-size: 40px; line-height: 1; font-weight: 800; letter-spacing: -.035em; }
 .close { width: 44px; height: 44px; border-radius: 50%; background: none; display: grid; place-items: center; flex: none; position: relative; }
@@ -281,16 +283,13 @@ table.lt { border-collapse: collapse; font-size: 12px; }
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .lens { background: var(--glass-solid); }
 }
-/* the sheet's bar: 44 px segments, the scrub surface */
+/* Match the card bars; keep a 44 px touch surface for instant scrubbing. */
 .bigwrap { margin-top: 4px; padding-top: 27px; }
-.tl.big { height: 44px; touch-action: none; cursor: pointer; }
-.tl.big .s { border-radius: 5px; }
-.tl.big .lens { top: -7px; bottom: -7px; }
-.tl.big .lens-seg { height: 44px; border-radius: 5px; }
+.tl.big { touch-action: none; cursor: pointer; }
+.tl.big::before { content: ""; position: absolute; inset: -16px 0; z-index: 1; }
 .bigwrap .ticks { height: 18px; margin-top: 8px; font-size: 12px; }
 /* sheet headers are drag handles at any scroll position (site/sheet.js) */
 .grab, .sh-head, .pn-head, .awx-ph, .awx-srch-head { touch-action: none; }
-.grab { padding: 4px 0; margin-top: -4px; box-sizing: content-box; }
 /* movement hook: "Traffic right now" inside the build2b section card */
 .sheet .scard > .mv-card { background: none; border-radius: 0; padding: 10px 0 0; }
 .natbox { display: grid; gap: 6px; }
@@ -414,7 +413,6 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 .tlsec { margin-top: 12px; }
 /* first screen of the sheet (build2b): compact header, trips' "Your flight" row and the status line */
 .sh-head { padding: 2px 0 4px; }
-.grab { margin-bottom: 2px; }
 .sheet .tflight { margin: 0 0 8px; gap: 6px; }
 .sheet .tfrow { padding: 6px 10px; min-height: 44px; gap: 10px; border-radius: 14px; }
 .sheet .tfrow .tfic { width: 28px; height: 28px; }
@@ -740,7 +738,7 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <div class="sr" id="announce" aria-live="polite"></div>
 <script src="cats.js?v=1"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=1"></script><!-- build2b: shared sheet drag / back / scroll lock -->
-<script src="app.js?v=16" defer></script>
+<script src="app.js?v=17" defer></script>
 <script type="module" src="searched.js?v=5"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=4"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="trips.js?v=5"></script><!-- trips hook -->

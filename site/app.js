@@ -823,7 +823,7 @@
   }
 
   /**
-   * Timeline element. opts.big: the sheet's (44 px bar, instant pointer scrubbing); else a card's (hold or
+   * Timeline element. opts.big: the sheet's (compact bar, instant pointer scrubbing); else a card's (hold or
    * horizontal move to scrub). The lens sits on the current hour at rest.
    */
   function timeline(a, opts = {}) {
