@@ -111,9 +111,16 @@ export function plainReason(r) {
   s = s.replace(/^Mist\b/, "Light fog / haze");
   s = s.replace(/^Center weather advisory: IFR conditions/, "Center weather advisory: low clouds or poor visibility");
   s = s.replace(/^Thunderstorms, (\w+) coverage \(TCF\)/, "Thunderstorms forecast, $1 coverage");
+  s = s.replace(/^Thunder chance (\d+)%/, (all, p) => thunderWords(p)); // no "%" for travelers (plain.mjs thunderWords)
   s = s.replace(/ \((LAMP|TCF|ATCSCC)\)/g, "");
   s = s.replace(/\b(\d+)h (\d+)m\b/g, "$1 hr $2 min").replace(/\b(\d+)h\b/g, "$1 hr").replace(/(\d)m\b/g, "$1 min");
   return s;
+}
+/** Thunder chance in words (the same table as plain.mjs thunderWords; this module has no imports). */
+export function thunderWords(p) {
+  const n = Number(p);
+  if (!Number.isFinite(n)) return "Chance of thunderstorms";
+  return n >= 60 ? "Thunderstorms likely" : n >= 30 ? "Chance of thunderstorms" : "Slight chance of thunderstorms";
 }
 
 // FAA program reasons as risk.mjs writes them, with the level each scores.

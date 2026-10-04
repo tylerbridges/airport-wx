@@ -218,6 +218,17 @@ export function plainTafHour(fcst) {
   return s;
 }
 
+/**
+ * Traveler words for a thunder chance (LAMP "Thunder chance 45%"): 60+ "Thunderstorms likely", 30–59 "Chance of
+ * thunderstorms", under 30 "Slight chance of thunderstorms". Aviation mode keeps the number; Traveler mode never
+ * shows a "%". The same table is in app.js plainReason() and trip-risk.mjs plainReason().
+ */
+export function thunderWords(p) {
+  const n = Number(p);
+  if (!Number.isFinite(n)) return "Chance of thunderstorms";
+  return n >= 60 ? "Thunderstorms likely" : n >= 30 ? "Chance of thunderstorms" : "Slight chance of thunderstorms";
+}
+
 // ---------- traveler impact ----------
 
 /**

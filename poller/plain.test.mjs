@@ -4,8 +4,9 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  plainMetar, plainTafHour, travelerImpact, plainSigmet, plainCwa, plainAlert, aviationLines, decodeWxCodes, towardName, mph,
+  plainMetar, plainTafHour, travelerImpact, plainSigmet, plainCwa, plainAlert, aviationLines, decodeWxCodes, towardName, mph, thunderWords,
 } from "./plain.mjs";
+import { thunderWords as tripThunderWords } from "./trip-risk.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const NOW = Date.parse("2026-10-03T19:20:00Z"); // Sat 2:20 PM CDT
@@ -124,4 +125,17 @@ test("traveler strings carry no raw coded tokens", () => {
 
 test("site/plain.js is a byte-identical copy of poller/plain.mjs", () => {
   assert.equal(readFileSync(join(HERE, "../site/plain.js"), "utf8"), readFileSync(join(HERE, "plain.mjs"), "utf8"));
+});
+
+test("thunder chances in words: 60+ likely, 30–59 chance, under 30 slight chance; never a %", () => {
+  const cases = [[0, "Slight chance of thunderstorms"], [29, "Slight chance of thunderstorms"], [30, "Chance of thunderstorms"], [45, "Chance of thunderstorms"],
+    [59, "Chance of thunderstorms"], [60, "Thunderstorms likely"], [90, "Thunderstorms likely"], ["45", "Chance of thunderstorms"]];
+  for (const [p, want] of cases) {
+    assert.equal(thunderWords(p), want, String(p));
+    assert.equal(tripThunderWords(p), want, "trip-risk copy " + p);
+    assert.doesNotMatch(thunderWords(p), /%/);
+  }
+  // site/app.js plainReason uses the same cut-offs (Traveler mode only)
+  const app = readFileSync(join(HERE, "../site/app.js"), "utf8");
+  assert.match(app, /n >= 60 \? "Thunderstorms likely" : n >= 30 \? "Chance of thunderstorms" : "Slight chance of thunderstorms"/);
 });

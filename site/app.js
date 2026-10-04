@@ -339,12 +339,18 @@
       visNum(v) < 1 ? (V === "V" ? "Poor visibility" : "poor visibility") : `${V}isibility about ${v} ${visNum(v) === 1 ? "mile" : "miles"}`);
     s = s.replace(/\bThunderstorm gusts (\d+) kt\b/g, (all, n) => `Thunderstorm wind gusts to ${mph(n)} mph`);
     s = s.replace(/\b([Gg])usts (\d+) kt\b/g, (all, G, n) => `${G === "G" ? "Wind gusts" : "wind gusts"} to ${mph(n)} mph`);
+    if (!aviation()) s = s.replace(/^Thunder chance (\d+)%/, (all, p) => thunderWords(p)); // Aviation mode keeps the LAMP number
     s = s.replace(/^Mist\b/, "Light fog / haze").replace(/\bmist\b/g, "light fog / haze");
     s = s.replace(/^Center weather advisory: IFR conditions/, "Low clouds or poor visibility advisory").replace(/^Center weather advisory: thunderstorms/, "Thunderstorm advisory");
     s = s.replace(/^Thunderstorms, (\w+) coverage \(TCF\)/, "Thunderstorms forecast, $1 coverage");
     s = s.replace(/ \((LAMP|TCF|ATCSCC)\)/g, "");
     s = s.replace(/\b(\d+)h (\d+)m\b/g, "$1 hr $2 min").replace(/\b(\d+)h\b/g, "$1 hr").replace(/(\d)m\b/g, "$1 min");
     return retime(s, a);
+  }
+  /** Thunder chance in Traveler words (poller/plain.mjs thunderWords: the same cut-offs). */
+  function thunderWords(p) {
+    const n = Number(p);
+    return n >= 60 ? "Thunderstorms likely" : n >= 30 ? "Chance of thunderstorms" : "Slight chance of thunderstorms";
   }
   const plainList = (arr, a) => uniq((arr || []).map((r) => plainReason(r, a)).filter(Boolean));
   /**

@@ -70,7 +70,7 @@ test("tight connection at an airport with Moderate risk", () => {
   assert.equal(r.label, "Possible delays");
   const c = r.concerns.find((x) => x.kind === "connection");
   assert.equal(c.level, 2);
-  assert.equal(c.text, "Tight connection at ORD: 45 min to make your 7:15 PM flight to ATL, and ORD is at Moderate risk around then (thunder chance 25%) — a late arrival could mean a missed connection.");
+  assert.equal(c.text, "Tight connection at ORD: 45 min to make your 7:15 PM flight to ATL, and ORD is at Moderate risk around then (slight chance of thunderstorms) — a late arrival could mean a missed connection.");
   assert.equal(r.legs[0].conn.minutes, 45);
   assert.equal(r.legs[0].conn.tight, true);
   // weather during the connection is one concern, not separate arrival/departure ones
@@ -156,7 +156,9 @@ test("reason helpers", () => {
   assert.equal(reasonLevel("Mist"), 1);
   assert.equal(plainReason("Ceiling 2,800 ft"), null);
   assert.equal(plainReason("Gusts 38 kt"), "Wind gusts to 45 mph");
-  assert.equal(plainReason("Thunder chance 45% (LAMP)"), "Thunder chance 45%");
+  assert.equal(plainReason("Thunder chance 45% (LAMP)"), "Chance of thunderstorms");
+  assert.equal(plainReason("Thunder chance 65% (LAMP) forecast 5–7 PM"), "Thunderstorms likely forecast 5–7 PM");
+  assert.equal(plainReason("Thunder chance 20% (LAMP)"), "Slight chance of thunderstorms");
   const w = windowAt(ap("DEN", "America/Denver", { 3: [3, ["Heavy snow", "Mist"]] }), NOW + 3 * H);
   assert.equal(w.level, 3);
   assert.deepEqual(w.reasons, ["Heavy snow", "Light fog / haze"]);
