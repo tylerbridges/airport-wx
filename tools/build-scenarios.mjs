@@ -5,6 +5,8 @@
 //   site/data/scenarios/<name>/trips.json     calendar trips for the scenario (from its trips.ics, if any)
 //   site/data/scenarios/<name>/movement.json  ADS-B movement for the scenario (README "Movement" shape)
 //   site/data/scenarios/<name>/config.json    the page config the scenario runs with ({liveUrl})
+//   site/data/scenarios/<name>/changes.json   the change log (brief hook: poller/changes.mjs fixture flow; the
+//                                             scenario's changes-prev.json, if any, sets the simulated previous state)
 //   site/data/scenarios/index.json            every scenario's title, group, description and assertions
 // Usage: node tools/build-scenarios.mjs [name ...]
 //
@@ -141,7 +143,7 @@ async function buildOne(name) {
     TRIPS_OUT: join(sub, "trips.json"), FLIGHTY_ICS_URL: "", // trips hook: <name>/trips.json (from the scenario's trips.ics)
     DELAY_MODEL_DIR: meta.model === "fallback" ? await fallbackModelDir(tmp) : MODEL,
   };
-  const job = { out, at: at.toISOString(), seed, movementOut: join(sub, "movement.json") };
+  const job = { out, at: at.toISOString(), seed, movementOut: join(sub, "movement.json"), changesOut: join(sub, "changes.json") }; // brief hook: changesOut
   const r = spawnSync(process.execPath, [fileURLToPath(import.meta.url), "--child", JSON.stringify(job)], { env, encoding: "utf8" });
   await rm(tmp, { recursive: true, force: true });
   if (r.status !== 0) throw new Error(`${name}: poller exited ${r.status}\n${r.stdout}\n${r.stderr}`);
@@ -152,7 +154,7 @@ async function buildOne(name) {
   await writeFile(join(sub, "config.json"), JSON.stringify({ liveUrl: null, ...(meta.config || {}) }) + "\n");
   const lines = r.stdout.trim().split("\n");
   console.log(`${name}: ${lines.filter((x) => /^wrote /.test(x)).pop() || lines[lines.length - 1]}`);
-  for (const l of lines.filter((x) => /^FAIL|^global:|movement:/.test(x))) console.log(`  ${l}`);
+  for (const l of lines.filter((x) => /^FAIL|^global:|movement:|changes:/.test(x))) console.log(`  ${l}`); // brief hook: changes
   return {
     name, title: meta.title, group: meta.group || null, blurb: meta.blurb || "", description: meta.description || "", file: `${name}.json`, wx: `${name}/wx/`,
     lagMin: meta.lagMin || 0, live: !!(meta.config && meta.config.liveUrl), model: meta.model || null,
@@ -264,6 +266,17 @@ async function child(job) {
     await writeFile(job.movementOut, JSON.stringify(m) + "\n");
     const off = Object.entries(m.airports).filter(([, e]) => e.index != null && (e.index < 0.7 || e.index > 1.3)).map(([k, e]) => `${k} ${e.index}`);
     console.log(`ok   movement: ${Object.keys(m.airports).length} airports${off.length ? ", off normal: " + off.join(" ") : ""}${m.airlineAlerts.length ? `; airline alerts: ${m.airlineAlerts.map((x) => x.name).join(", ")}` : ""}`);
+  }
+  // brief hook: <name>/changes.json from a simulated previous state (poller/changes.mjs fixtureChanges; the
+  // scenario's optional changes-prev.json overrides airports, the first run's time and earlier events)
+  {
+    const C = await import(pathToFileURL(join(ROOT, "poller/changes.mjs")).href);
+    const { expandTemplate } = await import(pathToFileURL(join(ROOT, "poller/lib.mjs")).href);
+    const prevText = await readMaybe(join(process.env.FIXTURES_DIR, "changes-prev.json"));
+    const movement = job.seed ? JSON.parse(await readFile(job.movementOut, "utf8")) : null;
+    const ch = C.fixtureChanges({ status, movement, likelihood: await C.loadLikelihood(), over: prevText ? JSON.parse(expandTemplate(prevText, now)) : null });
+    await writeFile(job.changesOut, JSON.stringify(ch) + "\n");
+    console.log(`ok   changes: ${ch.events.length} events`);
   }
   const top = status.airports.filter((a) => a.peak.level >= 3).length;
   console.log(`wrote ${out}: ${status.airports.length} airports, ${top} at High/Severe peak, ${okCount}/${total} sources ok`);
