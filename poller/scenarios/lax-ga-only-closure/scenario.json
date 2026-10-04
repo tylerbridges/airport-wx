@@ -1,11 +1,11 @@
 {
   "title": "LAX closed to transient GA only",
-  "group": "delays",
-  "blurb": "LAX closed to private flights only: airlines unaffected.",
   "description": "The real May 2026 NOTAM closing LAX to non-scheduled transient general aviation. Airline flights are unaffected, so LAX must not show Severe.",
   "assert": [
     { "t": "level", "iata": "LAX", "of": "now", "op": "<=", "v": 1, "note": "needs NOTAM closure scope (limited) from the other branch" },
     { "t": "level", "iata": "LAX", "of": "peak", "op": "<=", "v": 1, "note": "needs NOTAM closure scope (limited) from the other branch" },
     { "t": "noReason", "iata": "LAX", "re": "Airport closed", "note": "needs NOTAM closure scope (limited) from the other branch" }
-  ]
+  ],
+  "group": "delays",
+  "blurb": "LAX closed to private flights only: airlines unaffected."
 }

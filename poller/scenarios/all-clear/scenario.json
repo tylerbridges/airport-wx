@@ -1,7 +1,5 @@
 {
   "title": "All clear",
-  "group": "delays",
-  "blurb": "Quiet weather everywhere, no FAA programs, every source up.",
   "description": "Quiet weather everywhere, no FAA programs, every source up. Includes the global shards: EGLL (international, METAR + TAF), KFCM (small US, METAR only) and Y49 (no reports).",
   "assert": [
     { "t": "allLevels", "max": 0 },
@@ -9,5 +7,7 @@
     { "t": "shard", "icao": "KFCM", "has": ["m"], "lacks": ["t"] },
     { "t": "noShard", "icao": "Y49" },
     { "t": "rendered", "text": "Test scenario" }
-  ]
+  ],
+  "group": "delays",
+  "blurb": "Quiet weather everywhere, no FAA programs, every source up."
 }

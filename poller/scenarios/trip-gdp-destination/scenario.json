@@ -1,7 +1,5 @@
 {
   "title": "Trip: ground delay program at the destination (MSP→ORD)",
-  "group": "trips",
-  "blurb": "MSP→ORD while ORD has a ground delay program.",
   "description": "A calendar trip MSP→ORD departing in 90 minutes while ORD has a ground delay program: flights to ORD are held at MSP, so the trip shows Delays likely.",
   "assert": [
     { "t": "faa", "iata": "ORD", "type": "ground_delay" },
@@ -9,5 +7,7 @@
     { "t": "trip", "i": 0, "status": "Delays likely", "re": "^ORD ground delay program: flights to ORD are held — your .+ MSP→ORD departure may wait ~45 min\\.$" },
     { "t": "rendered", "text": "Add a trip" },
     { "t": "rendered", "text": "ORD ground delay program" }
-  ]
+  ],
+  "group": "trips",
+  "blurb": "MSP→ORD while ORD has a ground delay program."
 }

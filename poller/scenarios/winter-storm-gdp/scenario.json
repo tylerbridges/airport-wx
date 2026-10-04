@@ -1,11 +1,11 @@
 {
   "title": "Winter storm ground delay at DEN",
-  "group": "weather",
-  "blurb": "Heavy snow at DEN with a ground delay program.",
   "description": "Heavy snow and blowing snow at DEN with a ground delay program and a Winter Storm Warning.",
   "assert": [
     { "t": "level", "iata": "DEN", "of": "now", "op": ">=", "v": 3 },
     { "t": "faa", "iata": "DEN", "type": "ground_delay" },
     { "t": "faa", "iata": "DEN", "type": "ground_delay", "cause": "weather", "note": "needs FAA cause classification (cause.mjs, other branch)" }
-  ]
+  ],
+  "group": "weather",
+  "blurb": "Heavy snow at DEN with a ground delay program."
 }
