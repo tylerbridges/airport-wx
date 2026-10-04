@@ -230,7 +230,7 @@ export function mountMap(container) {
     const rows = sorted().map((e) => {
       const code = safe(() => A.codeOf(e.a), e.code) || e.code;
       const word = e.lv == null ? "No data" : WORDS[e.lv];
-      const status = e.lv == null ? e.head : e.head && e.head !== word ? word + " · " + e.head : word;
+      const status = e.lv == null || (e.head && e.head.toLowerCase().includes(word.toLowerCase())) ? e.head || word : e.head ? word + " · " + e.head : word;
       const ring = hasRing(e) && !/held|program|closed|closure/i.test(status) ? ". FAA program in effect" : "";
       return h("li", {}, h("button", { type: "button", class: "map-airport-row " + (e.lv == null ? "unknown" : "l" + e.lv), "data-code": e.code,
         "aria-label": `${code}, ${e.a.city || e.a.name || ""}. ${status}${ring}${e.a.shard ? ". Weather only" : ""}`, onclick: () => openAirport(e) },
