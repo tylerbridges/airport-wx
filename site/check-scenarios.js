@@ -10,6 +10,10 @@
 //   {t:"alert", iata, event}   {t:"spc", iata, cat}   {t:"sigmet", iata}   {t:"model", basis}
 //   {t:"movement", iata, line: re | null, arrBelow?: share}   {t:"airlineAlert", re}
 //   {t:"tripConcern", i, re}  one of trip i's concerns (site/trip-risk.js) matches
+//   words also take every: true (every hour in [from, to] has the word/key) and notKey (no hour in range has it)
+//   {t:"hourLevel", iata, at: [from, to], op, v}   the highest hour level in from..to
+//   {t:"hourReason", iata, at: [from, to], re, every?}  some (every) hour in from..to has a matching reason
+//   {t:"cascade", iata, hub, re?}  {t:"noCascade", iata, hub?}  hub cascade notes (status.json cascade, poller/hubs.mjs)
 // Page assertions:
 //   {t:"card", iata, re}   the airport's card on the All list
 //   {t:"sheet", iata, re}  the airport's sheet (text, including closed "Why?" parts)
@@ -19,7 +23,7 @@
 //   {t:"noPercent"}        Traveler mode: no "%" in delay-chance text (cards, every sheet, trips)
 import { tripStatus } from "./trip-risk.js";
 
-const DATA = new Set(["words", "badge", "noFaa", "opsplan", "atcscc", "alert", "spc", "sigmet", "model", "movement", "airlineAlert", "tripConcern"]);
+const DATA = new Set(["words", "badge", "noFaa", "opsplan", "atcscc", "alert", "spc", "sigmet", "model", "movement", "airlineAlert", "tripConcern", "hourLevel", "hourReason", "cascade", "noCascade"]);
 const PAGE = new Set(["card", "sheet", "national", "header", "banner", "noPercent"]);
 export const isPageAssert = (x) => PAGE.has(x.t);
 
@@ -78,6 +82,18 @@ export async function dataAsserts(add, { sc, data, delta, shift }) {
     switch (x.t) {
       case "words": {
         const D = await delayWords();
+        if ((x.every || x.notKey) && Array.isArray(x.at)) { // closures hook / hubs hook: every hour in the range
+          const hs = [];
+          for (let i = x.at[0]; a && i <= x.at[1] && i < a.hours.length; i++) {
+            const d = a.hours[i].delay;
+            hs.push({ i, L: D && d ? D.likelihood(d, { iata: x.iata, aviation: false }) : null });
+          }
+          label = `${x.iata} delay words every hour ${x.at[0]}–${x.at[1]}: ${[x.word && `"${x.word}"`, x.key && `key ${x.key}`, x.notKey && `never key ${x.notKey}`].filter(Boolean).join(", ")}`;
+          const bad = hs.filter(({ L }) => !L || (x.word && L.word !== x.word) || (x.key && L.key !== x.key) || (x.notKey && L.key === x.notKey));
+          ok = !!D && hs.length > 0 && !bad.length;
+          got = !D ? "site/delay.js didn't load" : bad.slice(0, 3).map(({ i, L }) => `hour ${i}: ${L ? `"${L.word}"` : "no delay numbers"}`).join("; ");
+          break;
+        }
         const i = a ? hourFor(a, x.at) : -1;
         const d = a && a.hours[i] && a.hours[i].delay;
         const L = D && d ? D.likelihood(d, { iata: x.iata, aviation: false }) : null;
@@ -159,6 +175,32 @@ export async function dataAsserts(add, { sc, data, delta, shift }) {
         ok = texts.some((v) => re(x.re).test(v));
         label = `trip ${x.i || 0} concern /${x.re}/`;
         got = r ? `got ${short(texts)}` : "no such trip";
+        break;
+      }
+      case "hourLevel": {
+        const hs = a ? a.hours.slice(x.at[0], x.at[1] + 1) : [];
+        const v = hs.length ? Math.max(...hs.map((h) => h.level)) : null;
+        const cmp = { "==": v === x.v, ">=": v >= x.v, "<=": v <= x.v, ">": v > x.v, "<": v < x.v }[x.op];
+        ok = v != null && !!cmp;
+        label = `${x.iata} highest level in hours ${x.at[0]}–${x.at[1]} ${x.op} ${x.v}`;
+        got = `got ${short(hs.map((h) => h.level))}`;
+        break;
+      }
+      case "hourReason": {
+        const hs = a ? a.hours.slice(x.at[0], x.at[1] + 1) : [];
+        const hit = (h) => (h.reasons || []).some((r) => re(x.re).test(r));
+        ok = hs.length > 0 && (x.every ? hs.every(hit) : hs.some(hit));
+        label = `${x.iata} ${x.every ? "every" : "some"} hour ${x.at[0]}–${x.at[1]} has a reason /${x.re}/`;
+        got = `got ${short(hs.map((h) => (h.reasons || [])[0] || null))}`;
+        break;
+      }
+      case "cascade":
+      case "noCascade": {
+        const cs = ((a && a.cascade) || []).filter((c) => !x.hub || c.hub === x.hub);
+        const has = cs.some((c) => !x.re || re(x.re).test(c.text));
+        ok = !!a && (x.t === "cascade" ? has : !cs.length);
+        label = `${x.iata} ${x.t === "cascade" ? "has" : "has no"} hub cascade note${x.hub ? " from " + x.hub : ""}${x.re ? ` /${x.re}/` : ""}`;
+        got = `got ${short(((a && a.cascade) || []).map((c) => c.text))}`;
         break;
       }
       case "airlineAlert": {

@@ -135,8 +135,14 @@
       "t": "level",
       "iata": "ORD",
       "of": "peak",
-      "op": "==",
-      "v": 0
+      "op": "<=",
+      "v": 1,
+      "note": "at most a Low hub cascade note from LGA (poller/hubs.mjs)"
+    },
+    {
+      "t": "cascade",
+      "iata": "ORD",
+      "hub": "LGA"
     },
     {
       "t": "national",

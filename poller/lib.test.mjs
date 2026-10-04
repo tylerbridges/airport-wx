@@ -223,7 +223,8 @@ test("fixture run writes a schema-shaped status.json", async () => {
   assert.ok(by.TPA.now.reasons.includes("FAA reports delays at MCO/TPA expected to continue"));
   assert.match(by.BNA.now.reasons.join("|"), /Air traffic control staffing shortage until 8 PM — delays possible/);
   assert.equal(by.SAN.now.level, 3); // ops-plan GDP (the fixture's NAS status has none at SAN)
-  assert.deepEqual(by.SAN.hours.slice(0, 7).map((h) => h.level), [3, 3, 3, 3, 3, 3, 0]); // until 0059Z
+  assert.deepEqual(by.SAN.hours.slice(0, 7).map((h) => h.level >= 3), [true, true, true, true, true, true, false]); // until 0059Z
+  assert.ok(by.SAN.hours[6].level <= 1); // after it: at most a Low hub cascade note (poller/hubs.mjs)
   assert.ok(by.DEN.now.reasons.includes("Runway 16R/34L closed until Nov 4"));
   assert.ok(by.JFK.opsplan.constraints[0].codes.includes("N90"));
   assert.ok(by.PHL.opsplan.items.some((x) => x.ifr && /glideslope/.test(x.text)));

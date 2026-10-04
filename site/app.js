@@ -1006,6 +1006,20 @@
 
   // ---------- home cards ----------
 
+  /**
+   * hubs hook: one short line for the airport's first hub cascade note (status.json `cascade`, poller/hubs.mjs),
+   * only while it is ahead, when its category is shown and the reasons on screen don't already say it.
+   */
+  function cascadeLine(v, shown, cls) {
+    const c = (v.cascade || []).find((x) => Date.parse(x.to) > refNow());
+    if (!c || isHidden(CATS.reason(c.text).cat)) return null;
+    if ((shown || []).some((r) => String(r || "").indexOf(c.hub + " ") === 0)) return null;
+    const tz = dispTz(v);
+    const from = Math.max(Date.parse(c.from), refNow());
+    const when = dayKey(from, tz) === dayKey(refNow(), tz) ? "later today" : dayKey(from, tz) === dayKey(refNow() + 24 * HOUR, tz) ? "tomorrow" : "on " + fmt(tz, { weekday: "long" }, "wdl").format(from);
+    return h("div", { class: cls }, c.text + " " + when);
+  }
+
   function card(a, idx, count) {
     const v = view(a);
     const fav = state.favs.includes(a.iata);
@@ -1036,6 +1050,7 @@
       h("div", { class: "reason" }, reason),
       window.AWXMovement ? safeCall(() => AWXMovement.line(a)) : null, // movement hook: "Departures running 38% below normal" (site/movement.js)
       window.AWXDelay ? safeCall(() => AWXDelay.delayLine(a)) : null, // phase3 hook: chance of a real delay (site/delay.js)
+      safeCall(() => cascadeLine(v, [reason], "sub hubline")), // hubs hook: "ORD ground stop may delay flights to and from Chicago later today"
       later ? h("div", { class: "sub" }, "Now: " + LEVELS[v.now.level].label) : null,
       cardPrograms(v).length ? h("div", { class: "badges" }, faaBadges(v)) : null,
       timeline(a, {}),
@@ -1449,7 +1464,13 @@
     const now = refNow();
     const out = [];
     for (const f of v.faa || []) {
-      if (f.type === "closure") { if (isNow && (f.scope || "full") === "full" && f.active !== false) out.push(f); continue; }
+      if (f.type === "closure") { // closures hook: a full closure covers its window (start through reopening; risk.mjs closureSpan)
+        if ((f.scope || "full") !== "full") continue;
+        const s = Date.parse(f.start), e = f.perm ? Infinity : Date.parse(f.end);
+        if (!Number.isNaN(e)) { if (e > now && t < e && t + HOUR > (Number.isFinite(s) ? s : -Infinity)) out.push(f); }
+        else if (isNow && f.active !== false) out.push(f);
+        continue;
+      }
       const end = programEnd(f) ?? now + (f.trend === "increasing" ? 5 : 3) * HOUR;
       if (t < end && t + HOUR > now - HOUR) out.push(f);
     }
@@ -1468,7 +1489,7 @@
     const end = programEnd(f);
     const until = end ? "until " + whenLabel(end, tz) : /until /.test(f.detail || "") ? retime(/until [^,]+/.exec(f.detail)[0], a) : "until further notice";
     const avg = /avg ([^,]+)/.exec(f.detail || "");
-    if (f.type === "closure") return "Airport closed";
+    if (f.type === "closure") return "Airport closed" + (end ? " until " + whenLabel(end, tz) : ""); // closures hook
     if (f.type === "ground_stop") return "Ground stop " + until;
     if (f.type === "ground_delay") return "Delay program " + until + (avg ? ", avg " + durTxt(avg[1]) : "");
     return "Delays: " + delayText(f.detail).replace(/^Delays /, "").replace(/^./, (c) => c.toLowerCase());
@@ -1865,6 +1886,7 @@
       h("div", { class: "sh-where" }, h("b", { class: "sh-aname" }, a.name), h("span", { class: "muted" }, " · " + `${a.city}, ${a.state}` + (S.tz === "mine" ? " · " + zoneLine : ""))),
       // above the timeline: only the header, the Now / Peak (or single) card and the timeline itself
       boxWrap,
+      safeCall(() => cascadeLine(v, [...shortList(v.now.reasons, a).slice(0, 3), ...shortList(v.peak.reasons, a).slice(0, 3)], "sh-hub")), // hubs hook
       h("section", { class: "sec tlsec" },
         h("div", { class: "sec-h" }, icon(ICONS.clock), h("h3", {}, tlTitle), h("span", { class: "rule", "aria-hidden": "true" }), dayBtn),
         tlHolder),

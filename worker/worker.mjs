@@ -271,9 +271,14 @@ export function overlay({ now = new Date(), majors = [], others = [], build = nu
     const out = assemble({
       airports: majors, now, metars, tafs, sigmets: ok("sigmet") ? src.sigmet.value : null, faaParsed,
       spc: null, nws: nwsMap, lamp: { stations }, atcscc: adv, tcf: null, cwa: null, over, delay: scoring,
+      hubsFrom: build?.airports || null, // hubs hook: hubs not requested cascade from the build
     });
     // Fields the relay doesn't recompute (added to status.json later) carry over from the build.
-    airports = out.map((a) => ({ ...(buildBy.get(a.iata) || {}), ...a }));
+    airports = out.map((a) => {
+      const m = { ...(buildBy.get(a.iata) || {}), ...a };
+      if (!a.cascade) delete m.cascade; // hubs hook: recomputed above; none now means none
+      return m;
+    });
     if (!scoring) { // phase3: model files unavailable -> the build's delay numbers for the same hours
       for (const a of airports) {
         const bh = new Map((buildBy.get(a.iata)?.hours || []).map((h) => [h.t, h.delay]));

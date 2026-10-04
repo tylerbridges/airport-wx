@@ -224,7 +224,7 @@ const lowerFirstChar = (s) => (s ? s.replace(/(^|; )([A-Z])(?=[a-z])/g, (m, a, b
  * (f.cause class + f.reason text) only names it. Closures: scope "full" is Severe, "runway" Low,
  * "limited" (closed only to some users, e.g. GA) and not-yet/no-longer active ones add nothing.
  */
-export function assessFaa(f) {
+export function assessFaa(f, { tz = null, now = new Date() } = {}) {
   const cause = f.type === "closure" ? closureCause(f) : causePhrase(f.cause, f.reason);
   // programs without a stated end: "until further notice"
   const open = PROGRAMS.has(f.type) && toMs(f.end) == null && !/\buntil\b/i.test(f.detail || "");
@@ -238,7 +238,10 @@ export function assessFaa(f) {
         const ids = (f.runways || []).join(", ");
         return { level: 1, text: ids ? `${(f.runways || []).length > 1 ? "Runways" : "Runway"} ${ids} closed` : "Runway closed", fixed: true };
       }
-      return { level: 4, text: cause ? join("Airport closed", f.detail) : `Airport closed${f.detail ? " " + f.detail : ""}`, fixed: true };
+      // with the airport's zone and a known end (NOTAM end or Reopen): "Airport closed until 6 PM ET"
+      const end = f.perm ? null : toMs(f.end);
+      const detail = end != null && tz ? closureUntil(end, tz, now) : f.detail;
+      return { level: 4, text: cause ? join("Airport closed", detail) : `Airport closed${detail ? " " + detail : ""}`, fixed: true };
     }
     case "ground_delay":
       return { level: 3, text: cause ? join("Ground delay program", f.detail) : `Ground delay program${f.detail ? " (" + f.detail + ")" : ""}${open ? ", until further notice" : ""}`, fixed: true };
@@ -260,6 +263,27 @@ export function faaSpan(f, now) {
   const end = toMs(f.end);
   if (end != null) return Math.max(end, +now);
   return +now + (f.trend === "increasing" ? OPEN_PROGRAM_HOURS_INCREASING : OPEN_PROGRAM_HOURS) * HOUR;
+}
+
+/** "until 6 PM ET" / "until Fri 6 AM ET" within a day of now, else "until Nov 4" (the airport's local date). */
+function closureUntil(end, tz, now) {
+  if (end - +now <= 24 * HOUR) return `until ${fmtClock(end, tz, now)} ${tzAbbr(end, tz)}`;
+  return `until ${clean(dtf(tz, { month: "short", day: "numeric" }, "md").format(new Date(end)))}`;
+}
+
+/**
+ * Effective window of a full airport closure (README "Risk levels"): {from, to} in ms, from its start
+ * (NOTAM start, else already in effect) to its reopening (NOTAM end, else the FAA's Reopen time; Infinity
+ * when permanent; null when no end is known, which scores hour 0 only). null for limited/runway closures
+ * and for closures that are over (or inactive with no known end).
+ */
+export function closureSpan(f, now) {
+  if (!f || f.type !== "closure" || (f.scope || "full") !== "full") return null;
+  const from = toMs(f.start) ?? -Infinity;
+  const to = f.perm ? Infinity : toMs(f.end);
+  if (to != null && to <= +now) return null;
+  if (to == null && f.active === false) return null;
+  return { from, to };
 }
 
 // Closure reasons are NOTAM text: name a cause only when the text says one (e.g. "snow removal").
@@ -600,15 +624,23 @@ export function buildHours({
     if (num(x.convProb) != null) conv.push({ from: t - span, to: t, p: Number(x.convProb) });
   }
   const planItems = opsPlanItems(opsplan, { faa, atcscc, tz, now });
-  // FAA programs and active ATCSCC GS/GDP score every hour until their end (closures: hour 0 only)
+  // FAA programs and active ATCSCC GS/GDP score every hour until their end; a full closure scores every
+  // hour of its window (closureSpan: start through reopening; hour 0 only when no end is known); other
+  // closures hour 0 only
   const progItems = [];
   for (const f of faa) {
-    const it = assessFaa(f);
-    if (it) progItems.push({ ...it, to: faaSpan(f, now) });
+    const span = closureSpan(f, now);
+    if (span) {
+      const it = assessFaa({ ...f, active: true }, { tz, now });
+      if (it) progItems.push({ ...it, from: span.from, to: span.to });
+      continue;
+    }
+    const it = assessFaa(f, { tz, now });
+    if (it) progItems.push({ ...it, from: -Infinity, to: faaSpan(f, now) });
   }
   for (const a of atcscc || []) {
     const it = assessAtcscc(a, faa, tz, now);
-    if (it) progItems.push({ ...it, to: toMs(a.end) });
+    if (it) progItems.push({ ...it, from: -Infinity, to: toMs(a.end) });
   }
   const tcfItems = [];
   for (const x of tcf || []) {
@@ -637,7 +669,9 @@ export function buildHours({
       }
       if (sigmet) items.push({ level: 3, text: "Convective SIGMET over airport", fixed: true });
     }
-    for (const x of progItems) if (i === 0 || (x.to != null && x.to > t0)) items.push({ level: x.level, text: x.text, fixed: true });
+    for (const x of progItems) {
+      if ((i === 0 && x.from <= +now) || (x.from < t1 && x.to != null && x.to > t0)) items.push({ level: x.level, text: x.text, fixed: true });
+    }
     for (const a of alertItems) if (a.from < t1 && a.to > t0) items.push({ level: a.level, text: a.text, fixed: true });
     for (const c of cwaItems) if (c.from < t1 && c.to > t0) items.push({ level: c.level, text: c.text, fixed: true });
     if (spcLvl && t0 < spcEnd) items.push({ level: spcLvl, text: spcText(spc), fixed: true });
