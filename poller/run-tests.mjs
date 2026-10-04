@@ -30,6 +30,7 @@ import "../tools/train.test.mjs";
 // trips
 import "./trips.test.mjs";
 import "./trip-risk.test.mjs";
+import "../tools/trip-import.test.mjs";
 // movement: ADS-B traffic rates
 import "./movement.test.mjs";
 // brief hook: per-airport change log

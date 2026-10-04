@@ -139,6 +139,7 @@ const PAGES = {
   root: { title: "Settings", build: buildRoot },
   airports: { title: "Your airports", build: buildAirports },
   trips: { title: "Trips & flight calendar", build: buildTrips },
+  calendar: { title: "Repository calendar", build: buildCalendar },
   data: { title: "Data & checks", build: buildData },
 };
 
@@ -171,7 +172,7 @@ function buildRoot(body) {
       "Forecast hours, delays and timelines use this time zone."),
     group(null, [navRow("pulse", "Data & checks", null, () => push("data"), { "data-page": "data" })]),
     group("About", [valueRow("App", "Airports"), valueRow("Version", appVersion())],
-      "Your airports and settings stay on this device. Trips publish only airports and flight times, never names or booking details."),
+      "Your airports, settings and device trips stay in this browser. The optional repository calendar publishes only airport codes and times."),
   );
 }
 
@@ -353,39 +354,35 @@ function tripLabel(t, i) {
   };
 }
 function buildTrips(body, page, opts) {
-  const status = valueRow("Status", "Checking…", { "data-id": "calstatus" });
-  const steps = h("ol", { class: "awx-steps" },
-    h("li", {}, "If you use Flighty, turn on its calendar sync to a dedicated calendar (only flights go in it)."), // trips hook: the user's wording
-    h("li", {}, "In Calendar, share that calendar as a public calendar."),
-    h("li", {}, "Copy the calendar's public link."),
-    h("li", {}, "On GitHub, add the link as a repository secret named ", h("code", {}, "FLIGHTY_ICS_URL"), ". The next update reads it."));
   const trips = manualTrips();
   const T = window.AWXTrips;
-  const canAdd = !!(T && typeof T.openAdd === "function");
-  const addRow = h("button", { type: "button", class: "awx-row awx-nrow awx-accent", "data-act": "add", disabled: !canAdd,
-    onclick: () => { close(false); T.openAdd(); } }, h("span", { class: "awx-ri" }, icon("plus")), h("span", { class: "awx-rt" }, "Add a trip"));
+  const canAdd = !!T?.openAdd;
+  const addRow = navRow("plus", "Add a trip", null, () => { close(false); T?.openAdd(); }, { "data-act": "add", disabled: !canAdd });
+  const importRow = navRow("calendar", "Import a calendar file", null, () => { close(false); T?.openImport(); }, { "data-act": "import", disabled: !T?.openImport });
   body.replaceChildren(
-    group("Flight calendar", [status]),
-    group("Connect your flight calendar", [h("div", { class: "awx-row awx-block" }, steps), linkRow(null, "Open GitHub secrets", SECRETS_URL, true)],
-      "The secret stays private on GitHub. Only airports and flight times are published to this site.", { id: "awx-connect" }),
-    group("Your trips", [
-      ...trips.map((t, i) => { const l = tripLabel(t, i); return T && T.openTrip && t.id // trips hook: a manual trip opens its sheet (Edit / Delete)
+    group("Flights on this device", [addRow, importRow], "Add scheduled times or choose a one-time .ics import. No account needed; imported files are never uploaded.", { id: "awx-addtrip" }),
+    group("Saved trips", [
+      ...trips.map((t, i) => { const l = tripLabel(t, i); return T?.openTrip && t.id
         ? navRow("plane", h("span", {}, l.title, l.sub ? h("small", {}, l.sub) : null), null, () => { close(false); T.openTrip(t.id); })
-        : h("div", { class: "awx-row" }, h("span", { class: "awx-ri" }, icon("plane")), h("span", { class: "awx-rt" }, l.title, l.sub ? h("small", {}, l.sub) : null)); }),
-      trips.length ? null : h("div", { class: "awx-row awx-off" }, "No trips added on this device"),
-      addRow,
-    ].filter(Boolean), canAdd ? null : "Adding trips by hand isn't available yet.", { id: "awx-addtrip" }),
+        : h("div", { class: "awx-row" }, l.title); }),
+      trips.length ? null : h("div", { class: "awx-row awx-off" }, "No trips saved on this device"),
+    ].filter(Boolean), canAdd ? "Open a trip to edit or delete it. Calendar imports are snapshots and do not sync changes." : "Trip setup is still loading."),
+    group("Advanced", [navRow("calendar", "Repository calendar", null, () => push("calendar"), { "data-page": "calendar" })], "For the owner of a site with a shared calendar integration."),
   );
-  // data/trips.json comes with site/trips.js (Build 4); without it there is nothing to read (and no 404 to log)
-  if (T && T.calStatus) { // trips hook: status from site/trips.js (configured, last fetch ok, upcoming flights; scenario-aware)
-    T.ready().then(() => { const cs = T.calStatus(); const v = status.querySelector(".awx-rv"); v.textContent = cs.text; v.classList.toggle("awx-good", !!cs.connected); });
-  } else (T ? getJson("./data/trips.json") : Promise.resolve({ ok: false })).then((r) => {
-    const v = status.querySelector(".awx-rv");
-    const connected = r.ok && r.data && r.data.connected !== false && !r.data.error;
-    v.textContent = connected ? `Connected · ${upcomingFlights(r.data)} upcoming flight${upcomingFlights(r.data) === 1 ? "" : "s"}` : "Not connected";
-    v.classList.toggle("awx-good", !!connected);
-  });
-  if (opts && opts.focus) setTimeout(() => { const el = body.querySelector(opts.focus === "add" ? "#awx-addtrip" : "#awx-connect"); if (el) el.scrollIntoView({ block: "start" }); }, 0);
+}
+
+function buildCalendar(body) {
+  const T = window.AWXTrips;
+  const status = valueRow("Status", T?.calStatus ? T.calStatus().text : "Checking…");
+  body.replaceChildren(
+    group("Repository calendar", [status], "This optional owner integration publishes airport codes and scheduled times to everyone using this site. Your device imports stay private to this browser."),
+    group("Owner setup", [h("div", { class: "awx-row awx-block" }, h("ol", { class: "awx-steps" },
+      h("li", {}, "Export or share a dedicated flight calendar using your calendar provider."),
+      h("li", {}, "Keep the calendar's public URL private: anyone with it can read that calendar."),
+      h("li", {}, "Add it as the repository's ", h("code", {}, "FLIGHTY_ICS_URL"), " secret, then run Poll and deploy."))),
+      linkRow(null, "Open repository secrets", SECRETS_URL, true)], "Device-only trips do not require GitHub or a public calendar."),
+  );
+  T?.ready?.().then(() => { const cs = T.calStatus(), v = status.querySelector(".awx-rv"); v.textContent = cs.text; v.classList.toggle("awx-good", cs.ok); v.classList.toggle("awx-warn", !!cs.warn); });
 }
 
 // ----- Data & checks -----

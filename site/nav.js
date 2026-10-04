@@ -8,7 +8,7 @@
 import { mountSearch } from "./search.js";
 import { mountMap } from "./map.js?v=7"; // map hook: Map tab (site/map.js)
 import { h, icon, prefs, reducedMotion, trapFocus, app } from "./navui.js";
-import { initSettings, openSettings, settingsOpen } from "./settings.js";
+import { initSettings, openSettings, settingsOpen } from "./settings.js?v=2";
 
 const TABS = [
   { id: "airports", label: "Airports", title: "Airports", icon: "terminal" },
@@ -113,9 +113,9 @@ function renderTrips() {
   box.replaceChildren(h("div", { class: "awx-empty" },
     h("div", { class: "awx-empty-ico" }, icon("case")),
     h("h2", {}, "No trips yet"),
-    h("p", {}, "Add a flight to watch for disruptions at both ends, or connect your flight calendar to bring trips in automatically."),
+    h("p", {}, "Add scheduled flight times to see the airport outlook along your trip. Saved on this device."),
     h("button", { type: "button", class: "awx-btn primary", onclick: add }, "Add a trip"),
-    h("button", { type: "button", class: "awx-btn", onclick: () => openSettings("trips", { focus: "connect" }) }, "Connect your flight calendar")));
+    h("button", { type: "button", class: "awx-btn", onclick: () => window.AWXTrips?.openImport ? AWXTrips.openImport() : openSettings("trips") }, "Import a calendar file")));
 }
 
 let mapApi;

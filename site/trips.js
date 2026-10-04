@@ -12,6 +12,7 @@
 // Calendar trips come from data/trips.json (airports and times only); concerns from ./trip-risk.js.
 import { tripStatus, flightLine, rolesAt, clockText, whenText, rangeText, LEVEL_LABELS, STATUS, TRIP_KEEP_AFTER_ARRIVAL_MS } from "./trip-risk.js?v=3";
 import { mountSearch, loadAirports, airportsLoaded, placeLine } from "./search.js";
+import { calendarDraft, nextScheduled, MAX_CALENDAR_BYTES, flightKey } from "./trip-import.js?v=1";
 
 const KEY = "awx-trips";
 const HOUR = 3600e3;
@@ -28,6 +29,10 @@ const S = {
   manual: loadManual(),
   view: null, // trip sheet: {kind: "trip", id} | {kind: "edit", id|null} | {kind: "settings"}
   lastFocus: null,
+  importDraft: null,
+  importError: "",
+  importBusy: false,
+  importSeq: 0,
 };
 
 // ---------- small helpers ----------
@@ -92,7 +97,7 @@ function loadManual() {
   } catch { return []; }
 }
 function saveManual() {
-  try { localStorage.setItem(KEY, JSON.stringify(S.manual)); } catch { /* storage blocked */ }
+  try { localStorage.setItem(KEY, JSON.stringify(S.manual)); return true; } catch { return false; }
 }
 
 function appReady() {
@@ -239,8 +244,27 @@ function tripCard(trip) {
   return el;
 }
 
+function focusedTrip(focus) {
+  const card = tripCard(focus.trip);
+  card.classList.add("tnext");
+  card.dataset.nextTrip = focus.trip.id;
+  card.prepend(h("div", { class: "tnext-label" }, focus.future ? "Next scheduled flight" : "Recent scheduled trip"));
+  const meta = card.querySelector(".tmeta .tw");
+  meta.textContent = `${focus.leg.from} → ${focus.leg.to} · ${dateLine(Date.parse(focus.leg.dep), tzFor(focus.leg.from, focus.trip))}`;
+  const r = resultOf(focus.trip);
+  card.append(h("div", { class: "tnext-action" }, r.level >= 2 || r.quality ? "Review trip outlook ›" : "View trip ›"));
+  return card;
+}
+function tripActions() {
+  return h("div", { class: "trips-b" },
+    h("button", { type: "button", class: "tadd", onclick: () => openEdit(null) }, "Add a trip"),
+    h("button", { type: "button", class: "tadd", onclick: openImport }, "Import .ics"));
+}
+
 let tabBox = null; // the nav shell's Trips tab (site/nav.js calls render(container))
 function render(container) {
+  const active = document.activeElement, focusedId = active?.dataset.trip;
+  const focusedBox = active?.closest("#navTrips, #trips")?.id;
   if (container && container.nodeType) tabBox = container;
   loadCal(false);
   if (tabBox) renderTab(tabBox);
@@ -248,19 +272,19 @@ function render(container) {
   if (!box) { refreshOpen(); return; }
   const trips = allTrips();
   if (!trips.length) { box.replaceChildren(); renderFoot(); refreshOpen(); document.dispatchEvent(new CustomEvent("awx:trips")); const a = statusAirports().find((a) => a.iata === app()?.state.openIata); if (a) decorateSheet(document.getElementById("sheet"), a); return; }
+  const focus = nextScheduled(trips, nowMs());
   box.replaceChildren(
-    h("div", { class: "trips-h" },
-      h("h2", {}, "Your trips"),
-      h("div", { class: "trips-b" },
-        h("button", { type: "button", class: "tadd", onclick: () => openEdit(null) }, "Add a trip"),
-        h("button", { type: "button", class: "tgear", "aria-label": "Trips settings", onclick: () => openTripSettings() }, svg("M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.6 7.6 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.6 7.6 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 1.7-1l2.4 1 2-3.4z", "gear")))),
-    h("div", { class: "tlist" }, trips.map(tripCard)));
+    h("div", { class: "trips-h" }, h("h2", {}, "Your trip"),
+      h("div", { class: "trips-b" }, h("button", { type: "button", class: "tadd", onclick: () => openEdit(null) }, "Add a trip"),
+        h("button", { type: "button", class: "tadd", onclick: () => window.AWXNav ? AWXNav.go("trips") : openTripSettings() }, "All trips ›"))),
+    focusedTrip(focus));
   renderFoot();
   refreshOpen();
   document.dispatchEvent(new CustomEvent("awx:trips"));
   const sheet = document.getElementById("sheet");
   const airport = statusAirports().find((a) => a.iata === app()?.state.openIata);
   if (airport) decorateSheet(sheet, airport);
+  if (focusedId && focusedBox) [...(document.getElementById(focusedBox)?.querySelectorAll("[data-trip]") || [])].find(el => el.dataset.trip === focusedId)?.focus({ preventScroll: true });
 }
 
 /** The Trips tab: every trip, "Add a trip", and the calendar line; an empty state when there are none. */
@@ -270,20 +294,23 @@ function renderTab(box) {
   if (!trips.length) {
     box.replaceChildren(h("div", { class: "awx-empty ttab-empty" },
       h("div", { class: "awx-empty-ico" }, svg(PLANE, "tempty", 45)),
-      h("h2", {}, "No trips yet"),
-      h("p", {}, cs.connected ? "Your flight calendar is connected but has no flights in the next 7 days. Add a flight to watch for disruptions at both ends."
-        : "Add a flight to watch for disruptions at both ends, or connect your flight calendar to bring trips in automatically."),
+      h("h2", {}, "Your next trip starts here"),
+      h("p", {}, "Add your flight times to see the airport outlook along your trip. Saved on this device."),
       h("button", { type: "button", class: "awx-btn primary", onclick: () => openEdit(null) }, "Add a trip"),
-      cs.connected ? null : h("button", { type: "button", class: "awx-btn", onclick: () => openTripSettings("connect") }, "Connect your flight calendar")));
+      h("button", { type: "button", class: "awx-btn", onclick: openImport }, "Import a calendar file"),
+      h("p", { class: "timport-note" }, "One-time .ics import · no calendar sync or upload"),
+      cs.warn ? h("p", { class: "warn", role: "status" }, "Repository calendar update unavailable. You can still add or import trips on this device.") : cs.connected ? h("p", {}, "The repository calendar has no active trips in the next 7 days.") : null));
     return;
   }
+  const focus = nextScheduled(trips, nowMs());
+  const rest = trips.filter((t) => t.id !== focus.trip.id);
   box.replaceChildren(
-    h("div", { class: "trips-h ttab-h" },
-      h("span", { class: "tcal-line" + (cs.warn ? " warn" : "") }, cs.connected ? "From your flight calendar" + calAgo() : cs.warn ? cs.text : "Flight calendar not connected"),
-      h("div", { class: "trips-b" },
-        h("button", { type: "button", class: "tadd", onclick: () => openEdit(null) }, "Add a trip"),
-        h("button", { type: "button", class: "tgear", "aria-label": "Trips settings", onclick: () => openTripSettings() }, svg("M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM19.4 13a7.5 7.5 0 0 0 0-2l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-1.7-1L15 3.5h-4l-.4 2.5a7.6 7.6 0 0 0-1.7 1l-2.4-1-2 3.4 2 1.6a7.5 7.5 0 0 0 0 2l-2 1.6 2 3.4 2.4-1a7.6 7.6 0 0 0 1.7 1l.4 2.5h4l.4-2.5a7.6 7.6 0 0 0 1.7-1l2.4 1 2-3.4z", "gear")))),
-    h("div", { class: "tlist" }, trips.map(tripCard)));
+    h("div", { class: "trips-h ttab-h" }, tripActions(),
+      h("button", { type: "button", class: "tgear", "aria-label": "Trips settings", onclick: () => openTripSettings() }, svg("M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z", "gear"))),
+    cs.warn ? h("div", { class: "tcal-line warn", role: "status" }, "Repository calendar update unavailable · saved times may be outdated") : null,
+    focusedTrip(focus),
+    rest.length ? h("div", { class: "trips-h", style: "margin-top:20px" }, h("h2", {}, "Other trips")) : null,
+    rest.length ? h("div", { class: "tlist" }, rest.map(tripCard)) : null);
 }
 const calAgo = () => { const g = S.cal && Date.parse(S.cal.generated); return g ? " · updated " + ago(Math.max(0, nowMs() - g)) : ""; };
 
@@ -393,12 +420,14 @@ function closeTrip() {
   const w = document.getElementById("tripWrap");
   if (!w || w.hidden) return;
   S.view = null;
+  S.importDraft = null; S.importSeq++;
   w.classList.remove("open");
   if (!(app() && app().state.openIata)) document.documentElement.classList.remove("lock");
   if (tripCtl) tripCtl.closed(); // build2b hook
   const done = () => { if (!S.view) w.hidden = true; };
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) done(); else setTimeout(done, 300);
-  if (S.lastFocus && S.lastFocus.focus) S.lastFocus.focus({ preventScroll: true });
+  const target = S.lastFocus?.isConnected ? S.lastFocus : document.querySelector(app()?.state.openIata ? "#sheet .close" : "#tab-trips");
+  target?.focus({ preventScroll: true });
 }
 const head = (title, ...right) => h("div", { class: "sh-head" },
   title,
@@ -407,9 +436,10 @@ const sec = (title, ...kids) => h("div", { class: "sec" }, h("h3", {}, title), .
 
 function openTrip(id) { S.view = { kind: "trip", id }; drawView(); show(); }
 function openEdit(id) { S.view = { kind: "edit", id }; drawView(); show(); }
+function openImport() { S.importDraft = null; S.importError = ""; S.importBusy = false; S.importSeq++; S.view = { kind: "import" }; drawView(); show(); }
 function openSettings() { S.view = { kind: "settings" }; drawView(); show(); }
 /** Redraw an open trip sheet when the data refreshes (not the editor: it would lose the typing). */
-function refreshOpen() { if (S.view && S.view.kind !== "edit") drawView(true); }
+function refreshOpen() { if (S.view && S.view.kind !== "edit" && S.view.kind !== "import") drawView(true); }
 
 function drawView(keep) {
   const sheet = wrap().querySelector(".sheet");
@@ -421,13 +451,15 @@ function drawView(keep) {
     if (!trip) { closeTrip(); return; }
     kids = tripView(trip);
   } else if (S.view.kind === "edit") kids = editView(S.view.id);
+  else if (S.view.kind === "import") kids = importView();
   else kids = settingsView();
   sheet.replaceChildren(h("div", { class: "grab", "aria-hidden": "true" }), ...kids);
   if (keep) sheet.scrollTop = top; else sheet.scrollTop = 0;
+  if (keep && S.view.kind === "import") sheet.querySelector('[role="alert"], [role="status"], .tbtn.primary, input')?.focus({ preventScroll: true });
 }
 
 function sourceLine(trip) {
-  if (trip.source === "manual") return "Added by you · saved on this device only";
+  if (trip.source === "manual") return trip.imported ? "Imported calendar snapshot · saved on this device only" : "Added by you · saved on this device only";
   return "From your flight calendar" + calAgo();
 }
 
@@ -489,7 +521,7 @@ function tripView(trip) {
       h("p", { class: "muted" }, sourceLine(trip)),
       !manual && S.cal && S.cal.ok === false ? h("p", { class: "warn" }, "Your flight calendar couldn't be read on the last update — times may be out of date.") : null,
       manual ? h("div", { class: "tbtns" },
-        h("button", { type: "button", class: "tbtn", onclick: () => openEdit(trip.id) }, "Edit"),
+        trip.legs.length <= 2 ? h("button", { type: "button", class: "tbtn", onclick: () => openEdit(trip.id) }, "Edit") : h("p", { class: "muted small" }, "To update multiple connections, delete this trip and import an updated calendar file."),
         h("button", { type: "button", class: "tbtn danger", onclick: (e) => {
           if (!delArmed) { delArmed = true; e.currentTarget.textContent = "Tap again to delete"; return; }
           S.manual = S.manual.filter((t) => t.id !== trip.id);
@@ -566,6 +598,7 @@ function editView(id) {
   const place = (c) => { const a = byIata(c); return a ? `${a.city}${a.state ? ", " + a.state : ""}` : ""; };
   const ap = (c) => (c ? { iata: c, tz: (ex && ex.tz && ex.tz[c]) || tzFor(c, ex), place: place(c) } : null);
   const legs = ex ? ex.legs : [];
+  if (legs.length > 2) return [head(h("h2", { id: "tripTitle", class: "th2" }, "Edit trip")), h("p", { class: "muted" }, "This imported trip has multiple connections. To replace its schedule, delete it and import an updated calendar file."), h("button", { type: "button", class: "tbtn", onclick: () => openTrip(ex.id) }, "Back to trip")];
   const f = {
     from: ex ? ap(legs[0].from) : null,
     to: ex ? ap(legs[legs.length - 1].to) : null,
@@ -578,8 +611,8 @@ function editView(id) {
   const date = inp("date", ex ? val(dep0, tzOf(f.from), "d") : localDate(Date.now() + 24 * HOUR, Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"), "Date (at departure)");
   const dep = inp("time", ex ? val(dep0, tzOf(f.from), "t") : "", "Departure time (local)");
   const arr = inp("time", ex ? val(Date.parse(legs[legs.length - 1].arr), tzOf(f.to), "t") : "", "Arrival time (local)");
-  const viaArr = inp("time", ex && legs.length > 1 ? val(Date.parse(legs[0].arr), tzOf(f.via), "t") : "", "Lands at the connection (local)");
-  const viaDep = inp("time", ex && legs.length > 1 ? val(Date.parse(legs[1].dep), tzOf(f.via), "t") : "", "Leaves the connection (local)");
+  const viaArr = inp("time", ex && legs.length > 1 ? val(Date.parse(legs[0].arr), tzOf(f.via), "t") : "", "Scheduled connection arrival (local)");
+  const viaDep = inp("time", ex && legs.length > 1 ? val(Date.parse(legs[1].dep), tzOf(f.via), "t") : "", "Scheduled connection departure (local)");
   const viaTimes = h("div", { class: "two tvia" }, viaArr, viaDep);
   viaTimes.hidden = !f.via;
   const err = h("div", { class: "terr", role: "alert" });
@@ -593,7 +626,7 @@ function editView(id) {
     if (!Number.isFinite(d0)) { err.textContent = "That date or time isn't valid."; return; }
     let newLegs;
     if (f.via) {
-      if (!v(viaArr) || !v(viaDep)) { err.textContent = "Add when you land at and leave the connection."; return; }
+      if (!v(viaArr) || !v(viaDep)) { err.textContent = "Add the scheduled arrival and departure at the connection."; return; }
       const a1 = nextAt(d0, v(viaArr), f.via.tz);
       const d1 = nextAt(a1, v(viaDep), f.via.tz);
       const a2 = nextAt(d1, v(arr), f.to.tz);
@@ -605,8 +638,9 @@ function editView(id) {
       legs: newLegs.map((l) => ({ from: l.from, to: l.to, dep: new Date(l.dep).toISOString(), arr: new Date(l.arr).toISOString() })),
       tz: Object.fromEntries([f.from, f.via, f.to].filter(Boolean).map((x) => [x.iata, x.tz])),
     };
+    const before = S.manual;
     S.manual = ex ? S.manual.map((t) => (t.id === ex.id ? trip : t)) : [...S.manual, trip];
-    saveManual();
+    if (!saveManual()) { S.manual = before; err.textContent = "Device storage is unavailable. The trip was not saved."; return; }
     render();
     openTrip(trip.id);
   };
@@ -635,12 +669,61 @@ function editView(id) {
   ];
 }
 
+// ---------- one-time calendar import ----------
+function importView() {
+  const d = S.importDraft;
+  const input = h("input", { type: "file", class: "tin", accept: ".ics,text/calendar", "aria-label": "Calendar file", onchange: async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const seq = ++S.importSeq;
+    S.importDraft = null; S.importError = ""; S.importBusy = true;
+    drawView(true);
+    try {
+      if (file.size > MAX_CALENDAR_BYTES) throw new Error("Choose a calendar file under 1 MB.");
+      const [text, airports] = await Promise.all([file.text(), loadAirports().catch(() => { throw new Error("Airport directory unavailable. Check your connection and try again."); })]);
+      const draft = calendarDraft(text, { airports, existing: [...S.manual, ...((S.cal && S.cal.trips) || [])], now: nowMs() });
+      if (S.view?.kind !== "import" || seq !== S.importSeq) return;
+      S.importDraft = draft;
+      if (!draft.trips.length) S.importError = draft.skipped ? "These matching flights are already saved. Nothing new to import." : "No recognizable timed flights in the next 7 days or recent 24 hours. The file needs departure and arrival airports and times.";
+    } catch (err) {
+      if (S.view?.kind !== "import" || seq !== S.importSeq) return;
+      S.importError = (err.message.startsWith("Choose ") || err.message.startsWith("Airport directory unavailable.")) ? err.message : "Couldn't read this calendar. Check the file and try again.";
+    }
+    if (S.view?.kind === "import" && seq === S.importSeq) { S.importBusy = false; drawView(true); }
+  } });
+  const save = () => {
+    if (!d?.trips.length) return;
+    // Recheck matches in case another tab added a flight while this preview was open.
+    const known = new Set([...loadManual(), ...((S.cal && S.cal.trips) || [])].flatMap(t => t.legs.map(flightKey)));
+    const added = d.trips.filter(t => !t.legs.some(l => known.has(flightKey(l))));
+    const before = S.manual;
+    S.manual = [...loadManual(), ...added];
+    if (!saveManual()) { S.manual = before; S.importError = "Device storage is unavailable. The trips were not saved."; drawView(true); return; }
+    closeTrip();
+    if (window.AWXNav) AWXNav.go("trips");
+    render();
+    setTimeout(() => { if (!S.view && window.AWXNav?.tab() === "trips" && (document.activeElement === document.body || document.activeElement.id === "tab-trips")) document.querySelector("#navTrips .tnext")?.focus({ preventScroll: true }); }, 320);
+  };
+  return [
+    head(h("h2", { id: "tripTitle", class: "th2" }, "Import calendar")),
+    h("p", { class: "muted" }, "Choose an exported .ics file. It is read on this device only; the file and calendar link are never uploaded."),
+    h("div", { class: "box" }, h("label", { class: "tfield" }, h("div", { class: "tlabel" }, "Calendar file"), input),
+      h("p", { class: "muted small" }, "Flights in the next 7 days and trips scheduled to arrive within the past 24 hours. This is a snapshot: import again or edit times when plans change.")),
+    S.importBusy ? h("p", { role: "status", class: "muted", tabindex: "-1" }, "Reading calendar…") : null,
+    S.importError ? h("p", { role: "alert", class: "terr", tabindex: "-1" }, S.importError) : null,
+    d?.trips.length ? sec("Preview", d.trips.slice(0, 5).map(t => h("div", { class: "item" }, routeEl(t), h("div", { class: "muted small" }, dateLine(Date.parse(t.legs[0].dep), t.tz[t.legs[0].from])))),
+      d.trips.length > 5 ? h("p", { class: "muted small" }, `And ${d.trips.length - 5} more trips`) : null,
+      h("p", { class: "muted small" }, `${d.flights} flight${d.flights === 1 ? "" : "s"} ready${d.skipped ? ` · ${d.skipped} matching flights skipped` : ""}. Only airports, scheduled times and airport time zones are saved; no names, flight numbers or booking details.`),
+      h("button", { type: "button", class: "tbtn primary", onclick: save }, `Save ${d.trips.length} trip${d.trips.length === 1 ? "" : "s"}`)) : null,
+  ];
+}
+
 // ---------- settings ----------
 
 /** Flight calendar status: {connected, ok, warn, text} ("Connected · 3 upcoming flights" / "Not connected"). */
 function calStatus() {
   const c = S.cal;
-  if (S.calFailed && !c) return { connected: false, ok: false, warn: true, text: "Couldn't check — trip data didn't load" };
+  if (S.calFailed) return { connected: !!c?.configured, ok: false, warn: true, text: "Couldn't check — saved repository calendar times may be out of date" };
   if (!c || !c.configured) return { connected: false, ok: false, text: "Not connected" };
   if (c.ok === false) return { connected: true, ok: false, warn: true, text: "Connected · couldn't read it on the last update" + (c.error ? ` (${c.error})` : "") };
   const now = nowMs();
@@ -654,25 +737,16 @@ function settingsView() {
   const man = S.manual.map((t) => ({ ...t, source: "manual" })).sort((a, b) => Date.parse(a.legs[0].dep) - Date.parse(b.legs[0].dep));
   return [
     head(h("h2", { id: "tripTitle", class: "th2" }, "Trips")),
-    sec("Flight calendar",
-      h("div", { class: "box" },
-        h("div", { class: "tcal" + (st.ok ? " ok" : st.warn ? " warn" : "") }, st.text),
-        g && S.cal.configured ? h("div", { class: "muted small" }, "Checked " + ago(Math.max(0, nowMs() - g))) : null),
-      h("details", { class: "thelp", open: !st.ok || null },
-        h("summary", {}, "How to connect your flight calendar"),
-        h("ol", {},
-          h("li", {}, "If you use Flighty, turn on its calendar sync to a dedicated calendar."),
-          h("li", {}, "In the Calendar app, share that calendar as a public calendar."),
-          h("li", {}, "Copy the link."),
-          h("li", {}, "Add it as the FLIGHTY_ICS_URL secret on GitHub (repository Settings → Secrets and variables → Actions).")),
-        h("p", { class: "muted small" }, "Only airports and flight times are published with this site. Flight numbers, names, confirmation codes, seats and notes are never shown or stored here."))),
+    sec("Add your flights", h("div", { class: "muted small" }, "Save flights on this device, or import a calendar snapshot."),
+      h("div", { class: "tbtns" }, h("button", { type: "button", class: "tbtn primary", onclick: () => openEdit(null) }, "Add a trip"), h("button", { type: "button", class: "tbtn", onclick: openImport }, "Import calendar file"))),
+    st.connected || st.warn ? sec("Repository calendar", h("div", { class: "tcal" + (st.warn ? " warn" : "") }, st.text), g ? h("div", { class: "muted small" }, "Checked " + ago(Math.max(0, nowMs() - g))) : null) : null,
     sec("Added on this device",
       man.length ? man.map((t) => h("div", { class: "item tman" },
         h("div", {}, h("b", {}, t.legs.map((l) => l.from).concat(t.legs[t.legs.length - 1].to).join(" → ")),
           h("div", { class: "muted small" }, dateLine(Date.parse(t.legs[0].dep), tzFor(t.legs[0].from, t)))),
         h("div", { class: "tbtns" },
           h("button", { type: "button", class: "tbtn", onclick: () => openTrip(t.id) }, "Open"),
-          h("button", { type: "button", class: "tbtn", onclick: () => openEdit(t.id) }, "Edit"))))
+          t.legs.length <= 2 ? h("button", { type: "button", class: "tbtn", onclick: () => openEdit(t.id) }, "Edit") : null)))
         : h("div", { class: "muted", style: "font-size:14px" }, "No trips added on this device."),
       h("div", { class: "tbtns", style: "margin-top:12px" }, h("button", { type: "button", class: "tbtn primary", onclick: () => openEdit(null) }, "Add a trip"))),
   ];
@@ -686,13 +760,13 @@ const CSS = `
 .trips-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 4px 8px}
 .trips-h h2{margin:0;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .trips-b{display:flex;align-items:center;gap:6px}
-.tadd{white-space:nowrap;flex:none;min-height:36px;padding:0 14px;border-radius:999px;background:var(--card);font-size:14px;font-weight:600;color:var(--l1)}
-.tgear{width:36px;height:36px;border-radius:50%;background:var(--card);display:grid;place-items:center;color:var(--muted)}
+.tadd{white-space:nowrap;flex:none;min-height:44px;padding:0 14px;border-radius:999px;background:var(--card);font-size:14px;font-weight:600;color:var(--brand)}
+.tgear{width:44px;height:44px;border-radius:50%;background:var(--card);display:grid;place-items:center;color:var(--muted)}
 .tgear svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8}
 .tlist{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
 .troute{display:flex;align-items:baseline;flex-wrap:wrap;column-gap:6px;row-gap:2px}
 .troute .tc{font-size:40px;line-height:.95;font-weight:800;letter-spacing:-.035em}
-.troute.big{flex-wrap:nowrap}
+.troute.big{flex-wrap:wrap}
 .troute.big .tc{font-size:44px}
 .tcard .reason{font-size:15px}
 .troute .ta{font-size:22px;font-weight:600;color:var(--muted)}
@@ -725,7 +799,7 @@ const CSS = `
 .tapt b{font-size:20px;font-weight:800;letter-spacing:-.02em}
 .tbtns{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .tbtn{min-height:44px;padding:0 16px;border-radius:12px;background:var(--card-2);font-weight:600;font-size:15px}
-.tbtn.primary{background:var(--l1);color:#000}
+.tbtn.primary{background:var(--accent-btn,var(--brand));color:var(--brand-ink,#000)}
 .tbtn.danger{color:var(--crit)}
 .tflight{display:grid;gap:8px;margin:0 0 14px}
 .tfrow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--card-2);border-radius:16px;padding:10px 12px;min-height:44px}
@@ -761,6 +835,9 @@ const CSS = `
 .tman .tbtns{margin-top:0;flex:none}
 .tfoot{color:var(--muted);font-size:13px;text-decoration:underline;padding:0}
 .ttab-h{margin-top:4px}
+.tnext-label{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+.tnext-action{font-size:15px;font-weight:700;color:var(--brand);margin-top:16px;min-height:28px}
+.timport-note{font-size:13px;margin-top:14px!important}
 .tcal-line{font-size:13px;color:var(--muted);min-width:0}
 .tcal-line.warn{color:var(--l2);font-weight:600}
 .ttab-empty .tempty{width:38px;height:38px;fill:currentColor}
@@ -779,7 +856,7 @@ function init() {
   window.AWXTrips = {
     render, decorateSheet, liveIds, openTrip, openEdit, openSettings: openTripSettings,
     // site/settings.js (Settings → Trips & flight calendar) and site/nav.js (Trips tab)
-    openAdd: () => openEdit(null),
+    openAdd: () => openEdit(null), openImport,
     calStatus,
     ready: () => (S.loading || (S.calAt ? Promise.resolve() : loadCal(true))),
     list: () => S.manual.map((t) => ({ id: t.id, from: t.legs[0].from, to: t.legs[t.legs.length - 1].to, dep: t.legs[0].dep, name: t.legs.length > 1 ? "via " + t.legs.slice(1).map((l) => l.from).join(", ") : "" })),

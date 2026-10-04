@@ -771,11 +771,11 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
     </button>
   </header>
   <div id="search"></div><!-- build2a hook: search (site/searched.js) -->
+  <section id="trips" aria-label="Your trips"></section><!-- trips hook: "Your trips" (site/trips.js) -->
   <section id="brief" aria-label="Today's brief" hidden></section><!-- brief hook: morning brief (site/brief.js) -->
   <div class="seg" id="seg" role="tablist" aria-label="Filter airports"></div>
   <div id="banner"></div>
   <div class="national" id="national" hidden></div><!-- build2b: national summary strip -->
-  <section id="trips" aria-label="Your trips"></section><!-- trips hook: "Your trips" (site/trips.js) -->
   <div class="list" id="extra"></div><!-- build2a hook: searched / starred non-major airports -->
   <main class="list" id="list" role="tabpanel"></main>
   <div class="notes" id="notes"></div>
@@ -798,11 +798,11 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="cats.js?v=2"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=3"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=1"></script><!-- notams hook: the airport sheet's "Notices" card -->
-<script src="app.js?v=37" defer></script>
+<script src="app.js?v=38" defer></script>
 <script type="module" src="searched.js?v=6"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=8"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
-<script type="module" src="trips.js?v=11"></script><!-- trips hook -->
-<script type="module" src="nav.js?v=11"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
+<script type="module" src="trips.js?v=12"></script><!-- trips hook -->
+<script type="module" src="nav.js?v=12"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
 <script type="module" src="movement.js?v=4"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
 <script type="module" src="brief.js?v=5"></script><!-- brief hook: morning brief + airport "Today" card -->
 <script type="module" src="terminals.js?v=3"></script><!-- terminals hook: terminal map + lounges cards in the airport sheet -->
