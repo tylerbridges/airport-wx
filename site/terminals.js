@@ -1,4 +1,4 @@
-// Terminal map and lounges (terminals hook) in the airport sheet. Loaded by index.html as a module; app.js calls
+// Terminal map and lounges (terminals hook) opened from the airport details menu. Loaded by index.html as a module; app.js calls
 // AWXTerminals.decorateSheet(sheet, a) at the end of renderSheet(), and check.js imports checkRow().
 //
 //   - "Terminal map": a small north-up SVG of the terminal outlines (data/terminals/<IATA>.json, built monthly
@@ -250,23 +250,31 @@ function loungeCard(a, list) {
     !allCheck && loungeFootnote(list) ? h("div", { class: "ln-foot" }, loungeFootnote(list)) : null], "Curated", "ln-sec");
 }
 
-function place(sheet, sec) {
-  // above the "More details ›" row (app.js), else above the hidden-categories note / checked line
-  const anchor = sheet.querySelector(":scope > .md-row") || sheet.querySelector(":scope > .hidnote") || sheet.querySelector(":scope > .checked");
-  if (anchor) anchor.before(sec); else sheet.append(sec);
-}
-
-/** Adds the two cards to the airport sheet (app.js renderSheet → terminals hook). Synchronous when data is in. */
+/** Navigation only: maps and lounge lists stay behind the Airport details menu. */
 function decorateSheet(sheet, a) {
   if (!sheet || !a) return;
-  sheet.querySelectorAll(":scope > .tm-sec, :scope > .ln-sec").forEach((x) => x.remove());
+  const menu = sheet.querySelector(".ad-menu"), A = W.AWXApp;
+  if (!menu || !A?.detailRow) return;
   if (!S.index || !S.lounges) { loadBase().then(() => redecorate(a.iata)); return; }
-  if (hasMap(a.iata)) {
-    if (S.files.has(a.iata)) { const t = S.files.get(a.iata); const c = t && mapCard(a, t); if (c) place(sheet, c); }
-    else loadFile(a.iata).then(() => redecorate(a.iata));
+  const anchor = menu.querySelector('[data-detail="technical"]');
+  if (hasMap(a.iata) && !menu.querySelector('[data-detail="terminal"]')) {
+    const row = A.detailRow("Terminal map", "Find a gate or concourse", "terminal", async () => {
+      const t = S.files.get(a.iata) || await loadFile(a.iata);
+      // An airport change while loading must not open the previous airport's map.
+      if (A.state.openIata !== a.iata || !document.querySelector('#sheet [data-detail="terminal"]') || document.getElementById("sheet").inert) return;
+      if (!row.isConnected) document.querySelector('#sheet [data-detail="terminal"]').focus({ preventScroll: true });
+      if (t) openViewer(a, t);
+      else A.openDetails(a.iata, "terminal");
+    });
+    anchor.before(row);
   }
   const L = S.lounges.airports && S.lounges.airports[a.iata];
-  if (L && L.lounges && L.lounges.length) place(sheet, loungeCard(a, L.lounges));
+  if (L && L.lounges?.length && !menu.querySelector('[data-detail="lounges"]')) anchor.before(A.detailRow("Lounges", "Locations and access rules", "lounges", () => A.openDetails(a.iata, "lounges")));
+  A.refreshDetails?.();
+}
+function detail(a, key) {
+  const L = S.lounges?.airports?.[a.iata];
+  return key === "lounges" && L?.lounges?.length ? loungeCard(a, L.lounges) : null;
 }
 function redecorate(iata) {
   const A = W.AWXApp;
@@ -284,6 +292,7 @@ function viewerWrap() {
     h("div", { class: "backdrop", onclick: () => closeViewer() }),
     h("div", { class: "sheet tm-sheet", id: "tmSheet", role: "dialog", "aria-modal": "true", "aria-labelledby": "tmTitle" }));
   document.body.append(w);
+  w.querySelector(".sheet").addEventListener("keydown", (ev) => W.AWXApp?.popupFocus(w.querySelector(".sheet"), ev));
   const ctl = W.AWXSheet ? W.AWXSheet.makeSheet(w.querySelector(".sheet"), { onClose: () => closeViewer(), header: ".grab, .tm-head", backdrop: w.querySelector(".backdrop"), noPull: ".tm-stage, input" }) : null;
   S.viewer = { w, ctl, open: false, last: null };
   return S.viewer;
@@ -292,6 +301,7 @@ function viewerWrap() {
 function openViewer(a, t) {
   const V = viewerWrap();
   V.last = document.activeElement;
+  V.lastDetail = V.last && V.last.dataset.detail;
   const sheet = V.w.querySelector(".sheet");
   const L = S.lounges && S.lounges.airports && S.lounges.airports[a.iata];
   const link = L && L.map && L.map.url ? h("a", { class: "tm-link", href: L.map.url, target: "_blank", rel: "noopener" }, L.map.kind === "map" ? "Open the airport's official map" : "Open the airport's website for its maps", " ↗") : null;
@@ -313,11 +323,15 @@ function openViewer(a, t) {
   stage.append(z);
 
   V.w.hidden = false;
+  document.getElementById("sheet").inert = true;
   document.documentElement.classList.add("lock");
   if (V.ctl) V.ctl.opened();
   void V.w.offsetHeight;
   V.w.classList.add("open");
   V.open = true;
+  V.esc = (ev) => { if (ev.key === "Escape" && V.open) { ev.preventDefault(); ev.stopImmediatePropagation(); closeViewer(); } };
+  window.addEventListener("keydown", V.esc, true);
+  sheet.querySelector(".close").focus({ preventScroll: true });
 
   // map state: viewBox [x, y, w, h] in metres (y = -north)
   const e = extent(t, 0.06);
@@ -466,6 +480,8 @@ function closeViewer() {
   const V = S.viewer;
   if (!V || !V.open) return;
   V.open = false;
+  document.getElementById("sheet").inert = false;
+  window.removeEventListener("keydown", V.esc, true);
   V.w.classList.remove("open");
   const A = W.AWXApp;
   if (!(A && A.state && A.state.openIata)) document.documentElement.classList.remove("lock");
@@ -474,7 +490,8 @@ function closeViewer() {
   const reduced = W.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   const done = () => { if (!V.open) V.w.hidden = true; };
   if (reduced) done(); else setTimeout(done, 300);
-  if (V.last && V.last.focus) V.last.focus({ preventScroll: true });
+  const focus = V.last && V.last.isConnected ? V.last : V.lastDetail ? document.querySelector('#sheet [data-detail="' + V.lastDetail + '"]') : null;
+  if (focus) focus.focus({ preventScroll: true });
 }
 function closeIcon() {
   const svg = s("svg", { viewBox: "0 0 24 24", width: "18", height: "18", "aria-hidden": "true", fill: "none", stroke: "currentColor", "stroke-width": "2.2", "stroke-linecap": "round" });
@@ -570,7 +587,7 @@ const STYLE = `
 .tm-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--brand); font-weight: 600; font-size: 14.5px; text-decoration: none; }
 `;
 
-const api = { decorateSheet, checkRow, loungeProblems, staleLounges, findGate, gateInfo, _state: () => S, _open: (iata) => { const t = S.files.get(iata); const A = W.AWXApp; const a = A && A.state.data && A.state.data.airports.find((x) => x.iata === iata); if (t && a) openViewer(a, t); return !!(t && a); }, _find: (q) => S.viewer && S.viewer.find && S.viewer.find(q) };
+const api = { decorateSheet, detail, checkRow, loungeProblems, staleLounges, findGate, gateInfo, _state: () => S, _open: (iata) => { const t = S.files.get(iata); const A = W.AWXApp; const a = A && A.state.data && A.state.data.airports.find((x) => x.iata === iata); if (t && a) openViewer(a, t); return !!(t && a); }, _find: (q) => S.viewer && S.viewer.find && S.viewer.find(q) };
 // Only the main page draws (check.html imports this module for checkRow).
 if (typeof document !== "undefined" && document.getElementById("list")) {
   if (!document.getElementById("awx-tm-css")) document.head.append(h("style", { id: "awx-tm-css" }, STYLE));

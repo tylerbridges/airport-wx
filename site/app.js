@@ -1927,6 +1927,7 @@
     const sheet = $("sheet");
     if (!a) { closeSheet(); return; }
     const top = sheet.scrollTop;
+    const focusedDetail = keepScroll && sheet.contains(document.activeElement) ? document.activeElement.dataset.detail : null;
     const v = view(a);
     const tz = dispTz(a);
     const fav = state.favs.includes(a.iata);
@@ -2023,11 +2024,15 @@
     const notices = [...[...(v.atcscc || [])].filter((x) => aviation() || !x.cnx && (x.active || Date.parse(x.start) > refNow())).sort((x, y) => (y.active ? 1 : 0) - (x.active ? 1 : 0)).map((x) => advItem(x, a)),
       ...planItems(aviation() ? v : { ...v, opsplan: v.opsplan ? { ...v.opsplan, items: (v.opsplan.items || []).filter((x) => x.level > 0 && !x.dup) } : null }, a)];
     add(notices.length, () => section("FAA traffic notices", "tower", notices, { key: "atcscc" }));
-    const nts = window.AWXNotices ? safeCall(() => AWXNotices.section(v, a, { h, section, aviation: aviation(), retime: (t) => retime(t, a), hidden: isHidden, now: refNow(), sources: state.data.noticeSources || {} })) : null; // notams hook: "Notices" (site/notices.js)
+    const noticeContext = { h, section, aviation: aviation(), retime: (t) => retime(t, a), hidden: isHidden, now: refNow(), sources: state.data.noticeSources || {} };
+    const informationalNotices = window.AWXNotices ? AWXNotices.visible(v.notices, noticeContext).some((x) => x.peak === 0 && x.cat !== "always") : false;
+    const primaryNotices = v.notices ? { ...v.notices, items: (v.notices.items || []).filter((x) => x.peak !== 0 || x.cat === "always") } : null;
+    if (primaryNotices) primaryNotices.count = primaryNotices.items.length + Math.max(0, (v.notices.count || 0) - (v.notices.items || []).length);
+    const nts = window.AWXNotices ? safeCall(() => AWXNotices.section({ ...v, notices: primaryNotices }, a, noticeContext)) : null; // notams hook: material notices stay visible
     const ntsDown = noticesDown() ? h("p", { class: "ntc-down muted" }, NOTICES_DOWN) : null; // never silently missing
     if (nts) { secs.push(nts); if (ntsDown) nts.querySelector(".scard").append(ntsDown); }
     else if (ntsDown) secs.push(ntsDown);
-    add(a.metar, () => currentWeather(a));
+
     add(v.alerts && v.alerts.length, () => section("Weather warnings", "alert", v.alerts.map((x) => h("div", { class: "item" }, h("b", {}, x.event),
       x.ends ? h("span", { class: "muted" }, " · until " + dayClock(Date.parse(x.ends), tz)) : null,
       x.headline ? h("div", { class: "muted", style: "font-size:13px;margin-top:2px" }, retime(x.headline, a)) : null,
@@ -2045,19 +2050,13 @@
       x.valid ? h("span", { class: "muted" }, " · around " + whenLabel(Date.parse(x.valid), tz)) : null,
       x.confidence ? h("div", { class: "muted small" }, "Forecaster confidence " + String(x.confidence).toLowerCase()) : null)),
       aviation() ? h("div", { class: "chips" }, confChip("NWS", "medium")) : null));
-    add(storms.length, () => section("Storms", "bolt", storms, null, { meta: [v.sigmets && v.sigmets.length && "NWS", v.spc && "SPC", v.tcf && v.tcf.length && "NWS"].filter(Boolean).filter((x, i, arr) => arr.indexOf(x) === i).join(" · "),
-      raw: null }));
+    const stormCard = storms.length ? section("Storms", "bolt", storms, null, { meta: [v.sigmets && v.sigmets.length && "NWS", v.spc && "SPC", v.tcf && v.tcf.length && "NWS"].filter(Boolean).filter((x, i, arr) => arr.indexOf(x) === i).join(" · "),
+      raw: null }) : null;
+    if (stormCard && v.sigmets && v.sigmets.length) secs.push(stormCard);
     const stormSrc = storms.length ? srcLine(v.sigmets && v.sigmets.length ? "sigmet" : v.spc ? "spc" : "tcf", (v.sigmets || []).map((x) => x.raw)) : null; // null in Traveler mode
-    if (stormSrc) secs[secs.length - 1].querySelector(".scard").append(stormSrc);
+    if (stormSrc && stormCard) stormCard.querySelector(".scard").append(stormSrc);
     // movement hook: "Traffic right now" (site/movement.js), its card body inside a build2b section card
     const mv = window.AWXMovement && typeof AWXMovement.card === "function" ? safeCall(() => AWXMovement.card(a)) : null;
-    if (mv) {
-      const box = mv.nodeType ? mv.querySelector(".mv-card") : null;
-      if (box) box.classList.remove("card");
-      secs.push(section("Traffic right now", "plane", [box || (mv.nodeType ? mv : String(mv))], null, { meta: "ADS-B" }));
-    }
-    const pd = pilotDetails(a);
-    if (pd) secs.push(pd);
     // Show a meaningful delay outlook directly below the timeline.
     const dl = window.AWXDelay && typeof AWXDelay.delayBlock === "function" ? safeCall(() => AWXDelay.delayBlock(a, null)) : null; // phase3 hook
     const hiddenNote = v.hiddenCats && v.hiddenCats.size
@@ -2087,9 +2086,13 @@
         tlHolder),
       dlShown ? section("Delay outlook", "clock", [dl.nodeType ? dl : String(dl)], null, { cls: "dlcard" }) : null, // phase3 hook
       travelOutlook(a),
-      window.AWXRadarCard ? safeCall(() => window.AWXRadarCard.section(a, section)) : null, // radar hook: radar loop card (site/radar/card.js)
       ...secs,
-      h("button", { type: "button", class: "md-row", "aria-haspopup": "dialog", onclick: () => openDetails(a.iata) }, "More details", h("span", { class: "chev", "aria-hidden": "true" }, "›")),
+      section("Airport details", "plane", [h("div", { class: "ad-menu" },
+        detailRow("Weather", "Current conditions and storm outlook", "weather", () => openDetails(a.iata, "weather")),
+        window.AWXRadarCard && AWXRadarCard.covered(a) ? detailRow("Radar", "Live rain and snow", "radar", () => AWXRadarCard.open(a)) : null,
+        informationalNotices ? detailRow("Airport notices", "Runway and nearby airspace information", "notices", () => openDetails(a.iata, "notices")) : null,
+        mv ? detailRow("Traffic right now", "Aircraft movements and coverage", "traffic", () => openDetails(a.iata, "traffic")) : null,
+        detailRow("More details", "Outlook, sources and aviation reports", "technical", () => openDetails(a.iata)))], null, { cls: "ad-card" }),
       hiddenNote,
       checkedLine(),
     ].filter(Boolean));
@@ -2097,6 +2100,7 @@
     if (window.AWXBrief) safeCall(() => window.AWXBrief.decorateSheet(sheet, a)); // brief hook: "Today" card (site/brief.js)
     if (window.AWXTerminals) safeCall(() => window.AWXTerminals.decorateSheet(sheet, a)); // terminals hook: "Terminal map" + "Lounges" cards (site/terminals.js)
     sheet.scrollTop = keepScroll ? top : 0; // a newly opened sheet starts at the top; live refreshes keep the place
+    if (focusedDetail) sheet.querySelector('[data-detail="' + focusedDetail + '"]')?.focus({ preventScroll: true });
     requestAnimationFrame(placeLenses);
     fillCrosswind(a);
   }
@@ -2120,23 +2124,39 @@
 
   // ---------- More details page (a full-height sheet over the airport sheet; site/sheet.js makeSheet) ----------
 
-  const md = { iata: null, wrap: null, ctl: noSheet, last: null };
+  function detailRow(title, subtitle, key, action) {
+    return h("button", { type: "button", class: "md-row ad-row", "data-detail": key, "aria-haspopup": "dialog", onclick: action },
+      h("span", {}, h("span", { class: "ad-title" }, title), subtitle ? h("span", { class: "ad-sub" }, subtitle) : null),
+      h("span", { class: "chev", "aria-hidden": "true" }, "›"));
+  }
+  function popupFocus(el, ev) {
+    if (ev.key !== "Tab") return;
+    const controls = [...el.querySelectorAll('button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]')].filter((x) => x.getClientRects().length && !x.hidden);
+    const first = controls[0], last = controls[controls.length - 1];
+    if (ev.shiftKey && document.activeElement === first) { ev.preventDefault(); last?.focus(); }
+    else if (!ev.shiftKey && document.activeElement === last) { ev.preventDefault(); first?.focus(); }
+  }
+  const md = { iata: null, page: "technical", wrap: null, ctl: noSheet, last: null };
   function mdWrap() {
     if (md.wrap) return md.wrap;
     md.wrap = h("div", { class: "sheet-wrap md-wrap", id: "mdWrap", hidden: true },
       h("div", { class: "backdrop", onclick: () => closeDetails() }),
       h("div", { class: "sheet md-sheet", id: "mdSheet", role: "dialog", "aria-modal": "true", "aria-labelledby": "mdTitle" }));
     document.body.append(md.wrap);
+    md.wrap.querySelector(".sheet").addEventListener("keydown", (ev) => popupFocus(md.wrap.querySelector(".sheet"), ev));
     if (window.AWXSheet) md.ctl = AWXSheet.makeSheet(md.wrap.querySelector(".sheet"), { onClose: () => closeDetails(), header: ".grab, .sh-head", backdrop: md.wrap.querySelector(".backdrop"), noPull: ".lamp" });
     return md.wrap;
   }
-  function openDetails(iata) {
+  function openDetails(iata, page = "technical") {
     const w = mdWrap();
     md.iata = iata;
+    md.page = page;
     md.last = document.activeElement;
+    md.lastDetail = md.last && md.last.dataset.detail;
     renderDetails(false);
     if (!md.iata) return;
     w.hidden = false;
+    $("sheet").inert = true;
     document.documentElement.classList.add("lock");
     md.ctl.opened();
     void w.offsetHeight;
@@ -2147,6 +2167,7 @@
   function closeDetails() {
     if (!md.iata) return;
     md.iata = null;
+    $("sheet").inert = false;
     const w = md.wrap;
     const sh = w.querySelector(".sheet");
     w.classList.remove("open");
@@ -2156,7 +2177,8 @@
     md.ctl.closed();
     const done = () => { if (!md.iata) w.hidden = true; };
     if (reduced()) done(); else setTimeout(done, 300);
-    if (md.last && md.last.focus && md.last.isConnected) md.last.focus({ preventScroll: true });
+    const focus = md.last && md.last.isConnected ? md.last : md.lastDetail ? $("sheet").querySelector('[data-detail="' + md.lastDetail + '"]') : null;
+    if (focus) focus.focus({ preventScroll: true });
   }
   const mdSrc = (text) => h("div", { class: "md-src" }, text);
   const srcAge = (key) => {
@@ -2245,6 +2267,9 @@
     if (!a) { if (md.iata) closeDetails(); return; }
     const sheet = mdWrap().querySelector(".sheet");
     const top = sheet.scrollTop;
+    const focusedLabel = keepScroll && sheet.contains(document.activeElement) ? document.activeElement.getAttribute("aria-label") : null;
+    const controlSelector = 'button, a[href], input, select, textarea, [tabindex="0"]';
+    const focusedControl = keepScroll ? [...sheet.querySelectorAll(controlSelector)].indexOf(document.activeElement) : -1;
     const v = view(a);
     const code = codeOf(a);
     const mark = (sec, key) => { if (sec) sec.dataset.md = key; return sec; };
@@ -2253,21 +2278,46 @@
     const hiddenNote = v.hiddenCats && v.hiddenCats.size
       ? h("p", { class: "hidnote" }, "Hidden by your settings: " + [...v.hiddenCats].map((k) => CATS.LABELS[k]).join(", ") + ".")
       : null;
-    sheet.setAttribute("aria-label", code + " more details");
+    const titles = { technical: "More details", weather: "Weather", traffic: "Traffic right now", lounges: "Lounges", today: "Today’s changes", terminal: "Terminal map", notices: "Airport notices" };
+    const title = titles[md.page] || titles.technical;
+    let content;
+    if (md.page === "weather") {
+      // The primary sheet retains warnings; this page carries the full conditions and outlook.
+      const parts = [];
+      if (a.metar) parts.push(currentWeather(a));
+      if (v.spc || v.tcf?.length) parts.push(section("Storm outlook", "bolt", [
+        v.spc ? h("p", { class: "muted" }, v.spc === "TSTM" ? "General thunderstorms possible in the area (no severe risk)" : (SPC_NAMES[v.spc] || "Elevated") + " risk of severe storms today") : null,
+        ...(v.tcf || []).map((x) => h("div", { class: "item" }, "Thunderstorms, " + ({ high: "widespread", medium: "scattered", low: "isolated" }[x.coverage] || "some") + " coverage", x.valid ? h("span", { class: "muted" }, " · around " + whenLabel(Date.parse(x.valid), dispTz(a))) : null))
+      ].filter(Boolean)));
+      content = parts.length ? parts : [h("p", { class: "muted" }, "Weather reports are unavailable right now.")];
+    } else if (md.page === "traffic") {
+      const traffic = window.AWXMovement ? safeCall(() => AWXMovement.card(a)) : null;
+      content = [traffic || h("p", { class: "muted" }, "Aircraft movement data is unavailable right now.")];
+    } else if (md.page === "lounges") content = [window.AWXTerminals?.detail(a, "lounges") || h("p", { class: "muted" }, "Lounge information is unavailable right now.")];
+    else if (md.page === "today") content = [window.AWXBrief?.todaySection(a) || h("p", { class: "muted" }, "No changes recorded today.")];
+    else if (md.page === "terminal") content = [h("p", { class: "muted" }, "The terminal map could not load right now. Try again from Airport details.")];
+    else if (md.page === "notices") content = [window.AWXNotices ? AWXNotices.section(v, a, { h, section, aviation: aviation(), retime: (t) => retime(t, a), hidden: isHidden, now: refNow(), sources: state.data.noticeSources || {} }) : null];
+    else content = [
+      mark(section("Why this outlook", "clock", [why || h("p", { class: "muted", style: "margin:0" }, "Delay numbers aren't available right now.")], null, { cls: "md-why" }), "why"),
+      mark(pd, "pilot"), mark(safeCall(() => planStormCard(a, v)), "plan")];
+    sheet.setAttribute("aria-label", code + " " + title.toLowerCase());
+    sheet.setAttribute("aria-labelledby", "mdTitle mdPageTitle");
     sheet.replaceChildren(...[
       h("div", { class: "grab", "aria-hidden": "true" }),
       h("div", { class: "sh-head" },
         h("div", { class: "sh-code", id: "mdTitle" }, code),
         h("div", { class: "right", style: "gap:6px" },
-          h("button", { type: "button", class: "close", "aria-label": "Close more details", onclick: () => closeDetails() }, closeSvg()))),
-      h("div", { class: "sh-where" }, h("b", { class: "sh-aname" }, a.name), h("span", { class: "muted" }, " · More details")),
-      mark(section("Why this outlook", "clock", [why || h("p", { class: "muted", style: "margin:0" }, "Delay numbers aren't available right now.")], null, { cls: "md-why" }), "why"),
-      mark(pd, "pilot"),
-      mark(safeCall(() => planStormCard(a, v)), "plan"),
+          h("button", { type: "button", class: "ad-back", "aria-label": "Back to airport", onclick: () => closeDetails() }, "‹ Back"),
+          h("button", { type: "button", class: "close", "aria-label": "Close " + title.toLowerCase(), onclick: () => closeDetails() }, closeSvg()))),
+      h("div", { class: "sh-where" }, h("b", { class: "sh-aname" }, a.name), h("span", { class: "muted" }, " · ", h("span", { id: "mdPageTitle" }, title))),
+      ...content,
       hiddenNote,
       checkedLine(),
     ].filter(Boolean));
     sheet.scrollTop = keepScroll ? top : 0;
+    const focus = focusedLabel ? [...sheet.querySelectorAll("[aria-label]")].find((x) => x.getAttribute("aria-label") === focusedLabel) : focusedControl >= 0 ? sheet.querySelectorAll(controlSelector)[focusedControl] : null;
+    focus?.focus({ preventScroll: true });
+    if (md.page === "weather") fillCrosswind(a);
   }
 
   // ---------- Current weather card ----------
@@ -2475,7 +2525,7 @@
   window.AWXApp = {
     state, openSheet, closeSheet, toggleFav, render, // build2a hook: used by site/searched.js
     // build2b: for site/searched.js, the settings UI and check.js
-    openDetails, closeDetails, // More details page (check.js)
+    openDetails, closeDetails, detailRow, popupFocus, refreshDetails: () => { if (md.iata) renderDetails(true); }, // Airport details pages
     prefs: PREFS, codeOf, view, outlook, summary, hourLevel, slotText, refNow, whenLabel, dispTz, zoneAbbr, clock, hourLabel, daySlots, openNational, closePanel, placeLenses,
     timeline: (a) => timeline(a, {}), // a status.json-shaped airport (searched.js builds one from a shard entry)
     version: APP_V,

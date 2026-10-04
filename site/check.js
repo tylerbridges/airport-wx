@@ -6,7 +6,7 @@
 import { loadAirports, rank } from "./search.js";
 import { navChecks } from "./navcheck.js?v=3"; // nav hook
 import { tripChecks } from "./check-trips.js"; // trips hook
-import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js"; // scenarios hook; More details page helpers
+import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=2"; // scenarios hook; More details page helpers
 
 const P = new URLSearchParams(location.search);
 const MOCK = P.get("mock") === "1";
@@ -347,8 +347,10 @@ async function uiChecks(add, scenario) {
       A.openSheet(a.iata);
       await frameSleep(w, 50);
       const fc = [...doc.querySelectorAll("#sheet .boxwrap .fc, #sheet .cw .fc")].map((e) => e.textContent).filter((t) => /^(VFR|MVFR|IFR|LIFR)$/.test(t));
-      const pilotVisible = !!doc.querySelector("#sheet .pilot .pd");
-      add(fc.length && pilotVisible ? "pass" : "fail", "Aviation mode shows flight categories and technical details", `${a.iata}: ${fc.slice(0, 3).join(", ") || "none"}; Pilot details ${pilotVisible ? "visible" : "missing"}`);
+      A.openDetails(a.iata);
+      await frameSleep(w, 50);
+      const pilotVisible = !!doc.querySelector("#mdSheet .pilot .pd");
+      add(fc.length && pilotVisible ? "pass" : "fail", "Aviation mode shows flight categories and opens technical details", `${a.iata}: ${fc.slice(0, 3).join(", ") || "none"}; Pilot details ${pilotVisible ? "available in More details" : "missing"}`);
     });
 
     // Timeline: 12 past + 24 forecast hours, dimmed history, lens on now, stable sheet layout

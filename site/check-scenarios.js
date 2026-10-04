@@ -21,12 +21,13 @@
 // Page assertions:
 //   {t:"card", iata, re}   the airport's card on the All list
 //   {t:"sheet", iata, re}  the airport's sheet (text, including closed "Why?" parts)
+//   {t:"airportDetail", iata, page, re} selected Airport details menu popup (material safety assertions stay "sheet")
 //   {t:"national", re}     the national strip (#natstrip)
 //   {t:"header", re}       the "Updated …" / "Live updates unavailable …" line
 //   {t:"banner", re}       the banner area
 //   {t:"noPercent"}        Traveler mode: no "%" in delay-chance text (cards, every sheet, trips)
 //   {t:"brief", re, favs?} the morning brief, opened as the menu does (AWXBrief.open), with these starred airports (brief hook)
-//   {t:"today", iata, re}  the airport sheet's "Today" card (brief hook)
+//   {t:"today", iata, re}  the airport menu's Today’s changes popup (brief hook)
 //   {t:"details", iata, cards?: ["why","pilot","plan"], re?}  the sheet's "More details ›" row opens the full-height
 //        More details page with those cards (default all three); Traveler text outside Pilot details has no "%"
 //        and no aviation codes; re matches the page text
@@ -42,10 +43,10 @@ export function detailsPlainText(doc) {
   return c.textContent.replace(/\s+/g, " ");
 }
 /** Opens airport iata's sheet, then its "More details ›" row; returns the page element (or null). */
-export async function openDetailsPage(w, doc, iata) {
+export async function openDetailsPage(w, doc, iata, page = "technical") {
   w.AWXApp.openSheet(iata);
   await later(w, 60);
-  const row = doc.querySelector("#sheet .md-row");
+  const row = doc.querySelector('#sheet [data-detail="' + page + '"]');
   if (!row) return null;
   row.click();
   await later(w, 60);
@@ -54,7 +55,7 @@ export async function openDetailsPage(w, doc, iata) {
 }
 
 const DATA = new Set(["words", "badge", "noFaa", "opsplan", "atcscc", "alert", "spc", "sigmet", "model", "movement", "airlineAlert", "tripConcern", "hourLevel", "hourReason", "cascade", "noCascade", "change", "notice", "noticeSource"]); // brief hook: change; notams hook: notice, noticeSource
-const PAGE = new Set(["card", "sheet", "national", "header", "banner", "noPercent", "brief", "today", "details"]); // brief hook: brief, today; details: More details page
+const PAGE = new Set(["card", "sheet", "airportDetail", "national", "header", "banner", "noPercent", "brief", "today", "details"]); // airportDetail: selected secondary menu page
 export const isPageAssert = (x) => PAGE.has(x.t);
 
 async function getJson(url) {
@@ -339,7 +340,9 @@ export async function pageAsserts(add, w, doc, asserts) {
       case "today": { // brief hook
         A.openSheet(x.iata);
         await later(w, 80);
-        const c = doc.querySelector("#sheet .bf-today");
+        doc.querySelector('#sheet [data-detail="today"]')?.click();
+        await later(w, 60);
+        const c = doc.querySelector("#mdSheet .bf-today");
         const t = c ? c.innerText.replace(/\s+/g, " ").trim() : "";
         closeSheet();
         ok = !!c && re(x.re).test(t);
@@ -362,6 +365,15 @@ export async function pageAsserts(add, w, doc, asserts) {
         label = `${x.iata} "More details" opens with ${want.join(", ")}; no % or codes outside Pilot details${x.re ? ` /${x.re}/` : ""}`;
         got = !page ? "no More details row, or the page didn't open" : `cards ${have.join(", ") || "none"}; title "${head}"` +
           (pct ? `; "%" in "${plain.slice(Math.max(0, pct.index - 40), pct.index + 10)}"` : "") + (code ? `; code "${code[0]}" in "${plain.slice(Math.max(0, code.index - 40), code.index + 20)}"` : "");
+        break;
+      }
+      case "airportDetail": {
+        const page = await openDetailsPage(w, doc, x.iata, x.page);
+        const text = page ? page.textContent.replace(/\s+/g, " ") : "";
+        ok = !!page && re(x.re).test(text);
+        label = `${x.iata} ${x.page} popup /${x.re}/`;
+        got = page ? `popup says "${text.slice(0, 300)}"` : "menu row or popup missing";
+        A.closeDetails(); closeSheet();
         break;
       }
       case "noPercent": {

@@ -382,8 +382,15 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 .md-row { width: 100%; margin-top: 14px; min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 14px; border-radius: 16px; background: var(--card-2); border: 1px solid var(--line); color: var(--text); font-size: 15px; font-weight: 600; text-align: left; }
 .md-row .chev { color: var(--muted); font-size: 20px; line-height: 1; }
 .md-row:focus-visible { outline: 2px solid var(--l1); outline-offset: 2px; }
+.ad-card { padding: 0 14px; }
+.ad-menu .ad-row { margin: 0; padding: 11px 0; min-height: 58px; border: 0; border-radius: 0; background: transparent; }
+.ad-menu .ad-row + .ad-row { border-top: 1px solid var(--line); }
+.ad-title, .ad-sub { display: block; }
+.ad-sub { color: var(--muted); font-size: 12px; font-weight: 400; margin-top: 3px; }
+.ad-back { min-height: 44px; padding: 0 10px; color: var(--brand); font-size: 15px; font-weight: 600; background: transparent; }
 .md-wrap { z-index: 11; }
 .md-sheet.sheet { top: max(env(safe-area-inset-top), 10px); max-height: none; }
+.md-sheet .sh-head { position: sticky; top: -8px; z-index: 5; background: var(--card); padding-top: 8px; padding-bottom: 8px; }
 .md-sub { margin-top: 12px; }
 .md-plan .md-sub:first-child { margin-top: 10px; }
 .md-src { margin: 2px 0 2px; font-size: 12px; line-height: 1.4; color: var(--muted); }
@@ -790,14 +797,14 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="cats.js?v=2"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=2"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=1"></script><!-- notams hook: the airport sheet's "Notices" card -->
-<script src="app.js?v=33" defer></script>
+<script src="app.js?v=34" defer></script>
 <script type="module" src="searched.js?v=5"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=8"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="trips.js?v=8"></script><!-- trips hook -->
 <script type="module" src="nav.js?v=9"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
 <script type="module" src="movement.js?v=4"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
-<script type="module" src="brief.js?v=3"></script><!-- brief hook: morning brief + airport "Today" card -->
-<script type="module" src="terminals.js?v=2"></script><!-- terminals hook: terminal map + lounges cards in the airport sheet -->
-<script type="module" src="radar/card.js?v=2"></script><!-- radar hook: radar loop card in the airport sheet (engine loads on demand) -->
+<script type="module" src="brief.js?v=4"></script><!-- brief hook: morning brief + airport "Today" card -->
+<script type="module" src="terminals.js?v=3"></script><!-- terminals hook: terminal map + lounges cards in the airport sheet -->
+<script type="module" src="radar/card.js?v=3"></script><!-- radar hook: radar loop card in the airport sheet (engine loads on demand) -->
 </body>
 </html>

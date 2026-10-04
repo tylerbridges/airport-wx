@@ -1,4 +1,4 @@
-// Morning brief and the airport sheet's "Today" card (brief hook). Loaded as a module after app.js; talks to it
+// Morning brief and the airport menu's Today’s changes page (brief hook). Loaded as a module after app.js; talks to it
 // through window.AWXApp (state, view, dispTz, clock, codeOf, openSheet, and AWXApp.brief: the helpers app.js
 // exports for this file) and is called back by two marked hooks in app.js: render() -> AWXBrief.render(),
 // renderSheet() -> AWXBrief.decorateSheet(sheet, a).
@@ -333,13 +333,11 @@ function open() {
 
 // ---------- airport sheet: "Today" ----------
 
-function decorateSheet(sheet, a) {
-  if (!sheet || !a) return;
-  sheet.querySelectorAll(".bf-today").forEach((x) => x.remove());
+function todaySection(a) {
   const A = app();
-  if (!A || !A.brief) return;
+  if (!A || !A.brief) return null;
   const list = todayEvents(a);
-  if (!list.length) return;
+  if (!list.length) return null;
   const tz = A.dispTz(a);
   const shown = list.slice(0, TODAY_MAX);
   const more = list.length - shown.length;
@@ -349,9 +347,14 @@ function decorateSheet(sheet, a) {
     h("div", { class: "scard" },
       h("ul", { class: "bf-evs" }, shown.map((e) => h("li", { class: "bf-ev" }, h("span", { class: "bf-t" }, A.clock(Date.parse(e.t), tz)), h("span", { class: "bf-s" }, eventText(e, a))))),
       more > 0 ? h("div", { class: "bf-more" }, `+${more} earlier`) : null));
-  const dl = sheet.querySelector(".scard.dlcard");
-  const anchor = (dl && dl.closest("section")) || sheet.querySelector(".tflight") || sheet.querySelector(".tlsec");
-  if (anchor) anchor.after(sec); else sheet.append(sec);
+  return sec;
+}
+function decorateSheet(sheet, a) {
+  if (!sheet || !a) return;
+  const A = app(), menu = sheet.querySelector(".ad-menu");
+  if (!menu || !A?.detailRow) return;
+  if (!todayEvents(a).length || menu.querySelector('[data-detail="today"]')) return;
+  menu.querySelector('[data-detail="technical"]').before(A.detailRow("Today’s changes", "Recent airport updates", "today", () => A.openDetails(a.iata, "today")));
 }
 
 // ---------- check page ----------
@@ -413,7 +416,7 @@ const CSS = `
 .bf-more { padding-top: 4px; font-size: 13px; color: var(--muted); }
 `;
 
-const api = { render, decorateSheet, open, dismiss, isShown, model: briefModel, todayEvents, reload: () => { S.seen = -1; return load(); }, checkRow, changeProblems, _state: () => ({ data: S.data, failed: S.failed, forced: S.forced, dismissed: readDismissed() }) };
+const api = { render, decorateSheet, todaySection, open, dismiss, isShown, model: briefModel, todayEvents, reload: () => { S.seen = -1; return load(); }, checkRow, changeProblems, _state: () => ({ data: S.data, failed: S.failed, forced: S.forced, dismissed: readDismissed() }) };
 // Only the main page shows the brief (check.html imports this module for checkRow).
 if (typeof document !== "undefined" && document.getElementById("list")) {
   if (!document.getElementById("awx-brief-css")) document.head.append(h("style", { id: "awx-brief-css" }, CSS));
