@@ -1,6 +1,7 @@
 // Trip concern rules (poller/trip-risk.mjs; site/trip-risk.js is a byte-identical copy).
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { createRequire } from "node:module";
 import { readFile } from "node:fs/promises";
 import { tripStatus, windowAt, programOf, reasonLevel, plainReason, flightLine, rolesAt, delayOf, whenText } from "./trip-risk.mjs";
 
@@ -171,4 +172,90 @@ test("site/trip-risk.js is a byte-identical copy of poller/trip-risk.mjs", async
   const a = await readFile(new URL("./trip-risk.mjs", import.meta.url), "utf8");
   const b = await readFile(new URL("../site/trip-risk.js", import.meta.url), "utf8");
   assert.equal(b, a, "run: cp poller/trip-risk.mjs site/trip-risk.js");
+});
+
+const Outlook = createRequire(import.meta.url)("../site/outlook.js");
+const healthySources = Object.fromEntries(["faa", "atcscc", "metar", "taf"].map((k) => [k, { ok: true }]));
+const healthFor = (more = {}) => (a) => Outlook.health(a, { now: NOW, generated: at(0), sources: healthySources, ...more });
+const healthyAirport = (code) => ap(code, "America/Chicago", {}, { metar: { obsTime: at(0) } });
+const quietTrip = { legs: [{ from: "MSP", to: "ATL", dep: at(2), arr: at(4) }] };
+
+test("shared airport health: complete fresh Trips stay green, stale or failed sources do not", () => {
+  const airports = by(healthyAirport("MSP"), healthyAirport("ATL"));
+  assert.equal(tripStatus(quietTrip, airports, { now: NOW, health: healthFor() }).status, "ok");
+  for (const opts of [{ generated: at(-1) }, { generated: "invalid" }, { sample: true }, ...["faa", "atcscc", "metar", "taf"].flatMap((k) => [
+    { sources: { ...healthySources, [k]: { ok: false } } },
+    { sources: { ...healthySources, [k]: { ok: true, error: "Partial fetch failure" } } },
+    { sources: { ...healthySources, [k]: { ok: true, stale: true } } },
+  ])]) {
+    const r = tripStatus(quietTrip, airports, { now: NOW, health: healthFor(opts) });
+    assert.equal(r.status, "unknown", JSON.stringify(opts));
+    assert.equal(r.cls, "off");
+    assert.ok(r.quality);
+    assert.equal(r.legs[0].depAt.level, null);
+    assert.equal(r.sides.dep, null);
+    assert.ok(!/No weather or FAA issues expected/.test(r.top));
+  }
+});
+
+test("shared airport health: observation gaps affect the relevant airport, not every airport", () => {
+  for (const metar of [null, { obsTime: "invalid" }, { obsTime: at(-3) }]) {
+    const r = tripStatus(quietTrip, by(healthyAirport("MSP"), { ...healthyAirport("ATL"), metar }), { now: NOW, health: healthFor() });
+    assert.equal(r.status, "unknown");
+    assert.deepEqual(r.qualifications.map((q) => q.iata), ["ATL"]);
+    assert.equal(r.legs[0].depAt.level, 0);
+    assert.equal(r.legs[0].arrAt.level, null);
+    assert.equal(r.sides.arr, null);
+    assert.equal(r.sides.dep, 0);
+  }
+});
+
+test("shared airport health: known disruption and weather survive stale/source qualifications", () => {
+  const airport = ap("MSP", "America/Chicago", span(0, 4, [4, ["Ground stop — equipment outage, until 8 PM CT", "Rain"]]), {
+    metar: { obsTime: at(0) }, faa: [{ type: "ground_stop", detail: "until 8 PM CT", end: at(4) }],
+  });
+  for (const opts of [{ generated: at(-1) }, { sources: { ...healthySources, taf: { ok: false } } }]) {
+    const r = tripStatus(quietTrip, by(airport, healthyAirport("ATL")), { now: NOW, health: healthFor(opts) });
+    assert.equal(r.status, "disruption");
+    assert.equal(r.level, 4);
+    assert.equal(r.sides.dep, 4);
+    assert.equal(r.legs[0].depAt.level, 4);
+    assert.match(r.top, /ground stop/);
+    assert.ok(r.concerns.some((c) => c.kind === "weather"));
+    assert.ok(r.concerns.some((c) => c.kind === "note" && c.quality));
+  }
+});
+
+test("partial airport and flight-hour coverage never imply an all-clear trip", () => {
+  const missing = tripStatus(quietTrip, by(healthyAirport("MSP")), { now: NOW, health: healthFor() });
+  assert.equal(missing.status, "unknown");
+  assert.deepEqual(missing.missing, ["ATL"]);
+  const edge = { legs: [{ from: "MSP", to: "ATL", dep: at(22), arr: at(24) }] };
+  const r = tripStatus(edge, by(healthyAirport("MSP"), healthyAirport("ATL")), { now: NOW, health: healthFor() });
+  assert.equal(r.status, "unknown", "a neighbouring hour isn't coverage for the scheduled flight hour");
+  assert.equal(r.legs[0].arrAt.level, null);
+  assert.equal(r.sides.arr, null);
+  assert.match(r.top, /no forecast/);
+});
+
+test("optional notice source failures qualify quiet Trips; absent notice source keys do not", () => {
+  const airports = by(healthyAirport("MSP"), healthyAirport("ATL"));
+  assert.equal(tripStatus(quietTrip, airports, { now: NOW, health: healthFor() }).status, "ok");
+  const r = tripStatus(quietTrip, airports, { now: NOW, health: healthFor({ noticesDown: true }) });
+  assert.equal(r.status, "unknown");
+  assert.match(r.concerns[0].text, /notices unavailable/);
+});
+
+test("real source-outage and stale-data scenarios qualify Trips just like the airport sheet", async () => {
+  for (const name of ["source-outage", "stale-data"]) {
+    const d = JSON.parse(await readFile(new URL(`../site/data/scenarios/${name}.json`, import.meta.url), "utf8"));
+    const now = Date.parse(d.generated) + (name === "stale-data" ? 50 * 60000 : 0);
+    const get = by(...d.airports);
+    const trip = { legs: [{ from: "MSP", to: "SEA", dep: now + H, arr: now + 2 * H }] };
+    const health = (a) => Outlook.health(a, { now, generated: d.generated, sources: d.sources });
+    const r = tripStatus(trip, get, { now, health });
+    assert.equal(r.status, "unknown", name);
+    assert.notEqual(r.cls, "l0");
+    assert.equal(r.qualifications[0].quality, Outlook.evaluate(get.MSP, { now, generated: d.generated, sources: d.sources }).quality);
+  }
 });

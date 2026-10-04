@@ -339,6 +339,30 @@ async function uiChecks(add, scenario) {
       add(hits.length ? "fail" : "pass", "Traveler mode shows no aviation codes outside Pilot details (sheets and More details)", hits.slice(0, 4).join("; ") || `home + ${A.state.data.airports.length} sheets and their More details pages`);
     });
 
+    await withPage(url, async (w, doc) => {
+      const A = w.AWXApp, panel = doc.querySelector("#navAirports"), bad = [];
+      const wheel = (el, dy) => {
+        const e = new w.WheelEvent("wheel", { bubbles: true, cancelable: true, deltaY: dy });
+        el.dispatchEvent(e);
+        return e.defaultPrevented;
+      };
+      A.openSheet(A.state.data.airports[0].iata);
+      await frameSleep(w, 50);
+      const sheet = doc.getElementById("sheet");
+      if (!doc.documentElement.classList.contains("awx-sheet-lock") || w.getComputedStyle(panel).overflowY !== "hidden") bad.push("background panel isn't locked");
+      sheet.scrollTop = sheet.scrollHeight;
+      if (!wheel(sheet, 100) || !wheel(panel, 100)) bad.push("bottom/background wheel escaped");
+      sheet.scrollTop = 0;
+      if (sheet.scrollHeight > sheet.clientHeight && wheel(sheet, 100)) bad.push("normal sheet scrolling blocked");
+      A.openDetails(A.state.openIata, "weather");
+      if (!wheel(sheet, 100)) bad.push("parent sheet scrolls behind detail page");
+      A.closeDetails();
+      if (!doc.documentElement.classList.contains("awx-sheet-lock")) bad.push("nested close unlocked the background");
+      A.closeSheet();
+      if (doc.documentElement.classList.contains("awx-sheet-lock") || wheel(panel, 100)) bad.push("background stayed locked after close");
+      add(bad.length ? "fail" : "pass", "Sheets contain bottom-edge scrolling and keep background panels locked through nested pages", bad.join("; ") || "wheel boundary, active sheet, nested close and final unlock checked");
+    });
+
     // Aviation mode shows a flight category
     set({ mode: "aviation" });
     await withPage(url, async (w, doc) => {

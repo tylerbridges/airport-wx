@@ -83,16 +83,22 @@
     while (near(end + 1)) end++;
     return { start: ms(hs[start].t), end: ms(hs[end].t) + HOUR, hour: hs[peak], level: target.level, words: target.meaningful ? target.L : null };
   }
-  function evaluate(a, opts = {}) {
-    const now = opts.now ?? Date.now(), at = opts.at ?? now;
-    const h = (a.hours || []).find((x) => ms(x.t) <= at && at < ms(x.t) + HOUR);
-    const current = at < Math.floor(now / HOUR) * HOUR + HOUR;
+  // One health contract for airport outlooks and Trips; health never discards known disruptions.
+  function health(a, opts = {}) {
+    const now = opts.now ?? Date.now();
     const sources = opts.sources || {};
     const unavailable = ["faa", "atcscc", "metar", "taf"].some((k) => !sources[k]?.ok || sources[k].error || sources[k].stale);
     const outdated = !Number.isFinite(ms(opts.generated)) || now - ms(opts.generated) > 30 * 60000;
     const missingWeather = !a.metar || !Number.isFinite(ms(a.metar.obsTime)) || now - ms(a.metar.obsTime) > 2 * HOUR;
     const incomplete = unavailable || missingWeather || opts.sample;
-    const quality = outdated ? "Data may be outdated" : incomplete ? "Some data unavailable" : opts.hidden ? "Some disruptions hidden by your settings" : "";
+    const quality = outdated ? "Data may be outdated" : incomplete ? "Some data unavailable" : opts.hidden ? "Some disruptions hidden by your settings" : opts.noticesDown ? "Airport notices unavailable" : "";
+    return { outdated, incomplete, quality };
+  }
+  function evaluate(a, opts = {}) {
+    const now = opts.now ?? Date.now(), at = opts.at ?? now;
+    const h = (a.hours || []).find((x) => ms(x.t) <= at && at < ms(x.t) + HOUR);
+    const current = at < Math.floor(now / HOUR) * HOUR + HOUR;
+    const { outdated, incomplete, quality } = health(a, opts);
     const programs = restrictions(a, at, now);
     const s = score(h, opts);
     const first = programs[0];
@@ -174,5 +180,5 @@
     const start = ms(at), end = Number.isFinite(ms(until)) ? ms(until) : start + 1;
     return !!window && start < window.end && end > window.start;
   }
-  return { evaluate, summary, levelAt, score, restrictions, directionRows, windowFor, overlaps, PROG_LEVEL, RAISE };
+  return { health, evaluate, summary, levelAt, score, restrictions, directionRows, windowFor, overlaps, PROG_LEVEL, RAISE };
 });

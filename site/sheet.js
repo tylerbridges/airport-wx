@@ -26,6 +26,27 @@
   var popping = false;
   var reduced = function () { return root.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches; };
 
+  function scrollsWithin(target, boundary, dy) {
+    for (var n = target.nodeType === 1 ? target : target.parentElement; n; n = n.parentElement) {
+      var overflow = root.getComputedStyle(n).overflowY;
+      if (/(auto|scroll)/.test(overflow) && n.scrollHeight > n.clientHeight &&
+          (dy > 0 ? n.scrollTop + n.clientHeight < n.scrollHeight - 1 : n.scrollTop > 0)) return true;
+      if (n === boundary) break;
+    }
+    return false;
+  }
+  function containInput(e) {
+    var top = stack[stack.length - 1];
+    if (!top) return;
+    if (!top.el.contains(e.target)) {
+      if (e.cancelable) e.preventDefault();
+      return;
+    }
+    // Maps and other gesture surfaces own their input, including wheel zoom.
+    if (e.type !== "wheel" || !e.deltaY || (top.opts.noPull && e.target.closest && e.target.closest(top.opts.noPull))) return;
+    if (!scrollsWithin(e.target, top.el, e.deltaY) && e.cancelable) e.preventDefault();
+  }
+
   function lockScroll() {
     if (lock.n++) return;
     var b = document.body;
@@ -36,11 +57,17 @@
     b.style.left = "0";
     b.style.right = "0";
     b.style.width = "100%";
+    document.documentElement.classList.add("awx-sheet-lock");
+    document.addEventListener("touchmove", containInput, { capture: true, passive: false });
+    document.addEventListener("wheel", containInput, { capture: true, passive: false });
   }
   function unlockScroll() {
     if (!lock.n || --lock.n) return;
     var b = document.body;
     if (lock.style == null) b.removeAttribute("style"); else b.setAttribute("style", lock.style);
+    document.documentElement.classList.remove("awx-sheet-lock");
+    document.removeEventListener("touchmove", containInput, true);
+    document.removeEventListener("wheel", containInput, true);
     root.scrollTo(0, lock.y);
   }
   function depth() {
@@ -167,6 +194,12 @@
       if (!tp.on) {
         if (Math.abs(dy) < 6 && Math.abs(dx) < 6) return;
         if (Math.abs(dx) > Math.abs(dy) * 1.2) { tp = null; return; } // sideways: leave it alone
+        // Older mobile browsers can chain an upward drag at the bottom into a background panel.
+        if (dy < 0 && !scrollsWithin(e.target, el, -dy)) {
+          if (e.cancelable) e.preventDefault();
+          tp.y = y;
+          return;
+        }
         if (dy <= 0) { if (tp.top) { tp = null; return; } tp.y = y; return; }       // up: scrolls normally; re-anchor
         if (tp.sc.scrollTop > TOP) { tp.y = y; return; }                           // still scrolling back to the top
         // at the top and moving down: start the close drag from here

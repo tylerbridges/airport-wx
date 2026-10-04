@@ -23,6 +23,9 @@
 //   - connections: a tight connection (< 60 min domestic, < 90 international) is flagged when the
 //     connecting airport is Moderate or worse around the arrival, or has a delay program.
 // Each concern is one plain sentence with a level (0–4); concerns are ordered by severity.
+// Health is an optional pure callback from the shared airport outlook health contract.
+// Missing airports, uncovered flight hours and qualified health never receive green reassurance.
+// Known weather/FAA concerns and their levels remain visible even with incomplete data.
 // Status: "On track" (≤ Minor), "Possible delays" (Moderate), "Delays likely" (High), "Disruption"
 // (Severe); "Too early to tell" when no flight time is inside the airports' 24-hour forecasts yet.
 
@@ -34,6 +37,7 @@ export const STATUS = {
   possible: { label: "Possible delays", cls: "l2" },
   likely: { label: "Delays likely", cls: "l3" },
   disruption: { label: "Disruption", cls: "l4" },
+  unknown: { label: "Data incomplete", cls: "off" },
   early: { label: "Too early to tell", cls: "off" },
   done: { label: "Arrived", cls: "off" },
 };
@@ -299,12 +303,20 @@ export function delayWords(p) {
   return x < 0.12 ? "Delays unlikely" : x < 0.25 ? "Small chance of delays" : x < 0.45 ? "Delays possible" : "Delays likely";
 }
 
-export function tripStatus(trip, byIata, { now = Date.now(), words = null } = {}) {
+export function tripStatus(trip, byIata, { now = Date.now(), words = null, health = null } = {}) {
   const legs = (trip.legs || []).map((l) => ({ from: l.from, to: l.to, dep: toMs(l.dep), arr: toMs(l.arr) })).sort((x, y) => x.dep - y.dep);
   const get = typeof byIata === "function" ? byIata : (c) => (byIata && byIata[c]) || null;
   const concerns = [];
   const unknown = [];
   const missing = [];
+  const qualifications = [];
+  const qualify = (a, side, leg) => {
+    const quality = a && health ? health(a)?.quality || "" : "";
+    if (quality && !qualifications.some((q) => q.iata === a.iata && q.side === side)) qualifications.push({ iata: a.iata, quality, side, leg });
+    return quality;
+  };
+  const covered = (a, t) => (a?.hours || []).some((h) => { const ms = toMs(h.t); return ms <= t && t < ms + HOUR; });
+  const displayAt = (w, quality) => w ? { level: quality && w.level === 0 ? null : w.level, reason: w.reasons[0] || null, delay: w.delay, quality } : null;
   const seen = new Set();
   const add = (c) => {
     const key = c.key || c.text;
@@ -326,16 +338,22 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null } = {}
     const landed = leg.arr < now - 15 * MIN;
     const depWin = F ? windowAt(F, leg.dep) : null;
     const arrWin = X ? windowAt(X, leg.arr) : null;
+    const depQuality = !landed && !departed ? qualify(F, connIn ? "conn" : "dep", i) : "";
+    const arrQuality = !landed ? qualify(X, connOut ? "conn" : "arr", i) : "";
     const out = {
       from: leg.from, to: leg.to, dep: leg.dep, arr: leg.arr, departed, landed,
-      depAt: depWin ? { level: depWin.level, reason: depWin.reasons[0] || null, delay: depWin.delay } : null,
-      arrAt: arrWin ? { level: arrWin.level, reason: arrWin.reasons[0] || null, delay: arrWin.delay } : null,
+      depAt: displayAt(depWin, depQuality || (!covered(F, leg.dep) ? "Forecast unavailable for this time" : "")),
+      arrAt: displayAt(arrWin, arrQuality || (!covered(X, leg.arr) ? "Forecast unavailable for this time" : "")),
       conn: null,
     };
     legOut.push(out);
     if (!F && !missing.includes(leg.from)) missing.push(leg.from);
     if (!X && !missing.includes(leg.to)) missing.push(leg.to);
     if (landed) return;
+    // A neighbouring hour can contain a real concern without covering the scheduled flight hour.
+    if (F && !departed && !connIn && !covered(F, leg.dep)) unknown.push({ iata: leg.from, at: leg.dep, what: "departure", side: "dep" });
+    if (X && !covered(X, leg.arr)) unknown.push({ iata: leg.to, at: leg.arr, what: connOut ? "connection" : "arrival", side: connOut ? "conn" : "arr" });
+    if (X && connOut && !covered(X, next.dep)) unknown.push({ iata: leg.to, at: next.dep, what: "connection", side: "conn" });
     const depClock = F ? whenText(leg.dep, F.tz, now) : null;
     const arrClock = X ? whenText(leg.arr, X.tz, now) : null;
     const route = `${leg.from}→${leg.to}`;
@@ -343,18 +361,18 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null } = {}
     // weather around the departure (a connection's departure is covered by the connection window)
     if (F && !departed && !connIn) {
       if (depWin) { known++; weather(F, depWin, `around your ${depClock} departure`, "dep", i); notices(F, depWin, `around your ${depClock} departure`, "dep", i); } // notams hook
-      else unknown.push({ iata: leg.from, at: leg.dep, what: "departure" });
+      else if (!unknown.some((u) => u.iata === leg.from && u.at === leg.dep)) unknown.push({ iata: leg.from, at: leg.dep, what: "departure", side: "dep" });
     }
     // weather around the arrival, or across the connection
     if (X && !connOut) {
       if (arrWin) { known++; weather(X, arrWin, `around your ${arrClock} arrival`, "arr", i); notices(X, arrWin, `around your ${arrClock} arrival`, "arr", i); } // notams hook
-      else unknown.push({ iata: leg.to, at: leg.arr, what: "arrival" });
+      else if (!unknown.some((u) => u.iata === leg.to && u.at === leg.arr)) unknown.push({ iata: leg.to, at: leg.arr, what: "arrival", side: "arr" });
     }
     if (X && connOut) {
       const w = windowAt(X, leg.arr, next.dep);
       const span = rangeText(leg.arr, next.dep, X.tz);
       if (w) { known++; weather(X, w, `during your connection (${span})`, "conn", i); notices(X, w, `during your connection (${span})`, "conn", i); } // notams hook
-      else unknown.push({ iata: leg.to, at: leg.arr, what: "connection" });
+      else if (!unknown.some((u) => u.iata === leg.to && u.at === leg.arr)) unknown.push({ iata: leg.to, at: leg.arr, what: "connection", side: "conn" });
     }
 
     // FAA programs that hit this flight
@@ -499,21 +517,30 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null } = {}
     concerns.push({ level: 0, kind: "note", side: null, iata: code, leg: -1, short: `no data for ${code}`,
       text: `No FAA or weather data for ${code} in this update yet.` });
   }
+  for (const q of qualifications) if (!concerns.some((c) => c.kind === "note" && c.iata === q.iata && c.quality === q.quality)) {
+    concerns.push({ level: 0, kind: "note", side: q.side, iata: q.iata, leg: q.leg, quality: q.quality, short: null, text: `${q.iata}: ${q.quality.toLowerCase()}.` });
+  }
+  const quality = qualifications.some((q) => /outdated/.test(q.quality)) ? "Airport data may be outdated"
+    : qualifications.length ? "Some airport data is unavailable" : missing.length ? "Some airports have no data yet" : unknown.length ? "Some flight times have no forecast yet" : "";
   const level = Math.max(0, ...concerns.map((c) => c.level));
   let key = level >= 4 ? "disruption" : level === 3 ? "likely" : level === 2 ? "possible" : "ok";
   if (done) key = "done";
-  else if (!known && level < 2 && legs.length) key = "early";
+  else if (!known && level < 2 && legs.length && !missing.length && !qualifications.length) key = "early";
+  else if (key === "ok" && quality) key = "unknown";
   const first = legs[0];
   const top = done ? "This trip has landed."
     : concerns[0] && concerns[0].level >= 1 ? concerns[0].text
     : key === "early" ? `Airport forecasts cover the next 24 hours — check back after ${first ? whenText(first.dep - 24 * HOUR, tzOf(first.from), now) : "tomorrow"}.`
-    : unknown.length ? `No issues expected so far; the forecast for your ${unknown[0].what} at ${unknown[0].iata} isn't out yet.`
+    : quality ? `${quality}. Check your airline for the latest flight status.`
     : "No weather or FAA issues expected around your flight times.";
-  const side = (s) => Math.max(0, ...concerns.filter((c) => c.side === s).map((c) => c.level));
+  const side = (s) => {
+    const level = Math.max(0, ...concerns.filter((c) => c.side === s).map((c) => c.level));
+    return level || !(qualifications.some((q) => q.side === s) || unknown.some((u) => u.side === s) || missing.length) ? level : null;
+  };
   return {
     status: key, label: STATUS[key].label, cls: STATUS[key].cls, level, top,
     short: concerns[0] && concerns[0].level >= 1 ? concerns[0].short : null,
-    concerns, legs: legOut, unknown, missing,
+    concerns, legs: legOut, unknown, missing, quality, qualifications,
     sides: { dep: side("dep"), arr: side("arr"), conn: legs.length > 1 ? side("conn") : null },
   };
 }

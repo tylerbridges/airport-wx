@@ -10,7 +10,7 @@
 //   - manual trips (stored only on this device, localStorage "awx-trips"), and the Trips settings sheet
 //     (flight calendar status and how to connect it).
 // Calendar trips come from data/trips.json (airports and times only); concerns from ./trip-risk.js.
-import { tripStatus, flightLine, rolesAt, clockText, whenText, rangeText, LEVEL_LABELS, STATUS } from "./trip-risk.js";
+import { tripStatus, flightLine, rolesAt, clockText, whenText, rangeText, LEVEL_LABELS, STATUS } from "./trip-risk.js?v=2";
 import { mountSearch, loadAirports, airportsLoaded, placeLine } from "./search.js";
 
 const KEY = "awx-trips";
@@ -145,7 +145,17 @@ function allTrips() {
 }
 // build2b hook: delay chances in plain, calibrated words (site/delay.js likelihood), never a percentage
 const delayWordsFor = (d, iata) => { const L = window.AWXDelay && window.AWXDelay.likelihood ? window.AWXDelay.likelihood(d, { iata }) : null; return L ? L.word : null; };
-const resultOf = (trip) => tripStatus(trip, byIata, { now: nowMs(), words: delayWordsFor });
+// Trips use all known disruption categories, including those hidden on the airport list.
+// Share the airport outlook's freshness/source checks rather than interpreting green hours as healthy data.
+function airportHealth(a) {
+  const st = app()?.state, data = st?.data;
+  const ns = data?.noticeSources || {};
+  const noticesDown = ["notam", "tfr"].some((k) => ns[k] && (!ns[k].ok || ns[k].error || ns[k].stale));
+  return window.AWXOutlook?.health ? window.AWXOutlook.health(a, {
+    now: nowMs(), generated: data?.generated, sources: data?.sources, sample: st?.sample, noticesDown,
+  }) : { quality: "Some data unavailable" };
+}
+const resultOf = (trip) => tripStatus(trip, byIata, { now: nowMs(), words: delayWordsFor, health: airportHealth });
 const findTrip = (id) => allTrips().find((t) => t.id === id) || S.manual.map((t) => ({ ...t, source: "manual" })).find((t) => t.id === id) || null;
 
 // ---------- home: "Your trips" ----------
@@ -173,6 +183,7 @@ function pieces(code, a, b) {
     const A = window.AWXApp;
     let level = hr ? hr.level : null;
     if (hr && A && A.hourLevel) { try { level = A.hourLevel(ap, hr); } catch { /* keep the hour's own level */ } }
+    if (ap && airportHealth(ap).quality && level === 0) level = null;
     out.push({ ms: next - t, level });
     t = next;
   }
@@ -222,6 +233,7 @@ function tripCard(trip) {
     routeEl(trip),
     h("div", { class: "tmeta" }, pillEl(r), h("span", { class: "tw" }, dateLine(Date.parse(first.dep), tz))),
     h("div", { class: "reason" }, r.top),
+    r.quality && r.concerns.some((c) => c.level > 0) ? h("div", { class: "muted small" }, r.quality) : null,
     miniTimeline(trip));
   return el;
 }
@@ -420,10 +432,11 @@ function sourceLine(trip) {
 
 function levelBox(title, sub, at, note) {
   return h("div", { class: "box" },
-    h("h4", {}, title, at ? h("span", { class: "pill sm " + lv(at.level) }, LEVEL_LABELS[at.level]) : null),
+    h("h4", {}, title, at ? h("span", { class: "pill sm " + (at.level == null ? "off" : lv(at.level)) }, at.level == null ? "Unknown" : LEVEL_LABELS[at.level]) : null),
     h("div", { class: "muted small" }, sub),
-    h("div", { class: "tbx" }, note || (at ? (at.reason || (at.level ? "Minor weather conditions" : "No significant weather")) : byIata(title.split(" ").pop()) ? "Forecast not out yet" : "No data for this airport yet")),
-    at && at.delay && at.delay.p != null ? h("div", { class: "muted small" }, delayWordsFor(at.delay, title.split(" ").pop()) || "") : null); // build2b hook: words, not %
+    h("div", { class: "tbx" }, note || (at ? (at.level == null ? at.quality : at.reason || (at.level ? "Minor weather conditions" : "No significant weather")) : byIata(title.split(" ").pop()) ? "Forecast not out yet" : "No data for this airport yet")),
+    at?.quality && at.level != null ? h("div", { class: "muted small" }, at.quality) : null,
+    at && at.level != null && at.delay && at.delay.p != null ? h("div", { class: "muted small" }, delayWordsFor(at.delay, title.split(" ").pop()) || "") : null); // build2b hook: words, not %
 }
 
 function tripView(trip) {
@@ -444,26 +457,26 @@ function tripView(trip) {
   });
   const sideBox = (title, level, side) => {
     const c = r.concerns.find((x) => x.side === side && x.level >= 1);
-    return h("div", { class: "box" }, h("h4", {}, title, h("span", { class: "pill sm " + lv(level) }, LEVEL_LABELS[level])),
-      h("div", { class: "tbx" }, c ? c.text : "No issues expected"));
+    return h("div", { class: "box" }, h("h4", {}, title, h("span", { class: "pill sm " + (level == null ? "off" : lv(level)) }, level == null ? "Unknown" : LEVEL_LABELS[level])),
+      h("div", { class: "tbx" }, c ? c.text : level == null ? r.quality || "Data incomplete" : "No issues expected"));
   };
   const items = r.concerns.length
     ? r.concerns.map((c) => h("div", { class: "item" + (c.level ? "" : " info") },
       c.level ? h("span", { class: "badge " + lv(c.level) }, LEVEL_LABELS[c.level]) : null,
       h("div", { class: c.level ? "" : "muted", style: c.level ? "margin-top:4px" : "" }, c.text)))
-    : [h("div", { class: "muted", style: "font-size:14px" }, r.status === "early" ? r.top : "Nothing expected right now. We check FAA programs and the weather at every airport on your trip.")];
+    : [h("div", { class: "muted", style: "font-size:14px" }, r.quality || r.status === "early" ? r.top : "Nothing expected right now. We check FAA programs and the weather at every airport on your trip.")];
   const codes = [...new Set(trip.legs.flatMap((l) => [l.from, l.to]))];
   const manual = trip.source === "manual";
   let delArmed = false;
   return [
     head(h("div", { id: "tripTitle" }, routeEl(trip, true))),
     h("div", { class: "where sh-where" }, dateLine(Date.parse(first.dep), tzF)),
-    h("div", { class: "box tstat" }, pillEl(r), h("div", { class: "tbx", style: "margin-top:8px;font-weight:600" }, r.top)),
+    h("div", { class: "box tstat" }, pillEl(r), h("div", { class: "tbx", style: "margin-top:8px;font-weight:600" }, r.top), r.quality && r.concerns.some((c) => c.level > 0) ? h("div", { class: "muted small" }, r.quality) : null),
     sec(trip.legs.length > 1 ? "Flights" : "Flight", ...legsEls),
     sec("Departure vs. arrival", h("div", { class: "two" },
       sideBox(`At departure · ${first.from}`, r.sides.dep, "dep"),
       sideBox(`At arrival · ${last.to}`, r.sides.arr, "arr")),
-      r.sides.conn != null ? h("div", { style: "margin-top:10px" }, sideBox("Connection", r.sides.conn, "conn")) : null,
+      trip.legs.length > 1 ? h("div", { style: "margin-top:10px" }, sideBox("Connection", r.sides.conn, "conn")) : null,
       h("div", { class: "muted small", style: "margin-top:8px" }, "A ground delay or ground stop at your destination holds you at the departure airport, so it shows under departure.")),
     sec("What could affect this trip", ...items),
     sec("Airports", h("div", { class: "tapts" }, codes.map((c) => h("button", {

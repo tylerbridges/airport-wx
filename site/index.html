@@ -616,7 +616,7 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
    the scroll padding keeps the last card clear of the bar once you reach the end. */
 .awx-panel { padding-bottom: calc(max(env(safe-area-inset-bottom), 12px) + 100px); scroll-padding-bottom: calc(max(env(safe-area-inset-bottom), 12px) + 100px); flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; scrollbar-width: none; animation: awx-tab-in .16s ease-out; }
 .awx-panel::-webkit-scrollbar { display: none; }
-html.lock .awx-panel { overflow-y: hidden; }
+html.lock .awx-panel, html.awx-sheet-lock .awx-panel { overflow-y: hidden; }
 @keyframes awx-tab-in { from { opacity: .45; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .awx-panel { animation: none; } }
 .awx-nav {
@@ -793,14 +793,14 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
   <div class="sheet" id="panel" role="dialog" aria-modal="true" aria-labelledby="panelTitle"></div>
 </div>
 <div class="sr" id="announce" aria-live="polite"></div>
-<script src="outlook.js?v=2"></script>
+<script src="outlook.js?v=3"></script>
 <script src="cats.js?v=2"></script><!-- build2b: disruption categories -->
-<script src="sheet.js?v=2"></script><!-- build2b: shared sheet drag / back / scroll lock -->
+<script src="sheet.js?v=3"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=1"></script><!-- notams hook: the airport sheet's "Notices" card -->
-<script src="app.js?v=34" defer></script>
+<script src="app.js?v=35" defer></script>
 <script type="module" src="searched.js?v=5"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=8"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
-<script type="module" src="trips.js?v=8"></script><!-- trips hook -->
+<script type="module" src="trips.js?v=9"></script><!-- trips hook -->
 <script type="module" src="nav.js?v=9"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
 <script type="module" src="movement.js?v=4"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
 <script type="module" src="brief.js?v=4"></script><!-- brief hook: morning brief + airport "Today" card -->
