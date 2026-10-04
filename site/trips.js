@@ -310,7 +310,7 @@ function decorateSheet(sheet, a) {
   if (anchor) anchor.after(box); else sheet.prepend(box);
   const tl = sheet.querySelector(".tl.big");
   if (tl && a.hours && a.hours.length) {
-    // build2b hook: the sheet's timeline is a calendar day (data-start on .tl-wrap, one segment per hour)
+    // build2b hook: use the displayed timeline range (data-start on .tl-wrap, one segment per hour)
     const tw = tl.closest(".tl-wrap");
     const segs = tl.querySelectorAll(".s").length;
     const t0 = tw && tw.dataset.start ? Number(tw.dataset.start) : Date.parse(a.hours[0].t);

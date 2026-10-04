@@ -306,17 +306,18 @@ async function uiChecks(add, scenario) {
       add(fc.length && pilotOpen ? "pass" : "fail", "Aviation mode shows flight categories and opens Pilot details", `${a.iata}: ${fc.slice(0, 3).join(", ") || "none"}; Pilot details ${pilotOpen ? "open" : "closed"}`);
     });
 
-    // Timeline: local midnight, dimmed past hours, lens on the current hour, no "ET"/"CT", sheet card swap without layout shift
+    // Timeline: 12 past + 24 forecast hours, dimmed history, lens on now, stable sheet layout
     set({});
     await withPage(url, async (w, doc) => {
       const A = w.AWXApp;
       const wraps = [...doc.querySelectorAll("#list .tl-wrap")];
-      const notMid = wraps.filter((el) => {
-        const t = Number(el.dataset.start);
-        const p = new Intl.DateTimeFormat("en-US", { timeZone: el.dataset.tz, hour: "numeric", minute: "numeric", hourCycle: "h23" }).formatToParts(t);
-        return Number(p.find((x) => x.type === "hour").value) % 24 !== 0 || Number(p.find((x) => x.type === "minute").value) !== 0 || el.querySelector(".ticks span").textContent !== "12a";
+      const wrongWindow = wraps.filter((el) => {
+        const T = el._tl;
+        const now = A.state.sample ? Date.parse(A.state.data.generated) : Date.now();
+        return T.slots.length !== 36 || T.day.cur !== 12 || T.day.end - T.day.start !== 36 * HOUR ||
+          now < T.day.start + 12 * HOUR || now >= T.day.start + 13 * HOUR;
       });
-      add(wraps.length && !notMid.length ? "pass" : "fail", "Timelines start at local midnight (12a)", `${wraps.length - notMid.length} of ${wraps.length}`);
+      add(wraps.length && !wrongWindow.length ? "pass" : "fail", "Rolling timelines: 12 past hours, 24 forecast hours, Now one-third across", `${wraps.length - wrongWindow.length} of ${wraps.length}`);
       const undim = wraps.filter((el) => {
         const segs = [...el.querySelectorAll(".tl .s")];
         const cur = segs.findIndex((s) => s.classList.contains("cur"));

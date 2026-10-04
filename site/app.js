@@ -759,19 +759,21 @@
     return x.cig == null && x.vis == null ? null : "VFR";
   }
 
-  // ---------- timeline: the local calendar day (build2b) ----------
+  // ---------- timeline: rolling context + forecast (build2b) ----------
 
   /**
-   * Slots for one calendar day in the display zone (dayOff 0 = today, 1 = tomorrow): one per hour from
-   * local midnight to the next. Past hours come from `observed` (METAR history), the current and later
+   * Default: 12 elapsed hours before the current hour, then 24 forecast hours. Tomorrow remains a
+   * calendar-day view. Past hours come from `observed` (METAR history), the current and later
    * hours from the forecast `hours`. kind: obs | now | fc | none (past, no report) | na (no forecast yet).
    */
   function daySlots(a, dayOff = 0) {
     const v = view(a);
     const tz = dispTz(a);
     const now = refNow();
-    const start = localMidnight(now, tz, dayOff);
-    const end = localMidnight(now, tz, dayOff + 1);
+    const midnight = localMidnight(now, tz);
+    const currentHour = midnight + Math.floor((now - midnight) / HOUR) * HOUR;
+    const start = dayOff ? localMidnight(now, tz, dayOff) : currentHour - 12 * HOUR;
+    const end = dayOff ? localMidnight(now, tz, dayOff + 1) : currentHour + 24 * HOUR;
     // data hours by their offset from the list's first hour; slots map to data hours through the hour that holds
     // now (test scenarios shift every time by the same amount, so their hours aren't on the clock hour)
     const index = (list) => {
@@ -802,7 +804,16 @@
       s.i = out.length;
       out.push(s);
     }
-    return { slots: out, start, end, tz, cur: out.findIndex((x) => x.kind === "now") };
+    return { slots: out, start, end, tz, cur: nowSlot >= 0 && nowSlot < out.length ? nowSlot : -1 };
+  }
+
+  function timelineDay(ms, tz) {
+    const now = refNow();
+    const key = dayKey(ms, tz);
+    for (const [offset, label] of [[0, "Today"], [-1, "Yesterday"], [1, "Tomorrow"]]) {
+      if (key === dayKey(localMidnight(now, tz, offset), tz)) return label;
+    }
+    return fmt(tz, { weekday: "short" }, "wd").format(ms);
   }
 
   /** "Now · Light rain, low clouds" for the lens label at rest. */
@@ -815,7 +826,7 @@
   /** "9 PM · High · Very low clouds" (past hours: "9 AM · Observed · Minor · Rain"). */
   function slotText(s, a) {
     const tz = dispTz(a);
-    const when = hourLabel(s.t, tz);
+    const when = (dayKey(s.t, tz) === dayKey(refNow(), tz) ? "" : timelineDay(s.t, tz) + " ") + hourLabel(s.t, tz);
     if (s.kind === "none") return when + " · No report";
     if (s.kind === "na") return when + " · Forecast not available yet";
     const top = plainList(s.reasons, a)[0];
@@ -832,7 +843,7 @@
     const { slots, tz } = day;
     const n = slots.length;
     const segs = slots.map((s) => h("span", {
-      class: "s " + (s.level == null ? "nd" : lv(s.level)) + (s.kind === "obs" || s.kind === "none" ? " past" : "") + (s.kind === "now" ? " cur" : ""),
+      class: "s " + (s.level == null ? "nd" : lv(s.level)) + (s.kind === "obs" || s.kind === "none" ? " past" : "") + (s.i === day.cur ? " cur" : ""),
       "data-i": s.i,
     }));
     const lensSeg = h("span", { class: "lens-seg" });
@@ -840,16 +851,21 @@
     const tl = h("div", { class: "tl" + (big ? " big" : ""), style: `grid-template-columns:repeat(${n},minmax(0,1fr))` }, segs, lens);
     const ticks = h("div", { class: "ticks", "aria-hidden": "true" });
     slots.forEach((s, i) => {
-      const lh = Number(fmt(tz, { hour: "numeric" }, "H24n").formatToParts(s.t).find((x) => x.type === "hour").value) % 24;
-      if (lh % 6 === 0) ticks.append(h("span", { style: `left:${(i / n) * 100}%`, class: i === 0 ? "first" : "" }, tickLabel(s.t, tz)));
+      const parts = fmt(tz, { hour: "numeric" }, "H24n").formatToParts(s.t);
+      const hour = Number(parts.find((x) => x.type === "hour").value);
+      const lh = S.clock === "24" ? hour % 24 : hour % 12 + (parts.some((x) => x.type === "dayPeriod" && /PM/i.test(x.value)) ? 12 : 0);
+      if (lh === 0) tl.append(h("span", { class: "midnight-mark", style: `left:${(i / n) * 100}%`, "aria-hidden": "true" }));
+      if (lh % 6 === 0 && i <= n - 3) ticks.append(h("span", { style: `left:${(i / n) * 100}%`, class: i < 2 ? "first" : "" }, tickLabel(s.t, tz),
+        lh === 0 ? h("small", { class: "tick-day" }, timelineDay(s.t, tz)) : null));
     });
-    ticks.append(h("span", { class: "last", style: "left:100%" }, tickLabel(day.end, tz)));
+    ticks.append(h("span", { class: "last", style: "left:100%" }, tickLabel(day.end, tz),
+      h("small", { class: "tick-day" }, timelineDay(day.end, tz))));
     const label = h("div", { class: "lenslabel", "aria-hidden": "true" });
     const na = slots.findIndex((x, i) => x.kind === "na" && slots.slice(i).every((y) => y.kind === "na"));
-    const naNote = na > 0 && opts.dayOff ? h("div", { class: "nanote" }, "Forecast not available yet after " + hourLabel(slots[na].t, tz)) : null;
+    const naNote = na >= 0 ? h("div", { class: "nanote" }, "Forecast not available yet from " + timelineDay(slots[na].t, tz) + " " + hourLabel(slots[na].t, tz)) : null;
     const wrap = h("div", {
       class: "tl-wrap" + (big ? " bigwrap" : " cardwrap"), tabindex: "0", role: "slider",
-      "aria-label": big ? "Hourly risk, " + (opts.dayOff ? "tomorrow" : "today") : timelineLabel(a),
+      "aria-label": big ? "Hourly risk, " + (opts.dayOff ? "tomorrow" : "past 12 hours and next 24 hours") : timelineLabel(a),
       "aria-valuemin": "0", "aria-valuemax": String(n - 1), "aria-valuenow": String(Math.max(0, day.cur)),
       "aria-valuetext": day.cur >= 0 ? slotText(slots[day.cur], a) : slotText(slots[0], a),
       "data-start": String(day.start), "data-tz": tz,
@@ -862,7 +878,7 @@
   }
 
   function timelineLabel(a) {
-    return `Today at ${codeOf(a)}: peak ${LEVELS[view(a).peak.level].label}`;
+    return `Past 12 hours and next 24 hours at ${codeOf(a)}: peak ${LEVELS[view(a).peak.level].label}`;
   }
 
   /** Puts the lens (and its label) over slot i; i < 0 hides it. scrub: the grown magnifier. */
@@ -886,7 +902,7 @@
     lensSeg.className = "lens-seg " + (T.slots[i].level == null ? "nd" : lv(T.slots[i].level)) + (seg.classList.contains("past") ? " past" : "");
     wrap.classList.toggle("scrub", !!scrub);
     label.hidden = false;
-    label.textContent = scrub || i !== T.rest ? slotText(T.slots[i], T.a) : nowWords(T.a);
+    label.textContent = scrub || i !== T.rest || T.slots[i].kind === "na" ? slotText(T.slots[i], T.a) : nowWords(T.a);
     const lw = Math.min(W, label.offsetWidth);
     label.style.left = Math.max(0, Math.min(W - lw, cx - lw / 2)) + "px";
     wrap.setAttribute("aria-valuenow", String(i));
@@ -1756,12 +1772,14 @@
   }
 
   let sheetPick = null; // slot index selected in the sheet timeline (kept until Back to now / second tap)
-  let sheetDay = 0; // 0 today, 1 tomorrow
+  let sheetDay = 0; // 0 rolling window, 1 tomorrow
   function renderSheet(keepScroll) {
     const a = state.data && state.data.airports.find((x) => x.iata === state.openIata);
     const sheet = $("sheet");
     if (!a) { closeSheet(); return; }
     const top = sheet.scrollTop;
+    const previousTl = sheet.querySelector(".bigwrap");
+    const pickedAt = keepScroll && sheetPick != null && previousTl ? previousTl._tl.slots[sheetPick]?.t : null;
     const v = view(a);
     const tz = dispTz(a);
     const fav = state.favs.includes(a.iata);
@@ -1849,13 +1867,13 @@
         sheetDay = sheetDay ? 0 : 1;
         sheetPick = null;
         tlHolder.replaceChildren(makeTl());
-        dayBtn.textContent = sheetDay ? "‹ Today" : "Tomorrow ›";
+        dayBtn.textContent = sheetDay ? "‹ Now" : "Tomorrow ›";
         dayBtn.setAttribute("aria-pressed", String(sheetDay === 1));
-        tlTitle.textContent = sheetDay ? "Tomorrow" : "Today";
+        tlTitle.textContent = sheetDay ? "Tomorrow" : "Next 24 hours";
         if (window.AWXTrips) window.AWXTrips.decorateSheet(sheet, a); // trips hook: plane markers on the shown day
         requestAnimationFrame(placeLenses);
-      } }, sheetDay ? "‹ Today" : "Tomorrow ›");
-    const tlTitle = h("span", {}, sheetDay ? "Tomorrow" : "Today");
+      } }, sheetDay ? "‹ Now" : "Tomorrow ›");
+    const tlTitle = h("span", {}, sheetDay ? "Tomorrow" : "Next 24 hours");
 
     // detail cards (build2b), each only when it has content
     const secs = [];
@@ -1926,7 +1944,9 @@
     if (window.AWXTrips) window.AWXTrips.decorateSheet(sheet, a); // trips hook: "Your flight" row + plane markers
     if (keepScroll) {
       sheet.scrollTop = top;
-      if (sheetPick != null && tlEl && tlEl._tl.slots[sheetPick]) { onPick(sheetPick); tlEl._tl.shown = sheetPick; }
+      const pick = pickedAt == null ? -1 : tlEl._tl.slots.findIndex((s) => s.t === pickedAt);
+      sheetPick = pick >= 0 ? pick : null;
+      if (sheetPick != null) { onPick(sheetPick); tlEl._tl.shown = sheetPick; }
     } else sheetPick = null;
     requestAnimationFrame(placeLenses);
     fillCrosswind(a);
