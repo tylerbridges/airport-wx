@@ -1,0 +1,21 @@
+{
+  "title": "Runway closures (NOTAMs)",
+  "blurb": "LGA's only into-wind runway closed, DEN down to 2 of 6 runways, an MSP runway closed for weeks.",
+  "description": "Clear weather. NOTAMs close LGA runway 4/22 while a 040° wind at 18 kt makes it the runway lined up with the wind (Moderate), four of DEN's six runways (Moderate), and MSP runway 12R/30L plus taxiway C (Low; the taxiway is information only).",
+  "group": "nonweather",
+  "assert": [
+    { "t": "level", "iata": "LGA", "of": "now", "op": "==", "v": 2 },
+    { "t": "reason", "iata": "LGA", "re": "^Runway 4/22 closed until .* — the runway best lined up with the wind$" },
+    { "t": "level", "iata": "DEN", "of": "now", "op": "==", "v": 2 },
+    { "t": "reason", "iata": "DEN", "re": "^Runways 16L/34R, 16R/34L, 17R/35L and 7/25 closed until .* — 4 of 6 runways$" },
+    { "t": "level", "iata": "MSP", "of": "now", "op": "==", "v": 1 },
+    { "t": "reason", "iata": "MSP", "re": "^Runway 12R/30L closed until " },
+    { "t": "notice", "iata": "MSP", "kind": "taxiway", "re": "^Taxiway C closed", "level": 0 },
+    { "t": "notice", "iata": "LGA", "kind": "runway", "level": 2 },
+    { "t": "noticeSource", "name": "notam", "ok": true },
+    { "t": "card", "iata": "LGA", "re": "Runway 4/22 closed" },
+    { "t": "sheet", "iata": "LGA", "re": "Notices.*Runway 4/22 is closed.*best lined up with the wind" },
+    { "t": "sheet", "iata": "MSP", "re": "Taxiway C closed" },
+    { "t": "noPercent" }
+  ]
+}
