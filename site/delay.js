@@ -2,7 +2,7 @@
 // (airports[].hours[].delay, top-level delayModel; README "Delay model"). No scoring happens here.
 //   likelihood(delay, opts)       plain words for a delay chance (build2b): "Delays likely · higher than usual"
 //   delayLine(airport)            card line: "Delays likely 6–9 PM · higher than usual"
-//   delayBlock(airport, hourIdx)  sheet card (hourIdx null = the peak window); the numbers sit behind "Why?"
+//   delayBlock(airport, hourIdx)  sheet card (hourIdx null = the peak window); brief outlook; technical explanation is visible in Aviation mode
 // Traveler mode never shows a percentage; Aviation mode adds the calibrated % in brackets.
 // Loaded as a module by index.html; app.js calls it through window.AWXDelay (marked "phase3 hook").
 
@@ -21,7 +21,6 @@ const STYLE = `
 .dl-analog { margin-top: 8px; font-size: 13.5px; line-height: 1.4; color: var(--text); opacity: .9; }
 .dl-srcline { margin-top: 10px; font-size: 12px; color: var(--muted); line-height: 1.4; }
 .dl-why { margin-top: 8px; }
-.dl-why summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--brand, var(--l1)); width: max-content; min-height: 32px; display: flex; align-items: center; }
 .dl-srcline a:focus-visible { outline: 2px solid var(--l1); outline-offset: 2px; border-radius: 4px; }
 `;
 
@@ -161,6 +160,11 @@ export function likelihood(d, opts = {}) {
   const size = key !== "unlikely" ? minutesRange(d.minutes) : "";
   return { key, word, sentence: word + (cue ? " · " + cue : ""), cue, rate, size };
 }
+/** Routine airport delay rates do not count as an operational disruption. */
+export function notable(d, level, L) {
+  if (!L || ["unlikely", "small", "usual"].includes(L.key)) return false;
+  return L.key === "now" || level > 0 || /^possible_/.test(d?.override || "") || L.cue === "higher than usual" && L.rate >= 0.45;
+}
 /** The band of an observed share (the same cut-offs as likelihood(), without calibration or caps). */
 export function bandOf(rate) {
   return rate < 0.12 ? 0 : rate < 0.25 ? 1 : rate < 0.45 ? 2 : rate < 0.7 ? 3 : 4;
@@ -182,13 +186,13 @@ export function analogWords(an) {
 }
 
 /** {i (peak hour), s, e (window), p} over the 24 hours, or null without delay numbers. */
-function peakWindow(a) {
+function peakWindow(a, include = () => true) {
   const hs = a.hours || [];
   let i = -1;
-  hs.forEach((h, k) => { if (h.delay && h.delay.p != null && (i < 0 || h.delay.p > hs[i].delay.p)) i = k; });
+  hs.forEach((h, k) => { if (h.delay && h.delay.p != null && include(h) && (i < 0 || h.delay.p > hs[i].delay.p)) i = k; });
   if (i < 0) return null;
   const p = hs[i].delay.p;
-  const near = (k) => hs[k] && hs[k].delay && hs[k].delay.p != null && hs[k].delay.p >= p - 0.1;
+  const near = (k) => hs[k] && include(hs[k]) && hs[k].delay && hs[k].delay.p != null && hs[k].delay.p >= p - 0.1;
   let s = i;
   let e = i;
   while (near(s - 1)) s--;
@@ -243,12 +247,17 @@ function sourceLine() {
 
 /**
  * Sheet card "Will it cause delays?" for hour i (null = the peak window): the words big, the size ("typically
- * 30–45 min") and the FAA status; "Why?" reveals the analog ("about 6 in 10 had delays"), how often warnings like
- * this were right, and what the numbers are based on. Always returns a node.
+ * 30–45 min") and timing. Quiet or active-delay Traveler views omit this duplicate card; Aviation mode also
+ * shows the analog, calibration and source explanation as visible text. Always returns a node.
  */
 export function delayBlock(a, i) {
   injectStyle();
-  const w = a && peakWindow(a);
+  const aviation = window.AWXPrefs?.getPrefs().mode === "aviation";
+  const include = (hr) => {
+    const L = likelihood(hr.delay, { iata: a.iata });
+    return aviation || L?.key !== "now" && notable(hr.delay, hr.level, L);
+  };
+  const w = a && peakWindow(a, include);
   if (!w) return document.createDocumentFragment();
   const idx = i == null ? w.i : i;
   const hr = a.hours[idx];
@@ -256,6 +265,7 @@ export function delayBlock(a, i) {
   if (!d || d.p == null) return document.createDocumentFragment();
   const t0 = Date.parse(hr.t);
   const L = likelihood(d, { iata: a.iata });
+  if (!aviation && (L.key === "now" || !notable(d, hr.level, L))) return document.createDocumentFragment();
   let when;
   if (L.key === "now") when = "";
   else if (i == null) {
@@ -280,11 +290,11 @@ export function delayBlock(a, i) {
   if (L.key !== "now" && bin && bin.rate != null && bin.n) why.push(el("div", "dl-analog", `For ${a.iata}, warnings like this were right ${inTen(bin.rate)} times.`));
   if (d.pTypical != null && L.key !== "now") why.push(el("div", "dl-analog", `On a typical day at this hour, delays happen ${inTen(d.pTypical)} times.`));
   why.push(sourceLine());
-  kids.push(el("details", "dl-why", el("summary", null, "Why?"), ...why));
+  kids.push(aviation ? el("div", "dl-why", ...why) : sourceLine());
   return el("div", "dl-block", ...kids);
 }
 
-const api = { delayLine, delayBlock, likelihood, calibrate, analogWords, analogAgrees, minutesRange, setReport };
+const api = { delayLine, delayBlock, likelihood, notable, calibrate, analogWords, analogAgrees, minutesRange, setReport };
 if (typeof window !== "undefined" && window.document) {
   window.AWXDelay = api;
   // the calibration table; until it arrives (or if it is missing) the raw score is used

@@ -141,6 +141,17 @@ export function card(a) {
   const old = !fresh(e);
   const tone = meaningful(e) ? (e.index < 1 ? " mv-lo" : " mv-hi") : "";
   const sum = meaningful(e) ? `Departures running ${pctOff(e.index)}% ${e.index < 1 ? "below" : "above"} normal` : e.sentence;
+  if (window.AWXPrefs?.getPrefs().mode !== "aviation") {
+    if (!old && !meaningful(e)) return null;
+    const box = el("div", "mv-card",
+      sum ? el("div", "mv-sum" + tone, sum) : null,
+      e.holding ? el("div", "mv-facts", `${e.holding} aircraft holding nearby`) : null,
+      el("div", "mv-when" + (old ? " mv-old" : ""),
+        `As of ${clock(Date.parse(e.asOf), a.tz)}` + (old ? ` · not updating (${agoText(ageOf(e))})` : "")
+        + (e.coverage != null && e.coverage < 0.6 && !old ? " · limited tracking coverage" : "")));
+    box.setAttribute("aria-label", "Traffic right now");
+    return el("div", "sec mv-sec", box);
+  }
   const box = el("div", "card mv-card",
     sum ? el("div", "mv-sum" + tone, sum) : null,
     bar("Departures", e.depHr, b.depHr),

@@ -314,7 +314,7 @@ table.lt { border-collapse: collapse; font-size: 12px; }
 .national[hidden] { display: none; }
 .natline { width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; background: var(--card); border-radius: 16px; padding: 12px 14px; font-size: 14px; line-height: 1.3; }
 .natline .nat-t { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.natline .chev, .sum-more span { color: var(--muted); font-size: 18px; }
+.natline .chev { color: var(--muted); font-size: 18px; }
 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 25%, transparent); }
 .list.mine .card { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
 .list.reordering .card { transition: transform .18s ease; }
@@ -323,21 +323,6 @@ table.lt { border-collapse: collapse; font-size: 12px; }
 
 /* sheet */
 .zone { color: var(--muted); }
-.summary { background: var(--card-2); border-radius: 18px; padding: 0 14px; margin-bottom: 10px; }
-.sum-head { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 8px 0; cursor: pointer; list-style: none; }
-.sum-head::-webkit-details-marker { display: none; }
-.sum-line { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; }
-.sum-h { margin: 0; font-size: 16px; line-height: 1.25; font-weight: 800; letter-spacing: -.01em; }
-.sum-fact { font-size: 13.5px; color: var(--muted); overflow-wrap: anywhere; }
-.sum-chev { color: var(--muted); font-size: 16px; transition: transform .15s ease; }
-.summary[open] .sum-chev { transform: rotate(180deg); }
-.summary[open] { padding-bottom: 4px; }
-.sum-row { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 14px; }
-.sum-row .ico { color: var(--muted); margin-top: 1px; }
-.sum-k { font-size: 12px; font-weight: 700; color: var(--muted); }
-.sum-v { overflow-wrap: anywhere; }
-.sum-delay { margin-top: 2px; font-weight: 600; }
-.sum-more { width: 100%; display: flex; justify-content: space-between; align-items: center; min-height: 44px; border-top: 1px solid var(--line); font-size: 14px; font-weight: 600; color: var(--brand); }
 /* detail sections as cards (weather-site pattern): header row + one rounded card */
 .sec { margin-top: 14px; }
 .tlsec { margin-top: 18px; }
@@ -350,28 +335,16 @@ table.lt { border-collapse: collapse; font-size: 12px; }
 .scard > .item:first-child { padding-top: 10px; }
 .gt { font-size: 16px; font-weight: 600; color: var(--text); }
 .subt { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
-details.rawt summary { margin-top: 6px; font-size: 12.5px; color: var(--muted); cursor: pointer; width: max-content; }
-details.rawt pre { margin-top: 6px; background: var(--card); }
+.rawt { margin-top: 8px; }
 .kv2 { margin: 12px 0 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; border-top: 1px solid var(--line); padding-top: 4px; }
 .kv2 div { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px dashed var(--line); font-size: 13.5px; min-width: 0; }
 .kv2 dt { color: var(--muted); }
 .kv2 dd { margin: 0; text-align: right; font-weight: 600; overflow-wrap: anywhere; }
 @media (max-width: 420px) { .kv2 { grid-template-columns: 1fr; } }
-details.scard.pilot { padding: 0 14px; }
-details.pilot > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 10px; min-height: 52px; color: var(--muted); }
-details.pilot > summary::-webkit-details-marker { display: none; }
-details.pilot > summary .gt { flex: 1; }
-details.pilot > summary .car { transition: transform .15s ease; }
-details.pilot[open] > summary .car { transform: rotate(180deg); }
-details.pilot .pd { padding: 0 0 14px; }
-details.pilot .box, details.pilot pre.raw, details.pilot .lamp { background: var(--card); }
+.scard.pilot { padding-top: 14px; }
+.pilot .box, .pilot pre.raw, .pilot .lamp { background: var(--card); }
 .daybtn { flex: none; min-height: 32px; padding: 0 12px; border-radius: 999px; background: var(--card-2); color: var(--text); font-size: 13px; font-weight: 600; letter-spacing: 0; text-transform: none; }
 .srcl { margin-top: 10px; font: 600 11px/1.4 var(--mono); letter-spacing: .04em; color: var(--muted); overflow-wrap: anywhere; }
-.srcl summary { cursor: pointer; list-style: none; padding: 4px 0; }
-.srcl summary::-webkit-details-marker { display: none; }
-.srcl .car { display: inline-block; transition: transform .15s ease; }
-.srcl[open] .car { transform: rotate(180deg); }
-.srcl.metar[open] .car { transform: rotate(90deg); }
 .srcl pre { margin-top: 6px; letter-spacing: 0; font-weight: 400; color: var(--text); }
 pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color: inherit; border-radius: 3px; padding: 0 2px; font-weight: 700; }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
@@ -405,25 +378,19 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 .sc { position: relative; min-width: 0; display: flex; flex-direction: column; padding: 9px 12px; }
 .sc-when.in { font-size: 12.5px; font-weight: 500; color: var(--muted); }
 .sc .rline { margin: 4px 0 0; font-size: 14px; line-height: 1.3; }
-.sc .rline .more { display: none; }
-.sc.expanded .rline .more { display: inline; }
-.sc .rline .morebtn { display: inline; margin: 0; padding: 0; font-size: 12.5px; }
-.sc.full .sc-delay { margin-top: 2px; }
+.sc.full .sc-delay { margin-top: 4px; font-size: 16px; line-height: 1.3; }
 .sc.full .sc-prog { margin-top: 4px; }
 .sc.full .facts { margin-top: 4px; }
 .sc.full .chips { padding-top: 4px; }
 .tlsec { margin-top: 12px; }
-/* first screen of the sheet (build2b): compact header, trips' "Your flight" row and the status line */
+/* Compact first screen: header, your flight, status, and timeline. */
 .sh-head { padding: 2px 0 4px; }
 .sheet .tflight { margin: 0 0 8px; gap: 6px; }
 .sheet .tfrow { padding: 6px 10px; min-height: 44px; gap: 10px; border-radius: 14px; }
 .sheet .tfrow .tfic { width: 28px; height: 28px; }
 .sheet .tfrow .tfl { display: inline; margin-right: 6px; }
-.sum-head { min-height: 44px; padding: 6px 0; }
 .tlsec .sec-h { margin-bottom: 0; }
 .daybtn { min-height: 30px; }
-.sc .reasons .morebtn { display: inline; margin: 0; padding: 0; font-size: 12px; }
-.sc.expanded .reasons li:nth-child(2) .morebtn, .sc.expanded .reasons .morebtn { display: inline; }
 .sc-h { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
 .sc h4 { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 13px; font-weight: 700; color: var(--muted); min-height: 22px; }
 .sc-when { margin-top: 2px; font-size: 12.5px; color: var(--muted); }
@@ -431,7 +398,6 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 .sc .reasons { margin-top: 6px; font-size: 14px; line-height: 1.3; }
 .sc .reasons li { padding: 2px 0; }
 .sc .reasons li.more { display: none; }
-.sc.expanded .reasons li.more { display: list-item; }
 .sc .none { margin-top: 6px; font-size: 14px; color: var(--muted); }
 .morebtn { align-self: flex-start; margin-top: 2px; font-size: 12.5px; font-weight: 600; color: var(--brand); padding: 2px 0; }
 .sc-prog { margin-top: 6px; font-size: 13px; font-weight: 600; }
@@ -743,11 +709,11 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <div class="sr" id="announce" aria-live="polite"></div>
 <script src="cats.js?v=1"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=1"></script><!-- build2b: shared sheet drag / back / scroll lock -->
-<script src="app.js?v=20" defer></script>
+<script src="app.js?v=21" defer></script>
 <script type="module" src="searched.js?v=5"></script><!-- build2a hook -->
-<script type="module" src="delay.js?v=4"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
+<script type="module" src="delay.js?v=5"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="trips.js?v=6"></script><!-- trips hook -->
 <script type="module" src="nav.js?v=5"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
-<script type="module" src="movement.js?v=1"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
+<script type="module" src="movement.js?v=2"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
 </body>
 </html>

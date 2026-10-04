@@ -1363,18 +1363,18 @@
     return rows;
   }
 
-  // Section sources: monospace "SOURCE: FAA NAS STATUS · UPDATED 3M AGO" lines that expand to the raw text
+  // Traveler source labels stay brief; raw source text is visible only in Aviation mode.
   const SEC_SRC = {
     faa: "FAA NAS STATUS", atcscc: "FAA COMMAND CENTER", nws: "NWS ALERTS", spc: "NOAA STORM PREDICTION CENTER",
     tcf: "AVIATIONWEATHER.GOV STORM FORECAST", sigmet: "AVIATIONWEATHER.GOV ADVISORIES",
   };
   function srcLine(key, raw) {
+    if (!aviation()) return null;
     const s = state.data && state.data.sources && state.data.sources[key];
     const when = s && s.at ? " · UPDATED " + agoShort(refNow() - Date.parse(s.at)) : "";
     const text = "SOURCE: " + (SEC_SRC[key] || key.toUpperCase()) + when;
     const r = (raw || []).filter(Boolean).join("\n\n");
-    if (!r) return h("div", { class: "srcl" }, h("span", {}, text));
-    return h("details", { class: "srcl" }, h("summary", {}, text + " ", h("span", { class: "car", "aria-hidden": "true" }, "⌄")), h("pre", { class: "raw" }, r));
+    return h("div", { class: "srcl" }, text, aviation() && r ? h("pre", { class: "raw" }, r) : null);
   }
   const SEC_META = { faa: "FAA", atcscc: "FAA", nws: "NWS", spc: "SPC", tcf: "NWS", sigmet: "NWS", metar: "Observed" };
   /**
@@ -1389,7 +1389,7 @@
       h("div", { class: "scard" + (opts.cls ? " " + opts.cls : "") }, ...kids, src ? srcLine(src.key, src.raw) : null));
   }
   function rawToggle(text) {
-    return text ? h("details", { class: "rawt" }, h("summary", {}, "Show raw"), h("pre", { class: "raw" }, text)) : null;
+    return aviation() && text ? h("pre", { class: "raw rawt" }, text) : null;
   }
   const SRC_TRAVELER = { TAF: "Forecast", LAMP: "Hourly model", METAR: "Observed" };
   const srcName = (s) => (s === "METAR" ? "Observed" : aviation() ? s : SRC_TRAVELER[s] || s);
@@ -1474,7 +1474,7 @@
   }
 
   function faaItem(f, a) {
-    const chip = h("div", { class: "chips" }, confChip("FAA", "high"));
+    const chip = aviation() ? h("div", { class: "chips" }, confChip("FAA", "high")) : null;
     if (f.type === "closure") {
       const info = f.scope === "limited" || f.active === false;
       const cls = f.scope === "runway" ? "l1" : "l4";
@@ -1512,7 +1512,7 @@
       h("span", { class: "badge " + cls }, name), h("span", { class: "muted" }, " " + status),
       x.causeLabel || x.causeText ? h("div", { style: "margin-top:4px" }, cap(x.causeLabel || x.causeText)) : null,
       x.issued ? h("div", { class: "muted small" }, "Issued " + whenLabel(Date.parse(x.issued), tz)) : null,
-      x.active ? h("div", { class: "chips" }, confChip("FAA", "high")) : null,
+      aviation() && x.active ? h("div", { class: "chips" }, confChip("FAA", "high")) : null,
       rawToggle(x.title));
   }
 
@@ -1528,7 +1528,7 @@
       x.level ? h("span", { class: "badge " + lv(x.level) }, LEVELS[x.level].label) : null,
       h("div", { class: x.level ? "" : "muted", style: x.level ? "margin-top:4px" : "" },
         retime(x.text, a) + (x.ifr ? " — can slow landings in low clouds or poor visibility" : "") + "." + (x.dup ? " Also in Delays & closures above." : "")),
-      x.level ? h("div", { class: "chips" }, confChip("FAA", CATS.reason(x.text).conf || "high")) : null,
+      aviation() && x.level ? h("div", { class: "chips" }, confChip("FAA", CATS.reason(x.text).conf || "high")) : null,
       rawToggle(x.raw)))];
   }
 
@@ -1569,15 +1569,18 @@
       if (!x.ok) { warn.push(`${SOURCE_NAMES[k]} unavailable — ${SOURCE_MISSING[k]}`); continue; }
       any = true;
       if (x.error) warn.push(`${SOURCE_NAMES[k]} partly unavailable — ${SOURCE_MISSING[k]}`);
+      else if (x.stale) warn.push(`${SOURCE_NAMES[k]}: live update unavailable — showing the last known data`);
     }
     const when = state.sample ? "sample data" : d ? ago(Math.max(0, Date.now() - Date.parse(d.generated))) : "";
+    if (d && !state.sample && refNow() - Date.parse(d.generated) > STALE_MS) warn.unshift("Data is " + when + " — status may have changed");
     return h("div", { class: "checked" },
       warn.map((w) => h("p", { class: "warn" }, w)),
       any ? h("p", { class: "muted" }, `Checked FAA delays and NOAA weather${when ? " · " + when : ""}`) : null);
   }
 
-  /** Coded aviation detail: collapsed at the bottom in Traveler mode, open and above the sections in Aviation mode. */
+  /** Technical data is visible in Aviation mode, without expandable cards. */
   function pilotDetails(a) {
+    if (!aviation()) return null;
     const kids = [];
     const tz = dispTz(a);
     const zl = (ms) => clock(ms, tz) + " " + zoneAbbr(ms, tz);
@@ -1600,8 +1603,7 @@
       h("b", {}, cap(x.coverageRaw || x.coverage || "Unknown") + " coverage"),
       h("span", { class: "muted" }, [x.valid && " · valid " + whenLabel(Date.parse(x.valid), tz), x.confidence && " · confidence " + String(x.confidence).toLowerCase(), x.tops && " · tops " + x.tops].filter(Boolean).join("")))));
     if (!kids.length) return null;
-    return h("section", { class: "sec" }, h("details", { class: "scard pilot", open: aviation() || null },
-      h("summary", {}, icon(ICONS.plane), h("span", { class: "gt" }, "Pilot details"), h("span", { class: "car", "aria-hidden": "true" }, "⌄")), h("div", { class: "pd" }, ...kids)));
+    return section("Pilot details", "plane", [h("div", { class: "pd" }, ...kids)], null, { cls: "pilot" });
   }
 
   // ---------- Now / Peak / Hour cards (one structure, build2b) ----------
@@ -1661,25 +1663,19 @@
   /** One state card (Now, Peak, Now · Peak, or an hour): label + pill, time line, delay chance, reasons, FAA status, impact, facts, chips. */
   function stateCard(o) {
     const a = o.a;
-    const max = 2; // compact: two reasons, the rest behind "+N more"
-    // FAA program reasons are shown once, as the program status line
+    const max = o.full ? 3 : 2;
     const progTxt = o.programs && o.programs.length ? uniq(o.programs.map((f) => programLine(f, a))) : [];
     const others = o.programs && o.programs.length ? o.reasons.filter((r) => !/^(Ground stop|Ground delay program|Delays\b|Airport closed)/.test(r)) : o.reasons;
-    // simple (Now / Peak / single) cards: the program status is one of the two reasons
-    const rs = o.simple ? [...progTxt, ...others] : others;
-    const moreBtn = rs.length > max ? h("button", { type: "button", class: "morebtn", "aria-expanded": "false",
-      onclick: (e) => { e.stopPropagation(); const box = e.currentTarget.closest(".sc"); const on = box.classList.toggle("expanded"); e.currentTarget.setAttribute("aria-expanded", String(on)); e.currentTarget.textContent = on ? "Show less" : "+" + (rs.length - max) + " more"; } },
-      "+" + (rs.length - max) + " more") : null;
-    // full-width cards: the reasons run on one line ("Rain · Light fog / haze +1 more"); split cards: a short list
-    const list = rs.length && o.full
-      ? h("p", { class: "rline" }, rs.map((r, i) => h("span", { class: i >= max ? "more" : null }, i ? " · " : "", r)), moreBtn ? [" ", moreBtn] : null)
-      : rs.length
-      ? h("ul", { class: "reasons" }, rs.map((r, i) => h("li", { class: i >= max ? "more" : null }, r, i === Math.min(max, rs.length) - 1 && moreBtn ? [" ", moreBtn] : null)))
-      : o.programs && o.programs.length && o.reasons.length ? null : h("div", { class: "none" }, o.empty || (o.level ? "Minor weather conditions" : "No significant weather"));
-    // delay chance (Phase 3 hours[].delay) in plain words via site/delay.js likelihood(); hidden when absent
+    const rs = uniq(o.simple ? [...progTxt, ...others] : others).slice(0, max);
     const L = o.delay && o.delay.p != null && window.AWXDelay && AWXDelay.likelihood ? safeCall(() => AWXDelay.likelihood(o.delay, { iata: a.iata })) : null;
-    const progs = o.programs && o.programs.length;
-    const delay = L && !(L.key === "now" && progs && !o.simple) ? h("div", { class: "sc-delay" }, L.word, L.cue ? h("span", { class: "muted", style: "font-weight:500" }, " · " + L.cue) : null) : null;
+    const meaningful = L && (aviation() || AWXDelay.notable(o.delay, o.level, L));
+    const normal = o.level === 0 && !progTxt.length && !meaningful && !o.empty;
+    const status = normal ? o.normalNote || (o.kind === "hour" && o.past ? "No disruption reported" : o.kind === "peak" || o.kind === "hour" && !o.isNow ? "No disruption expected" : "Operating normally")
+      : meaningful ? L.word : o.level > 0 ? o.level === 1 ? "Minor disruption possible" : "Disruption possible" : null;
+    const delay = status ? h("div", { class: "sc-delay" }, status) : null;
+    const list = normal ? null : rs.length
+      ? o.full ? h("p", { class: "rline" }, rs.join(" · ")) : h("ul", { class: "reasons" }, rs.map((r) => h("li", {}, r)))
+      : o.empty ? h("div", { class: "none" }, o.empty) : null;
     // program status and the departure/arrival impact share one line; with source chips only in full-width cards
     const prog = o.programs && o.programs.length ? o.programs.map((f) => programLine(f, a)).join(" · ") : "";
     const imp = o.impact && prog ? o.impact.replace(/ \([^)]*\)$/, "") : o.impact;
@@ -1712,6 +1708,11 @@
     const endMs = levelEnd(v);
     const lastMs = Date.parse(v.hours[v.hours.length - 1].t) + HOUR;
     const nowPrograms = programsAt(v, t0, true);
+    const sources = state.data.sources || {};
+    const incomplete = state.sample || !a.metar || refNow() - Date.parse(a.metar.obsTime) > 2 * HOUR || ["faa", "atcscc", "metar", "taf"].some((k) => !sources[k] || !sources[k].ok || sources[k].error || sources[k].stale);
+    const stale = refNow() - Date.parse(state.data.generated) > STALE_MS;
+    const normalNote = stale ? "Status may be outdated" : incomplete ? "No disruptions reported · some data unavailable"
+      : v.hiddenCats && v.hiddenCats.size ? "No issues in your selected categories" : null;
 
     // rest state: Now | Peak, or one full-width "Now · Peak" / clear card
     const restCards = () => {
@@ -1720,8 +1721,8 @@
         const pt = Date.parse(pk.t);
         return h("div", { class: "two" },
           stateCard({ a, kind: "now", simple: true, label: "Now", level: v.now.level, when: "through " + whenLabel(endMs, tz), delay: v.hours[0].delay,
-            reasons: shortList(v.now.reasons, a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true), chips: cardSources(v.now.reasons, "now") }),
-          stateCard({ a, kind: "peak", simple: true, label: "Peak", level: v.peak.level, when: peakRange(v), delay: pk.delay,
+            normalNote, reasons: shortList(v.now.reasons, a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true), chips: cardSources(v.now.reasons, "now") }),
+          stateCard({ a, kind: "peak", simple: true, label: "Coming up", level: v.peak.level, when: peakRange(v), delay: pk.delay,
             reasons: shortList(pk.reasons, a), programs: programsAt(v, pt, false), impact: CATS.impact(pk.reasons, programsAt(v, pt, false)), facts: factsRow(pk, a, pt, false, true), chips: cardSources(pk.reasons, "fc") }));
       }
       let when;
@@ -1736,9 +1737,9 @@
           when += ", then " + LEVELS[nxt.level].label;
         }
       }
-      return stateCard({ a, kind: "nowpeak", full: true, simple: true, label: layout === "clear" ? "Now" : "Now · Peak", level: v.now.level, when, delay: v.hours[0].delay,
-        reasons: shortList(v.now.reasons, a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true),
-        chips: cardSources(v.now.reasons, "now"), empty: layout === "clear" ? "Nothing expected" : null });
+      return stateCard({ a, kind: "nowpeak", full: true, simple: true, label: "Now", level: v.now.level, when, delay: v.hours[0].delay,
+        normalNote, reasons: shortList(v.now.reasons, a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true),
+        chips: cardSources(v.now.reasons, "now"), empty: null });
     };
     const hourCard = (s) => {
       const isNow = s.kind === "now";
@@ -1748,7 +1749,7 @@
       const zulu = aviation() ? " · " + new Date(s.t).toISOString().slice(11, 13) + "00Z" : "";
       const when = (s.kind === "obs" ? (s.observed ? "Observed" : "Earlier forecast") : s.kind === "none" ? "No report" : s.kind === "na" ? "Forecast not available yet" : isNow ? "Now" : "Forecast") + zulu;
       const progs = past || s.kind === "na" ? [] : programsAt(v, s.key, isNow);
-      return stateCard({ a, kind: "hour", full: true, max: 3, label, level: s.level, when, delay: !past && s.h ? s.h.delay : null,
+      return stateCard({ a, kind: "hour", past, normalNote: isNow ? normalNote : null, isNow, full: true, max: 3, label, level: s.level, when, delay: !past && s.h ? s.h.delay : null,
         reasons: shortList(s.reasons, a), programs: progs, impact: s.level == null ? null : CATS.impact(s.reasons, progs),
         facts: c ? factsRow(c, a, s.key, past, true) : null, chips: s.level == null ? [] : cardSources(s.reasons, s.kind),
         empty: s.kind === "none" ? "No weather report for this hour" : s.kind === "na" ? "Forecast not available yet" : null });
@@ -1793,26 +1794,27 @@
     const secs = [];
     const add = (cond, fn) => { if (cond) secs.push(fn()); };
     add(v.faa && v.faa.length, () => section("Delays & closures", "clock", v.faa.map((f) => faaItem(f, a)), { key: "faa" }));
-    const notices = [...[...(v.atcscc || [])].sort((x, y) => (y.active ? 1 : 0) - (x.active ? 1 : 0)).map((x) => advItem(x, a)), ...planItems(v, a)];
+    const notices = [...[...(v.atcscc || [])].filter((x) => aviation() || !x.cnx && (x.active || Date.parse(x.start) > refNow())).sort((x, y) => (y.active ? 1 : 0) - (x.active ? 1 : 0)).map((x) => advItem(x, a)),
+      ...planItems(aviation() ? v : { ...v, opsplan: v.opsplan ? { ...v.opsplan, items: (v.opsplan.items || []).filter((x) => x.level > 0 && !x.dup) } : null }, a)];
     add(notices.length, () => section("FAA traffic notices", "tower", notices, { key: "atcscc" }));
     add(a.metar, () => currentWeather(a));
     add(v.alerts && v.alerts.length, () => section("Weather warnings", "alert", v.alerts.map((x) => h("div", { class: "item" }, h("b", {}, x.event),
       x.ends ? h("span", { class: "muted" }, " · until " + dayClock(Date.parse(x.ends), tz)) : null,
       x.headline ? h("div", { class: "muted", style: "font-size:13px;margin-top:2px" }, retime(x.headline, a)) : null,
-      h("div", { class: "chips" }, confChip("NWS", /Warning/.test(x.event) ? "high" : "medium")))), { key: "nws", raw: v.alerts.map((x) => [x.event, x.headline].filter(Boolean).join("\n")) }));
+      aviation() ? h("div", { class: "chips" }, confChip("NWS", /Warning/.test(x.event) ? "high" : "medium")) : null)), { key: "nws", raw: v.alerts.map((x) => [x.event, x.headline].filter(Boolean).join("\n")) }));
     // Storms: thunderstorms over the airport, the severe-storm outlook and the aviation storm forecast as sub-rows
     const storms = [];
     if (v.sigmets && v.sigmets.length) storms.push(h("div", { class: "item" }, h("div", { class: "subt" }, "Thunderstorms"),
-      h("div", {}, plainReason("Convective SIGMET over airport", v) + ", or within 10 nautical miles."), h("div", { class: "chips" }, confChip("NWS", "high"))));
+      h("div", {}, plainReason("Convective SIGMET over airport", v) + ", or within 10 nautical miles."), aviation() ? h("div", { class: "chips" }, confChip("NWS", "high")) : null));
     if (v.spc) storms.push(h("div", { class: "item" }, h("div", { class: "subt" }, "Storm outlook"),
       v.spc === "TSTM" ? h("div", { class: "muted" }, "General thunderstorms possible in the area (no severe risk)")
         : h("div", { style: "font-weight:600" }, (SPC_NAMES[v.spc] || v.spc) + " risk of severe storms", h("span", { class: "muted", style: "font-weight:400" }, " · today's outlook")),
-      h("div", { class: "chips" }, confChip("SPC", "medium"))));
+      aviation() ? h("div", { class: "chips" }, confChip("SPC", "medium")) : null));
     if (v.tcf && v.tcf.length) storms.push(h("div", { class: "item" }, h("div", { class: "subt" }, "Storm forecast"), ...v.tcf.map((x) => h("div", {},
       h("b", {}, "Thunderstorms, " + ({ high: "widespread", medium: "scattered", low: "isolated" }[x.coverage] || "some") + " coverage"),
       x.valid ? h("span", { class: "muted" }, " · around " + whenLabel(Date.parse(x.valid), tz)) : null,
       x.confidence ? h("div", { class: "muted small" }, "Forecaster confidence " + String(x.confidence).toLowerCase()) : null)),
-      h("div", { class: "chips" }, confChip("NWS", "medium"))));
+      aviation() ? h("div", { class: "chips" }, confChip("NWS", "medium")) : null));
     add(storms.length, () => section("Storms", "bolt", storms, null, { meta: [v.sigmets && v.sigmets.length && "NWS", v.spc && "SPC", v.tcf && v.tcf.length && "NWS"].filter(Boolean).filter((x, i, arr) => arr.indexOf(x) === i).join(" · "),
       raw: null }));
     if (storms.length) secs[secs.length - 1].querySelector(".scard").append(srcLine(v.sigmets && v.sigmets.length ? "sigmet" : v.spc ? "spc" : "tcf", (v.sigmets || []).map((x) => x.raw)));
@@ -1825,8 +1827,7 @@
     }
     const pd = pilotDetails(a);
     if (pd) secs.push(pd);
-    if (secs.length) secs[0].id = "fullReport";
-    // Will it cause delays?: site/delay.js (Phase 3) when present, directly under the timeline
+    // Show a meaningful delay outlook directly below the timeline.
     const dl = window.AWXDelay && typeof AWXDelay.delayBlock === "function" ? safeCall(() => AWXDelay.delayBlock(a, null)) : null; // phase3 hook
     const hiddenNote = v.hiddenCats && v.hiddenCats.size
       ? h("p", { class: "hidnote" }, "Hidden by your settings: " + [...v.hiddenCats].map((k) => CATS.LABELS[k]).join(", ") + ". Ground stops and airport closures are always shown.")
@@ -1846,11 +1847,7 @@
       h("section", { class: "sec tlsec" },
         h("div", { class: "sec-h" }, icon(ICONS.clock), h("h3", {}, tlTitle), h("span", { class: "rule", "aria-hidden": "true" }), dayBtn),
         tlHolder),
-      dl && (dl.nodeType ? dl.childNodes.length || dl.nodeType === 1 : true) ? section("Will it cause delays?", "clock", [dl.nodeType ? dl : String(dl)], null, { cls: "dlcard" }) : null, // phase3 hook
-      summaryCard(a, v, nowPrograms, () => {
-        const t = sheet.querySelector("#fullReport") || sheet.querySelector(".pilot");
-        if (t) sheet.scrollTo({ top: t.offsetTop - 64, behavior: reduced() ? "auto" : "smooth" });
-      }),
+      dl && (dl.nodeType ? dl.childNodes.length || dl.nodeType === 1 : true) ? section("Delay outlook", "clock", [dl.nodeType ? dl : String(dl)], null, { cls: "dlcard" }) : null, // phase3 hook
       ...secs,
       hiddenNote,
       checkedLine(),
@@ -1863,54 +1860,6 @@
 
   function safeCall(fn) {
     try { return fn(); } catch (e) { console.warn(e); return null; }
-  }
-
-  /** Status summary at the top of the sheet (one line; rows behind the chevron). */
-  function summaryCard(a, v, nowPrograms, onMore) {
-    const tz = dispTz(a);
-    const closed = nowPrograms.find((f) => f.type === "closure");
-    const gs = nowPrograms.find((f) => f.type === "ground_stop");
-    const L = Math.max(v.now.level, v.peak.level);
-    let head, dot;
-    if (closed) { head = "Airport closed"; dot = 4; }
-    else if (gs) {
-      const end = programEnd(gs);
-      head = "Ground stop " + (end ? "until " + whenLabel(end, tz) : /until /.test(gs.detail || "") ? retime(/until [^,]+/.exec(gs.detail)[0], a) : "until further notice");
-      dot = 4;
-    } else {
-      dot = L;
-      const range = laterPeak(v) ? peakRange(v) : "until " + whenLabel(levelEnd(v), tz);
-      head = L === 0 ? "Normal operations" : L === 1 ? "Minor delays possible" : L === 2 ? "Delays possible " + range : "Delays likely " + range;
-    }
-    const ops = [];
-    for (const f of nowPrograms) ops.push(programLine(f, a));
-    for (const x of ((v.opsplan && v.opsplan.items) || []).filter((x) => x.level > 0 && !x.dup).sort((p, q) => q.level - p.level)) ops.push(retime(x.text, a));
-    for (const f of (v.faa || []).filter((f) => f.type === "closure" && f.scope === "runway")) ops.push(retime(f.plain || "Runway closed", a));
-    const dn = delaysNow(v);
-    const opsShown = uniq(ops).slice(0, 3);
-    const more = uniq(ops).length - opsShown.length;
-    const wxNow = shortCond(a.metar ? metarCond(a.metar) : v.hours[0], a.metar && a.metar.raw) + (a.metar && a.metar.temp != null ? " · " + f1(a.metar.temp) + "°F" : "");
-    let coming;
-    const pkh = v.hours.find((x) => x.t === v.peak.at) || v.hours[0];
-    if (laterPeak(v)) coming = `${LEVELS[v.peak.level].label} ${peakRange(v)}: ${plainList(pkh.reasons, a)[0] || "minor weather"}`;
-    else if (v.now.level > 0) {
-      const nxt = v.hours.find((x) => Date.parse(x.t) >= levelEnd(v));
-      coming = nxt ? `${LEVELS[v.now.level].label} until ${whenLabel(levelEnd(v), tz)}, then ${nxt.level ? LEVELS[nxt.level].label : "clear"}` : `${LEVELS[v.now.level].label} through the next 24 hours`;
-    } else coming = "Nothing significant expected";
-    const row = (ico, k, ...val) => h("div", { class: "sum-row" }, icon(ICONS[ico]), h("div", {}, h("div", { class: "sum-k" }, k), ...val));
-    // one line at rest (dot, headline, the most important fact); the rows open behind the chevron
-    const fact = dn[0] || uniq(ops).find((t) => t !== head && !t.startsWith(head)) || wxNow;
-    return h("details", { class: "summary", "aria-label": "Status summary" },
-      h("summary", { class: "sum-head" }, h("span", { class: "dot " + lv(dot), "aria-hidden": "true" }),
-        h("span", { class: "sum-line" }, h("h2", { class: "sum-h" }, head), fact ? h("span", { class: "sum-fact" }, fact) : null),
-        h("span", { class: "sum-chev", "aria-hidden": "true" }, "⌄")),
-      row("ops", "Operations",
-        opsShown.length ? opsShown.map((t) => h("div", { class: "sum-v" }, t)) : h("div", { class: "sum-v" }, "No operational issues reported"),
-        more > 0 ? h("div", { class: "sum-v muted" }, `and ${more} more below`) : null,
-        dn.length ? h("div", { class: "sum-v sum-delay" }, h("span", { class: "muted" }, "Delays right now: "), dn.join(" · ")) : null),
-      row("sun", "Weather now", h("div", { class: "sum-v" }, wxNow || "No current report")),
-      row("next", "Coming up", h("div", { class: "sum-v" }, coming)),
-      h("button", { type: "button", class: "sum-more", onclick: onMore }, "View full report", h("span", { "aria-hidden": "true" }, " ›")));
   }
 
   // ---------- Current weather card ----------
@@ -1988,7 +1937,8 @@
     const grid = h("dl", { class: "kv2" }, kv.map(([k, val]) => h("div", {}, h("dt", {}, k), h("dd", {}, val))));
     const obs = m.obsTime ? "Observed " + ago(Math.max(0, refNow() - Date.parse(m.obsTime))) : "";
     if (!aviation()) {
-      return section("Current weather", "sun", [head, cat ? h("p", { class: "cw-expl" }, FC_EXPLAIN[cat]) : null, grid], null, { cls: "cw", meta: obs });
+      const rows = kv.filter(([k]) => k !== "Temperature" && (k !== "Gusts" || m.gust != null));
+      return section("Current weather", "sun", [head, h("dl", { class: "kv2" }, rows.map(([k, val]) => h("div", {}, h("dt", {}, k), h("dd", {}, val))))], null, { cls: "cw", meta: obs });
     }
     const age = m.obsTime ? agoShort(refNow() - Date.parse(m.obsTime)) : "";
     const maxW = Math.max(40, Math.ceil(((m.gust || 0) + 5) / 10) * 10);
@@ -2000,7 +1950,7 @@
       tickBar("Wind " + (w.dir != null ? (w.dir === "VRB" ? "variable" : String(w.dir).padStart(3, "0") + "°") : ""), w.spd, maxW),
       tickBar("Gusts", m.gust, maxW, "gust"),
       h("div", { class: "cw-xw", "data-icao": a.icao }, "Crosswind: checking runways…"),
-      h("details", { class: "srcl metar" }, h("summary", {}, "METAR · REPORTED " + age + " ", h("span", { class: "car", "aria-hidden": "true" }, "›")),
+      h("div", { class: "srcl metar" }, "METAR · REPORTED " + age,
         h("pre", { class: "raw" }, metarMarked(m.raw)))], null, { cls: "cw av", meta: obs });
   }
   const compass = (d) => ["north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"][Math.round(((Number(d) % 360) + 360) % 360 / 45) % 8];

@@ -75,3 +75,17 @@ test("delay words: the analog is shown only when it agrees with the words (same 
   assert.equal(D.analogAgrees({ n: 57, k: 33 }, likely), true);
   assert.equal(D.analogAgrees({ n: 0, k: 0 }, likely), false);
 });
+
+test("detail outlook: routine delay rates stay quiet; active or elevated risk stays visible", () => {
+  const routine = { p: 0.55, pTypical: 0.5 };
+  assert.equal(D.notable(routine, 0, W(routine.p, routine)), false);
+  const elevated = { p: 0.55, pTypical: 0.2 };
+  assert.equal(D.notable(elevated, 0, W(elevated.p, elevated)), true);
+  const smallIncrease = { p: 0.3, pTypical: 0.1 };
+  assert.equal(D.notable(smallIncrease, 0, W(smallIncrease.p, smallIncrease)), false);
+  assert.equal(D.notable(smallIncrease, 2, W(smallIncrease.p, smallIncrease)), true);
+  for (const override of ["ground_stop", "ground_delay", "delay", "possible_ground_stop"]) {
+    const d = { p: override.startsWith("possible_") ? 0.5 : 1, pTypical: 0.5, override };
+    assert.equal(D.notable(d, 0, W(d.p, d)), true, override);
+  }
+});

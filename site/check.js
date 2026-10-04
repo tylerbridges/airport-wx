@@ -302,8 +302,8 @@ async function uiChecks(add, scenario) {
       A.openSheet(a.iata);
       await frameSleep(w, 50);
       const fc = [...doc.querySelectorAll("#sheet .boxwrap .fc, #sheet .cw .fc")].map((e) => e.textContent).filter((t) => /^(VFR|MVFR|IFR|LIFR)$/.test(t));
-      const pilotOpen = !!doc.querySelector("#sheet details.pilot[open]");
-      add(fc.length && pilotOpen ? "pass" : "fail", "Aviation mode shows flight categories and opens Pilot details", `${a.iata}: ${fc.slice(0, 3).join(", ") || "none"}; Pilot details ${pilotOpen ? "open" : "closed"}`);
+      const pilotVisible = !!doc.querySelector("#sheet .pilot .pd");
+      add(fc.length && pilotVisible ? "pass" : "fail", "Aviation mode shows flight categories and technical details", `${a.iata}: ${fc.slice(0, 3).join(", ") || "none"}; Pilot details ${pilotVisible ? "visible" : "missing"}`);
     });
 
     // Timeline: 12 past + 24 forecast hours, dimmed history, lens on now, stable sheet layout
@@ -364,9 +364,10 @@ async function uiChecks(add, scenario) {
       if (rect() !== r0) shifts.push("after release " + rect());
       const restored = doc.querySelector("#sheet .bx-layer.on").dataset.layer === "rest" && bar._tl.shown == null;
       add(shown && restored && !doc.querySelector("#sheet .backnow") && !shifts.length ? "pass" : "fail", "Held hour previews return on release without a Back to now button or layout shift", shifts.join("; ") || `${r0} unchanged`);
-      // the three rest layouts: split (later, higher peak), single (now is the peak), clear
+      // Quiet/active/later-risk cards remain compact, with no expandable content.
       const counts = { split: 0, single: 0, clear: 0 };
       const wrong = [];
+      let expandable = 0;
       for (const x of A.state.data.airports) {
         A.openSheet(x.iata);
         await frameSleep(w, 10);
@@ -375,10 +376,12 @@ async function uiChecks(add, scenario) {
         const rest = doc.querySelector('#sheet .bx-layer[data-layer="rest"]');
         const got = rest.querySelector(".two") ? "split" : /^Clear through/.test(rest.querySelector(".sc-when").textContent) ? "clear" : "single";
         counts[got]++;
+        expandable += doc.querySelectorAll("#sheet details, #sheet .morebtn, #sheet [aria-expanded]").length;
         if (got !== want) wrong.push(`${x.iata} ${got} (want ${want})`);
       }
+      add(expandable ? "fail" : "pass", "Airport details have no expandable cards", `${expandable} expanders`);
       A.closeSheet();
-      add(wrong.length ? "fail" : "pass", "Sheet shows Now | Peak, one Now · Peak card, or a Clear card as the levels say", wrong.join("; ") || `split ${counts.split}, single ${counts.single}, clear ${counts.clear}`);
+      add(wrong.length ? "fail" : "pass", "Sheet shows Now / Coming up, one current-risk card, or a normal status as the levels say", wrong.join("; ") || `split ${counts.split}, single ${counts.single}, clear ${counts.clear}`);
     });
 
     // iPhone first screen: at 390×700 in Traveler mode the sheet's timeline is visible without scrolling (busy + quiet airport)
