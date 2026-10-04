@@ -26,13 +26,14 @@ test("delay words: mapping table on the calibrated rate", () => {
   assert.equal(W(0.76).word, "Delays very likely", "bin rate >= 70% over >= 200 hours");
 });
 
-test("delay words: calibration reads the reliability table (predicted 60–70% -> observed 53%)", () => {
+test("delay words: test outcomes never remap the validation-calibrated probability", () => {
   const real = { test: { reliability: bins([[0.5, 0.55, 0.47, 13000], [0.6, 0.65, 0.53, 9700], [0.7, 0.75, 0.63, 6700]]) } };
   const L = D.likelihood({ p: 0.65 }, { report: real, aviation: false });
-  assert.ok(Math.abs(L.rate - 0.53) < 1e-9);
+  assert.equal(L.rate, 0.65);
   assert.equal(L.word, "Delays likely");
   assert.equal(D.likelihood({ p: 0.75 }, { report: real, aviation: false }).word, "Delays likely", "observed 63%: not very likely");
-  // no report: the raw score
+  assert.equal(D.calibrate(0.75, real).rate, 0.75);
+  // no report: the already calibrated score
   assert.equal(D.likelihood({ p: 0.3 }, { report: null, aviation: false }).word, "Delays possible");
 });
 
@@ -119,4 +120,14 @@ test("routine line: day-part phrases", () => {
   assert.equal(D.dayPartPhrase(at(15), at(5, 17), tz, true), "today"); // 10 AM – midnight
   assert.equal(D.dayPartPhrase(at(3, 17), at(4, 17), tz), "tonight"); // 10–11 PM
   assert.equal(D.dayPartPhrase(at(14), at(16), tz), "this morning");
+});
+
+
+test("delay words: pre-test support controls caps independently of test outcomes", () => {
+  const frozen = { reliability: bins([[0.7, 0.75, 0.78, 5000]]), byAirport: { ORD: { bss: { climo: 0.12 } } } };
+  const a = { displaySupport: frozen, test: { reliability: bins([[0.7, 0.75, 0.1, 1]]), byAirport: { ORD: { bss: { climo: -0.1 } } } } };
+  const b = { displaySupport: frozen, test: { reliability: bins([[0.7, 0.75, 0.95, 5000]]), byAirport: { ORD: { bss: { climo: 0.8 } } } } };
+  const opts = { iata: "ORD", aviation: false };
+  assert.deepEqual(D.likelihood({ p: 0.75 }, { ...opts, report: a }), D.likelihood({ p: 0.75 }, { ...opts, report: b }));
+  assert.equal(D.likelihood({ p: 0.75 }, { ...opts, report: a }).word, "Delays very likely");
 });

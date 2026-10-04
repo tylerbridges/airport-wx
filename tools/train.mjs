@@ -37,6 +37,7 @@ import {
 import { aggregateBts, buildDataset, readDataset, runwayTable } from "./train-data.mjs";
 import { fixtureWorld } from "./train-fixtures.mjs";
 import { mergeAcc } from "./train-lib.mjs";
+import { likelihood } from "../site/delay.js";
 import {
   SPEC, BUCKETS, DEF, DEF_TEXT, FEATS, typicalRate, logit, calibrate, modelOk, featsOf, modelRaw, encode, volumeAt, seasonOf,
 } from "../poller/delay.mjs";
@@ -193,6 +194,8 @@ export async function train(opts) {
 
   // climatology from the training period (the model's input; also the "typical" baseline on test)
   const climoTrain = climatology(trainRecs);
+  // The calibration predictor cannot use calibration-month outcome rates as an input.
+  const climoFit = climatology(records.filter((r) => fitSet.has(r.ym)));
 
   // training-time inputs: FAA program state from the history log, schedule volume from BTS
   const vol = volumeTable(records, trainSet);
@@ -207,6 +210,7 @@ export async function train(opts) {
   const V = rows.vocab.size;
   const y = new Uint8Array(rows.n);
   const xc = new Float64Array(rows.n);
+  const xcFit = new Float64Array(rows.n);
   const pc = new Float64Array(rows.n);
   for (let q = 0; q < rows.n; q++) {
     const r = records[rows.rec[q]];
@@ -214,6 +218,8 @@ export async function train(opts) {
     const t = typicalRate(climoTrain, r.a, r.mo, r.lh);
     pc[q] = t ? t.p : climoTrain.base.all;
     xc[q] = logit(pc[q]);
+    const tf = typicalRate(climoFit, r.a, r.mo, r.lh);
+    xcFit[q] = logit(tf ? tf.p : climoFit.base.all);
   }
   const idxOf = (pred) => { const a = []; for (let q = 0; q < rows.n; q++) if (pred(records[rows.rec[q]])) a.push(q); return Uint32Array.from(a); };
   const trainRows = idxOf((r) => trainSet.has(r.ym));
@@ -228,6 +234,7 @@ export async function train(opts) {
   const maskFor = (on) => { const m = new Uint8Array(V); for (let j = 0; j < V; j++) m[j] = cnt[j] >= minCount && (fam[j] == null || on.includes(fam[j])) ? 1 : 0; return m; };
   const mask = maskFor(families);
   const X = { off: rows.off, idx: rows.idx, xc, y, V };
+  const XFit = { ...X, xc: xcFit };
 
   // lambda: out-of-fold log loss over contiguous blocks of the training months
   const fs = folds(split.train, 3);
@@ -252,11 +259,13 @@ export async function train(opts) {
   const yTest = Array.from(testRows, (q) => y[q]);
   const variant = (on) => {
     const m = on === families ? mask : maskFor(on);
-    const fitV = fitLogistic({ ...X, mask: m, rows: fitRows, lambda: best.lambda });
-    const cal = isotonicFit(Array.from(predictRows({ ...X, mask: m, rows: valRows, fit: fitV })), yVal);
+    const fitV = fitLogistic({ ...XFit, mask: m, rows: fitRows, lambda: best.lambda });
+    const rawVal = Array.from(predictRows({ ...XFit, mask: m, rows: valRows, fit: fitV }));
+    const cal = isotonicFit(rawVal, yVal);
+    const pVal = rawVal.map((p) => calibrate(cal, p));
     const fit = fitLogistic({ ...X, mask: m, rows: trainRows, lambda: best.lambda, init: fitV.beta });
     const pTest = Array.from(predictRows({ ...X, mask: m, rows: testRows, fit }), (p) => calibrate(cal, p));
-    return { fit, cal, pTest, mask: m };
+    return { fit, cal, pTest, pVal, mask: m };
   };
   const main = variant(families);
   const { fit, cal, pTest } = main;
@@ -341,6 +350,31 @@ export async function train(opts) {
   test.byLead = Object.fromEntries(BUCKETS.map((b, bi) => [b.key, evalSet(sub((q) => rows.b[q] === bi))]));
   const aps = [...new Set(records.map((r) => r.a))].sort();
   test.byAirport = Object.fromEntries(aps.map((ap) => [ap, evalSet(sub((q, r) => r.a === ap))]).filter(([, v]) => v.n));
+  // Freeze word support on the pre-test calibration block. Test outcomes evaluate it,
+  // rather than selecting the displayed probability mapping or its conservative caps.
+  const displaySupport = {
+    on: vb.val, source: "pre-test calibration block", scoreMapping: "model isotonic only",
+    reliability: reliability(main.pVal, yVal).map((b) => ({ ...b, meanP: r4(b.meanP), rate: r4(b.rate) })),
+    byAirport: Object.fromEntries(aps.map((ap) => {
+      const ix = Array.from(valRows.keys()).filter((i) => records[rows.rec[valRows[i]]].a === ap);
+      const pm = ix.map((i) => main.pVal[i]);
+      const yy = ix.map((i) => yVal[i]);
+      const bc = brier(ix.map((i) => 1 / (1 + Math.exp(-xcFit[valRows[i]]))), yy);
+      return [ap, { n: ix.length, bss: { climo: bc ? r4(1 - brier(pm, yy) / bc) : null } }];
+    }).filter(([, v]) => v.n)),
+  };
+  const wordRows = new Map();
+  testRows.forEach((q, i) => {
+    const ap = records[rows.rec[q]].a;
+    const L = likelihood({ p: pTest[i], pTypical: pc[q] }, { report: { displaySupport }, iata: ap, aviation: false });
+    const b = wordRows.get(L.key) || { key: L.key, word: L.word, n: 0, k: 0, sumP: 0 };
+    b.n++; b.k += yTest[i]; b.sumP += L.rate;
+    wordRows.set(L.key, b);
+  });
+  test.displayWords = {
+    supportOn: vb.val, evaluatedOn: split.test, scoreMapping: "model isotonic only", overrides: "not included in weather-only forecast rows",
+    bands: [...wordRows.values()].map(({ sumP, ...b }) => ({ ...b, meanP: r4(sumP / b.n), rate: r4(b.k / b.n) })),
+  };
   test.bySeason = Object.fromEntries(["winter", "spring", "summer", "fall"].map((s) => [s, evalSet(sub((q, r) => seasonOf(r.mo) === s))]).filter(([, v]) => v.n));
   // calibration by airport group (model, and the deployed model when it could be scored)
   const rc = (c) => (c ? { n: c.n, meanP: r4(c.meanP), rate: r4(c.rate), brier: r4(c.brier), ece: r4(c.ece), mid: c.mid ? { n: c.mid.n, meanP: r4(c.mid.meanP), rate: r4(c.mid.rate) } : null } : null);
@@ -434,6 +468,7 @@ export async function train(opts) {
     features: { used: families, requested, unavailable, programsCoverage: progCov, programsRowsCovered: feats.programs ? countCovered(rows, records, prog) : null },
     current: { ...current, feats: current.feats || null },
     ablation,
+    displaySupport,
     test,
     ruleRates: lr.levels,
     lamp: feats.lamp,
@@ -519,6 +554,13 @@ export function renderMarkdown(rep) {
     L.push(row(["Features", "Brier", "Skill vs climatology", "AUC"]));
     L.push(sep(4));
     for (const a of rep.ablation) L.push(row([a.label, f3(a.brier), f3(a.bss), f3(a.auc)]));
+    L.push("");
+  }
+  if (T.displayWords) {
+    L.push("## Displayed delay words (untouched test)", "");
+    L.push(`Probability comes directly from the pre-test isotonic model calibration. Word support and airport caps were frozen on ${T.displayWords.supportOn.join(", ")}; evaluated on ${T.displayWords.evaluatedOn.join(", ")}. FAA overrides are not represented by these weather-only rows.`, "");
+    L.push(row(["Word", "Hours", "Mean predicted", "Observed disruption rate"]), sep(4));
+    for (const b of T.displayWords.bands) L.push(row([b.word, int(b.n), pct(b.meanP), pct(b.rate)]));
     L.push("");
   }
   L.push("## Reliability (test)");

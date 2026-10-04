@@ -81,7 +81,7 @@ const NOW_KINDS = { ground_stop: "FAA ground stop", ground_delay: "FAA ground de
 
 let REPORT = null; // data/model/report.json (test reliability table and per-airport skill); loaded once below
 export function setReport(r) { REPORT = r && r.test ? r : null; }
-const MIN_BIN = 200; // test hours a reliability bin needs before its word is trusted
+const MIN_BIN = 200; // supported hours a reliability bin needs before its word is trusted
 const LOW_SKILL = 0.02; // Brier skill vs climatology at or below this: cap at "Delays possible"
 const WORDS = [
   ["unlikely", "Delays unlikely"],
@@ -96,26 +96,16 @@ const STEP_DOWN = { very: "likely", likely: "possible", possible: "small", small
 const RANK = { unlikely: 0, small: 1, usual: 1, possible: 2, likely: 3, very: 4 };
 
 /**
- * Observed delay rate for a model score p, read through the test reliability table (what actually happened at each
- * predicted level), interpolated between bins' mean scores; with no report, p itself. Also returns the bin of p.
+ * The model score already includes isotonic calibration fitted before the test period.
+ * Holdout outcomes explain sample support; they must never fit another score mapping.
  */
 export function calibrate(p, report = REPORT) {
-  const rel = report && report.test && Array.isArray(report.test.reliability) ? report.test.reliability : null;
+  const support = report && (report.displaySupport || report.test);
+  const rel = support && Array.isArray(support.reliability) ? support.reliability : null;
   if (!rel || p == null || !Number.isFinite(Number(p))) return { rate: p, bin: null };
   p = Number(p);
-  const pts = rel.filter((b) => b.n > 0 && b.meanP != null && b.rate != null).sort((a, b) => a.meanP - b.meanP);
-  if (!pts.length) return { rate: p, bin: null };
-  let rate;
-  if (p <= pts[0].meanP) rate = pts[0].rate * (pts[0].meanP > 0 ? Math.max(0, p) / pts[0].meanP : 1);
-  else if (p >= pts[pts.length - 1].meanP) rate = pts[pts.length - 1].rate;
-  else {
-    for (let i = 0; i + 1 < pts.length; i++) {
-      const a = pts[i], b = pts[i + 1];
-      if (p >= a.meanP && p <= b.meanP) { rate = a.rate + ((b.rate - a.rate) * (p - a.meanP)) / Math.max(1e-9, b.meanP - a.meanP); break; }
-    }
-  }
   const bin = rel.find((b) => p >= b.lo && (p < b.hi || (b.hi >= 1 && p <= 1))) || null;
-  return { rate, bin };
+  return { rate: p, bin };
 }
 
 /** "typically 30–45 min": the median ± 10, rounded to 5, never one number. */
@@ -156,7 +146,8 @@ export function likelihood(d, opts = {}) {
   const small = !!report && (!bin || !(bin.n >= MIN_BIN));
   if (key === "very" && !(bin && bin.rate >= 0.7 && bin.n >= MIN_BIN)) key = "likely"; // the one step down for this bin
   else if (small) key = STEP_DOWN[key];
-  const ap = opts.iata && report && report.test && report.test.byAirport && report.test.byAirport[opts.iata];
+  const support = report && (report.displaySupport || report.test);
+  const ap = opts.iata && support && support.byAirport && support.byAirport[opts.iata];
   const skill = ap && ap.bss ? ap.bss.climo : null;
   if (skill != null && skill <= LOW_SKILL && RANK[key] > RANK.possible) key = "possible";
   const cue = typ > 0 ? (rate >= 1.25 * typ ? "higher than usual" : rate <= 0.75 * typ ? "lower than usual" : "") : "";
@@ -348,8 +339,8 @@ export function whyBlock(a, now = refNow()) {
     const { bin } = calibrate(Number(d.p));
     if (L.key !== "now" && bin && bin.rate != null && bin.n) {
       kids.push(el("div", "dl-analog", RANK[L.key] >= RANK.possible
-        ? `For ${a.iata}, warnings like this were right ${inTen(bin.rate)} times.`
-        : `For ${a.iata}, hours given this outlook had delays ${inTen(bin.rate)} times.`));
+        ? `Across airports, warnings like this were followed by delays ${inTen(bin.rate)} times.`
+        : `Across airports, hours given this outlook had delays ${inTen(bin.rate)} times.`));
     }
     if (d.pTypical != null && L.key !== "now") kids.push(el("div", "dl-analog", `On a typical day at this hour, delays happen ${inTen(d.pTypical)} times.`));
   }
@@ -400,7 +391,7 @@ export function delayBlock(a, i) {
   const an = analogWords(d.analog);
   if (an && analogAgrees(d.analog, L)) why.push(el("div", "dl-analog", an));
   const { bin } = calibrate(Number(d.p));
-  if (L.key !== "now" && bin && bin.rate != null && bin.n) why.push(el("div", "dl-analog", `For ${a.iata}, warnings like this were right ${inTen(bin.rate)} times.`));
+  if (L.key !== "now" && bin && bin.rate != null && bin.n) why.push(el("div", "dl-analog", `Across airports, warnings like this were followed by delays ${inTen(bin.rate)} times.`));
   if (d.pTypical != null && L.key !== "now") why.push(el("div", "dl-analog", `On a typical day at this hour, delays happen ${inTen(d.pTypical)} times.`));
   why.push(sourceLine());
   kids.push(aviation ? el("div", "dl-why", ...why) : el("div", "dl-srcline", "Airport-wide weather and air traffic control risk · forecast estimate"));
@@ -411,7 +402,7 @@ export function delayBlock(a, i) {
 const api = { delayLine, delayBlock, likelihood, notable, calibrate, analogWords, analogAgrees, minutesRange, setReport, routineOutlook, outlookHour, whyBlock, dayPartPhrase };
 if (typeof window !== "undefined" && window.document) {
   window.AWXDelay = api;
-  // the calibration table; until it arrives (or if it is missing) the raw score is used
+  // Holdout sample support and explanations; probabilities are calibrated by the model.
   fetch("./data/model/report.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).then((r) => {
     if (!r) return;
     setReport(r);

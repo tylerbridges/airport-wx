@@ -24,7 +24,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseCsvLine, parseCsv, tafsFromIemCsv, metarsFromIemCsv, mergeTafs } from "./backtest-lib.mjs";
 import {
-  btsIndex2, btsAdd2, accEntries, mergeAcc, truthFromAcc, hubBitsMap, airportRecords, lampFromIemCsv, lampLookup, HOUR, TOP_HUBS,
+  btsIndex2, btsAdd2, accEntries, mergeAcc, truthFromAcc, hubBitsMap, airportRecords, lampFromIemCsv, lampLookup, LAMP_ARCHIVE_TIMING, HOUR, TOP_HUBS,
 } from "./train-lib.mjs";
 import { HUBS } from "../poller/delay.mjs";
 
@@ -146,7 +146,7 @@ export function iemSources(cacheDir) {
       const q = ["metar", "drct", "sknt", "gust", "vsby", "skyc1", "skyl1", "skyc2", "skyl2", "skyc3", "skyl3", "wxcodes"].map((d) => `data=${d}`).join("&");
       return checkCsv(await iemGet(`${IEM}/asos.py?station=${id}&${q}&tz=Etc/UTC&format=onlycomma&latlon=no&missing=M&trace=T&report_type=3&report_type=4&sts=${isoZ(from - 3 * HOUR)}&ets=${isoZ(to)}`, cacheDir), "METAR");
     },
-    lamp: async (icao, from, to) => checkCsv(await iemGet(`${IEM}/mos.py?station=${icao}&model=LAV&sts=${isoZ(from - 3 * HOUR)}&ets=${isoZ(to)}&format=csv`, cacheDir), "LAMP"),
+    lamp: async (icao, from, to) => checkCsv(await iemGet(`${IEM}/mos.py?station=${icao}&model=LAV&sts=${isoZ(from - 7 * HOUR)}&ets=${isoZ(to)}&format=csv`, cacheDir), "LAMP"),
   };
 }
 
@@ -246,7 +246,7 @@ export async function buildDataset({
     all.sort((x, y) => x.t - y.t);
     return all.filter((o, i) => i === 0 || o.t !== all[i - 1].t || o.raw !== all[i - 1].raw);
   };
-  // LAMP (format unverified): the header, the columns found and the first row are logged once; a chunk
+  // LAMP (real IEM midnight and 06Z replies are fixtures): columns and the first row are logged once; a chunk
   // that fails is retried month by month; after lampBudgetMs the remaining chunks are skipped ("lp:none").
   const lampT0 = Date.now();
   let lampFormat = null; // set when a response's header has no usable columns: the rest is skipped
@@ -319,7 +319,7 @@ export async function buildDataset({
     if (kept) used.push(a.iata);
     log(`${a.iata}: ${tafs.length} TAFs, ${obs.length} METARs, ${tr.size} BTS hours, ${kept} records`);
   }
-  return { counts, skipped, diagnostics: diag, airportsUsed: used, hubCascade: !!hubCascade, topHubs: hubCascade ? Object.fromEntries(airports.map((a) => [a.iata, (topHubs[a.iata] || []).filter((h) => byIata.has(h))])) : null, period: { months, start: new Date(start).toISOString(), end: new Date(end).toISOString() } };
+  return { counts, skipped, diagnostics: diag, lampTiming: lamp ? { ...LAMP_ARCHIVE_TIMING, actualReceiptArchived: false, archiveCyclesUTC: [0, 6, 12, 18] } : null, airportsUsed: used, hubCascade: !!hubCascade, topHubs: hubCascade ? Object.fromEntries(airports.map((a) => [a.iata, (topHubs[a.iata] || []).filter((h) => byIata.has(h))])) : null, period: { months, start: new Date(start).toISOString(), end: new Date(end).toISOString() } };
 }
 
 /** Runway headings (true) per IATA from site/data/airports-all.json. */

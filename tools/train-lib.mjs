@@ -254,7 +254,7 @@ export function airportRecords({ iata, tz, tafs, obs, truth, hubMaps = [], casca
   return out;
 }
 
-// ---------- IEM LAMP archive (optional; format unverified) ----------
+// ---------- IEM LAMP archive (optional; real midnight/06Z CSV fixtures) ----------
 
 /** Case-insensitive column lookup over several candidate names, after trimming and dropping quotes/units. */
 function lampCol(h, names) {
@@ -265,7 +265,7 @@ function lampCol(h, names) {
 
 /**
  * IEM mos.py CSV (model=LAV) -> Map ftimeMs -> [{run, lp, cp, lc, lv}] sorted by run. The format is
- * unverified, so columns are found by name, case-insensitively: run time (runtime, run, model_runtime),
+ * verified against real midnight/06Z samples; columns are found by name, case-insensitively: run time (runtime, run, model_runtime),
  * valid time (ftime, valid, fcst_time), thunder/lightning chance (lp1, ltg1, ltg, lp2, tp1, tstm1, tsd),
  * convection chance (cp1, cnv1, cp2), ceiling category (cig, ceiling) and visibility category (vis).
  * LAMP's ceiling/visibility *probabilities* aren't in the text bulletin the live poller reads, so only the
@@ -299,12 +299,19 @@ export function lampFromIemCsv(rows) {
   for (const v of byTime.values()) v.sort((a, b) => a.run - b.run);
   return { byTime, diag };
 }
-/** LP1/CP1 and the categories for the hour starting H (column time H + 1 h) from the latest run at or before pred. */
-export function lampLookup(byTime, H, pred) {
+/** IEM drops LAV's :30 issuance minutes; restore them before causal selection.
+ * Actual receipt times aren't archived. Six-hour archive cycles cannot represent hourly live freshness.
+ */
+export const LAMP_ARCHIVE_TIMING = Object.freeze({ issueOffsetMs: 30 * 60e3, maxAgeMs: 6 * HOUR });
+/** LP1/CP1 and categories for hour H, from the latest issued, non-expired archived cycle. */
+export function lampLookup(byTime, H, pred, timing = LAMP_ARCHIVE_TIMING) {
   const list = byTime.get(H + HOUR);
   if (!list) return null;
   let best = null;
-  for (const x of list) if (x.run <= pred) best = x;
+  for (const x of list) {
+    const issued = x.run + timing.issueOffsetMs;
+    if (issued <= pred && pred - issued <= timing.maxAgeMs) best = x;
+  }
   return best ? { lp: best.lp, cp: best.cp, lc: best.lc ?? null, lv: best.lv ?? null } : null;
 }
 

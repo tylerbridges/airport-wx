@@ -418,6 +418,11 @@ test("fixture training end to end: with every family and with none (calibrated o
     assert.ok(R.features.programsRowsCovered > 0 && R.features.programsRowsCovered < 1);
     assert.equal(R.ablation, null);
     assert.ok(R.test.calibrationByGroup.all.model.n === R.test.n);
+    assert.deepEqual(R.displaySupport.on, R.period.calibration);
+    assert.deepEqual(R.test.displayWords.evaluatedOn, R.period.test);
+    assert.equal(R.test.displayWords.bands.reduce((n, b) => n + b.n, 0), R.test.n);
+    assert.ok(Math.abs(R.test.displayWords.bands.reduce((n, b) => n + b.k, 0) / R.test.n - R.test.base) <= 0.00005);
+    assert.match(renderMarkdown(R), /Displayed delay words \(untouched test\)/);
     assert.ok(on.model.feats.volume && on.model.vol.ORD.q.length === 168 && Array.isArray(on.model.hubs.MSP));
     assert.ok(modelOk(on.model));
     const md = renderMarkdown(R);
@@ -435,5 +440,22 @@ test("fixture training end to end: with every family and with none (calibrated o
     assert.ok(off.report.test.n > 1000);
   } finally {
     await rm(out, { recursive: true, force: true });
+  }
+});
+
+
+test("real IEM LAV midnight and 06Z: complete coverage and restored issuance timing", async () => {
+  for (const cycle of ["00", "06"]) {
+    const text = await readFile(join(FX, `iem-lav-KORD-2026-07-01-${cycle}.csv`), "utf8");
+    const { byTime, diag } = lampFromIemCsv(parseCsv(text));
+    assert.equal(diag.rows, 38);
+    assert.equal(diag.used, 38, `${cycle}Z real rows all parsed`);
+    const run = Date.UTC(2026, 6, 1, Number(cycle));
+    const issued = run + 30 * 60e3;
+    assert.equal(lampLookup(byTime, run + HOUR, run), null, "IEM rounded runtime precedes bulletin issuance");
+    assert.equal(lampLookup(byTime, run + HOUR, issued - 1), null);
+    assert.ok(lampLookup(byTime, run + HOUR, issued));
+    assert.ok(lampLookup(byTime, run + 8 * HOUR, issued + 6 * HOUR));
+    assert.equal(lampLookup(byTime, run + 8 * HOUR, issued + 6 * HOUR + 1), null, "expired archive cycle is missing, not current");
   }
 });

@@ -27,6 +27,10 @@ test("time parsing and local hour <-> UTC across DST", () => {
   assert.equal(parseTime("2026-07-14 11:20:00+00"), Date.parse("2026-07-14T11:20:00Z"));
   assert.equal(parseTime("2026-07-14T11:20:00Z"), Date.parse("2026-07-14T11:20:00Z"));
   assert.equal(parseTime("M"), null);
+  assert.equal(parseTime("2026-07-01"), Date.UTC(2026, 6, 1));
+  assert.equal(parseTime("2024-02-29"), Date.UTC(2024, 1, 29));
+  assert.equal(parseTime("2026-07-14 11:20:00-05"), Date.parse("2026-07-14T16:20:00Z"));
+  for (const invalid of ["2026-02-29", "2026-02-30", "2026-13-01", "2026-07-00", "2026-07-14 24:00", "2026-07-14 11:60", "2026-07-14 11:20:60", "2026-07-14+00", "garbage"]) assert.equal(parseTime(invalid), null, invalid);
   assert.equal(localToUtc("2026-07-14", 15, "America/Chicago"), Date.parse("2026-07-14T20:00:00Z")); // CDT
   assert.equal(localToUtc("2026-01-14", 15, "America/Chicago"), Date.parse("2026-01-14T21:00:00Z")); // CST
   assert.equal(localToUtc("2026-07-14", 6, "America/Phoenix"), Date.parse("2026-07-14T13:00:00Z"));

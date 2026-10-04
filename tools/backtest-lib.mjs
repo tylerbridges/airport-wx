@@ -102,12 +102,19 @@ export function findCol(header, names) {
 
 /** "2026-07-14 11:20", "2026-07-14T11:20:00Z", "2026-07-14 11:20:00+00" -> epoch ms (UTC if no zone). */
 export function parseTime(v) {
-  let s = String(v ?? "").trim();
-  if (!s || s === "M") return null;
-  s = s.replace(" ", "T");
-  if (/[+-]\d{2}$/.test(s)) s += ":00";
-  if (!/(Z|[+-]\d{2}:?\d{2})$/i.test(s)) s += "Z";
-  const t = Date.parse(s);
+  const s = String(v ?? "").trim();
+  // Validate the calendar date before Date.parse can normalize e.g. February 30.
+  // A date-only IEM midnight runtime has no zone; its trailing -DD is not an offset.
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2})(\.\d{1,3})?)?(Z|[+-]\d{2}(?::?\d{2})?)?)?$/i);
+  if (!m) return null;
+  const [year, month, day] = m.slice(1, 4).map(Number);
+  const d = new Date(0);
+  d.setUTCFullYear(year, month - 1, day);
+  if (d.getUTCFullYear() !== year || d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) return null;
+  if (Number(m[4] || 0) > 23 || Number(m[5] || 0) > 59 || Number(m[6] || 0) > 59) return null;
+  let zone = m[8] || "Z";
+  if (/^[+-]\d{2}$/.test(zone)) zone += ":00";
+  const t = Date.parse(`${m[1]}-${m[2]}-${m[3]}T${m[4] || "00"}:${m[5] || "00"}:${m[6] || "00"}${m[7] || ""}${zone}`);
   return Number.isFinite(t) ? t : null;
 }
 
