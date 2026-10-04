@@ -322,6 +322,7 @@ async function uiChecks(add, scenario) {
         });
       });
       add(!undim.length ? "pass" : "fail", "Past hours are dimmed", undim.length ? `${undim.length} timelines with undimmed past hours` : "all past hours dimmed");
+      if (A.placeLenses) A.placeLenses(); // (virtual-time runs may not have run the animation frame yet)
       const off = wraps.map((el) => {
         const cur = el.querySelector(".tl .s.cur"), lens = el.querySelector(".lens");
         if (!cur || !lens || lens.hidden) return 99;
@@ -380,11 +381,14 @@ async function uiChecks(add, scenario) {
       const atl = aps.find((x) => x.iata === "ATL");
       for (const a of [busy, quiet, atl].filter((x, i, arr) => x && arr.indexOf(x) === i)) {
         A.openSheet(a.iata);
-        await frameSleep(w, 450);
-        const bottom = doc.querySelector("#sheet .bigwrap .tl").getBoundingClientRect().bottom;
-        out.push({ iata: a.iata, bottom: Math.round(bottom), ok: bottom <= w.innerHeight && doc.getElementById("sheet").scrollTop === 0 });
+        await frameSleep(w, 60);
+        // where the bar ends once the sheet has slid up (the sheet sits on the bottom edge), whatever its animation state
+        const sh = doc.getElementById("sheet");
+        const tl = doc.querySelector("#sheet .bigwrap .tl").getBoundingClientRect();
+        const bottom = w.innerHeight - sh.offsetHeight + (tl.bottom - sh.getBoundingClientRect().top);
+        out.push({ iata: a.iata, bottom: Math.round(bottom), ok: bottom <= w.innerHeight && sh.scrollTop === 0 });
         A.closeSheet();
-        await frameSleep(w, 350);
+        await frameSleep(w, 30);
       }
       add(out.every((x) => x.ok) ? "pass" : "fail", "Traveler: the sheet's timeline is on the first screen at 390×700 (busy, quiet, ATL)",
         out.map((x) => `${x.iata} bar ends at ${x.bottom} px`).join(", ") + " (viewport 700)");
@@ -423,7 +427,7 @@ async function uiChecks(add, scenario) {
       scan("home");
       for (const a of A.state.data.airports.slice(0, 8)) { A.openSheet(a.iata); await frameSleep(w, 15); scan(a.iata); A.closeSheet(); }
       if (w.AWXNav) {
-        for (const pg of [null, "trips", "data", "airports"]) { w.AWXNav.openSettings(pg || undefined); await frameSleep(w, 120); scan("Settings " + (pg || "root")); doc.querySelector(".awx-done") && doc.querySelector(".awx-done").click(); await frameSleep(w, 360); }
+        for (const pg of [null, "trips", "data", "airports"]) { w.AWXNav.openSettings(pg || undefined); await frameSleep(w, 60); scan("Settings " + (pg || "root")); const done = [...doc.querySelectorAll(".awx-done")].pop(); if (done) done.click(); await frameSleep(w, 30); }
         w.location.hash = "#trips"; await frameSleep(w, 200); scan("Trips tab"); w.location.hash = "";
       }
       const title = doc.title;
@@ -584,7 +588,9 @@ async function runLive() {
       rr(r.ready && !r.errors.length ? "pass" : "fail", `Render ${label}`, !r.ready ? "cards never appeared" : r.errors.length ? r.errors.join(" | ") : `${r.cards} cards, no errors`);
     }
     await navChecks(group("Navigation (390 px, hidden frame)"), "./index.html"); // nav hook
-    await uiChecks(group("App: settings, modes, timeline (390 px, hidden frame)"), null); // build2b
+    // build2b: the app UI checks run in mock mode; live only with &ui=1 (they double the run time, and the uptime
+    // monitor dumps this page under a 30 s virtual-time budget)
+    if (P.get("ui") === "1") await uiChecks(group("App: settings, modes, timeline (390 px, hidden frame)"), null);
   }
 }
 
