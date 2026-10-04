@@ -38,3 +38,5 @@ import "../tools/brief.test.mjs";
 // closures and hub cascades
 import "./closures.test.mjs";
 import "./hubs.test.mjs";
+// radar hook: radar card helpers and the copied engine
+import "../tools/radar.test.mjs";
