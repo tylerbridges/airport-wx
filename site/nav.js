@@ -141,6 +141,7 @@ function menuItems() {
   const acc = row("target", "How accurate is this?", { href: "accuracy.html" }, { hidden: true, id: "navMenuAcc" });
   accuracyExists().then((ok) => { if (ok) acc.hidden = false; });
   return [
+    window.AWXBrief ? row("sun", "Today's brief", { fn: () => { if (cur !== "airports") go("airports"); window.AWXBrief.open(); } }) : null, // brief hook: site/brief.js
     row("star", "Your airports", { fn: () => openSettings("airports"), count: favs.length }),
     row("calendar", "Trips & flight calendar", { fn: () => openSettings("trips") }),
     row("gear", "Settings", { fn: () => openSettings() }),

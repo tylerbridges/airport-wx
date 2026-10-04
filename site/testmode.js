@@ -163,7 +163,7 @@
         if (/\/data\/status\.json$/.test(p)) {
           return scenarioStatus().then(function (st) { T.info = st.scenario || null; scenarioLoaded(); return reply(shift(st, deltaOf(st))); });
         }
-        var mm = /\/data\/(trips\.json|movement\.json|wx\/[A-Za-z0-9_.-]+\.json)$/.exec(p);
+        var mm = /\/data\/(trips\.json|movement\.json|changes\.json|wx\/[A-Za-z0-9_.-]+\.json)$/.exec(p); // brief hook: changes.json
         if (mm) return shifted(mm[1]);
       }
     }

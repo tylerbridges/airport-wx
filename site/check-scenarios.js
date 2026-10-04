@@ -10,6 +10,7 @@
 //   {t:"alert", iata, event}   {t:"spc", iata, cat}   {t:"sigmet", iata}   {t:"model", basis}
 //   {t:"movement", iata, line: re | null, arrBelow?: share}   {t:"airlineAlert", re}
 //   {t:"tripConcern", i, re}  one of trip i's concerns (site/trip-risk.js) matches
+//   {t:"change", iata, kind?, re}  the scenario's changes.json has a matching event (brief hook)
 //   words also take every: true (every hour in [from, to] has the word/key) and notKey (no hour in range has it)
 //   {t:"hourLevel", iata, at: [from, to], op, v}   the highest hour level in from..to
 //   {t:"hourReason", iata, at: [from, to], re, every?}  some (every) hour in from..to has a matching reason
@@ -21,10 +22,12 @@
 //   {t:"header", re}       the "Updated …" / "Live data unavailable …" line
 //   {t:"banner", re}       the banner area
 //   {t:"noPercent"}        Traveler mode: no "%" in delay-chance text (cards, every sheet, trips)
+//   {t:"brief", re, favs?} the morning brief, opened as the menu does (AWXBrief.open), with these starred airports (brief hook)
+//   {t:"today", iata, re}  the airport sheet's "Today" card (brief hook)
 import { tripStatus } from "./trip-risk.js";
 
-const DATA = new Set(["words", "badge", "noFaa", "opsplan", "atcscc", "alert", "spc", "sigmet", "model", "movement", "airlineAlert", "tripConcern", "hourLevel", "hourReason", "cascade", "noCascade"]);
-const PAGE = new Set(["card", "sheet", "national", "header", "banner", "noPercent"]);
+const DATA = new Set(["words", "badge", "noFaa", "opsplan", "atcscc", "alert", "spc", "sigmet", "model", "movement", "airlineAlert", "tripConcern", "hourLevel", "hourReason", "cascade", "noCascade", "change"]); // brief hook: change
+const PAGE = new Set(["card", "sheet", "national", "header", "banner", "noPercent", "brief", "today"]); // brief hook: brief, today
 export const isPageAssert = (x) => PAGE.has(x.t);
 
 async function getJson(url) {
@@ -177,6 +180,14 @@ export async function dataAsserts(add, { sc, data, delta, shift }) {
         got = r ? `got ${short(texts)}` : "no such trip";
         break;
       }
+      case "change": { // brief hook
+        const raw = await getJson(`./data/scenarios/${sc.name}/changes.json`);
+        const evs = ((raw && raw.events) || []).filter((e) => e.iata === x.iata && (!x.kind || e.kind === x.kind));
+        ok = evs.some((e) => re(x.re).test(e.sentence));
+        label = `${x.iata} change log ${x.kind || "event"} /${x.re}/`;
+        got = raw ? `got ${short(evs.map((e) => e.sentence))}` : "no changes.json";
+        break;
+      }
       case "hourLevel": {
         const hs = a ? a.hours.slice(x.at[0], x.at[1] + 1) : [];
         const v = hs.length ? Math.max(...hs.map((h) => h.level)) : null;
@@ -272,11 +283,33 @@ export async function pageAsserts(add, w, doc, asserts) {
         got = e ? `says "${e.textContent.replace(/\s+/g, " ").trim().slice(0, 200)}"` : `no #${id}`;
         break;
       }
+      case "brief": { // brief hook: opened the way the menu does, whatever the time of day
+        const B = w.AWXBrief;
+        if (x.favs && A.setFavs) A.setFavs(x.favs); // test mode: not saved (site/testmode.js)
+        if (B) { B.open(); await later(w, 60); }
+        const e = doc.getElementById("brief");
+        const t = e && !e.hidden ? e.innerText.replace(/\s+/g, " ").trim() : "";
+        ok = !!t && re(x.re).test(t) && !/\d\s?%/.test(t);
+        label = `morning brief /${x.re}/`;
+        got = !B ? "site/brief.js didn't load" : t ? `brief says "${t.slice(0, 240)}"` : "no brief shown";
+        break;
+      }
+      case "today": { // brief hook
+        A.openSheet(x.iata);
+        await later(w, 80);
+        const c = doc.querySelector("#sheet .bf-today");
+        const t = c ? c.innerText.replace(/\s+/g, " ").trim() : "";
+        closeSheet();
+        ok = !!c && re(x.re).test(t);
+        label = `${x.iata} sheet "Today" /${x.re}/`;
+        got = c ? `Today says "${t.slice(0, 240)}"` : "no Today card";
+        break;
+      }
       case "noPercent": {
         await showAll();
         const hits = [];
         const scan = (root, where) => {
-          for (const el of root.querySelectorAll(".dl-line, .dl-block, .sc-delay, #trips, .tflight")) {
+          for (const el of root.querySelectorAll(".dl-line, .dl-block, .sc-delay, #trips, .tflight, #brief, .bf-today") /* brief hook */) {
             const t = el.textContent;
             if (/\d\s?%/.test(t)) hits.push(`${where}: "${t.trim().replace(/\s+/g, " ").slice(0, 70)}"`);
           }

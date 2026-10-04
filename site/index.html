@@ -734,6 +734,7 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
     </button>
   </header>
   <div id="search"></div><!-- build2a hook: search (site/searched.js) -->
+  <section id="brief" aria-label="Today's brief" hidden></section><!-- brief hook: morning brief (site/brief.js) -->
   <div class="seg" id="seg" role="tablist" aria-label="Filter airports"></div>
   <div id="banner"></div>
   <div class="national" id="national" hidden></div><!-- build2b: national summary strip -->
@@ -762,7 +763,8 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script type="module" src="searched.js?v=5"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=7"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="trips.js?v=7"></script><!-- trips hook -->
-<script type="module" src="nav.js?v=6"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
+<script type="module" src="nav.js?v=7"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
 <script type="module" src="movement.js?v=2"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
+<script type="module" src="brief.js?v=1"></script><!-- brief hook: morning brief + airport "Today" card -->
 </body>
 </html>

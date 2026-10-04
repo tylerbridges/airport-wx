@@ -44,6 +44,17 @@ jobs:
             done
           fi
           ls -l .cache/movement
+      # brief hook: the change log's previous state (changes/state.json on the history branch) for
+      # poller/changes.mjs. Missing = a fresh start (no events this run); never fails the job.
+      - name: Change log state from history
+        continue-on-error: true
+        timeout-minutes: 2
+        run: |
+          mkdir -p .cache/changes
+          if git fetch -q --depth=1 origin history; then
+            git show "FETCH_HEAD:changes/state.json" > .cache/changes/state.json 2>/dev/null || rm -f .cache/changes/state.json
+          fi
+          ls -l .cache/changes
       # Exits 0 unless every source failed, so a partial outage still deploys.
       # Also writes raw response samples to .cache/raw for the history step.
       - name: Poll sources and compute risk
@@ -53,6 +64,13 @@ jobs:
           # (trips.json says "not configured"); the poller never logs or publishes it.
           FLIGHTY_ICS_URL: ${{ secrets.FLIGHTY_ICS_URL }}
         run: node poller/poll.mjs
+      # brief hook: compare this poll with the previous one -> site/data/changes.json (last 36 h of per-airport
+      # events, deployed with the page) and .cache/changes/out (state + this run's events for the history step)
+      - name: Change log
+        if: ${{ steps.poll.outcome == 'success' }}
+        continue-on-error: true
+        timeout-minutes: 2
+        run: node poller/changes.mjs
       - uses: actions/configure-pages@v5
       # Live relay: tell the page where the Cloudflare Worker answers (site/data/config.json), only
       # once its /health is ok; otherwise {"liveUrl":null} (the committed default). Never fails the deploy.
@@ -112,6 +130,12 @@ jobs:
         continue-on-error: true
         timeout-minutes: 2
         run: node poller/movement.mjs record history/
+      # brief hook: changes/state.json and this run's events -> history/changes/ (poller/changes.mjs record)
+      - name: Record change log
+        if: ${{ !cancelled() && steps.history_prep.outcome == 'success' }}
+        continue-on-error: true
+        timeout-minutes: 2
+        run: node poller/changes.mjs record history/
       # Pushes whatever was recorded, even if one part of the record step failed.
       - name: Push history
         if: ${{ !cancelled() && steps.history_prep.outcome == 'success' }}

@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-04T03:35:21.025Z",
+ "generated": "2026-10-04T03:39:21.750Z",
  "groups": {
   "delays": "Delays & programs",
   "weather": "Weather",
@@ -1215,6 +1215,51 @@
     {
      "t": "rendered",
      "text": "Test scenario: Storms across the New York area"
+    },
+    {
+     "t": "change",
+     "iata": "EWR",
+     "kind": "program_start",
+     "re": "^Ground stop started \\(storms\\)$"
+    },
+    {
+     "t": "change",
+     "iata": "JFK",
+     "kind": "program_start",
+     "re": "^Delay program started \\(storms\\)$"
+    },
+    {
+     "t": "change",
+     "iata": "EWR",
+     "kind": "warning",
+     "re": "^Severe Thunderstorm Warning issued$"
+    },
+    {
+     "t": "change",
+     "iata": "BOS",
+     "kind": "plan_gs_add",
+     "re": "^FAA plans a possible ground stop \\(storms\\)$"
+    },
+    {
+     "t": "change",
+     "iata": "LGA",
+     "kind": "level",
+     "re": "^Risk up to Severe \\(storms\\)$"
+    },
+    {
+     "t": "today",
+     "iata": "EWR",
+     "re": "Ground stop started \\(storms\\).*Severe Thunderstorm Warning issued"
+    },
+    {
+     "t": "brief",
+     "favs": [
+      "EWR",
+      "JFK",
+      "BOS",
+      "ORD"
+     ],
+     "re": "[34] airports need attention EWR: Ground stop until [^—]+— storms JFK: Delay program until [^—]+— storms BOS: .*U\\.S\\.: 2 ground stops, 1 delay program"
     }
    ]
   },
@@ -1287,6 +1332,37 @@
     {
      "t": "rendered",
      "text": "Test scenario: Recovering after an EWR ground stop"
+    },
+    {
+     "t": "change",
+     "iata": "EWR",
+     "kind": "program_end",
+     "re": "^Ground stop lifted$"
+    },
+    {
+     "t": "change",
+     "iata": "EWR",
+     "kind": "level",
+     "re": "^Risk down to Moderate$"
+    },
+    {
+     "t": "change",
+     "iata": "EWR",
+     "kind": "movement",
+     "re": "^Departures back to normal$"
+    },
+    {
+     "t": "today",
+     "iata": "EWR",
+     "re": "Ground stop lifted.*Ground stop started \\(storms\\).*\\+1 earlier$"
+    },
+    {
+     "t": "brief",
+     "favs": [
+      "EWR",
+      "ORD"
+     ],
+     "re": "1 airport needs attention EWR: Delays happening now — ground stop lifted \\d"
     }
    ]
   },
