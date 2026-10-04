@@ -180,7 +180,7 @@ test("site/trip-risk.js is a byte-identical copy of poller/trip-risk.mjs", async
 const Outlook = createRequire(import.meta.url)("../site/outlook.js");
 const healthySources = Object.fromEntries(["faa", "atcscc", "metar", "taf"].map((k) => [k, { ok: true }]));
 const healthFor = (more = {}) => (a) => Outlook.health(a, { now: NOW, generated: at(0), sources: healthySources, ...more });
-const healthyAirport = (code) => ap(code, "America/Chicago", {}, { metar: { obsTime: at(0) } });
+const healthyAirport = (code) => ap(code, "America/Chicago", {}, { metar: { obsTime: at(0) }, taf: { issued: at(0) } });
 const quietTrip = { legs: [{ from: "MSP", to: "ATL", dep: at(2), arr: at(4) }] };
 
 test("shared airport health: complete fresh Trips stay green, stale or failed sources do not", () => {
@@ -215,7 +215,7 @@ test("shared airport health: observation gaps affect the relevant airport, not e
 
 test("shared airport health: known disruption and weather survive stale/source qualifications", () => {
   const airport = ap("MSP", "America/Chicago", span(0, 4, [4, ["Ground stop — equipment outage, until 8 PM CT", "Rain"]]), {
-    metar: { obsTime: at(0) }, faa: [{ type: "ground_stop", detail: "until 8 PM CT", end: at(4) }],
+    metar: { obsTime: at(0) }, taf: { issued: at(0) }, faa: [{ type: "ground_stop", detail: "until 8 PM CT", end: at(4) }],
   });
   for (const opts of [{ generated: at(-1) }, { sources: { ...healthySources, taf: { ok: false } } }]) {
     const r = tripStatus(quietTrip, by(airport, healthyAirport("ATL")), { now: NOW, health: healthFor(opts) });

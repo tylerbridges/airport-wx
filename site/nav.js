@@ -6,7 +6,7 @@
 // so app.js and searched.js keep working) and talks to them through window.AWXApp / AWXExtra.
 // Tab state lives in the URL hash (#airports, #trips, #map), so Back works.
 import { mountSearch } from "./search.js";
-import { mountMap } from "./map.js?v=6"; // map hook: Map tab (site/map.js)
+import { mountMap } from "./map.js?v=7"; // map hook: Map tab (site/map.js)
 import { h, icon, prefs, reducedMotion, trapFocus, app } from "./navui.js";
 import { initSettings, openSettings, settingsOpen } from "./settings.js";
 

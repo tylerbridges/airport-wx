@@ -25,7 +25,7 @@
   const NOTICES_DOWN = "Airport notices (runway closures, flight restrictions) unavailable right now";
   function noticesDown() {
     const ns = (state.data && state.data.noticeSources) || {};
-    return ["notam", "tfr"].some((k) => ns[k] && ns[k].ok === false);
+    return ["notam", "tfr"].some((k) => ns[k] && (!ns[k].ok || ns[k].error || ns[k].stale));
   }
   const SPC_NAMES = { MRGL: "Marginal", SLGT: "Slight", ENH: "Enhanced", MDT: "Moderate", HIGH: "High" };
   const FAV_KEY = "awx-favs";
@@ -40,6 +40,7 @@
   const state = {
     data: null,
     sample: false,
+    offline: false,
     filter: "mine",
     favs: loadFavs(),
     fetchedAt: 0,
@@ -459,7 +460,7 @@
     return ids.length ? "ids=" + encodeURIComponent(ids.join(",")) + (tz.length ? "&tz=" + encodeURIComponent(tz.join(",")) : "") : null;
   }
   async function loadLive() {
-    if (testMode() || state.sample || !(await liveConfig())) return;
+    if (testMode() || state.sample || state.offline || !(await liveConfig())) return;
     const q = liveQuery();
     if (!q) return;
     const ctl = new AbortController();
@@ -483,9 +484,12 @@
     const L = live.data;
     state.liveWx = {};
     viewCache = new WeakMap();
-    if (!b || state.sample || live.failed || !L || !(Date.parse(L.generated) >= Date.parse(b.generated))) { state.data = b; return; }
+    if (!b || state.sample || state.offline || live.failed || !L || !(Date.parse(L.generated) >= Date.parse(b.generated))) { state.data = b; return; }
     const by = new Map(L.airports.map((a) => [a.iata, a]));
-    const airports = b.airports.map((a) => by.get(a.iata) || a)
+    const airports = b.airports.map((a) => {
+      const fresh = by.get(a.iata);
+      return Object.assign({}, fresh || a, { coverage: { generated: fresh ? L.generated : b.generated, sources: fresh ? Object.assign({}, b.sources, L.sources) : b.sources } });
+    })
       .sort((x, y) => y.peak.level - x.peak.level || y.now.level - x.now.level || x.iata.localeCompare(y.iata));
     state.data = Object.assign({}, b, { airports, sources: Object.assign({}, b.sources, L.sources), live: L.generated });
     state.liveWx = L.wx || {};
@@ -503,6 +507,9 @@
     } catch (e) { /* offline */ }
   }
 
+  function cachedStatus() { try { return window.AWXOffline?.load(localStorage) || null; } catch { return null; } }
+  function saveStatus(data) { try { window.AWXOffline?.save(localStorage, data); } catch { /* storage blocked */ } }
+
   let loading = false;
   let reloading = false; // the refresh button is reloading the page: keep the spinner
   async function load(manual) {
@@ -517,19 +524,28 @@
         data = window.AWXTest && AWXTest.name ? AWXTest.rebase(await getJson(AWXTest.url)) : await getJson("./data/status.json"); // build2a hook: ?test=<scenario> (site/testmode.js)
       } catch (e) {
         if (e.status !== 404) throw e;
+        if (!testMode() && cachedStatus()) throw e;
         data = await getJson("./data/sample.json");
         sample = true;
       }
       if (!data || !Array.isArray(data.airports)) throw new Error("bad data");
       state.build = data; // live relay (merged into state.data below)
       state.sample = sample;
+      state.offline = false;
       state.fetchError = null;
       state.fetchedAt = Date.now();
     } catch (e) {
       state.fetchError = manual || !state.data ? "Couldn't load data" : "Couldn't refresh";
+      if (!testMode()) {
+        const cached = cachedStatus();
+        if (state.data && !state.sample) state.build = state.data;
+        else if (cached) { state.build = cached; state.sample = false; }
+        if (state.build && !state.sample) state.offline = true;
+      }
     } finally {
       await (liveP || loadLive()); // live relay: the refresh button waits for fresh data
       mergeLive();
+      if (!testMode() && !state.sample && !state.offline && state.data) saveStatus(state.data);
       loading = false;
       state.loaded = true;
       setTimeout(() => { if (!reloading) $("refresh").classList.remove("spin"); }, manual ? 500 : 0);
@@ -627,6 +643,7 @@
     el.classList.remove("stale");
     if (!d) { el.textContent = state.loaded ? "Not updated" : "Loading…"; return; }
     if (state.sample) { el.textContent = "Sample data"; return; }
+    if (state.offline) { el.textContent = "Offline · last checked " + ago(Math.max(0, Date.now() - Date.parse(d.live || d.generated))); el.classList.add("stale"); return; }
     el.classList.remove("livefail"); // live relay
     if (d.live) { const s = Math.max(0, Date.now() - Date.parse(d.live)); el.textContent = "Live · " + (s < 60e3 ? Math.round(s / 1e3) + " s ago" : ago(s)); return; }
     const age = Date.now() - Date.parse(d.generated);
@@ -860,6 +877,7 @@
     const when = (dayKey(s.t, tz) === dayKey(refNow(), tz) ? "" : timelineDay(s.t, tz) + " ") + hourLabel(s.t, tz);
     if (s.kind === "none") return when + " · No report";
     if (s.kind === "na") return when + " · Forecast not available yet";
+    if (s.level === 0 && s.kind !== "obs" && AWXOutlook.health(a, outlookOpts(a, view(a))).quality) return when + " · Status unconfirmed";
     const top = plainList(s.reasons, a)[0];
     return [s.kind === "now" ? "Now" : when, s.kind === "obs" ? (s.observed ? "Observed" : "Earlier forecast") : null, LEVELS[s.level].label, top].filter(Boolean).join(" · ");
   }
@@ -876,8 +894,9 @@
     // an FAA program with no stated end: after its hold hours the forecast can't say it's over (hatched, not Clear)
     const sm = safeCall(() => summary(a)) || {};
     const unsure = (s) => s.kind === "fc" && sm.uncertainFrom != null && s.key >= sm.uncertainFrom && s.level != null && s.level < sm.openLevel;
+    const qualified = !!AWXOutlook.health(a, outlookOpts(a, view(a))).quality;
     const segs = slots.map((s) => h("span", {
-      class: "s " + (s.level == null ? "nd" : lv(s.level)) + (s.kind === "obs" || s.kind === "none" ? " past" : "") + (s.i === day.cur ? " cur" : "") + (unsure(s) ? " unc" : ""),
+      class: "s " + (s.level == null || qualified && s.level === 0 && s.kind !== "obs" ? "nd" : lv(s.level)) + (s.kind === "obs" || s.kind === "none" ? " past" : "") + (s.i === day.cur ? " cur" : "") + (unsure(s) ? " unc" : ""),
       style: unsure(s) ? `--u:var(--l${sm.openLevel})` : null,
       "data-i": s.i, "data-l": s.level == null ? null : String(s.level), "data-t": String(s.key),
     }));
@@ -943,7 +962,7 @@
     lens.hidden = false;
     lens.style.left = cx + "px";
     lens.style.width = sw + (T.big ? 14 : 10) + "px";
-    lensSeg.className = "lens-seg " + (T.slots[i].level == null ? "nd" : lv(T.slots[i].level)) + (seg.classList.contains("past") ? " past" : "") + (seg.classList.contains("unc") ? " unc" : "");
+    lensSeg.className = "lens-seg " + (seg.classList.contains("nd") ? "nd" : lv(T.slots[i].level)) + (seg.classList.contains("past") ? " past" : "") + (seg.classList.contains("unc") ? " unc" : "");
     lensSeg.style.cssText = seg.style.cssText.replace(/(^|;)\s*width[^;]*/g, "") + ";width:" + sw + "px";
     wrap.classList.toggle("scrub", !!scrub);
     label.hidden = false;
@@ -1108,6 +1127,8 @@
   function card(a, idx, count) {
     const v = view(a);
     const sm = summary(a);
+    const health = AWXOutlook.health(a, outlookOpts(a, v));
+    const unknown = sm.level === 0 && !!health.quality;
     const fav = state.favs.includes(a.iata);
     const later = sm.later;
     const progs = cardPrograms(v);
@@ -1119,7 +1140,7 @@
     const code = codeOf(a);
     const el = h("div", {
       class: "card", role: "button", tabindex: "0", "data-iata": a.iata, "data-level": String(sm.level),
-      "aria-label": `${code}, ${a.city}. ${later ? "Upcoming " : ""}${LEVELS[sm.level].label} risk. ${reason}`,
+      "aria-label": `${code}, ${a.city}. ${unknown ? "Status unconfirmed" : (later ? "Upcoming " : "") + LEVELS[sm.level].label + " risk"}. ${reason}${health.quality ? ". " + health.quality : ""}`,
       onclick: () => openSheet(a.iata),
       onkeydown: (e) => {
         if ((e.key === "Enter" || e.key === " ") && e.target === el) { e.preventDefault(); openSheet(a.iata); }
@@ -1130,7 +1151,7 @@
         h("div", { class: "code" }, code),
         h("div", { class: "right" },
           staleTag(),
-          pill(sm.level, false, later ? "Upcoming · " : ""),
+          unknown ? h("span", { class: "pill off" }, "Unknown") : pill(sm.level, false, later ? "Upcoming · " : ""),
           h("button", {
             type: "button", class: "star", "aria-pressed": String(fav), "aria-label": (fav ? "Remove " : "Add ") + code + (fav ? " from" : " to") + " my airports",
             onclick: (e) => { e.stopPropagation(); toggleFav(a.iata); },
@@ -1138,9 +1159,10 @@
           }, starSvg()))),
       h("div", { class: "aname" }, a.name),
       h("div", { class: "where" }, `${a.city}, ${a.state}`),
-      h("div", { class: "reason" }, reason),
+      h("div", { class: "reason" }, unknown ? "Status unconfirmed" : reason),
+      health.quality ? h("div", { class: "muted small" }, health.quality) : null,
       window.AWXMovement ? safeCall(() => AWXMovement.line(a)) : null, // movement hook: "Departures far below normal" (site/movement.js)
-      safeCall(() => cardWhen(a, v, sm, progs)), // the level's window (the sheet's words); phase3 hook inside for routine days
+      unknown ? null : safeCall(() => cardWhen(a, v, sm, progs)), // the level's window (the sheet's words); phase3 hook inside for routine days
       cascadeOnCard(v, sm) ? safeCall(() => cascadeLine(v, [reason], "sub hubline")) : null, // hubs hook: "ORD ground stop may delay flights to and from Chicago later today"
       progs.length ? h("div", { class: "badges" }, faaBadges(v)) : null,
       timeline(a, {}),
@@ -1672,9 +1694,9 @@
     return [h("div", { class: "lamp" }, table), h("div", { class: "muted small", style: "margin:6px 4px 0" }, note)];
   }
 
-  function checkedLine() {
+  function checkedLine(a) {
     const d = state.data;
-    const src = (d && d.sources) || {};
+    const src = a?.coverage?.sources || (d && d.sources) || {};
     const warn = [];
     let any = false;
     for (const k of Object.keys(SOURCE_NAMES)) {
@@ -1688,9 +1710,16 @@
     if (noticesDown()) warn.push("Airport notices unavailable — runway closures and flight restrictions may be missing"); // notams hook
     const when = state.sample ? "sample data" : d ? ago(Math.max(0, Date.now() - Date.parse(d.generated))) : "";
     if (d && !state.sample && refNow() - Date.parse(d.generated) > STALE_MS) warn.unshift("Data is " + when + " — status may have changed");
+    const quality = a ? AWXOutlook.health(a, outlookOpts(a, view(a))) : null;
+    if (state.offline) warn.unshift("Offline — last-known restrictions and weather; check your airline before travelling");
+    if (quality?.missingWeather) warn.push("Recent weather observation unavailable for this airport");
+    if (quality?.missingForecast) warn.push("Airport forecast unavailable or outdated");
+    const airportAge = quality?.checked != null ? ago(Math.max(0, refNow() - quality.checked)) : when;
     return h("div", { class: "checked" },
       warn.map((w) => h("p", { class: "warn" }, w)),
-      any ? h("p", { class: "muted" }, `Checked FAA delays and NOAA weather${when ? " · " + when : ""}`) : null);
+      any ? h("p", { class: "muted" }, `Checked FAA delays and NOAA weather${airportAge ? " · " + airportAge : ""}`) : null,
+      quality ? h("p", { class: "muted" }, [quality.observed ? "Weather observed " + ago(Math.max(0, refNow() - quality.observed)) : null,
+        quality.forecastIssued ? "Forecast issued " + ago(Math.max(0, refNow() - quality.forecastIssued)) : null].filter(Boolean).join(" · ")) : null);
   }
 
   /** Technical data is visible in Aviation mode, without expandable cards; the More details page shows it in both modes (opts.force, with the LAMP table even on quiet days). */
@@ -1807,7 +1836,7 @@
       o.simple ? null : o.facts);
   }
 
-  const outlookOpts = (a, v) => ({ now: refNow(), generated: state.data?.generated, sources: state.data?.sources, sample: state.sample, noticesDown: noticesDown(),
+  const outlookOpts = (a, v) => ({ now: refNow(), generated: state.data?.generated, sources: state.data?.sources, sample: state.sample, offline: state.offline, noticesDown: noticesDown(),
     hidden: v.hiddenCats?.size, plain: (r) => plainReason(shortRaw(r), a),
     words: (d) => window.AWXDelay?.likelihood(d, { iata: a.iata, aviation: aviation() }), notable: window.AWXDelay?.notable });
   function outlook(a, at = refNow()) {
@@ -1940,10 +1969,10 @@
     const layout = CATS.restLayout(sm.nowLevel, sm.level, later);
     const lastMs = Date.parse(v.hours[v.hours.length - 1].t) + HOUR;
     const nowPrograms = programsAt(v, t0, true);
-    const sources = state.data.sources || {};
-    const incomplete = state.sample || !a.metar || refNow() - Date.parse(a.metar.obsTime) > 2 * HOUR || ["faa", "atcscc", "metar", "taf"].some((k) => !sources[k] || !sources[k].ok || sources[k].error || sources[k].stale);
-    const stale = refNow() - Date.parse(state.data.generated) > STALE_MS;
-    const normalNote = stale ? "Status may be outdated" : incomplete ? "No disruptions reported · some data unavailable"
+    const health = AWXOutlook.health(a, outlookOpts(a, v));
+    const incomplete = health.incomplete;
+    const stale = health.outdated;
+    const normalNote = state.offline ? "Offline · status unconfirmed" : stale ? "Status may be outdated" : incomplete ? "No disruptions reported · some data unavailable"
       : v.hiddenCats && v.hiddenCats.size ? "No issues in your selected categories" : noticesDown() ? "Operating normally · notices unavailable" : null;
     // the current run: "through 3 PM, then Clear" — or, for an FAA program with no stated end, "— FAA gives no end time"
     const nowWhen = () => (sm.open ? "— " + NO_END : "through " + whenLabel(sm.nowEnd || lastMs, tz) + (sm.next != null ? ", then " + LEVELS[sm.next].label : ""));
@@ -2095,7 +2124,7 @@
         mv ? detailRow("Traffic right now", "Aircraft movements and coverage", "traffic", () => openDetails(a.iata, "traffic")) : null,
         detailRow("More details", "Outlook, sources and aviation reports", "technical", () => openDetails(a.iata)))], null, { cls: "ad-card" }),
       hiddenNote,
-      checkedLine(),
+      checkedLine(a),
     ].filter(Boolean));
     if (window.AWXTrips) window.AWXTrips.decorateSheet(sheet, a); // trips hook: "Your flight" row + plane markers
     if (window.AWXBrief) safeCall(() => window.AWXBrief.decorateSheet(sheet, a)); // brief hook: "Today" card (site/brief.js)
@@ -2313,7 +2342,7 @@
       h("div", { class: "sh-where" }, h("b", { class: "sh-aname" }, a.name), h("span", { class: "muted" }, " · ", h("span", { id: "mdPageTitle" }, title))),
       ...content,
       hiddenNote,
-      checkedLine(),
+      checkedLine(a),
     ].filter(Boolean));
     sheet.scrollTop = keepScroll ? top : 0;
     const focus = focusedLabel ? [...sheet.querySelectorAll("[aria-label]")].find((x) => x.getAttribute("aria-label") === focusedLabel) : focusedControl >= 0 ? sheet.querySelectorAll(controlSelector)[focusedControl] : null;

@@ -4,8 +4,14 @@ import { createRequire } from "node:module";
 const O = createRequire(import.meta.url)("../site/outlook.js");
 const now = Date.parse("2026-10-04T14:15:00Z"), H = 3600000;
 const sources = Object.fromEntries(["faa", "atcscc", "metar", "taf"].map((k) => [k, { ok: true }]));
-const base = () => ({ iata: "ORD", metar: { obsTime: "2026-10-04T14:00:00Z" }, faa: [], atcscc: [], hours: Array.from({ length: 24 }, (_, i) => ({ t: new Date(now - 15 * 60000 + i * H).toISOString(), level: 0, reasons: [] })) });
+const base = () => ({ iata: "ORD", metar: { obsTime: "2026-10-04T14:00:00Z" }, taf: { issued: "2026-10-04T12:00:00Z" }, faa: [], atcscc: [], hours: Array.from({ length: 24 }, (_, i) => ({ t: new Date(now - 15 * 60000 + i * H).toISOString(), level: 0, reasons: [] })) });
 const options = (more = {}) => ({ now, generated: new Date(now).toISOString(), sources, ...more });
+test("outlook: a last-known active restriction remains visible without forecast hours", () => {
+  const a = base(); a.hours = []; a.faa = [{ type: "ground_stop", end: new Date(now + H).toISOString() }];
+  const o = O.evaluate(a, options({ offline: true, generated: new Date(now - H).toISOString() }));
+  assert.equal(o.kind, "active"); assert.equal(o.level, 4); assert.match(o.headline, /held/); assert.match(o.quality, /Offline/);
+  assert.match(o.impacts[0].value, /Held before departure/);
+});
 test("outlook: quiet status, absent forecast, missing and stale data remain distinct", () => {
   assert.equal(O.evaluate(base(), options()).headline, "Operating normally");
   assert.equal(O.evaluate(base(), options({ at: now + 24 * H })).kind, "unknown");
@@ -102,5 +108,39 @@ test("outlook: no forecast improvement for a program whose cause isn't weather",
   }
 });
 test("outlook: a quiet airport whose notices couldn't be read says so", () => {
-  assert.equal(O.evaluate(base(), options({ noticesDown: true })).headline, "Operating normally · notices unavailable");
+  const o = O.evaluate(base(), options({ noticesDown: true }));
+  assert.equal(o.kind, "unknown");
+  assert.equal(o.headline, "No disruptions reported · notices unavailable");
+});
+
+test("airport health: missing/old airport forecasts and stale source-success timestamps qualify quiet outlooks", () => {
+  for (const taf of [null, { issued: "bad" }, { issued: new Date(now - 13 * H).toISOString() }]) {
+    const a = base(); a.taf = taf;
+    const health = O.health(a, options());
+    assert.equal(health.missingForecast, true);
+    assert.equal(O.evaluate(a, options()).kind, "unknown");
+  }
+  const old = { ...sources, faa: { ok: true, at: new Date(now - H).toISOString() } };
+  assert.equal(O.evaluate(base(), options({ sources: old })).kind, "unknown");
+});
+
+test("airport health: perairport age beats fresh global time; weather-only coverage cannot claim full operations", () => {
+  const a = base(); a.coverage = { generated: new Date(now - H).toISOString(), sources };
+  assert.equal(O.health(a, options()).outdated, true);
+  a.coverage = { generated: new Date(now).toISOString(), sources, weatherOnly: true };
+  assert.equal(O.health(a, options()).weatherOnly, true);
+  assert.match(O.health(a, options()).quality, /Weather only/);
+  assert.equal(O.evaluate(a, options()).kind, "unknown");
+});
+
+test("airport health: offline quiet is unknown but last-known material restrictions keep their severity", () => {
+  assert.equal(O.evaluate(base(), options({ offline: true })).kind, "unknown");
+  const a = base(); a.faa = [{ type: "ground_stop", end: new Date(now + H).toISOString() }];
+  for (const extra of [{ offline: true }, { generated: new Date(now - H).toISOString() }]) {
+    const r = O.evaluate(a, options(extra));
+    assert.equal(r.kind, "active");
+    assert.equal(r.level, 4);
+    assert.match(r.headline, /held/);
+    assert.ok(r.quality);
+  }
 });

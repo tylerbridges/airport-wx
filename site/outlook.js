@@ -86,13 +86,22 @@
   // One health contract for airport outlooks and Trips; health never discards known disruptions.
   function health(a, opts = {}) {
     const now = opts.now ?? Date.now();
-    const sources = opts.sources || {};
-    const unavailable = ["faa", "atcscc", "metar", "taf"].some((k) => !sources[k]?.ok || sources[k].error || sources[k].stale);
-    const outdated = !Number.isFinite(ms(opts.generated)) || now - ms(opts.generated) > 30 * 60000;
-    const missingWeather = !a.metar || !Number.isFinite(ms(a.metar.obsTime)) || now - ms(a.metar.obsTime) > 2 * HOUR;
-    const incomplete = unavailable || missingWeather || opts.sample;
-    const quality = outdated ? "Data may be outdated" : incomplete ? "Some data unavailable" : opts.hidden ? "Some disruptions hidden by your settings" : opts.noticesDown ? "Airport notices unavailable" : "";
-    return { outdated, incomplete, quality };
+    const coverage = a.coverage || {}, weatherOnly = !!(coverage.weatherOnly || a.shard);
+    const sources = coverage.sources || opts.sources || {};
+    const generated = ms(coverage.generated || opts.generated);
+    const required = weatherOnly ? ["metar", "taf"] : ["faa", "atcscc", "metar", "taf"];
+    const unavailable = required.some((k) => !sources[k]?.ok || sources[k].error || sources[k].stale || Number.isFinite(ms(sources[k].at)) && now - ms(sources[k].at) > 30 * 60000);
+    const outdated = !Number.isFinite(generated) || now - generated > 30 * 60000 || generated - now > 5 * 60000;
+    const observed = ms(a.metar?.obsTime), forecastIssued = ms(a.taf?.issued);
+    const missingWeather = !Number.isFinite(observed) || now - observed > 2 * HOUR || observed - now > 10 * 60000;
+    const missingForecast = !a.taf || !Number.isFinite(forecastIssued) || now - forecastIssued > 12 * HOUR || forecastIssued - now > 10 * 60000;
+    const incomplete = unavailable || missingWeather || missingForecast || opts.sample || opts.offline || weatherOnly || opts.noticesDown;
+    const quality = opts.offline ? "Offline · showing last-known airport data" : outdated ? "Data may be outdated" : missingWeather ? "Recent weather observation unavailable"
+      : missingForecast ? "Airport forecast unavailable or outdated" : unavailable || opts.sample ? "Some data unavailable" : weatherOnly ? "Weather only · FAA delay coverage unavailable"
+      : opts.hidden ? "Some disruptions hidden by your settings" : opts.noticesDown ? "Airport notices unavailable" : "";
+    return { outdated, incomplete, quality, checked: Number.isFinite(generated) ? generated : null,
+      observed: Number.isFinite(observed) ? observed : null, forecastIssued: Number.isFinite(forecastIssued) ? forecastIssued : null, missingWeather, missingForecast, weatherOnly };
+
   }
   function evaluate(a, opts = {}) {
     const now = opts.now ?? Date.now(), at = opts.at ?? now;
@@ -103,18 +112,18 @@
     const s = score(h, opts);
     const first = programs[0];
     let kind = "normal", headline = current ? "Operating normally" : "Normal conditions expected", level = s.level;
-    if (!h) { kind = "unknown"; headline = "Forecast unavailable for this time"; level = null; }
-    else if (first) {
+    if (first) {
       kind = current ? "active" : "forecast";
       headline = first.type === "closure" ? current ? "Airport closed" : "Airport closure scheduled"
         : first.type === "ground_stop" ? current ? "Flights to " + a.iata + " held" : "Ground stop scheduled"
         : first.type === "ground_delay" ? current ? "Arrival delays in effect" : "Arrival delay program scheduled" : "Delays happening now";
       level = Math.max(level, first.type === "closure" || first.type === "ground_stop" ? 4 : first.type === "ground_delay" ? 3 : 2);
-    } else if (s.meaningful || s.level > 0) {
+    } else if (!h) { kind = "unknown"; headline = "Forecast unavailable for this time"; level = null; }
+    else if (s.meaningful || s.level > 0) {
       kind = "forecast";
       headline = s.meaningful ? s.L.word.replace(/^Delays/, "Airport disruption") : s.level >= 3 ? "Airport disruption likely" : s.level >= 2 ? "Airport disruption possible" : "Minor disruption possible";
     }
-    if (outdated || incomplete && kind === "normal") { kind = "unknown"; headline = outdated ? "Status may be outdated" : "No disruptions reported · some data unavailable"; }
+    if ((outdated || incomplete) && kind === "normal") { kind = "unknown"; headline = opts.offline ? "Offline · status unconfirmed" : outdated ? "Status may be outdated" : opts.noticesDown ? "No disruptions reported · notices unavailable" : "No disruptions reported · some data unavailable"; }
     else if (opts.hidden && kind === "normal") headline = "No issues in your selected categories";
     if (kind === "normal" && opts.noticesDown) headline += " · notices unavailable"; // airport NOTAMs/TFRs couldn't be read: never an unqualified "normal"
     const window = h ? windowFor(a, opts, at) : null;

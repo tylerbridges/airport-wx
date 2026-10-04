@@ -152,7 +152,7 @@ function airportHealth(a) {
   const ns = data?.noticeSources || {};
   const noticesDown = ["notam", "tfr"].some((k) => ns[k] && (!ns[k].ok || ns[k].error || ns[k].stale));
   return window.AWXOutlook?.health ? window.AWXOutlook.health(a, {
-    now: nowMs(), generated: data?.generated, sources: data?.sources, sample: st?.sample, noticesDown,
+    now: nowMs(), generated: data?.generated, sources: data?.sources, sample: st?.sample, noticesDown, offline: st?.offline,
   }) : { quality: "Some data unavailable" };
 }
 const resultOf = (trip) => tripStatus(trip, byIata, { now: nowMs(), words: delayWordsFor, health: airportHealth });

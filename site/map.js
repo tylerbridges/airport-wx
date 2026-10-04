@@ -51,6 +51,8 @@ export function mountMap(container) {
   let baseDirty = true, baseAt = 0, frame = 0, gesturing = false, colors = null, pulsing = false;
   const shardAirports = new Map(); // code -> status-shaped airport built from its shard entry (null: no entry)
   const shardSig = new Map();
+  const shardChecks = new Map(); // code -> latest bounded refresh context; requests share searched.js shard TTL
+  const shardLoading = new Set();
 
   // ---------- DOM ----------
   const base = h("canvas", { class: "mapx-base", "aria-hidden": "true" });
@@ -105,13 +107,14 @@ export function mountMap(container) {
   /** A starred or trip airport outside status.json, from its global shard entry (weather only). */
   function shardAirport(x) {
     const A = app(), ex = window.AWXExtra;
-    shardSig.set(x.code, "loading");
-    if (!x.icao || !ex || !ex._shardFor) return;
+    if (!x.icao || !ex || !ex._shardFor || shardLoading.has(x.code)) return;
+    shardLoading.add(x.code);
+    shardChecks.set(x.code, { at: Date.now(), context: [A.state.data?.generated, A.state.data?.live, !!A.state.offline].join("|") });
     ex._shardFor(x.icao).then((s) => {
       const lw = (A.state.liveWx || {})[x.icao];
       const e = lw || (s && s.data && s.data.a && s.data.a[x.icao]);
       const h0 = Date.parse((lw && A.state.liveH0) || (s && s.data && s.data.h0) || (e && e.pt));
-      const sig = e ? [e.h, e.mt, h0].join("|") : "none";
+      const sig = e ? [e.h, e.mt, e.ti, h0, s?.data?.generated, A.state.data?.live, !!s?.error, !!A.state.offline].join("|") : "none";
       if (shardSig.get(x.code) === sig) return;
       shardSig.set(x.code, sig);
       if (!e || !Number.isFinite(h0)) { shardAirports.set(x.code, null); schedule(); return; }
@@ -120,11 +123,13 @@ export function mountMap(container) {
         .filter((r) => r.level != null); // an hour no report covers stays unknown, never Clear
       shardAirports.set(x.code, hours.length ? {
         iata: x.code, icao: x.icao, name: x.name, city: x.city, tz: x.tz || "UTC", lat: x.lat, lon: x.lon, shard: true,
-        hours, observed: [], metar: e.mt ? { obsTime: e.mt } : null, faa: [], atcscc: [], alerts: [], cascade: [],
+        coverage: { generated: lw ? A.state.data.live : s.data.generated, weatherOnly: true,
+          sources: { metar: lw ? A.state.data.sources.metar : s.sources?.metars, taf: lw ? A.state.data.sources.taf : s.sources?.tafs } },
+        hours, observed: [], metar: e.mt ? { obsTime: e.mt } : null, taf: e.t ? { issued: e.ti } : null, faa: [], atcscc: [], alerts: [], cascade: [],
         now: { level: e.n || 0, reasons: [] }, peak: { level: e.p || 0, at: e.pt || hours[0].t, reasons: e.r ? [e.r] : [] },
       } : null);
       schedule();
-    }).catch(() => {});
+    }).catch(() => { shardSig.delete(x.code); }).finally(() => { shardLoading.delete(x.code); });
   }
 
   function collect() {
@@ -140,7 +145,8 @@ export function mountMap(container) {
       if (majors.has(code)) continue;
       const x = index.find((y) => y.code === code);
       if (!x || !Number.isFinite(x.lat) || !Number.isFinite(x.lon)) continue;
-      if (!shardSig.has(code)) shardAirport(x);
+      const check = shardChecks.get(code), context = [data.generated, data.live, !!A.state.offline].join("|");
+      if (!check || check.context !== context || Date.now() - check.at >= 60e3) shardAirport(x);
       const s = shardAirports.get(code);
       all.push({ a: s || { iata: code, icao: x.icao, name: x.name, city: x.city, tz: x.tz || "UTC", lat: x.lat, lon: x.lon, hours: [], observed: [], metar: null, faa: [] }, code, major: false });
     }
@@ -171,7 +177,7 @@ export function mountMap(container) {
     }
     const o = safe(() => A.outlook(e.a, at));
     if (!o) return { lv: null, programs, head: "Forecast unavailable for this time" };
-    return { lv: o.kind === "unknown" || o.level == null ? null : Math.max(0, Math.min(4, o.level)), programs: o.programs || programs, head: o.headline };
+    return { lv: o.kind === "unknown" || o.level == null ? null : Math.max(0, Math.min(4, o.level)), programs: o.programs || programs, head: o.headline, quality: o.quality };
   }
   /** Cascade notes on this airport, from a hub with a program (not plain hub delays), in effect at the slider's hour. */
   function cascadesOf(e) {
@@ -247,8 +253,8 @@ export function mountMap(container) {
       const status = e.lv == null || (e.head && e.head.toLowerCase().includes(word.toLowerCase())) ? e.head || word : e.head ? word + " · " + e.head : word;
       const ring = hasRing(e) && !/held|program|closed|closure/i.test(status) ? ". FAA program in effect" : "";
       return h("li", {}, h("button", { type: "button", class: "map-airport-row " + (e.lv == null ? "unknown" : "l" + e.lv), "data-code": e.code,
-        "aria-label": `${code}, ${e.a.city || e.a.name || ""}. ${status}${ring}${e.a.shard ? ". Weather only" : ""}. Open current airport status`, onclick: () => openAirport(e) },
-      h("b", {}, code), h("span", {}, e.a.city || e.a.name || ""), h("span", { class: "map-row-status" }, h("i", { "aria-hidden": "true" }), status)));
+        "aria-label": `${code}, ${e.a.city || e.a.name || ""}. ${status}${ring}${e.quality ? ". " + e.quality : ""}${e.a.shard ? ". Weather only" : ""}. Open current airport status`, onclick: () => openAirport(e) },
+      h("b", { style: e.quality ? "grid-row:span 3" : null }, code), h("span", {}, e.a.city || e.a.name || ""), h("span", { class: "map-row-status" }, h("i", { "aria-hidden": "true" }), status), e.quality ? h("span", { class: "map-row-quality", style: "grid-column:2;font-size:12px;color:var(--muted)" }, e.quality) : null));
     });
     if (!shown.length) rows.push(h("li", { class: "mapx-empty" }, filter === "mine" ? "Star an airport or add a trip to see it here." : "No airport is at risk at this hour."));
     list.replaceChildren(...rows);

@@ -114,6 +114,7 @@ async function shardFor(icao) {
       entry.data = entry.error ? null : { a: {}, generated: wxIndex.generated };
     }
     entry.at = Date.now();
+    entry.sources = wxIndex?.sources || {};
     delete entry.loading;
     shards.set(k, entry);
     return entry;
@@ -185,7 +186,12 @@ function card(a, shard, opts) {
     ] }, opts);
   }
   const genMs = lw ? Date.parse(app().state.data.live) : Date.parse(shard.data.generated); // live relay
-  const stale = Number.isFinite(genMs) && Date.now() - genMs > STALE_MS;
+  const stale = !Number.isFinite(genMs) || Date.now() - genMs > STALE_MS;
+  const health = window.AWXOutlook.health({ shard: true, metar: e.mt ? { obsTime: e.mt } : null, taf: e.t ? { issued: e.ti } : null,
+    coverage: { generated: Number.isFinite(genMs) ? new Date(genMs).toISOString() : null, weatherOnly: true,
+      sources: { metar: lw ? app().state.data.sources.metar : shard.sources?.metars, taf: lw ? app().state.data.sources.taf : shard.sources?.tafs } },
+  }, { offline: app().state.offline });
+  const unknown = !e.p && !!health.quality;
   const expanded = open.has(a.code);
   const reason = e.r || e.pl || (e.p ? "Elevated risk" : "No significant weather");
   const details = expanded ? h("div", { class: "xdet" },
@@ -195,9 +201,10 @@ function card(a, shard, opts) {
     e.m ? h("pre", { class: "raw" }, e.m) : null,
     e.t ? h("pre", { class: "raw" }, e.t) : h("div", { class: "muted small" }, "No TAF (forecast) issued for this airport"),
   ) : null;
-  return shell(a, { right: [h("span", { class: "pill " + lv(e.p) }, LEVELS[e.p] || "Clear")], body: [
-    h("div", { class: "reason" }, reason),
-    e.n !== e.p ? h("div", { class: "sub" }, "Now: " + (LEVELS[e.n] || "Clear")) : null,
+  return shell(a, { right: [h("span", { class: "pill " + (unknown ? "off" : lv(e.p)) }, unknown ? "Unknown" : LEVELS[e.p] || "Clear")], body: [
+    h("div", { class: "reason" }, unknown ? "Weather status unconfirmed" : reason),
+    health.quality && !health.quality.startsWith("Weather only") ? h("div", { class: "sub crit" }, health.quality) : null,
+    e.n !== e.p ? h("div", { class: "sub" }, "Now: " + (!e.n && health.quality ? "Unconfirmed" : LEVELS[e.n] || "Clear")) : null,
     timeline(e, (lw && app().state.liveH0) || shard.data.h0 || e.pt, tz, a.code),
     h("div", { class: "sub xnote" }, scopeNote(a)),
     stale ? h("div", { class: "sub crit" }, "Weather data updated " + ago(Date.now() - genMs)) : null,

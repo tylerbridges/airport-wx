@@ -45,3 +45,6 @@ import "./notams.test.mjs";
 import "./tfr.test.mjs";
 // terminals hook: terminal maps (Overpass parsing, simplification) and the curated lounge data
 import "../tools/terminals.test.mjs";
+
+// Last-known airport status (privacy bounds, expiry and source qualification)
+import "../tools/offline.test.mjs";
