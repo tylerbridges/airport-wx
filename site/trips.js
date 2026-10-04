@@ -305,7 +305,8 @@ function decorateSheet(sheet, a) {
   }
   if (!rows.length) return;
   const box = h("div", { class: "tflight" }, rows);
-  const anchor = sheet.querySelector(".sh-where") || sheet.querySelector(".sh-head");
+  // build2b hook: under the timeline (above it only the header, the Now/Peak card and the timeline)
+  const anchor = sheet.querySelector(".tlsec") || sheet.querySelector(".sh-where") || sheet.querySelector(".sh-head");
   if (anchor) anchor.after(box); else sheet.prepend(box);
   const tl = sheet.querySelector(".tl.big");
   if (tl && a.hours && a.hours.length) {

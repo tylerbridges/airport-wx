@@ -347,6 +347,18 @@
     return retime(s, a);
   }
   const plainList = (arr, a) => uniq((arr || []).map((r) => plainReason(r, a)).filter(Boolean));
+  /**
+   * A reason inside a card that already states its time window: drop the repeated time phrase ("Very low clouds
+   * forecast Sun 6 AM – 12 PM" -> "Very low clouds"; "Rain until 8 PM" -> "Rain"). Warnings and programs keep their
+   * own end times; only "forecast …" is dropped from them.
+   */
+  function shortRaw(r) {
+    let t = String(r || "").replace(/\s+forecast\b.*$/, "");
+    if (!CATS.reason(r).src) t = t.replace(/\s+(until|from)\s.*$/, "").replace(/\s+for the next \d+ hours$/, "");
+    else if (!/^(Ground stop|Ground delay program|Delays\b|Airport closed)/.test(t)) t = t.replace(/\s+until\s[^(]*?(?=\s*\(|$)/, "").replace(/\s+\S{3} \d.*? to .*$/, "");
+    return t.replace(/^FAA plans a possible /, "Possible ").replace(/^Possible ground stop or delay program/, "Possible ground stop or delay program");
+  }
+  const shortList = (arr, a) => plainList((arr || []).map(shortRaw), a);
   /** Badge words: "GDP avg 49m" -> "Arrival delays ~49 min". */
   function badgeText(b) {
     const s = String(b || "");
@@ -480,6 +492,7 @@
   }
 
   let loading = false;
+  let reloading = false; // the refresh button is reloading the page: keep the spinner
   async function load(manual) {
     if (loading) return;
     loading = true;
@@ -507,7 +520,7 @@
       mergeLive();
       loading = false;
       state.loaded = true;
-      setTimeout(() => $("refresh").classList.remove("spin"), manual ? 500 : 0);
+      setTimeout(() => { if (!reloading) $("refresh").classList.remove("spin"); }, manual ? 500 : 0);
       render();
     }
   }
@@ -1709,7 +1722,10 @@
     const a = o.a;
     const max = 2; // compact: two reasons, the rest behind "+N more"
     // FAA program reasons are shown once, as the program status line
-    const rs = o.programs && o.programs.length ? o.reasons.filter((r) => !/^(Ground stop|Ground delay program|Delays\b|Airport closed)/.test(r)) : o.reasons;
+    const progTxt = o.programs && o.programs.length ? uniq(o.programs.map((f) => programLine(f, a))) : [];
+    const others = o.programs && o.programs.length ? o.reasons.filter((r) => !/^(Ground stop|Ground delay program|Delays\b|Airport closed)/.test(r)) : o.reasons;
+    // simple (Now / Peak / single) cards: the program status is one of the two reasons
+    const rs = o.simple ? [...progTxt, ...others] : others;
     const moreBtn = rs.length > max ? h("button", { type: "button", class: "morebtn", "aria-expanded": "false",
       onclick: (e) => { e.stopPropagation(); const box = e.currentTarget.closest(".sc"); const on = box.classList.toggle("expanded"); e.currentTarget.setAttribute("aria-expanded", String(on)); e.currentTarget.textContent = on ? "Show less" : "+" + (rs.length - max) + " more"; } },
       "+" + (rs.length - max) + " more") : null;
@@ -1722,22 +1738,21 @@
     // delay chance (Phase 3 hours[].delay) in plain words via site/delay.js likelihood(); hidden when absent
     const L = o.delay && o.delay.p != null && window.AWXDelay && AWXDelay.likelihood ? safeCall(() => AWXDelay.likelihood(o.delay, { iata: a.iata })) : null;
     const progs = o.programs && o.programs.length;
-    const delay = L && !(L.key === "now" && progs) ? h("div", { class: "sc-delay" }, L.word, L.cue ? h("span", { class: "muted", style: "font-weight:500" }, " · " + L.cue) : null) : null;
+    const delay = L && !(L.key === "now" && progs && !o.simple) ? h("div", { class: "sc-delay" }, L.word, L.cue ? h("span", { class: "muted", style: "font-weight:500" }, " · " + L.cue) : null) : null;
     // program status and the departure/arrival impact share one line; with source chips only in full-width cards
     const prog = o.programs && o.programs.length ? o.programs.map((f) => programLine(f, a)).join(" · ") : "";
     const imp = o.impact && prog ? o.impact.replace(/ \([^)]*\)$/, "") : o.impact;
-    const progLine = o.full && (prog || imp) ? h("div", { class: "sc-prog" }, prog, prog && imp ? h("span", { class: "sc-imp" }, " · " + imp) : !prog ? h("span", { class: "sc-imp" }, imp) : null)
+    const progLine = o.simple ? null : o.full && (prog || imp) ? h("div", { class: "sc-prog" }, prog, prog && imp ? h("span", { class: "sc-imp" }, " · " + imp) : !prog ? h("span", { class: "sc-imp" }, imp) : null)
       : !o.full && prog ? h("div", { class: "sc-prog" }, prog) : null;
     return h("div", { class: "box sc" + (o.full ? " full" : ""), "data-kind": o.kind },
       h("div", { class: "sc-h" },
-        h("h4", {}, h("span", { class: "sc-label" }, o.label), o.level != null ? pill(o.level, true) : null, o.full && o.when ? h("span", { class: "sc-when in" }, o.when) : null),
+        h("h4", {}, h("span", { class: "sc-label" }, o.label), o.level != null ? pill(o.level, true) : null, (o.full || o.simple) && o.when ? h("span", { class: "sc-when in" }, o.when) : null),
         o.back ? h("button", { type: "button", class: "backnow", onclick: o.back, "aria-label": "Back to now" }, "Back to now") : null),
-      !o.full && o.when ? h("div", { class: "sc-when" }, o.when) : null,
+      !o.full && !o.simple && o.when ? h("div", { class: "sc-when" }, o.when) : null,
       delay,
       list,
       progLine,
-      o.facts,
-      o.full && o.chips && o.chips.length ? h("div", { class: "chips compact" }, o.chips.slice(0, 4).map(([s, c]) => confChip(s, c))) : null);
+      o.simple ? null : o.facts);
   }
 
   let sheetPick = null; // slot index selected in the sheet timeline (kept until Back to now / second tap)
@@ -1765,10 +1780,10 @@
         const pk = v.hours.find((x) => x.t === v.peak.at) || v.hours[0];
         const pt = Date.parse(pk.t);
         return h("div", { class: "two" },
-          stateCard({ a, kind: "now", label: "Now", level: v.now.level, when: "through " + whenLabel(endMs, tz), delay: v.hours[0].delay,
-            reasons: plainList(v.now.reasons, a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true), chips: cardSources(v.now.reasons, "now") }),
-          stateCard({ a, kind: "peak", label: "Peak", level: v.peak.level, when: peakRange(v), delay: pk.delay,
-            reasons: plainList(pk.reasons, a), programs: programsAt(v, pt, false), impact: CATS.impact(pk.reasons, programsAt(v, pt, false)), facts: factsRow(pk, a, pt, false, true), chips: cardSources(pk.reasons, "fc") }));
+          stateCard({ a, kind: "now", simple: true, label: "Now", level: v.now.level, when: "through " + whenLabel(endMs, tz), delay: v.hours[0].delay,
+            reasons: shortList(v.now.reasons, a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true), chips: cardSources(v.now.reasons, "now") }),
+          stateCard({ a, kind: "peak", simple: true, label: "Peak", level: v.peak.level, when: peakRange(v), delay: pk.delay,
+            reasons: shortList(pk.reasons, a), programs: programsAt(v, pt, false), impact: CATS.impact(pk.reasons, programsAt(v, pt, false)), facts: factsRow(pk, a, pt, false, true), chips: cardSources(pk.reasons, "fc") }));
       }
       let when;
       if (layout === "clear") when = "Clear through " + whenLabel(lastMs, tz);
@@ -1782,8 +1797,8 @@
           when += ", then " + LEVELS[nxt.level].label;
         }
       }
-      return stateCard({ a, kind: "nowpeak", full: true, max: 3, label: layout === "clear" ? "Now" : "Now · Peak", level: v.now.level, when, delay: v.hours[0].delay,
-        reasons: plainList(v.now.reasons, a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true),
+      return stateCard({ a, kind: "nowpeak", full: true, simple: true, label: layout === "clear" ? "Now" : "Now · Peak", level: v.now.level, when, delay: v.hours[0].delay,
+        reasons: shortList(v.now.reasons, a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true),
         chips: cardSources(v.now.reasons, "now"), empty: layout === "clear" ? "Nothing expected" : null });
     };
     const hourCard = (s) => {
@@ -1795,7 +1810,7 @@
       const when = (s.kind === "obs" ? (s.observed ? "Observed" : "Earlier forecast") : s.kind === "none" ? "No report" : s.kind === "na" ? "Forecast not available yet" : isNow ? "Now" : "Forecast") + zulu;
       const progs = past || s.kind === "na" ? [] : programsAt(v, s.key, isNow);
       return stateCard({ a, kind: "hour", full: true, max: 3, label, level: s.level, when, back: backToNow, delay: !past && s.h ? s.h.delay : null,
-        reasons: plainList(s.reasons, a), programs: progs, impact: s.level == null ? null : CATS.impact(s.reasons, progs),
+        reasons: shortList(s.reasons, a), programs: progs, impact: s.level == null ? null : CATS.impact(s.reasons, progs),
         facts: c ? factsRow(c, a, s.key, past, true) : null, chips: s.level == null ? [] : cardSources(s.reasons, s.kind),
         empty: s.kind === "none" ? "No weather report for this hour" : s.kind === "na" ? "Forecast not available yet" : null });
     };
@@ -1893,16 +1908,17 @@
         h("div", { class: "right", style: "gap:6px" },
           h("button", { type: "button", class: "star", "aria-pressed": String(fav), "aria-label": (fav ? "Remove " : "Add ") + code + (fav ? " from" : " to") + " my airports", onclick: () => toggleFav(a.iata) }, starSvg()),
           h("button", { type: "button", class: "close", "aria-label": "Close", onclick: closeSheet }, closeSvg()))),
-      h("div", { class: "sh-where" }, h("b", { class: "sh-aname" }, a.name), h("span", { class: "muted" }, " · " + `${a.city}, ${a.state}` + " · " + zoneLine)),
-      summaryCard(a, v, nowPrograms, () => {
-        const t = sheet.querySelector("#fullReport") || sheet.querySelector(".pilot") || sheet.querySelector(".tlsec");
-        if (t) sheet.scrollTo({ top: t.offsetTop - 64, behavior: reduced() ? "auto" : "smooth" });
-      }),
+      h("div", { class: "sh-where" }, h("b", { class: "sh-aname" }, a.name), h("span", { class: "muted" }, " · " + `${a.city}, ${a.state}` + (S.tz === "mine" ? " · " + zoneLine : ""))),
+      // above the timeline: only the header, the Now / Peak (or single) card and the timeline itself
       boxWrap,
       h("section", { class: "sec tlsec" },
         h("div", { class: "sec-h" }, icon(ICONS.clock), h("h3", {}, tlTitle), h("span", { class: "rule", "aria-hidden": "true" }), dayBtn),
         tlHolder),
       dl && (dl.nodeType ? dl.childNodes.length || dl.nodeType === 1 : true) ? section("Will it cause delays?", "clock", [dl.nodeType ? dl : String(dl)], null, { cls: "dlcard" }) : null, // phase3 hook
+      summaryCard(a, v, nowPrograms, () => {
+        const t = sheet.querySelector("#fullReport") || sheet.querySelector(".pilot");
+        if (t) sheet.scrollTo({ top: t.offsetTop - 64, behavior: reduced() ? "auto" : "smooth" });
+      }),
       ...secs,
       hiddenNote,
       checkedLine(),
@@ -2146,7 +2162,15 @@
   $("backdrop").addEventListener("click", closeSheet);
   $("panelBackdrop").addEventListener("click", () => closePanel());
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") { if (panel.kind) closePanel(); else closeSheet(); } });
-  $("refresh").addEventListener("click", () => load(true));
+  // Refresh = a full page reload, like the browser's: refetch index.html past the HTTP cache first so the reload
+  // (and checkVersion) see any new version; the icon spins until the page goes. The 2-minute background refresh stays.
+  $("refresh").addEventListener("click", () => {
+    reloading = true;
+    $("refresh").classList.add("spin");
+    const go = () => location.reload();
+    const t = setTimeout(go, 2500);
+    fetch("./index.html", { cache: "reload" }).catch(() => null).then(() => { clearTimeout(t); go(); });
+  });
 
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {

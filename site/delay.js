@@ -14,14 +14,14 @@ const STYLE = `
 .dl-block { background: var(--card-2); border-radius: 16px; padding: 12px 14px; margin-bottom: 10px; }
 .dl-block h3 { margin: 0 0 6px; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .dl-main { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.dl-big { font-size: 40px; line-height: 1; font-weight: 800; letter-spacing: -.03em; }
+.dl-big { font-size: 28px; line-height: 1.1; font-weight: 800; letter-spacing: -.02em; }
 .dl-what { font-size: 15px; font-weight: 600; }
 .dl-usual-b { margin-top: 4px; font-size: 14px; color: var(--muted); }
 .dl-min, .dl-now, .dl-faa { margin-top: 6px; font-size: 14px; }
 .dl-analog { margin-top: 8px; font-size: 13.5px; line-height: 1.4; color: var(--text); opacity: .9; }
 .dl-srcline { margin-top: 10px; font-size: 12px; color: var(--muted); line-height: 1.4; }
 .dl-why { margin-top: 8px; }
-.dl-why summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--l1); width: max-content; min-height: 32px; display: flex; align-items: center; }
+.dl-why summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--brand, var(--l1)); width: max-content; min-height: 32px; display: flex; align-items: center; }
 .dl-srcline a:focus-visible { outline: 2px solid var(--l1); outline-offset: 2px; border-radius: 4px; }
 `;
 
@@ -161,6 +161,16 @@ export function likelihood(d, opts = {}) {
   const size = key !== "unlikely" ? minutesRange(d.minutes) : "";
   return { key, word, sentence: word + (cue ? " · " + cue : ""), cue, rate, size };
 }
+/** The band of an observed share (the same cut-offs as likelihood(), without calibration or caps). */
+export function bandOf(rate) {
+  return rate < 0.12 ? 0 : rate < 0.25 ? 1 : rate < 0.45 ? 2 : rate < 0.7 ? 3 : 4;
+}
+/** An analog {n, k} agrees with the words L when its share is in the same band or one apart. */
+export function analogAgrees(an, L) {
+  if (!an || !an.n || !L) return false;
+  if (L.key === "now") return an.k / an.n >= 0.45;
+  return Math.abs(bandOf(an.k / an.n) - RANK[L.key]) <= 1;
+}
 /** "about 6 in 10" for a share. */
 export const inTen = (x) => `about ${Math.max(0, Math.min(10, Math.round(Number(x) * 10)))} in 10`;
 /** Analog sentence without percentages: "…, 131 (61%) had delays…" -> "…, about 6 in 10 had delays…". */
@@ -261,14 +271,11 @@ export function delayBlock(a, i) {
   if (/^possible_/.test(d.override || "")) {
     kids.push(el("div", "dl-faa", "The FAA plans a possible " + (d.override === "possible_ground_stop" ? "ground stop" : "ground delay program")));
   }
-  if (i == null && w.i !== 0 && a.hours[0].delay && a.hours[0].delay.p != null) {
-    const N = likelihood(a.hours[0].delay, { iata: a.iata });
-    if (N && N.key !== L.key) kids.push(el("div", "dl-now", "Right now: " + N.word.charAt(0).toLowerCase() + N.word.slice(1)));
-  }
-  // Why?: analog, how often warnings like this were right, basis
+  // Why?: the analog (only when it agrees with the words: same band or one apart), how often warnings like this
+  // were right, and what the numbers are based on
   const why = [];
   const an = analogWords(d.analog);
-  if (an) why.push(el("div", "dl-analog", an));
+  if (an && analogAgrees(d.analog, L)) why.push(el("div", "dl-analog", an));
   const { bin } = calibrate(Number(d.p));
   if (L.key !== "now" && bin && bin.rate != null && bin.n) why.push(el("div", "dl-analog", `For ${a.iata}, warnings like this were right ${inTen(bin.rate)} times.`));
   if (d.pTypical != null && L.key !== "now") why.push(el("div", "dl-analog", `On a typical day at this hour, delays happen ${inTen(d.pTypical)} times.`));
@@ -277,7 +284,7 @@ export function delayBlock(a, i) {
   return el("div", "dl-block", ...kids);
 }
 
-const api = { delayLine, delayBlock, likelihood, calibrate, analogWords, minutesRange, setReport };
+const api = { delayLine, delayBlock, likelihood, calibrate, analogWords, analogAgrees, minutesRange, setReport };
 if (typeof window !== "undefined" && window.document) {
   window.AWXDelay = api;
   // the calibration table; until it arrives (or if it is missing) the raw score is used

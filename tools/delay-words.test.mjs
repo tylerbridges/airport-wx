@@ -67,3 +67,11 @@ test("delay words: relative cue, size range, no % except Aviation mode", () => {
   assert.equal(D.analogWords({ n: 214, k: 131, text: "In 214 similar evening hours at ORD since Aug 2024, 131 (61%) had delays of 15+ min; median 38 min." }),
     "In 214 similar evening hours at ORD since Aug 2024, about 6 in 10 had delays of 15+ min; median 38 min.");
 });
+
+test("delay words: the analog is shown only when it agrees with the words (same band or one apart)", () => {
+  const likely = W(0.55);
+  assert.equal(D.analogAgrees({ n: 57, k: 11 }, likely), false, "19% vs 'Delays likely' contradicts");
+  assert.equal(D.analogAgrees({ n: 57, k: 20 }, likely), true, "35% is one band below");
+  assert.equal(D.analogAgrees({ n: 57, k: 33 }, likely), true);
+  assert.equal(D.analogAgrees({ n: 0, k: 0 }, likely), false);
+});

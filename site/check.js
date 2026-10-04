@@ -377,7 +377,8 @@ async function uiChecks(add, scenario) {
       const busy = aps.find((x) => (x.faa || []).some((f) => f.type === "ground_stop")) || aps[0];
       const quiet = aps.find((x) => x.peak.level === 0) || aps[aps.length - 1];
       const out = [];
-      for (const a of [busy, quiet]) {
+      const atl = aps.find((x) => x.iata === "ATL");
+      for (const a of [busy, quiet, atl].filter((x, i, arr) => x && arr.indexOf(x) === i)) {
         A.openSheet(a.iata);
         await frameSleep(w, 450);
         const bottom = doc.querySelector("#sheet .bigwrap .tl").getBoundingClientRect().bottom;
@@ -385,7 +386,7 @@ async function uiChecks(add, scenario) {
         A.closeSheet();
         await frameSleep(w, 350);
       }
-      add(out.every((x) => x.ok) ? "pass" : "fail", "Traveler: the sheet's timeline is on the first screen at 390×700",
+      add(out.every((x) => x.ok) ? "pass" : "fail", "Traveler: the sheet's timeline is on the first screen at 390×700 (busy, quiet, ATL)",
         out.map((x) => `${x.iata} bar ends at ${x.bottom} px`).join(", ") + " (viewport 700)");
     }, [390, 700]);
 
