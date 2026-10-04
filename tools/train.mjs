@@ -166,15 +166,24 @@ export async function train(opts) {
   if (!records.length) throw new Error("no training records");
   let history = loaded.history;
   if (opts.history) history = await readHistory(opts.history);
-  const avail = { lamp: !!meta.lamp, hubs: !!meta.hubCascade, programs: true, daytype: true, volume: true, history: !!history };
-  const requested = want ?? (meta.lamp ? ["lamp"] : []);
-  const families = requested.filter((f) => avail[f]);
-  const unavailable = requested.filter((f) => !avail[f]);
-  const feats = Object.fromEntries(FEATS.map((f) => [f, families.includes(f)]));
-
   const months = [...new Set(records.map((r) => r.ym))].sort();
   const split = timeSplit(months, { testCount: opts.testMonths });
   if (split.train.length < 3) throw new Error(`only ${split.train.length} training months; need at least 3`);
+  const prog = history ? programIndex(history) : null;
+  const trainMonths = new Set(split.train);
+  const progInTrain = !!prog && records.some((r) => trainMonths.has(r.ym) && BUCKETS.some((b) => prog.at(r.a, r.H - b.lo * HOUR, r.H)));
+  // a family is used only if the data has it (a family that would be all "missing" in training is left out)
+  const why = {
+    lamp: !meta.lamp ? "dataset built without --lamp" : !(meta.counts?.lampRows > 0) ? "no LAMP values parsed (see the LAMP sample in the log)" : null,
+    hubs: !meta.hubCascade ? "dataset built without --hub-cascade" : null,
+    programs: !prog ? "no history log (--history)" : !progInTrain ? `the history log (${prog.coverage.from?.slice(0, 10) ?? "–"}..) has no records in the training months` : null,
+    daytype: null, volume: null,
+  };
+  const avail = { lamp: !why.lamp, hubs: !why.hubs, programs: true, daytype: true, volume: true, history: !!history };
+  const requested = want ?? (meta.lamp ? ["lamp"] : []);
+  const families = requested.filter((f) => !why[f]);
+  const unavailable = requested.filter((f) => why[f]).map((f) => `${f} (${why[f]})`);
+  const feats = Object.fromEntries(FEATS.map((f) => [f, families.includes(f)]));
   const vb = validationBlock(split.train, opts.valMonths ?? 2);
   const trainSet = new Set(split.train);
   const testSet = new Set(split.test);
@@ -186,7 +195,6 @@ export async function train(opts) {
   const climoTrain = climatology(trainRecs);
 
   // training-time inputs: FAA program state from the history log, schedule volume from BTS
-  const prog = history ? programIndex(history) : null;
   const vol = volumeTable(records, trainSet);
   const liveLike = (r) => testSet.has(r.ym) || valSet.has(r.ym); // calibration and test rows see what the live scorer sees
   const aug = (r, bi) => {

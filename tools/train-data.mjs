@@ -249,6 +249,7 @@ export async function buildDataset({
   // LAMP (format unverified): the header, the columns found and the first row are logged once; a chunk
   // that fails is retried month by month; after lampBudgetMs the remaining chunks are skipped ("lp:none").
   const lampT0 = Date.now();
+  let lampFormat = null; // set when a response's header has no usable columns: the rest is skipped
   const getLamp = async (a) => {
     const byTime = new Map();
     const fetchPart = async (p) => {
@@ -261,15 +262,23 @@ export async function buildDataset({
         diag.lampColumns = r.diag.columns;
         log(`LAMP sample (${a.icao} ${p.label}): header ${JSON.stringify(r.diag.header)}; columns ${JSON.stringify(r.diag.columns)}; first row ${JSON.stringify(r.diag.firstRow)}`);
       }
+      const c = r.diag.columns;
+      if (r.diag.rows && (c.run < 0 || c.ft < 0 || (c.lp < 0 && c.cp < 0 && c.lc < 0 && c.lv < 0))) {
+        lampFormat = `LAMP format not recognised (header ${JSON.stringify(r.diag.header).slice(0, 200)}); LAMP skipped`;
+        log(lampFormat);
+        throw new Error(lampFormat);
+      }
       if (r.diag.rows && !r.diag.used) throw new Error(`no LAMP values parsed from ${r.diag.rows} rows (header ${JSON.stringify(r.diag.header).slice(0, 150)})`);
       counts.lampRows += r.diag.used;
       for (const [k, v] of r.byTime) byTime.set(k, (byTime.get(k) || []).concat(v).sort((x, y) => x.run - y.run));
     };
     for (const p of parts) {
+      if (lampFormat) { skipped.push({ station: a.icao, what: "LAMP", month: p.label, error: lampFormat }); continue; }
       if (Date.now() - lampT0 > lampBudgetMs) { skipped.push({ station: a.icao, what: "LAMP", month: p.label, error: "LAMP time budget used up" }); continue; }
       try { await fetchPart(p); } catch (e) {
-        if (p.months.length > 1) {
+        if (p.months.length > 1 && !lampFormat) {
           for (const m of p.months) {
+            if (lampFormat) break;
             try { await fetchPart({ from: monthStart(m), to: monthEnd(m), label: m, months: [m] }); } catch (e2) { skipped.push({ station: a.icao, what: "LAMP", month: m, error: String(e2.message || e2).slice(0, 200) }); }
           }
         } else skipped.push({ station: a.icao, what: "LAMP", month: p.label, error: String(e.message || e).slice(0, 200) });
