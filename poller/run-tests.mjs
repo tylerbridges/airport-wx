@@ -38,3 +38,6 @@ import "../tools/brief.test.mjs";
 // closures and hub cascades
 import "./closures.test.mjs";
 import "./hubs.test.mjs";
+// notams hook: NOTAMs + TFRs (README "Notices")
+import "./notams.test.mjs";
+import "./tfr.test.mjs";

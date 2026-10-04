@@ -170,12 +170,24 @@ export function delayOf(hr) {
   return { p: Math.max(0, Math.min(1, pp)), minutes: typeof d === "object" ? d.minutes ?? null : null, override: typeof d === "object" ? d.override ?? null : null };
 }
 
-/** Weather-only level of one hour: the hour's level unless FAA programs set it, then the strongest weather reason (capped). */
+// notams hook: runway closures and VIP movement restrictions (README "Notices") are their own concerns, not weather
+const NOTICE_RES = [
+  [/^VIP movement\b/, "vip", () => 2],
+  [/^Runways? \S.*?\bclosed\b/, "runway", (r) => (/ — (\d+ of \d+ runways|the runway best lined up with the wind)$/.test(r) ? 2 : 1)],
+];
+/** {kind: vip|runway, level} when the reason is a notice; else null. */
+export function noticeOf(reason) {
+  const r = String(reason || "");
+  for (const [re, kind, lv] of NOTICE_RES) if (re.test(r)) return { kind, level: lv(r) };
+  return null;
+}
+
+/** Weather-only level of one hour: the hour's level unless FAA programs (or notices) set it, then the strongest weather reason (capped). */
 function hourWx(hr) {
   const reasons = hr.reasons || [];
   const progs = reasons.map(programOf).filter(Boolean);
-  const wx = reasons.filter((r) => !programOf(r));
-  const progLevel = Math.max(0, ...progs.map((p) => p.level));
+  const wx = reasons.filter((r) => !programOf(r) && !noticeOf(r)); // notams hook
+  const progLevel = Math.max(0, ...progs.map((p) => p.level), ...reasons.map(noticeOf).filter(Boolean).map((n) => n.level)); // notams hook
   const wxLevel = hr.level > progLevel ? hr.level : Math.min(hr.level, Math.max(0, ...wx.map(reasonLevel)));
   return { wx, wxLevel, progs };
 }
@@ -323,18 +335,18 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null } = {}
 
     // weather around the departure (a connection's departure is covered by the connection window)
     if (F && !departed && !connIn) {
-      if (depWin) { known++; weather(F, depWin, `around your ${depClock} departure`, "dep", i); }
+      if (depWin) { known++; weather(F, depWin, `around your ${depClock} departure`, "dep", i); notices(F, depWin, `around your ${depClock} departure`, "dep", i); } // notams hook
       else unknown.push({ iata: leg.from, at: leg.dep, what: "departure" });
     }
     // weather around the arrival, or across the connection
     if (X && !connOut) {
-      if (arrWin) { known++; weather(X, arrWin, `around your ${arrClock} arrival`, "arr", i); }
+      if (arrWin) { known++; weather(X, arrWin, `around your ${arrClock} arrival`, "arr", i); notices(X, arrWin, `around your ${arrClock} arrival`, "arr", i); } // notams hook
       else unknown.push({ iata: leg.to, at: leg.arr, what: "arrival" });
     }
     if (X && connOut) {
       const w = windowAt(X, leg.arr, next.dep);
       const span = rangeText(leg.arr, next.dep, X.tz);
-      if (w) { known++; weather(X, w, `during your connection (${span})`, "conn", i); }
+      if (w) { known++; weather(X, w, `during your connection (${span})`, "conn", i); notices(X, w, `during your connection (${span})`, "conn", i); } // notams hook
       else unknown.push({ iata: leg.to, at: leg.arr, what: "connection" });
     }
 
@@ -456,7 +468,25 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null } = {}
     }
   }
 
-  const order = { program: 0, connection: 1, weather: 2, note: 3 };
+  // notams hook: a VIP movement restriction or runway closure at a trip airport during the leg
+  function notices(A, w, when, side, legIdx) {
+    const best = {};
+    for (const h of w.hours || []) for (const r of h.reasons || []) {
+      const n = noticeOf(r);
+      if (n && (!best[n.kind] || n.level > best[n.kind].level)) best[n.kind] = { ...n, r };
+    }
+    if (best.vip) {
+      add({ level: 2, kind: "notice", side, iata: A.iata, leg: legIdx, key: `vip-${A.iata}-${side}-${legIdx}`, short: `VIP movement near ${A.iata}`,
+        text: `VIP movement near ${A.iata} ${when} — brief ground holds are possible.` });
+    }
+    if (best.runway) {
+      const name = /^(Runways? .+?) closed\b/.exec(best.runway.r)[1];
+      add({ level: best.runway.level, kind: "notice", side, iata: A.iata, leg: legIdx, key: `rwy-${A.iata}-${side}-${legIdx}`, short: `${lower(name)} closed at ${A.iata}`,
+        text: `${name} closed at ${A.iata} ${when}${best.runway.level >= 2 ? " — fewer usable runways, so delays are possible" : " — usually only minor delays"}.` });
+    }
+  }
+
+  const order = { program: 0, notice: 1, connection: 1, weather: 2, note: 3 }; // notams hook: notice
   concerns.sort((x, y) => y.level - x.level || (order[x.kind] ?? 9) - (order[y.kind] ?? 9) || x.leg - y.leg);
   for (const code of missing) {
     concerns.push({ level: 0, kind: "note", side: null, iata: code, leg: -1, short: `no data for ${code}`,

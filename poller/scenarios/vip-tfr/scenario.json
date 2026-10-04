@@ -1,0 +1,22 @@
+{
+  "title": "VIP movement (TFR)",
+  "blurb": "A VIP flight restriction over Washington in 90 minutes; a space launch near Orlando later.",
+  "description": "Clear weather. An FAA VIP TFR (30 NM around Washington, DC) starts in 90 minutes for two hours: DCA, IAD and BWI are Moderate then (\"VIP movement — brief ground holds possible\"). A space operations TFR off Cape Canaveral is Low at MCO; a stadium TFR near LAS is information only. A DCA→ORD trip leaves during the VIP window.",
+  "group": "nonweather",
+  "assert": [
+    { "t": "level", "iata": "DCA", "of": "now", "op": "==", "v": 0 },
+    { "t": "level", "iata": "DCA", "of": "peak", "op": "==", "v": 2 },
+    { "t": "reason", "iata": "DCA", "re": "^VIP movement — brief ground holds possible " },
+    { "t": "level", "iata": "BWI", "of": "peak", "op": "==", "v": 2 },
+    { "t": "level", "iata": "MCO", "of": "peak", "op": "==", "v": 1 },
+    { "t": "notice", "iata": "MCO", "kind": "space", "level": 1 },
+    { "t": "notice", "iata": "LAS", "kind": "stadium", "level": 0 },
+    { "t": "level", "iata": "LAS", "of": "peak", "op": "==", "v": 0 },
+    { "t": "noticeSource", "name": "tfr", "ok": true },
+    { "t": "tripConcern", "i": 0, "re": "^VIP movement near DCA around your .* departure — brief ground holds are possible\\.$" },
+    { "t": "trips", "count": 1 },
+    { "t": "card", "iata": "DCA", "re": "VIP movement" },
+    { "t": "sheet", "iata": "DCA", "re": "Notices.*VIP movement nearby: flight restrictions" },
+    { "t": "noPercent" }
+  ]
+}

@@ -12,6 +12,7 @@ import { plainMetar, travelerImpact } from "./plain.mjs";
 import { opsPlanFor } from "./opsplan.mjs";
 import { scoreHours, HUBS } from "./delay.mjs"; // phase3 hook: delay model (README "Delay model")
 import { cascades, applyCascade } from "./hubs.mjs"; // hubs hook: hub cascade warnings (README "Hub cascade")
+import { noticesFor, applyNotices } from "./notices.mjs"; // notams hook: NOTAMs + TFRs (README "Notices")
 
 const HOUR = 3600e3;
 const ADV_KEYS = ["id", "type", "airport", "issued", "cause", "causeText", "title", "active", "cnx", "start", "end"];
@@ -23,8 +24,10 @@ const ADV_KEYS = ["id", "type", "airport", "issued", "cause", "causeText", "titl
  * adds hours[].delay (poller/delay.mjs scoreHours); hub TAFs come from `tafs`, else delay.hubTaf.
  * hubsFrom (hubs hook, optional): status.json airports (e.g. the last build) used as hub-cascade sources
  * for hubs not in `airports` (the live relay assembles only the requested airports).
+ * notices (notams hook, optional): {notams: records | null, tfrs: parsed | null, runways: {IATA: [[ids, hdg]]}}
+ * adds airports[].notices (poller/notices.mjs); over(a).notices (the build's) replaces it.
  */
-export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc, nws, lamp = null, atcscc = null, tcf = null, cwa = null, plan = null, over = null, delay = null, hubsFrom = null }) {
+export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc, nws, lamp = null, atcscc = null, tcf = null, cwa = null, plan = null, over = null, delay = null, hubsFrom = null, notices = null }) {
   const metarBy = latestBy(metars, "icaoId", "obsTime");
   const tafBy = latestBy(tafs, "icaoId", "issueTime");
   const validTaf = (x) => (x && !(toMs(x.validTimeTo) != null && toMs(x.validTimeTo) < +now) ? x : null);
@@ -74,6 +77,10 @@ export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc,
       alerts: alertsFull.map((x) => ({ event: x.event, onset: x.onset, ends: x.ends })), spc: spcCat,
       atcscc: adv, lamp: lampSt, tcf: tcfHere, cwa: cwaHere, opsplan: op,
     });
+    // notams hook: runway/ILS NOTAMs and nearby TFRs (README "Notices") add their reasons to the hours
+    const nt = has("notices") ? (o.notices ? { ...o.notices, items: (o.notices.items || []).map((x) => ({ ...x })) } : null)
+      : notices ? noticesFor({ a, notams: notices.notams, tfrs: notices.tfrs, runways: notices.runways?.[a.iata] || null, faa, opsplan: op, now }) : null;
+    if (nt) applyNotices(hours, nt, { faa, opsplan: op, tz: a.tz, now });
     // plain-English items for the sheet ("From the FAA Command Center"), same texts as the risk reasons
     const opOut = op
       ? { ...op, items: opsPlanItems(op, { faa, atcscc: adv, tz: a.tz, now }).map(({ kind, level, text, cause, until, raw, dup, ifr }) => ({ kind, level, text, cause, until, raw, dup, ifr })) }
@@ -116,6 +123,7 @@ export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc,
       tcf: tcfHere,
       cwa: cwaHere,
       opsplan: opOut,
+      ...(nt ? { notices: { items: nt.items, runways: nt.runways, count: nt.count ?? nt.items.length, other: nt.other || 0 } } : {}), // notams hook
     });
   }
   // hubs hook: hub cascade notes (poller/hubs.mjs) — reasons and levels of the affected hours, now/peak again
