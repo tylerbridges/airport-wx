@@ -1,0 +1,53 @@
+name: Terminal maps
+
+# Monthly rebuild of the terminal maps (site/data/terminals/) from OpenStreetMap through the Overpass API:
+# one query per airport (32), one at a time, 5+ s apart, 60 s timeout, no retries (tools/build-terminals.mjs).
+# An airport whose query fails keeps its previous file. Commits to main only when something changed; index.json
+# carries the run's check date, so a successful monthly run normally commits. Data © OpenStreetMap contributors (ODbL).
+on:
+  schedule:
+    - cron: "41 7 3 * *"
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Comma-separated IATA codes (blank = all 32)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: terminals
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Unit tests
+        run: node poller/run-tests.mjs
+      - name: Build terminal maps
+        env:
+          ONLY: ${{ github.event.inputs.only }}
+        run: |
+          if [ -n "${ONLY:-}" ]; then node tools/build-terminals.mjs --only "$ONLY"; else node tools/build-terminals.mjs; fi
+      - name: Commit if changed
+        run: |
+          set -eu
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A site/data/terminals
+          if git diff --cached --quiet; then echo "terminal maps unchanged"; exit 0; fi
+          git commit -q -m "Update terminal maps from OpenStreetMap ($(date -u +%F))"
+          for i in 1 2 3; do
+            if git push origin HEAD:main; then exit 0; fi
+            echo "push rejected; rebasing on main and retrying"
+            git pull --rebase -q origin main
+          done
+          exit 1

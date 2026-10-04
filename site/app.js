@@ -1899,6 +1899,7 @@
     ].filter(Boolean));
     if (window.AWXTrips) window.AWXTrips.decorateSheet(sheet, a); // trips hook: "Your flight" row + plane markers
     if (window.AWXBrief) safeCall(() => window.AWXBrief.decorateSheet(sheet, a)); // brief hook: "Today" card (site/brief.js)
+    if (window.AWXTerminals) safeCall(() => window.AWXTerminals.decorateSheet(sheet, a)); // terminals hook: "Terminal map" + "Lounges" cards (site/terminals.js)
     if (keepScroll) sheet.scrollTop = top;
     requestAnimationFrame(placeLenses);
     fillCrosswind(a);

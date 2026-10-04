@@ -583,6 +583,7 @@ async function runLive() {
   await tripChecks(group("Trips"), { url: "./data/trips.json", data: st.ok ? st.data : null }); // trips hook
   try { await (await import("./brief.js")).checkRow(group("Change log"), { data: st.ok ? st.data : null }); } catch (e) { group("Change log")("warn", "Change log", "check failed: " + (e.message || e)); } // brief hook
   try { await (await import("./movement.js")).checkRow(group("Movement feed")); } catch (e) { group("Movement feed")("warn", "Movement feed", "check failed: " + (e.message || e)); } // movement hook
+  try { await (await import("./terminals.js")).checkRow(group("Terminal maps & lounges"), { majors: st.ok && Array.isArray(st.data.airports) ? st.data.airports.filter((a) => !a.trip).map((a) => a.iata) : null }); } catch (e) { group("Terminal maps & lounges")("warn", "Terminal maps & lounges", "check failed: " + (e.message || e)); } // terminals hook
 
   const up = group("Uptime");
   const u = await getJson("./data/uptime.json");
@@ -615,6 +616,7 @@ async function runMock() {
   const idx = await getJson("./data/scenarios/index.json");
   const { list, byIcao, error } = await airportList();
   searchChecks(group("Search"), list, error);
+  try { await (await import("./terminals.js")).checkRow(group("Terminal maps & lounges"), {}); } catch (e) { group("Terminal maps & lounges")("fail", "Terminal maps & lounges", "check failed: " + (e.message || e)); } // terminals hook
   if (!idx.ok) { group("Scenarios")("fail", "data/scenarios/index.json loads", `HTTP ${idx.status || idx.error}`); return; }
   if (RENDER) await navChecks(group("Navigation (390 px, hidden frame)"), "./index.html?test=all-clear"); // nav hook
   for (const sc of idx.data.scenarios) {

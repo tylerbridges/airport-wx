@@ -38,3 +38,5 @@ import "../tools/brief.test.mjs";
 // closures and hub cascades
 import "./closures.test.mjs";
 import "./hubs.test.mjs";
+// terminals hook: terminal maps (Overpass parsing, simplification) and the curated lounge data
+import "../tools/terminals.test.mjs";
