@@ -268,6 +268,7 @@ export function parseAdvisory(text, { title = "", href = "", now = new Date() } 
     id, type, cnx: isCnx(name) || isCnx(title), airport, ctl: ctl || null,
     issued: iso(issued), start: iso(period?.start ?? null), end: iso(period?.end ?? null),
     cause: classifyCause(causeText), causeText: causeText || null,
+    extension: ({ LOW: "low", MEDIUM: "medium", MODERATE: "medium", HIGH: "high", NONE: "none", NIL: "none" })[/^(LOW|MEDIUM|MODERATE|HIGH|NONE|NIL)\b/i.exec(get("PROBABILITY OF EXTENSION"))?.[1]?.toUpperCase()] || null,
     title: (name || title).replace(/\s+/g, " ").slice(0, 160), active: false,
   };
 }
