@@ -230,7 +230,7 @@ function render(container) {
   const box = document.getElementById("trips");
   if (!box) { refreshOpen(); return; }
   const trips = allTrips();
-  if (!trips.length) { box.replaceChildren(); renderFoot(); refreshOpen(); return; }
+  if (!trips.length) { box.replaceChildren(); renderFoot(); refreshOpen(); document.dispatchEvent(new CustomEvent("awx:trips")); const a = statusAirports().find((a) => a.iata === app()?.state.openIata); if (a) decorateSheet(document.getElementById("sheet"), a); return; }
   box.replaceChildren(
     h("div", { class: "trips-h" },
       h("h2", {}, "Your trips"),
@@ -240,6 +240,10 @@ function render(container) {
     h("div", { class: "tlist" }, trips.map(tripCard)));
   renderFoot();
   refreshOpen();
+  document.dispatchEvent(new CustomEvent("awx:trips"));
+  const sheet = document.getElementById("sheet");
+  const airport = statusAirports().find((a) => a.iata === app()?.state.openIata);
+  if (airport) decorateSheet(sheet, airport);
 }
 
 /** The Trips tab: every trip, "Add a trip", and the calendar line; an empty state when there are none. */
@@ -296,10 +300,15 @@ function decorateSheet(sheet, a) {
     if (!roles.length) continue;
     const r = resultOf(trip);
     for (const line of flightLine(trip, r, a.iata, a.tz, now)) {
-      if (line.at < now - HOUR && line.role !== "conn") continue;
+      if (line.at < now - HOUR && (line.role !== "conn" || line.until < now)) continue;
+      const localOutlook = app()?.outlook?.(a);
+      const overlaps = window.AWXOutlook?.overlaps(localOutlook?.window, line.at, line.until);
+      const inRange = a.hours?.some((hr) => Date.parse(hr.t) <= line.at && line.at < Date.parse(hr.t) + HOUR);
+      const context = overlaps ? (line.role === "dep" ? "Your departure overlaps the highest-risk window here." : line.role === "arr" ? "Your arrival overlaps the highest-risk window here." : "Your connection overlaps the highest-risk window here.")
+        : !inRange ? "Airport forecast not available for your travel time yet." : null;
       rows.push(h("button", { type: "button", class: "tfrow " + r.cls, "aria-label": `Your flight. ${line.text}. Open the trip`, onclick: () => openTrip(trip.id) },
         h("span", { class: "tfic" }, svg(PLANE, "tfi", line.role === "arr" ? 135 : line.role === "conn" ? 90 : 45)),
-        h("span", { class: "tft" }, h("span", { class: "tfl" }, "Your flight"), line.text)));
+        h("span", { class: "tft" }, h("span", { class: "tfl" }, "Your flight"), line.text, context ? h("span", { class: "tfcontext" }, context) : null)));
       marks.push({ at: line.at, what: line.role === "dep" ? "departure" : line.role === "arr" ? "arrival" : "connection" });
     }
   }
@@ -753,6 +762,7 @@ function init() {
     calStatus,
     ready: () => (S.loading || (S.calAt ? Promise.resolve() : loadCal(true))),
     list: () => S.manual.map((t) => ({ id: t.id, from: t.legs[0].from, to: t.legs[t.legs.length - 1].to, dep: t.legs[0].dep, name: t.legs.length > 1 ? "via " + t.legs.slice(1).map((l) => l.from).join(", ") : "" })),
+    routes: () => allTrips().flatMap((t) => t.legs.map((l) => ({ from: l.from, to: l.to }))),
     _state: () => ({ cal: S.cal, manual: S.manual, trips: allTrips().map((t) => ({ id: t.id, source: t.source, ...resultOf(t) })) }),
   };
   render();

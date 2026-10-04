@@ -303,3 +303,10 @@ test("CWA: AWC JSON with coords, GeoJSON features, expired dropped", () => {
   assert.equal(cwaAt(-87.9, 41.97, gj, NOW)[0].raw, "CWA IFR");
   assert.deepEqual(cwaAt(-87.9, 41.97, null, NOW), []);
 });
+
+test("advisory extension outlook: preserve published words, never infer a percentage", () => {
+  for (const [raw, expected] of [["HIGH", "high"], ["medium (30-60%)", "medium"], ["LOW", "low"], ["NONE", "none"], ["30-60%", null], ["UNKNOWN", null]]) {
+    assert.equal(parseAdvisory(GS + "\nPROBABILITY OF EXTENSION: " + raw, { now: NOW }).extension, expected);
+  }
+  assert.equal(parseAdvisory(GS, { now: NOW }).extension, null);
+});

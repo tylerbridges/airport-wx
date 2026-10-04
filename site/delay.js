@@ -71,7 +71,7 @@ function rangeLabel(start, end, tz, fromNow) {
   const suffix = !pre && dayPrefix(end, tz) === "tomorrow " ? " tomorrow" : " " + dayPrefix(end, tz).trim();
   return pre + a + " – " + b + suffix;
 }
-const NOW_KINDS = { ground_stop: "FAA ground stop", ground_delay: "FAA ground delay program", delay: "FAA-reported delays" };
+const NOW_KINDS = { ground_stop: "FAA ground stop", ground_delay: "FAA ground delay program", delay: "FAA-reported delays", closure: "Airport closed" }; // closures hook
 
 // ---------- likelihood words (build2b) ----------
 
@@ -122,11 +122,11 @@ export function minutesRange(m) {
   return `typically ${lo}–${hi} min`;
 }
 
-const FAA_NOW = { ground_stop: true, ground_delay: true, delay: true };
+const FAA_NOW = { ground_stop: true, ground_delay: true, delay: true, closure: true }; // closures hook: a closed airport is "happening now", never "very likely"
 /**
  * Plain, conservative words for one hour's delay numbers ({p, pTypical, minutes, minutesFrom, override}):
  * {key, word, sentence, cue, rate, size}. opts: {iata, report, aviation}. Rules (README "Delay words"):
- * FAA ground stop / delay program / reported delays in effect -> "Delays happening now" (+ the FAA average);
+ * FAA ground stop / delay program / reported delays / full airport closure in effect -> "Delays happening now" (+ the FAA average);
  * else the calibrated observed rate: < 12% unlikely; 12–25% "Usual delays" within ±25% of the typical rate, else
  * "Small chance"; 25–45% possible; 45–70% likely; >= 70% very likely only when that bin's observed rate was >= 70%
  * over >= 200 test hours. A bin with < 200 test hours steps down one word; airports where the model's skill vs
@@ -274,10 +274,10 @@ export function delayBlock(a, i) {
     when = w.s === 0 && w.e === a.hours.length - 1 ? "in the next 24 hours" : rangeLabel(start, end, tzOf(a), w.s === 0);
   } else when = idx === 0 ? "this hour" : "at " + dayPrefix(t0, tzOf(a)) + clock(t0, tzOf(a));
   const cls = L.key === "now" || RANK[L.key] >= 3 ? "dl-hi" : RANK[L.key] === 2 ? "dl-mid" : "dl-lo";
-  const kids = [el("div", "dl-main", el("span", "dl-big " + cls, L.word), when ? el("span", "dl-what", when) : null)];
-  const sub = [L.cue, L.size].filter(Boolean).join(" · ");
+  const kids = [el("div", "dl-main", el("span", "dl-big " + cls, L.key === "now" ? L.word : L.word.replace(/^Delays/, "Airport disruption")), when ? el("span", "dl-what", when) : null)];
+  const sub = [L.cue, L.size ? "When disrupted: " + L.size : ""].filter(Boolean).join(" · ");
   if (sub) kids.push(el("div", "dl-usual-b", sub));
-  if (L.key === "now" && NOW_KINDS[d.override]) kids.push(el("div", "dl-faa", NOW_KINDS[d.override] + " in effect"));
+  if (L.key === "now" && NOW_KINDS[d.override]) kids.push(el("div", "dl-faa", d.override === "closure" ? "Airport closed" : NOW_KINDS[d.override] + " in effect"));
   if (/^possible_/.test(d.override || "")) {
     kids.push(el("div", "dl-faa", "The FAA plans a possible " + (d.override === "possible_ground_stop" ? "ground stop" : "ground delay program")));
   }
@@ -290,7 +290,8 @@ export function delayBlock(a, i) {
   if (L.key !== "now" && bin && bin.rate != null && bin.n) why.push(el("div", "dl-analog", `For ${a.iata}, warnings like this were right ${inTen(bin.rate)} times.`));
   if (d.pTypical != null && L.key !== "now") why.push(el("div", "dl-analog", `On a typical day at this hour, delays happen ${inTen(d.pTypical)} times.`));
   why.push(sourceLine());
-  kids.push(aviation ? el("div", "dl-why", ...why) : sourceLine());
+  kids.push(aviation ? el("div", "dl-why", ...why) : el("div", "dl-srcline", "Airport-wide weather and air traffic control risk · forecast estimate"));
+  if (!aviation && window.AWXApp?.state.data?.delayModel?.basis !== "model") kids.push(sourceLine());
   return el("div", "dl-block", ...kids);
 }
 

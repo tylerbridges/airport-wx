@@ -4,7 +4,7 @@
 // Writes "CHECK PASS" or "CHECK FAIL n" plus one line per row into <pre id="result"> so headless
 // Chrome (--dump-dom) and the uptime workflow can read it. Warnings don't fail the check.
 import { loadAirports, rank } from "./search.js";
-import { navChecks } from "./navcheck.js"; // nav hook
+import { navChecks } from "./navcheck.js?v=2"; // nav hook
 import { tripChecks } from "./check-trips.js"; // trips hook
 import { dataAsserts, pageAsserts } from "./check-scenarios.js"; // scenarios hook
 
@@ -386,7 +386,7 @@ async function uiChecks(add, scenario) {
         const v = A.view(x);
         const want = w.AWXCats.restLayout(v.now.level, v.peak.level, v.peak.level > v.now.level && v.peak.at !== v.hours[0].t);
         const rest = doc.querySelector('#sheet .bx-layer[data-layer="rest"]');
-        const got = rest.querySelector(".two") ? "split" : /^Clear through/.test(rest.querySelector(".sc-when").textContent) ? "clear" : "single";
+        const got = rest.querySelector(".two") ? "split" : rest.querySelector(".sc").dataset.layout === "clear" ? "clear" : "single";
         counts[got]++;
         expandable += doc.querySelectorAll("#sheet details, #sheet .morebtn, #sheet [aria-expanded]").length;
         if (got !== want) wrong.push(`${x.iata} ${got} (want ${want})`);
@@ -593,6 +593,7 @@ async function runLive() {
   searchChecks(group("Search"), list, error);
   await liveRelay(group("Live relay")); // live relay
   await tripChecks(group("Trips"), { url: "./data/trips.json", data: st.ok ? st.data : null }); // trips hook
+  try { await (await import("./brief.js")).checkRow(group("Change log"), { data: st.ok ? st.data : null }); } catch (e) { group("Change log")("warn", "Change log", "check failed: " + (e.message || e)); } // brief hook
   try { await (await import("./movement.js")).checkRow(group("Movement feed")); } catch (e) { group("Movement feed")("warn", "Movement feed", "check failed: " + (e.message || e)); } // movement hook
 
   const up = group("Uptime");
@@ -655,6 +656,7 @@ async function runMock() {
     }
     await dataAsserts(add, { sc, data, delta, shift }); // scenarios hook: delay words, badges, ops plan, movement, model…
     await tripChecks(add, { url: `./data/scenarios/${sc.name}/trips.json`, data, shift: (d) => shift(d, delta), asserts: sc.assert, mock: true }); // trips hook
+    try { await (await import("./brief.js")).checkRow(add, { url: `./data/scenarios/${sc.name}/changes.json`, shift: (d) => shift(d, delta), mock: true, data }); } catch (e) { add("fail", "Change log", "check failed: " + (e.message || e)); } // brief hook
     if (RENDER) {
       const expect = (sc.assert || []).filter((x) => x.t === "rendered");
       const r = await renderPage(`./index.html?test=${sc.name}`, expect, (w, doc) => pageAsserts(add, w, doc, sc.assert)); // scenarios hook

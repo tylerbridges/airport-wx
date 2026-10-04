@@ -21,6 +21,7 @@ import "../tools/uptime-parse.test.mjs";
 import "../tools/cats.test.mjs";
 import "../tools/prefs.test.mjs";
 import "../tools/delay-words.test.mjs";
+import "../tools/outlook.test.mjs";
 // live relay
 import "../worker/worker.test.mjs";
 // phase3: delay model
@@ -31,6 +32,12 @@ import "./trips.test.mjs";
 import "./trip-risk.test.mjs";
 // movement: ADS-B traffic rates
 import "./movement.test.mjs";
+// brief hook: per-airport change log
+import "./changes.test.mjs";
+import "../tools/brief.test.mjs";
+// closures and hub cascades
+import "./closures.test.mjs";
+import "./hubs.test.mjs";
 // notams hook: NOTAMs + TFRs (README "Notices")
 import "./notams.test.mjs";
 import "./tfr.test.mjs";

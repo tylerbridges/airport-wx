@@ -3,6 +3,8 @@ name: Train delay model
 # Retrains the delay model (README "Delay model"): BTS On-Time months + IEM historical TAFs/METARs ->
 # tools/train-data.mjs -> tools/train.mjs. Commits site/data/model/ to main (model.json only when the
 # safety gate passes) and the report to the `history` branch (reports/model-YYYY-MM-DD.md/.json).
+# The optional feature families (poller/delay.mjs FEATS) are switched by the inputs below; a scheduled
+# run keeps the deployed model's families. The gate also requires beating the deployed model.
 on:
   workflow_dispatch:
     inputs:
@@ -19,10 +21,35 @@ on:
         required: false
         default: "4"
       lamp:
-        description: "Also use IEM LAMP thunder/convection chances (format unverified; slow)"
+        description: "Feature: IEM LAMP thunder/convection chances + ceiling/visibility categories (format unverified; up to 150 min of downloads)"
         type: boolean
         required: false
         default: false
+      faa_programs:
+        description: "Feature: FAA ground stop / GDP / possible-program / staffing state from the history log (missing before 2026-10-03)"
+        type: boolean
+        required: false
+        default: false
+      hub_cascade:
+        description: "Feature: conditions and TAF level at the top connecting hubs (live scoring needs every hub TAF: scoreHours tafOf)"
+        type: boolean
+        required: false
+        default: false
+      day_type:
+        description: "Feature: federal holidays and the days around Thanksgiving, Christmas and July 4"
+        type: boolean
+        required: false
+        default: false
+      volume:
+        description: "Feature: scheduled flights for the hour vs the airport's usual (BTS)"
+        type: boolean
+        required: false
+        default: false
+      ablation:
+        description: "Also fit each feature family on/off for the report's ablation table"
+        type: boolean
+        required: false
+        default: true
       publish:
         description: "Commit site/data/model/ to main (the gate still decides model.json)"
         type: boolean
@@ -41,12 +68,17 @@ concurrency:
 jobs:
   train:
     runs-on: ubuntu-latest
-    timeout-minutes: 300
+    timeout-minutes: 345 # BTS ~10 min, IEM TAF/METAR ~15-90 min, LAMP (optional) capped at 150 min, fitting + ablation a few minutes
     env:
       MONTHS: ${{ inputs.months || '24' }}
       AIRPORTS: ${{ inputs.airports || 'all' }}
       TEST_MONTHS: ${{ inputs.test_months || '4' }}
-      LAMP: ${{ inputs.lamp && '1' || '' }}
+      IN_LAMP: ${{ inputs.lamp }}
+      IN_PROGRAMS: ${{ inputs.faa_programs }}
+      IN_HUBS: ${{ inputs.hub_cascade }}
+      IN_DAYTYPE: ${{ inputs.day_type }}
+      IN_VOLUME: ${{ inputs.volume }}
+      ABLATION: ${{ github.event_name == 'schedule' && 'true' || inputs.ablation }}
       PUBLISH: ${{ github.event_name == 'schedule' && 'true' || inputs.publish }}
       NODE_OPTIONS: --max-old-space-size=6144 # ~370k airport-hour records x 4 lead buckets in memory
     steps:
@@ -57,6 +89,24 @@ jobs:
 
       - name: Unit tests
         run: node poller/run-tests.mjs
+
+      # Feature families: the dispatch inputs, or (monthly schedule) the deployed model's own families.
+      - name: Feature flags
+        id: feats
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            f="$(node -e 'try { const m = require("./site/data/model/model.json"); const f = m.feats || { lamp: !!m.lamp }; console.log(Object.keys(f).filter((k) => f[k]).join(",")); } catch { console.log(""); }')"
+          else
+            f=""
+            [ "$IN_LAMP" = "true" ] && f="$f,lamp"
+            [ "$IN_PROGRAMS" = "true" ] && f="$f,programs"
+            [ "$IN_HUBS" = "true" ] && f="$f,hubs"
+            [ "$IN_DAYTYPE" = "true" ] && f="$f,daytype"
+            [ "$IN_VOLUME" = "true" ] && f="$f,volume"
+          fi
+          f="${f#,}"; f="${f:-none}"
+          echo "features: $f"
+          echo "features=$f" >> "$GITHUB_OUTPUT"
 
       # Our own history log (FAA programs, ops plans) for how often a "possible ground stop" happened.
       - name: History log (program rates)
@@ -99,16 +149,23 @@ jobs:
           [ "$ok" -ge 6 ] || { echo "::error::fewer than 6 BTS months"; exit 1; }
 
       - name: Historical TAFs/METARs (IEM) -> training records
+        env:
+          FEATURES: ${{ steps.feats.outputs.features }}
         run: |
           args=(build --out data --airports "$AIRPORTS")
-          [ -n "$LAMP" ] && args+=(--lamp)
+          case ",$FEATURES," in *,lamp,*) args+=(--lamp --lamp-budget-min 150) ;; esac
+          case ",$FEATURES," in *,hubs,*) args+=(--hub-cascade) ;; esac
           node tools/train-data.mjs "${args[@]}"
           ls -la data data/samples
 
       - name: Fit, calibrate, validate, gate
+        env:
+          FEATURES: ${{ steps.feats.outputs.features }}
         run: |
           hist=(); [ -d hist/truth ] && hist=(--history hist)
-          node tools/train.mjs --data data --out out/model --reports out/reports --prev site/data/model --test-months "$TEST_MONTHS" "${hist[@]}"
+          abl=(); [ "$ABLATION" = "false" ] && abl=(--no-ablation)
+          node tools/train.mjs --data data --out out/model --reports out/reports --prev site/data/model --test-months "$TEST_MONTHS" \
+            --features "$FEATURES" "${hist[@]}" "${abl[@]}"
           mkdir -p out/reports/samples-train
           cp data/samples/* out/reports/samples-train/ 2>/dev/null || true
           cp data/meta.json out/reports/train-meta-$(date -u +%F).json

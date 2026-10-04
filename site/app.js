@@ -590,7 +590,9 @@
     if (state.openIata) renderSheet(true);
     if (window.AWXExtra) window.AWXExtra.render(); // build2a hook: search + searched/starred non-major airports (site/searched.js)
     if (window.AWXTrips) window.AWXTrips.render(); // trips hook: "Your trips" (site/trips.js)
+    if (window.AWXBrief) safeCall(() => window.AWXBrief.render()); // brief hook: morning brief (site/brief.js)
     if (panel.kind === "national") renderNationalPanel();
+    document.dispatchEvent(new CustomEvent("awx:render"));
   }
 
   function renderHeader() {
@@ -1005,6 +1007,20 @@
 
   // ---------- home cards ----------
 
+  /**
+   * hubs hook: one short line for the airport's first hub cascade note (status.json `cascade`, poller/hubs.mjs),
+   * only while it is ahead, when its category is shown and the reasons on screen don't already say it.
+   */
+  function cascadeLine(v, shown, cls) {
+    const c = (v.cascade || []).find((x) => Date.parse(x.to) > refNow());
+    if (!c || isHidden(CATS.reason(c.text).cat)) return null;
+    if ((shown || []).some((r) => String(r || "").indexOf(c.hub + " ") === 0)) return null;
+    const tz = dispTz(v);
+    const from = Math.max(Date.parse(c.from), refNow());
+    const when = dayKey(from, tz) === dayKey(refNow(), tz) ? "later today" : dayKey(from, tz) === dayKey(refNow() + 24 * HOUR, tz) ? "tomorrow" : "on " + fmt(tz, { weekday: "long" }, "wdl").format(from);
+    return h("div", { class: cls }, c.text + " " + when);
+  }
+
   function card(a, idx, count) {
     const v = view(a);
     const fav = state.favs.includes(a.iata);
@@ -1035,6 +1051,7 @@
       h("div", { class: "reason" }, reason),
       window.AWXMovement ? safeCall(() => AWXMovement.line(a)) : null, // movement hook: "Departures running 38% below normal" (site/movement.js)
       window.AWXDelay ? safeCall(() => AWXDelay.delayLine(a)) : null, // phase3 hook: chance of a real delay (site/delay.js)
+      safeCall(() => cascadeLine(v, [reason], "sub hubline")), // hubs hook: "ORD ground stop may delay flights to and from Chicago later today"
       later ? h("div", { class: "sub" }, "Now: " + LEVELS[v.now.level].label) : null,
       cardPrograms(v).length ? h("div", { class: "badges" }, faaBadges(v)) : null,
       timeline(a, {}),
@@ -1448,7 +1465,13 @@
     const now = refNow();
     const out = [];
     for (const f of v.faa || []) {
-      if (f.type === "closure") { if (isNow && (f.scope || "full") === "full" && f.active !== false) out.push(f); continue; }
+      if (f.type === "closure") { // closures hook: a full closure covers its window (start through reopening; risk.mjs closureSpan)
+        if ((f.scope || "full") !== "full") continue;
+        const s = Date.parse(f.start), e = f.perm ? Infinity : Date.parse(f.end);
+        if (!Number.isNaN(e)) { if (e > now && t < e && t + HOUR > (Number.isFinite(s) ? s : -Infinity)) out.push(f); }
+        else if (isNow && f.active !== false) out.push(f);
+        continue;
+      }
       const end = programEnd(f) ?? now + (f.trend === "increasing" ? 5 : 3) * HOUR;
       if (t < end && t + HOUR > now - HOUR) out.push(f);
     }
@@ -1467,7 +1490,7 @@
     const end = programEnd(f);
     const until = end ? "until " + whenLabel(end, tz) : /until /.test(f.detail || "") ? retime(/until [^,]+/.exec(f.detail)[0], a) : "until further notice";
     const avg = /avg ([^,]+)/.exec(f.detail || "");
-    if (f.type === "closure") return "Airport closed";
+    if (f.type === "closure") return "Airport closed" + (end ? " until " + whenLabel(end, tz) : ""); // closures hook
     if (f.type === "ground_stop") return "Ground stop " + until;
     if (f.type === "ground_delay") return "Delay program " + until + (avg ? ", avg " + durTxt(avg[1]) : "");
     return "Delays: " + delayText(f.detail).replace(/^Delays /, "").replace(/^./, (c) => c.toLowerCase());
@@ -1670,7 +1693,8 @@
     const L = o.delay && o.delay.p != null && window.AWXDelay && AWXDelay.likelihood ? safeCall(() => AWXDelay.likelihood(o.delay, { iata: a.iata })) : null;
     const meaningful = L && (aviation() || AWXDelay.notable(o.delay, o.level, L));
     const normal = o.level === 0 && !progTxt.length && !meaningful && !o.empty;
-    const status = normal ? o.normalNote || (o.kind === "hour" && o.past ? "No disruption reported" : o.kind === "peak" || o.kind === "hour" && !o.isNow ? "No disruption expected" : "Operating normally")
+    const shared = o.outlook;
+    const status = shared ? shared.headline : normal ? o.normalNote || (o.kind === "hour" && o.past ? "No disruption reported" : o.kind === "peak" || o.kind === "hour" && !o.isNow ? "No disruption expected" : "Operating normally")
       : meaningful ? L.word : o.level > 0 ? o.level === 1 ? "Minor disruption possible" : "Disruption possible" : null;
     const delay = status ? h("div", { class: "sc-delay" }, status) : null;
     const list = normal ? null : rs.length
@@ -1681,14 +1705,30 @@
     const imp = o.impact && prog ? o.impact.replace(/ \([^)]*\)$/, "") : o.impact;
     const progLine = o.simple ? null : o.full && (prog || imp) ? h("div", { class: "sc-prog" }, prog, prog && imp ? h("span", { class: "sc-imp" }, " · " + imp) : !prog ? h("span", { class: "sc-imp" }, imp) : null)
       : !o.full && prog ? h("div", { class: "sc-prog" }, prog) : null;
-    return h("div", { class: "box sc" + (o.full ? " full" : ""), "data-kind": o.kind },
+    return h("div", { class: "box sc" + (o.full ? " full" : ""), "data-kind": o.kind, "data-layout": o.layout },
       h("div", { class: "sc-h" },
-        h("h4", {}, h("span", { class: "sc-label" }, o.label), o.level != null ? pill(o.level, true) : null, (o.full || o.simple) && o.when ? h("span", { class: "sc-when in" }, o.when) : null)),
+        h("h4", {}, h("span", { class: "sc-label" }, o.label), shared?.kind === "unknown" ? null : (shared?.level ?? o.level) != null ? pill(shared?.level ?? o.level, true) : null, (o.full || o.simple) && o.when ? h("span", { class: "sc-when in" }, o.when) : null)),
       !o.full && !o.simple && o.when ? h("div", { class: "sc-when" }, o.when) : null,
       delay,
       list,
       progLine,
       o.simple ? null : o.facts);
+  }
+
+  function outlook(a, at = refNow()) {
+    const v = a.hours?.length ? view(a) : a;
+    return AWXOutlook.evaluate(v, { now: refNow(), at, generated: state.data?.generated, sources: state.data?.sources, sample: state.sample,
+      hidden: v.hiddenCats?.size, plain: (r) => plainReason(shortRaw(r), a),
+      words: (d) => window.AWXDelay?.likelihood(d, { iata: a.iata, aviation: aviation() }), notable: window.AWXDelay?.notable });
+  }
+  function travelOutlook(a) {
+    const o = outlook(a);
+    const rows = o.impacts.map((r) => h("div", { class: "outlook-row" }, h("b", {}, r.label), h("span", {}, r.value)));
+    if (o.scheduledEnd) rows.push(h("div", { class: "outlook-row" }, h("b", {}, "Scheduled end"), h("span", {}, whenLabel(o.scheduledEnd, dispTz(a)) + " · may change")));
+    if (o.extension) rows.push(h("div", { class: "outlook-row" }, h("b", {}, "FAA extension outlook"), h("span", {}, cap(o.extension))));
+    if (o.recovery) rows.push(h("div", { class: "outlook-row" }, h("b", {}, "Forecast improvement"), h("span", {}, "Conditions may improve after " + whenLabel(o.recovery, dispTz(a)))));
+    if (!rows.length) return null;
+    return section("Travel impact", "plane", rows, null, { cls: "outlook-card", meta: o.basis });
   }
 
   let sheetDay = 0; // 0 rolling window, 1 tomorrow
@@ -1720,11 +1760,12 @@
         const pk = v.hours.find((x) => x.t === v.peak.at) || v.hours[0];
         const pt = Date.parse(pk.t);
         return h("div", { class: "two" },
-          stateCard({ a, kind: "now", simple: true, label: "Now", level: v.now.level, when: "through " + whenLabel(endMs, tz), delay: v.hours[0].delay,
+          stateCard({ a, kind: "now", simple: true, label: "Now", outlook: outlook(a), level: v.now.level, when: "through " + whenLabel(endMs, tz), delay: v.hours[0].delay,
             normalNote, reasons: shortList(v.now.reasons, a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true), chips: cardSources(v.now.reasons, "now") }),
-          stateCard({ a, kind: "peak", simple: true, label: "Coming up", level: v.peak.level, when: peakRange(v), delay: pk.delay,
+          stateCard({ a, kind: "peak", simple: true, label: "Coming up", outlook: outlook(a, pt), level: v.peak.level, when: peakRange(v), delay: pk.delay,
             reasons: shortList(pk.reasons, a), programs: programsAt(v, pt, false), impact: CATS.impact(pk.reasons, programsAt(v, pt, false)), facts: factsRow(pk, a, pt, false, true), chips: cardSources(pk.reasons, "fc") }));
       }
+      const currentOutlook = outlook(a);
       let when;
       if (layout === "clear") when = "Clear through " + whenLabel(lastMs, tz);
       else {
@@ -1737,7 +1778,9 @@
           when += ", then " + LEVELS[nxt.level].label;
         }
       }
-      return stateCard({ a, kind: "nowpeak", full: true, simple: true, label: "Now", level: v.now.level, when, delay: v.hours[0].delay,
+      if (currentOutlook.kind === "unknown") when = currentOutlook.quality || "Forecast unavailable";
+      else if (layout === "clear" && currentOutlook.kind !== "normal") when = "This hour";
+      return stateCard({ a, layout, kind: "nowpeak", full: true, simple: true, label: "Now", outlook: currentOutlook, level: v.now.level, when, delay: v.hours[0].delay,
         normalNote, reasons: shortList(v.now.reasons, a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true),
         chips: cardSources(v.now.reasons, "now"), empty: null });
     };
@@ -1846,15 +1889,18 @@
       h("div", { class: "sh-where" }, h("b", { class: "sh-aname" }, a.name), h("span", { class: "muted" }, " · " + `${a.city}, ${a.state}` + (S.tz === "mine" ? " · " + zoneLine : ""))),
       // above the timeline: only the header, the Now / Peak (or single) card and the timeline itself
       boxWrap,
+      safeCall(() => cascadeLine(v, [...shortList(v.now.reasons, a).slice(0, 3), ...shortList(v.peak.reasons, a).slice(0, 3)], "sh-hub")), // hubs hook
       h("section", { class: "sec tlsec" },
         h("div", { class: "sec-h" }, icon(ICONS.clock), h("h3", {}, tlTitle), h("span", { class: "rule", "aria-hidden": "true" }), dayBtn),
         tlHolder),
       dl && (dl.nodeType ? dl.childNodes.length || dl.nodeType === 1 : true) ? section("Delay outlook", "clock", [dl.nodeType ? dl : String(dl)], null, { cls: "dlcard" }) : null, // phase3 hook
+      travelOutlook(a),
       ...secs,
       hiddenNote,
       checkedLine(),
     ].filter(Boolean));
     if (window.AWXTrips) window.AWXTrips.decorateSheet(sheet, a); // trips hook: "Your flight" row + plane markers
+    if (window.AWXBrief) safeCall(() => window.AWXBrief.decorateSheet(sheet, a)); // brief hook: "Today" card (site/brief.js)
     if (keepScroll) sheet.scrollTop = top;
     requestAnimationFrame(placeLenses);
     fillCrosswind(a);
@@ -2068,10 +2114,11 @@
   window.AWXApp = {
     state, openSheet, closeSheet, toggleFav, render, // build2a hook: used by site/searched.js
     // build2b: for site/searched.js, the settings UI and check.js
-    prefs: PREFS, codeOf, view, dispTz, zoneAbbr, clock, hourLabel, daySlots, openNational, closePanel, placeLenses,
+    prefs: PREFS, codeOf, view, outlook, refNow, whenLabel, dispTz, zoneAbbr, clock, hourLabel, daySlots, openNational, closePanel, placeLenses,
     timeline: (a) => timeline(a, {}), // a status.json-shaped airport (searched.js builds one from a shard entry)
     version: APP_V,
   };
+  window.AWXApp.brief = { shortList, nationalSummary, programsAt, programLine, localMidnight, dayKey, refNow, whenLabel, LEVELS, icon, ICONS }; // brief hook: helpers for site/brief.js
   window.AWXApp.setFavs = (list) => { state.favs = list.filter((x) => typeof x === "string"); saveFavs(); render(); }; // nav hook: Settings → Your airports (site/settings.js)
   if (!testMode()) liveConfig(); // live relay: read data/config.json on load
   render();

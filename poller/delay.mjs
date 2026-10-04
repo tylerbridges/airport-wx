@@ -7,7 +7,7 @@
 //     -> [{p, pTypical, minutes, analog: {n, k, median, text} | null, basis: "model"|"fallback", lead, override?}]
 //
 // README "Delay model" documents the target, the features, validation and the safety gate.
-import { tafHourParts, tafHour, levelOf, assessConditions, parseVisib, ceilingOf, parseWx, toMs, faaSpan, flightCategory } from "./risk.mjs";
+import { tafHourParts, tafHour, levelOf, assessConditions, parseVisib, ceilingOf, parseWx, toMs, faaSpan, closureSpan, flightCategory } from "./risk.mjs";
 
 /** Feature spec version: model.json files built for another spec are ignored (fallback is used). */
 export const SPEC = 1;
@@ -31,6 +31,18 @@ export function bucketOf(leadH) {
  */
 export const DEF = { minFlights: 5, delayShare: 0.25, cxlShare: 0.05, lateMin: 15 };
 export const DEF_TEXT = "At least a quarter of the hour's departures or arrivals left or landed 15+ minutes late because of weather or air traffic control (FAA/BTS weather and NAS delay causes), or at least 5% were cancelled for those reasons. Hours with fewer than 5 flights are left out.";
+
+/**
+ * Optional feature families (model.json `feats`; a model without `feats` uses none of them, so models
+ * trained before they existed score exactly as before): lamp (IEM LAMP thunder/convection chances and
+ * ceiling/visibility categories), programs (FAA ground stop / GDP / possible program / staffing state when
+ * the forecast is made, "pg:none" where no record exists), hubs (conditions and TAF rule level at the
+ * airport's top connecting hubs, model.hubs), daytype (federal holidays and the days around Thanksgiving,
+ * Christmas and July 4), volume (scheduled flights for the hour vs the airport's usual, model.vol).
+ * TODO(movement): poller/movement.mjs's movement index is live-only. Don't train on it until the history
+ * branch has 4+ weeks of movement/ logs to backtest it against BTS.
+ */
+export const FEATS = ["lamp", "programs", "hubs", "daytype", "volume"];
 
 /** Main connecting hub(s) per airport for the hub-cascade features (weather there delays flights here). */
 export const HUBS = {
@@ -168,17 +180,143 @@ export function hubBits(w) {
   return b;
 }
 
-/** LAMP thunder (LP1, LP2) and convection (CP1) chances for the hour starting t0 (status.json lamp.hours shape). */
+/**
+ * LAMP thunder (LP1, LP2) and convection (CP1) chances for the hour starting t0 (status.json lamp.hours
+ * shape), plus the ceiling (cig 1-8) and visibility (vis 1-7) categories forecast for the end of the hour.
+ */
 export function lampAt(lamp, t0) {
   let lp = null;
   let cp = null;
+  let lc = null;
+  let lv = null;
   for (const x of lamp?.hours || []) {
     const t = toMs(x.t);
+    if (t === t0 + HOUR) { lc = lampCat(x.cig, 8); lv = lampCat(x.vis, 7); }
     if (t == null || !(t > t0 && t <= t0 + (num(x.probHrs) || 1) * HOUR)) continue;
     if (num(x.tstmProb) != null && (lp == null || x.tstmProb > lp)) lp = Number(x.tstmProb);
     if (num(x.convProb) != null && (cp == null || x.convProb > cp)) cp = Number(x.convProb);
   }
-  return { lp, cp };
+  return { lp, cp, lc, lv };
+}
+/** A LAMP category (1..max) or null. */
+export const lampCat = (x, max) => { const v = num(x); return v != null && Number.isInteger(v) && v >= 1 && v <= max ? v : null; };
+
+/** Hub TAF summary -> packed int: hubBits | rule level << 8 (null when the hub's TAF doesn't cover the hour). */
+export const hubPack = (w) => (w ? hubBits(w) | ((w.l || 0) << 8) : null);
+/**
+ * Hub cascade over the top connecting hubs (packed values, null = no TAF for that hub):
+ * [hubs with a TAF, with thunder, with PROB thunder, IFR, snow/ice, gusts 25+, highest rule level] or null.
+ */
+export function cascadeOf(packed) {
+  const c = [0, 0, 0, 0, 0, 0, 0];
+  for (const v of packed || []) {
+    if (v == null) continue;
+    c[0]++;
+    if (v & 1) c[1]++;
+    if (v & 2) c[2]++;
+    if (v & 4) c[3]++;
+    if (v & 8) c[4]++;
+    if (v & 16) c[5]++;
+    c[6] = Math.max(c[6], v >> 8);
+  }
+  return c[0] ? c : null;
+}
+
+/**
+ * FAA program state for the hour starting H, as known at time `at` (the poll the forecast is made from):
+ * ground stop / GDP in effect (NAS status, active ATCSCC advisory, or an active ops-plan program covering H),
+ * an ops-plan "possible" GS/GDP covering H, and staffing (an ops-plan staffing trigger not yet expired, or a
+ * program with a staffing cause). entry = {faa, atcscc, opsplan} as in status.json / the history truth log.
+ */
+export function programState({ faa = [], atcscc = [], opsplan = null } = {}, H, at) {
+  const o = { gs: false, gdp: false, poss: false, staff: false };
+  for (const f of faa || []) {
+    if (f.type === "ground_stop") o.gs = true;
+    else if (f.type === "ground_delay") o.gdp = true;
+    else continue;
+    if (f.cause === "staffing") o.staff = true;
+  }
+  for (const a of atcscc || []) {
+    if (!a.active) continue;
+    if (a.type === "GS") o.gs = true;
+    else if (a.type === "GDP") o.gdp = true;
+    else continue;
+    if (a.cause === "staffing") o.staff = true;
+  }
+  for (const p of opsplan?.programs || []) {
+    const from = toMs(p.from) ?? -Infinity;
+    const to = toMs(p.until) ?? at + 6 * HOUR;
+    if (!(H < to && H + HOUR > from)) continue;
+    if (p.status === "active") { if (p.program === "GS") o.gs = true; else o.gdp = true; } else if (p.status === "possible") o.poss = true;
+    if (p.cause === "staffing") o.staff = true;
+  }
+  for (const s of opsplan?.staffing || []) if (H < (toMs(s.until) ?? at + 6 * HOUR)) o.staff = true;
+  return o;
+}
+
+// ---------- day type ----------
+
+const dayNum = (y, mo, d) => Math.round(Date.UTC(y, mo - 1, d) / 864e5);
+function nthWeekday(y, mo, dow, n) {
+  if (n > 0) { const first = new Date(Date.UTC(y, mo - 1, 1)).getUTCDay(); return 1 + ((dow - first + 7) % 7) + (n - 1) * 7; }
+  const last = new Date(Date.UTC(y, mo, 0)).getUTCDate();
+  return last - ((new Date(Date.UTC(y, mo - 1, last)).getUTCDay() - dow + 7) % 7);
+}
+const holCache = new Map();
+/** US federal holidays of year y (day numbers, observed dates included) and the big travel holidays (actual dates). */
+function holidaysOf(y) {
+  if (holCache.has(y)) return holCache.get(y);
+  const fixed = [[1, 1], [6, 19], [7, 4], [11, 11], [12, 25]];
+  const floating = [[1, 1, 3], [2, 1, 3], [5, 1, -1], [9, 1, 1], [10, 1, 2], [11, 4, 4]]; // MLK, Presidents, Memorial, Labor, Columbus, Thanksgiving
+  const hol = new Set();
+  for (const [mo, d] of fixed) {
+    const n = dayNum(y, mo, d);
+    hol.add(n);
+    const wd = new Date(Date.UTC(y, mo - 1, d)).getUTCDay();
+    if (wd === 6) hol.add(n - 1); else if (wd === 0) hol.add(n + 1); // observed Friday / Monday
+  }
+  for (const [mo, dow, k] of floating) hol.add(dayNum(y, mo, nthWeekday(y, mo, dow, k)));
+  const big = [dayNum(y, 11, nthWeekday(y, 11, 4, 4)), dayNum(y, 12, 25), dayNum(y, 7, 4)];
+  const v = { hol, big };
+  holCache.set(y, v);
+  return v;
+}
+/**
+ * Day type of a local date: {hol: federal holiday (or its observed day), pk: -1 one or two days before
+ * Thanksgiving / Christmas / July 4, +1 one or two days after, else 0}. null for a bad date.
+ */
+export function dayType(y, mo, d) {
+  if (!(y > 1900 && mo >= 1 && mo <= 12 && d >= 1 && d <= 31)) return null;
+  const n = dayNum(y, mo, d);
+  let hol = false;
+  let pk = 0;
+  for (const yy of [y - 1, y, y + 1]) {
+    const H = holidaysOf(yy);
+    if (H.hol.has(n)) hol = true;
+    for (const b of H.big) { const k = n - b; if (k >= -2 && k <= -1) pk = -1; else if (k >= 1 && k <= 2) pk = 1; }
+  }
+  return { hol, pk };
+}
+
+// ---------- schedule volume ----------
+
+/** Hour of week (0 = Sunday 00 local). */
+export const hourOfWeek = (dw, lh) => dw * 24 + lh;
+/** Scheduled-flights ratio vs the usual for the hour -> bin name or null (0.9-1.1 = usual). */
+export function volRatioBin(r) {
+  if (r == null || !Number.isFinite(r)) return null;
+  return r < 0.7 ? "lo2" : r < 0.9 ? "lo" : r > 1.3 ? "hi2" : r > 1.1 ? "hi" : null;
+}
+/**
+ * Live volume inputs from model.vol ({IATA: {q: "168 digits", f: [12 month factors]}}): q = how busy this
+ * hour of the week usually is at the airport (0 quiet … 3 peak bank), r = the month's expected schedule vs usual.
+ */
+export function volumeAt(vol, iata, mo, dw, lh) {
+  const v = vol?.[iata];
+  if (!v || typeof v.q !== "string" || v.q.length !== 168) return { vq: null, vr: null };
+  const q = Number(v.q[hourOfWeek(dw, lh)]);
+  const f = Array.isArray(v.f) ? num(v.f[mo - 1]) : null;
+  return { vq: Number.isInteger(q) && q >= 0 && q <= 3 ? q : null, vr: f };
 }
 
 // ---------- encoding ----------
@@ -189,10 +327,12 @@ export const seasonOf = (mo) => (mo === 12 || mo <= 2 ? "winter" : mo <= 5 ? "sp
 
 /**
  * Feature names for one (airport, hour, lead bucket): calendar, airport, lead, the TAF hour summary
- * (w), the persistence observation (o), hub bits (h) and optionally LAMP (lp, cp). The climatology
- * logit is a separate continuous input. Names unknown to a model weigh 0.
+ * (w), the persistence observation (o), hub bits (h) and the optional families (FEATS; off unless set):
+ * lamp (lp, cp, lc, lv), programs (pg: programState or null = no record), hubs (hc: cascadeOf),
+ * daytype (y, mo, d local date), volume (vq 0-3, vr ratio). The climatology logit is a separate
+ * continuous input. Names unknown to a model weigh 0.
  */
-export function encode(f, b, { lamp = false } = {}) {
+export function encode(f, b, { lamp = false, programs = false, hubs = false, daytype = false, volume = false } = {}) {
   const n = ["lead:" + b, "hr:" + f.lh, "dow:" + f.dw, "mon:" + f.mo, "ap:" + f.ap];
   const w = f.w;
   if (!w) n.push("taf:none");
@@ -234,6 +374,53 @@ export function encode(f, b, { lamp = false } = {}) {
     else if (f.lp >= 20) n.push("lp:20");
     else if (f.lp >= 10) n.push("lp:10");
     if (f.cp != null && f.cp >= 50) n.push("cp:50");
+    // LAMP categories: CIG 1-3 = under 1000 ft, 4-5 = 1000-3000 ft; VIS 1-3 = under 3 mi, 4-5 = 3-5 mi
+    if (f.lc != null) { if (f.lc <= 3) n.push("lcig:ifr"); else if (f.lc <= 5) n.push("lcig:mvfr"); }
+    if (f.lv != null) { if (f.lv <= 3) n.push("lvis:ifr"); else if (f.lv <= 5) n.push("lvis:mvfr"); }
+  }
+  if (programs) {
+    const g = f.pg;
+    if (!g) n.push("pg:none");
+    else {
+      if (g.gs) n.push("pg:gs|" + b);
+      if (g.gdp) n.push("pg:gdp|" + b);
+      if (g.poss) n.push("pg:poss", "pg:poss|" + b);
+      if (g.staff) n.push("pg:staff");
+    }
+  }
+  if (hubs) {
+    const c = f.hc;
+    if (!c) n.push("hc:none");
+    else {
+      if (c[1]) n.push("hc:ts", "hc:ts|" + b);
+      if (c[1] >= 2) n.push("hc:ts2");
+      if (c[2]) n.push("hc:tsp");
+      if (c[3]) n.push("hc:ifr");
+      if (c[3] >= 2) n.push("hc:ifr2");
+      if (c[4]) n.push("hc:win");
+      if (c[5]) n.push("hc:g25");
+      if (c[6] >= 3) n.push("hc:l3", "hc:l3|" + b);
+      else if (c[6] === 2) n.push("hc:l2");
+    }
+  }
+  if (daytype) {
+    const t = dayType(f.y, f.mo, f.d);
+    if (t?.hol) n.push("day:hol");
+    if (t?.pk < 0) n.push("day:pre");
+    if (t?.pk > 0) n.push("day:post");
+  }
+  if (volume) {
+    if (f.vq == null) n.push("vol:none");
+    else {
+      n.push("vol:q" + f.vq);
+      const r = volRatioBin(f.vr);
+      if (r) n.push("volr:" + r);
+      if (f.vq === 3 && w) {
+        if (w.fc >= 2 || w.it >= 2) n.push("vol:q3|ifr");
+        if (w.t >= 2) n.push("vol:q3|ts");
+        if (w.g >= 25 || (w.x != null && w.x >= 15)) n.push("vol:q3|wind");
+      }
+    }
   }
   return [...new Set(n)];
 }
@@ -357,9 +544,12 @@ export function delayRange(detail) {
 }
 
 /**
- * FAA overrides per hour. Active ground stop / GDP (NAS status, active ATCSCC advisory, or an active
+ * FAA overrides per hour. A full airport closure -> p = 1 ("closure") over its whole window (risk.mjs
+ * closureSpan: start through reopening or NOTAM end; hour 0 only with no known end); it wins over any
+ * program in the same hour. Active ground stop / GDP (NAS status, active ATCSCC advisory, or an active
  * ops-plan program) -> p = 1 over its hours (until its end; 3 h / 5 h with no end, as the risk rules);
- * minutes = the FAA's stated average delay when given. A general FAA delay of 15+ min -> p = 1 in hour 0.
+ * minutes = the FAA's stated average delay when given. A general FAA delay of 15+ min -> p = 1 in hour 0,
+ * and through its end when the FAA gives one.
  * An ops-plan "possible" GS/GDP raises p to at least the program's historical rate (fallback.programs,
  * from our history log), else 0.5, until its time.
  */
@@ -367,9 +557,17 @@ export function overrides({ hours, now, faa = [], atcscc = [], opsplan = null, p
   const out = hours.map(() => null);
   const set = (i, o) => {
     const cur = out[i];
+    if (cur && cur.override === "closure") return; // a closed airport stays "closure"
     if (!cur || o.p > cur.p || (o.p === cur.p && cur.minutes == null && o.minutes != null)) out[i] = o;
   };
   const t0s = hours.map((h) => +new Date(h.t));
+  for (const f of faa || []) {
+    const span = closureSpan(f, now);
+    if (!span) continue;
+    t0s.forEach((t, i) => {
+      if ((i === 0 && span.from <= +now) || (t + HOUR > span.from && span.to != null && t < span.to)) out[i] = { p: 1, override: "closure", minutes: null };
+    });
+  }
   for (const f of faa || []) {
     if (f.type === "ground_stop" || f.type === "ground_delay") {
       const end = faaSpan(f, now);
@@ -377,7 +575,8 @@ export function overrides({ hours, now, faa = [], atcscc = [], opsplan = null, p
       t0s.forEach((t, i) => { if (i === 0 || t < end) set(i, { p: 1, override: f.type, minutes: avg }); });
     } else if (f.type === "delay") {
       const r = delayRange(f.detail);
-      if (r && r.min >= 15) set(0, { p: 1, override: "delay", minutes: r.mid });
+      const end = toMs(f.end);
+      if (r && r.min >= 15) t0s.forEach((t, i) => { if (i === 0 || (end != null && t < end)) set(i, { p: 1, override: "delay", minutes: r.mid }); });
     }
   }
   for (const a of atcscc || []) {
@@ -404,7 +603,9 @@ export function overrides({ hours, now, faa = [], atcscc = [], opsplan = null, p
 // ---------- live scoring ----------
 
 /** True when model.json can be used with this scorer. */
-export const modelOk = (m) => !!(m && m.spec === SPEC && m.w && typeof m.b0 === "number");
+export const modelOk = (m) => !!(m && m.spec === SPEC && m.w && typeof m.b0 === "number" && Object.entries(m.feats || {}).every(([k, v]) => !v || FEATS.includes(k)));
+/** encode() options for a model: its feature families (older models: only `lamp`). */
+export const featsOf = (m) => ({ lamp: !!(m?.feats?.lamp ?? m?.lamp), programs: !!m?.feats?.programs, hubs: !!m?.feats?.hubs, daytype: !!m?.feats?.daytype, volume: !!m?.feats?.volume });
 export const fallbackOk = (fb) => !!(fb && fb.levels && typeof fb.levels === "object");
 
 const r2 = (x) => (x == null ? null : Math.round(x * 100) / 100);
@@ -413,17 +614,26 @@ const r5 = (x) => (x == null ? null : Math.max(15, Math.round(x / 5) * 5));
 /**
  * Delay objects for an airport's hours (risk.mjs buildHours rows: {t, level, items}).
  * metar: the current METAR (AWC shape) or null. hubTafs: TAFs of HUBS[iata] (missing ones skipped).
+ * tafOf(IATA) -> TAF | null (optional): any airport's TAF, for a model with the hub cascade (model.hubs);
+ * without it, hub TAFs are looked up in hubTafs by station and hubs not found count as having no TAF.
  * Returns an array (same length) of delay objects, or nulls when neither a model nor a fallback is loaded.
  */
 export function scoreHours({
   iata, tz, now = new Date(), hours, taf = null, metar = null, hubTafs = [], lamp = null,
-  faa = [], atcscc = [], opsplan = null, model = null, fallback = null, analogs = null,
+  faa = [], atcscc = [], opsplan = null, model = null, fallback = null, analogs = null, tafOf = null,
 }) {
   const useModel = modelOk(model);
   if (!useModel && !fallbackOk(fallback)) return hours.map(() => null);
   const rwys = (useModel ? model.rwy?.[iata] : null) || fallback?.rwy?.[iata] || null;
   const o = metar ? condSummary(metar, rwys) : null;
   const ov = overrides({ hours, now, faa, atcscc, opsplan, programs: fallback?.programs || model?.programs || null });
+  const fo = useModel ? featsOf(model) : {};
+  const cascadeTafs = fo.hubs
+    ? (model.hubs?.[iata] || []).map((h) => {
+      const t = typeof tafOf === "function" ? tafOf(h) : null;
+      return t || (hubTafs || []).find((x) => { const s = String(x?.icaoId || x?.station || ""); return s.slice(1) === h || s === h; }) || null;
+    })
+    : [];
   return hours.map((hr, i) => {
     const t0 = +new Date(hr.t);
     const leadH = Math.max(0, (t0 - +now) / HOUR);
@@ -436,9 +646,12 @@ export function scoreHours({
     let p;
     let minutes;
     if (useModel) {
-      const { lp: lpv, cp } = model.lamp ? lampAt(lamp, t0) : { lp: null, cp: null };
-      const f = { ap: iata, lh: lp.h, dw: lp.dw, mo: lp.mo, w, o, h, lp: lpv, cp };
-      p = calibrate(model.cal, modelRaw(model, encode(f, b, { lamp: !!model.lamp }), typ?.p ?? model.base ?? 0.15));
+      const L = fo.lamp ? lampAt(lamp, t0) : { lp: null, cp: null, lc: null, lv: null };
+      const f = { ap: iata, lh: lp.h, dw: lp.dw, mo: lp.mo, y: lp.y, d: lp.d, w, o, h, lp: L.lp, cp: L.cp, lc: L.lc, lv: L.lv };
+      if (fo.hubs) f.hc = cascadeOf(cascadeTafs.map((t) => (t ? hubPack(tafSummary(t, t0, null)) : null)));
+      if (fo.programs) f.pg = programState({ faa, atcscc, opsplan }, t0, +now);
+      if (fo.volume) Object.assign(f, volumeAt(model.vol, iata, lp.mo, lp.dw, lp.h));
+      p = calibrate(model.cal, modelRaw(model, encode(f, b, fo), typ?.p ?? model.base ?? 0.15));
       minutes = minutesFor(model, iata, p);
     } else {
       const lvl = w ? w.l : hr.level;

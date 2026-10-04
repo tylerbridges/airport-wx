@@ -135,8 +135,14 @@
       "t": "level",
       "iata": "ORD",
       "of": "peak",
-      "op": "==",
-      "v": 0
+      "op": "<=",
+      "v": 1,
+      "note": "at most a Low hub cascade note from LGA (poller/hubs.mjs)"
+    },
+    {
+      "t": "cascade",
+      "iata": "ORD",
+      "hub": "LGA"
     },
     {
       "t": "national",
@@ -158,6 +164,51 @@
     {
       "t": "rendered",
       "text": "Test scenario: Storms across the New York area"
+    },
+    {
+      "t": "change",
+      "iata": "EWR",
+      "kind": "program_start",
+      "re": "^Ground stop started \\(storms\\)$"
+    },
+    {
+      "t": "change",
+      "iata": "JFK",
+      "kind": "program_start",
+      "re": "^Delay program started \\(storms\\)$"
+    },
+    {
+      "t": "change",
+      "iata": "EWR",
+      "kind": "warning",
+      "re": "^Severe Thunderstorm Warning issued$"
+    },
+    {
+      "t": "change",
+      "iata": "BOS",
+      "kind": "plan_gs_add",
+      "re": "^FAA plans a possible ground stop \\(storms\\)$"
+    },
+    {
+      "t": "change",
+      "iata": "LGA",
+      "kind": "level",
+      "re": "^Risk up to Severe \\(storms\\)$"
+    },
+    {
+      "t": "today",
+      "iata": "EWR",
+      "re": "Ground stop started \\(storms\\).*Severe Thunderstorm Warning issued"
+    },
+    {
+      "t": "brief",
+      "favs": [
+        "EWR",
+        "JFK",
+        "BOS",
+        "ORD"
+      ],
+      "re": "[34] airports need attention EWR: Ground stop until [^—]+— storms JFK: Delay program until [^—]+— storms BOS: .*U\\.S\\.: 2 ground stops, 1 delay program"
     }
   ]
 }
