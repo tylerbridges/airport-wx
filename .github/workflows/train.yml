@@ -189,10 +189,13 @@ jobs:
           set -eu
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Only a model that passed the gate replaces the live files: report.json, fallback.json and the
+          # analogs belong to the deployed model (the app reads its accuracy table), so a failed run
+          # changes nothing on main; its report is on the history branch and in the artifact.
+          if [ ! -f out/model/model.json ]; then echo "gate failed: site/data/model left unchanged"; exit 0; fi
           apply() {
             mkdir -p site/data/model
-            cp out/model/fallback.json out/model/report.json site/data/model/
-            [ -f out/model/model.json ] && cp out/model/model.json site/data/model/
+            cp out/model/fallback.json out/model/report.json out/model/model.json site/data/model/
             rm -rf site/data/model/analogs && cp -R out/model/analogs site/data/model/analogs
             git add -A site/data/model
             if git diff --cached --quiet; then echo "nothing new"; return 1; fi
