@@ -49,3 +49,6 @@ import "../tools/terminals.test.mjs";
 
 // Last-known airport status (privacy bounds, expiry and source qualification)
 import "../tools/offline.test.mjs";
+// Research-only NOAA extraction, provenance and promotion guards
+import "../tools/mrms.test.mjs";
+import "../tools/noaa-forecast.test.mjs";

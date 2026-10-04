@@ -1,0 +1,49 @@
+name: MRMS research pilot
+on:
+  workflow_dispatch:
+    inputs:
+      at:
+        description: "UTC cutoff ISO timestamp, blank for now (two frames, 15 minutes apart)"
+        required: false
+        default: ""
+      airports:
+        description: "Pilot airport codes (maximum 32; shared grid per frame)"
+        required: false
+        default: "ORD,MSP,SFO,DEN"
+      quality:
+        description: "Also fetch aligned Radar Quality Index for diagnostics; does not make missing reflectivity clear"
+        type: boolean
+        required: false
+        default: false
+permissions:
+  contents: read
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Verify extractor
+        run: node --test tools/mrms.test.mjs
+      - name: Collect bounded research frames
+        env:
+          PILOT_AT: ${{ inputs.at }}
+          PILOT_AIRPORTS: ${{ inputs.airports }}
+          PILOT_QUALITY: ${{ inputs.quality }}
+        run: |
+          mkdir -p out/mrms
+          at="$(node -e 'const t=process.env.PILOT_AT?Date.parse(process.env.PILOT_AT):Date.now();if(!Number.isFinite(t))process.exit(1);console.log(new Date(t).toISOString())')"
+          previous="$(PILOT_CUTOFF="$at" node -e 'console.log(new Date(Date.parse(process.env.PILOT_CUTOFF)-15*60e3).toISOString())')"
+          extra=(); [ "$PILOT_QUALITY" = "true" ] && extra=(--quality)
+          node tools/mrms-pilot.mjs --at "$previous" --airports "$PILOT_AIRPORTS" --out out/mrms/previous.json "${extra[@]}" || true
+          node tools/mrms-pilot.mjs --at "$at" --airports "$PILOT_AIRPORTS" --previous out/mrms/previous.json --out out/mrms/current.json "${extra[@]}" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mrms-research
+          path: out/mrms
+          if-no-files-found: warn
+          retention-days: 30

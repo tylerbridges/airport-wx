@@ -1,0 +1,46 @@
+{
+  "source": {
+    "url": "https://noaa-nbm-grib2-pds.s3.amazonaws.com/blend.20260701/00/core/blend.t00z.core.f003.co.grib2",
+    "offset": 69893306,
+    "length": 689251,
+    "fetchedAt": "2026-10-04T21:45:11.662996+00:00",
+    "headers": {
+      "last-modified": "Wed, 01 Jul 2026 01:07:10 GMT",
+      "etag": "\"d512dc31cfd10231e2b7a5322343f4ff\"",
+      "content-range": "bytes 69893306-70582556/163310287",
+      "content-type": "application/octet-stream",
+      "content-length": "689251"
+    },
+    "index": "58:69893306:d=2026070100:TSTM:surface:2-3 hour acc fcst:probability forecast"
+  },
+  "sha256": "2dcedaeea916fbd0da4b80c89835706a56242a06b46f90af8b54b2fe0f9924a1",
+  "referenceImplementation": "NOAA-EMC/NCEPLIBS-g2c comunpack.c, develop, retrieved 2026-10-04; temporary standalone verification harness, not a runtime dependency",
+  "referenceUrl": "https://github.com/NOAA-EMC/NCEPLIBS-g2c/blob/develop/src/comunpack.c",
+  "points": [
+    {
+      "index": 0,
+      "value": 0.0
+    },
+    {
+      "index": 826,
+      "value": 1.0
+    },
+    {
+      "index": 1237125,
+      "value": 28.0
+    },
+    {
+      "index": 2029239,
+      "value": 2.0
+    },
+    {
+      "index": 2332277,
+      "value": 1.0
+    },
+    {
+      "index": 1781878,
+      "value": 0.0
+    }
+  ],
+  "meaning": "One-hour NBM thunderstorm forecast percentage; not a flight-delay probability."
+}
