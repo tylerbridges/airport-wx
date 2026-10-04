@@ -4,7 +4,8 @@
 // history log and the safety gate. No I/O; unit-tested in tools/train.test.mjs.
 import { findCol, parseTime, localToUtc } from "./backtest-lib.mjs";
 import {
-  BUCKETS, DEF, HUBS, PX, encode, tafSummary, condSummary, hubBits, localParts, analogKeys, ANALOG_MIN, logit, sigmoid, calibrate, seasonOf,
+  BUCKETS, DEF, HUBS, PX, encode, tafSummary, condSummary, hubPack, cascadeOf, localParts, analogKeys, ANALOG_MIN, logit, sigmoid, calibrate, seasonOf,
+  programState, lampCat, hourOfWeek,
 } from "../poller/delay.mjs";
 
 export const HOUR = 3600e3;
@@ -182,13 +183,29 @@ export function tafFor(tafs, H, b) {
   return ti;
 }
 
-/** Hub bits per verifying hour and bucket for a hub airport's TAFs: Map H -> [4 x bits|null]. */
+/**
+ * Top connecting hubs per airport for the hub-cascade features (feature family "hubs"; the first one is
+ * HUBS' hub). Stored in model.json (`hubs`) so the live scorer asks for the same hubs.
+ * TODO: unify with the shared hub table (poller/hubs.mjs) once it lands on main.
+ */
+export const TOP_HUBS = {
+  ATL: ["ORD", "DFW", "EWR"], DFW: ["ORD", "ATL", "DEN"], DEN: ["ORD", "DFW", "LAX"], ORD: ["EWR", "LGA", "ATL"],
+  LAX: ["SFO", "DEN", "ORD"], JFK: ["ATL", "ORD", "LAX"], LAS: ["DEN", "LAX", "PHX"], MCO: ["ATL", "EWR", "CLT"],
+  MIA: ["ATL", "JFK", "ORD"], CLT: ["EWR", "ATL", "PHL"], SEA: ["SFO", "LAX", "DEN"], PHX: ["DEN", "DFW", "LAX"],
+  EWR: ["ORD", "ATL", "DEN"], SFO: ["LAX", "DEN", "ORD"], IAH: ["DFW", "ORD", "EWR"], BOS: ["EWR", "LGA", "DCA"],
+  FLL: ["ATL", "EWR", "JFK"], MSP: ["ORD", "DEN", "ATL"], LGA: ["ORD", "ATL", "DCA"], DTW: ["ORD", "ATL", "LGA"],
+  PHL: ["EWR", "CLT", "ORD"], SLC: ["DEN", "LAX", "SFO"], DCA: ["EWR", "LGA", "ATL"], SAN: ["LAX", "SFO", "DEN"],
+  BWI: ["EWR", "ATL", "ORD"], TPA: ["ATL", "EWR", "CLT"], AUS: ["DFW", "DEN", "ATL"], IAD: ["EWR", "ORD", "DEN"],
+  BNA: ["ATL", "ORD", "DFW"], MDW: ["ORD", "DEN", "LAS"], HNL: ["LAX", "SFO", "SEA"], ANC: ["SEA", "DEN", "ORD"],
+};
+
+/** Hub TAF state per verifying hour and bucket: Map H -> [4 x packed (hubBits | level << 8) | null]. */
 export function hubBitsMap(tafs, hoursList) {
   const m = new Map();
   for (const H of hoursList) {
     const row = BUCKETS.map((b) => {
       const ti = tafFor(tafs, H, b);
-      return ti < 0 ? null : hubBits(tafSummary(tafs[ti], H, null));
+      return ti < 0 ? null : hubPack(tafSummary(tafs[ti], H, null));
     });
     if (row.some((x) => x != null)) m.set(H, row);
   }
@@ -197,10 +214,11 @@ export function hubBitsMap(tafs, hoursList) {
 
 /**
  * Training records for one airport: one per verifying hour with BTS truth, holding the features for
- * each lead bucket (f[i] for BUCKETS[i]: {w, o, h, lp, cp} or null when no TAF applies).
- * truth: Map H -> truth row; hubMaps: [Map H -> [4 bits]]; lampFn(H, predMs) -> {lp, cp} | null.
+ * each lead bucket (f[i] for BUCKETS[i]: {w, o, h, lp, cp, lc, lv, hc?} or null when no TAF applies).
+ * truth: Map H -> truth row; hubMaps: [Map H -> [4 packed]] (HUBS); cascadeMaps: [Map | null] for the
+ * top hubs (null = not built; then f has no hc); lampFn(H, predMs) -> {lp, cp, lc, lv} | null.
  */
-export function airportRecords({ iata, tz, tafs, obs, truth, hubMaps = [], start, end, rwys = null, lampFn = null }) {
+export function airportRecords({ iata, tz, tafs, obs, truth, hubMaps = [], cascadeMaps = null, start, end, rwys = null, lampFn = null }) {
   const out = [];
   const sumCache = new Map();
   const obsCache = new Map();
@@ -224,14 +242,18 @@ export function airportRecords({ iata, tz, tafs, obs, truth, hubMaps = [], start
         o = obsCache.get(oi);
       }
       let h = null;
-      for (const m of hubMaps) { const x = m.get(H)?.[bi]; if (x != null) h = (h ?? 0) | x; }
+      for (const m of hubMaps) { const x = m.get(H)?.[bi]; if (x != null) h = (h ?? 0) | (x & 63); }
       if (!w && !o) return null;
       const L = lampFn ? lampFn(H, pred) : null;
-      return { w, o, h, lp: L?.lp ?? null, cp: L?.cp ?? null };
+      const out = { w, o, h, lp: L?.lp ?? null, cp: L?.cp ?? null };
+      if (L?.lc != null) out.lc = L.lc;
+      if (L?.lv != null) out.lv = L.lv;
+      if (cascadeMaps) out.hc = cascadeOf(cascadeMaps.map((m) => m?.get(H)?.[bi] ?? null));
+      return out;
     });
     if (f.every((x) => x == null)) continue;
     out.push({
-      a: iata, H, lh: lp.h, dw: lp.dw, mo: lp.mo, ym: `${lp.y}-${String(lp.mo).padStart(2, "0")}`,
+      a: iata, H, lh: lp.h, dw: lp.dw, mo: lp.mo, d: lp.d, ym: `${lp.y}-${String(lp.mo).padStart(2, "0")}`,
       y: tr.y, md: tr.md == null ? null : Math.round(tr.md * 10) / 10, dm: tr.dm, cx: Math.round(tr.cx * 1000) / 1000, n: tr.n, f,
     });
   }
@@ -240,41 +262,95 @@ export function airportRecords({ iata, tz, tafs, obs, truth, hubMaps = [], start
 
 // ---------- IEM LAMP archive (optional; format unverified) ----------
 
+/** Case-insensitive column lookup over several candidate names, after trimming and dropping quotes/units. */
+function lampCol(h, names) {
+  const norm = h.map((x) => String(x ?? "").trim().toLowerCase().replace(/^"|"$/g, "").replace(/\s*\(.*\)$/, ""));
+  for (const n of names) { const i = norm.indexOf(n); if (i >= 0) return i; }
+  return -1;
+}
+
 /**
- * IEM mos.py CSV (model=LAV) -> Map ftimeMs -> [{run, lp, cp}] sorted by run. Columns by name:
- * runtime, ftime, and lp1 (else lp2, tp1) / cp1 (else cp2). Returns {byTime, diag}.
+ * IEM mos.py CSV (model=LAV) -> Map ftimeMs -> [{run, lp, cp, lc, lv}] sorted by run. The format is
+ * unverified, so columns are found by name, case-insensitively: run time (runtime, run, model_runtime),
+ * valid time (ftime, valid, fcst_time), thunder/lightning chance (lp1, ltg1, ltg, lp2, tp1, tstm1, tsd),
+ * convection chance (cp1, cnv1, cp2), ceiling category (cig, ceiling) and visibility category (vis).
+ * LAMP's ceiling/visibility *probabilities* aren't in the text bulletin the live poller reads, so only the
+ * categories are used (the live scorer can supply the same). Returns {byTime, diag (header, columns, rows)}.
  */
 export function lampFromIemCsv(rows) {
   const h = rows[0] || [];
   const c = {
-    run: findCol(h, ["runtime", "run", "model_runtime"]), ft: findCol(h, ["ftime", "valid", "fcst_time"]),
-    lp: findCol(h, ["lp1", "lp2", "tp1", "tstm1"]), cp: findCol(h, ["cp1", "cp2"]),
+    run: lampCol(h, ["runtime", "run", "model_runtime", "runtime_utc"]), ft: lampCol(h, ["ftime", "valid", "fcst_time", "ftime_utc"]),
+    lp: lampCol(h, ["lp1", "ltg1", "ltg", "lp2", "tp1", "tstm1", "tsd"]), cp: lampCol(h, ["cp1", "cnv1", "cp2"]),
+    lc: lampCol(h, ["cig", "ceiling", "cig_cat"]), lv: lampCol(h, ["vis", "visibility", "vis_cat"]),
   };
-  const diag = { header: h, columns: c, rows: Math.max(0, rows.length - 1), used: 0 };
+  const diag = { header: h, columns: c, rows: Math.max(0, rows.length - 1), used: 0, firstRow: rows[1] || null };
   const byTime = new Map();
-  if (c.run < 0 || c.ft < 0 || (c.lp < 0 && c.cp < 0)) return { byTime, diag };
+  if (c.run < 0 || c.ft < 0 || (c.lp < 0 && c.cp < 0 && c.lc < 0 && c.lv < 0)) return { byTime, diag };
+  const pct = (v) => (v == null || v < 0 || v > 100 ? null : v);
   for (let r = 1; r < rows.length; r++) {
     const row = rows[r];
     const run = parseTime(row[c.run]);
     const ft = parseTime(row[c.ft]);
     if (run == null || ft == null) continue;
-    const lp = c.lp >= 0 ? num(row[c.lp]) : null;
-    const cp = c.cp >= 0 ? num(row[c.cp]) : null;
-    if (lp == null && cp == null) continue;
+    const lp = c.lp >= 0 ? pct(num(row[c.lp])) : null;
+    const cp = c.cp >= 0 ? pct(num(row[c.cp])) : null;
+    const lc = c.lc >= 0 ? lampCat(row[c.lc], 8) : null;
+    const lv = c.lv >= 0 ? lampCat(row[c.lv], 7) : null;
+    if (lp == null && cp == null && lc == null && lv == null) continue;
     if (!byTime.has(ft)) byTime.set(ft, []);
-    byTime.get(ft).push({ run, lp, cp });
+    byTime.get(ft).push({ run, lp, cp, lc, lv });
     diag.used++;
   }
   for (const v of byTime.values()) v.sort((a, b) => a.run - b.run);
   return { byTime, diag };
 }
-/** LP1/CP1 for the hour starting H (column time H + 1 h) from the latest run at or before pred. */
+/** LP1/CP1 and the categories for the hour starting H (column time H + 1 h) from the latest run at or before pred. */
 export function lampLookup(byTime, H, pred) {
   const list = byTime.get(H + HOUR);
   if (!list) return null;
   let best = null;
   for (const x of list) if (x.run <= pred) best = x;
-  return best ? { lp: best.lp, cp: best.cp } : null;
+  return best ? { lp: best.lp, cp: best.cp, lc: best.lc ?? null, lv: best.lv ?? null } : null;
+}
+
+// ---------- FAA program state from the history log (feature family "programs") ----------
+
+/**
+ * Index of the history branch's truth/*.jsonl lines (any order) for program features:
+ * at(iata, atMs, H) -> programState(...) as known at atMs for the hour starting H, or null when there is no
+ * record (no poll line within maxGap before atMs, or the FAA status source was down on it). Ops-plan items
+ * are carried forward from the last line that had a plan (a plan is written only when it changes), for at
+ * most planMaxAge. coverage: {from, to, lines}.
+ */
+export function programIndex(lines, { maxGap = 30 * 60e3, planMaxAge = 24 * HOUR } = {}) {
+  const polls = [];
+  const plans = [];
+  for (const L of lines || []) {
+    const t = Date.parse(L?.t);
+    if (!Number.isFinite(t)) continue;
+    const down = Array.isArray(L.down) && L.down.includes("faa");
+    const ap = {};
+    let hasPlan = !!L.opsplan?.plan;
+    for (const [k, x] of Object.entries(L.airports || {})) {
+      if (x?.faa?.length || x?.atcscc?.length) ap[k] = { faa: x.faa || [], atcscc: x.atcscc || [] };
+      if (x?.opsplan) hasPlan = true;
+    }
+    polls.push({ t, down, ap });
+    if (hasPlan) plans.push({ t, ap: Object.fromEntries(Object.entries(L.airports || {}).filter(([, x]) => x?.opsplan).map(([k, x]) => [k, x.opsplan])) });
+  }
+  polls.sort((a, b) => a.t - b.t);
+  plans.sort((a, b) => a.t - b.t);
+  const last = (arr, t) => { let lo = 0; let hi = arr.length - 1; let ans = -1; while (lo <= hi) { const m = (lo + hi) >> 1; if (arr[m].t <= t) { ans = m; lo = m + 1; } else hi = m - 1; } return ans; };
+  const at = (iata, atMs, H) => {
+    const i = last(polls, atMs);
+    if (i < 0 || atMs - polls[i].t > maxGap || polls[i].down) return null;
+    const x = polls[i].ap[iata] || {};
+    const j = last(plans, atMs);
+    const opsplan = j >= 0 && atMs - plans[j].t <= planMaxAge ? plans[j].ap[iata] || null : null;
+    return programState({ faa: x.faa, atcscc: x.atcscc, opsplan }, H, atMs);
+  };
+  return { at, coverage: { from: polls.length ? new Date(polls[0].t).toISOString() : null, to: polls.length ? new Date(polls[polls.length - 1].t).toISOString() : null, lines: polls.length } };
 }
 
 // ---------- FAA program rates from the history log ----------
@@ -337,7 +413,76 @@ export function timeSplit(months, { testCount = 4, maxTest = 8 } = {}) {
   return { train: ms.slice(0, ms.length - test.length), test, winterInTest: test.some(isWinter) };
 }
 
+/**
+ * Calibration block: the last `n` training months (the months just before the test period). The model
+ * fitted on the earlier training months predicts them and the isotonic calibration is fitted there.
+ * Needs >= 2 earlier months; with fewer training months the block shrinks (never below one month).
+ */
+export function validationBlock(trainMonths, n = 2) {
+  const ms = [...trainMonths].sort();
+  const k = Math.max(0, Math.min(n, ms.length - 2));
+  return { fit: ms.slice(0, ms.length - k), val: ms.slice(ms.length - k) };
+}
+
+// ---------- schedule volume (feature family "volume") ----------
+
+/**
+ * Scheduled flights (departures + arrivals, incl. cancelled) per airport x local hour of week, from records
+ * (r.n) of the given months: {IATA: {med: [168 medians|null], q: "168 digits", f: [12 month factors]}}.
+ * q = how busy the hour usually is relative to the airport's busiest hour of the week (0 under 40%,
+ * 1 under 60%, 2 under 80%, 3 = peak banks); f = the month's median of (scheduled / usual for the hour).
+ */
+export function volumeTable(records, monthSet) {
+  const acc = new Map();
+  for (const r of records) {
+    if (!monthSet.has(r.ym) || !(r.n > 0)) continue;
+    let a = acc.get(r.a);
+    if (!a) { a = { how: Array.from({ length: 168 }, () => []), rows: [] }; acc.set(r.a, a); }
+    a.how[hourOfWeek(r.dw, r.lh)].push(r.n);
+    a.rows.push(r);
+  }
+  const out = {};
+  for (const [ap, a] of acc) {
+    const med = a.how.map((v) => (v.length >= 3 ? median(v) : null));
+    const peak = Math.max(0, ...med.filter((x) => x != null));
+    const q = med.map((m) => (m == null || !peak ? 0 : m / peak < 0.4 ? 0 : m / peak < 0.6 ? 1 : m / peak < 0.8 ? 2 : 3)).join("");
+    const byMo = Array.from({ length: 12 }, () => []);
+    for (const r of a.rows) { const m = med[hourOfWeek(r.dw, r.lh)]; if (m) byMo[r.mo - 1].push(r.n / m); }
+    const f = byMo.map((v) => (v.length >= 20 ? Math.round(median(v) * 100) / 100 : 1));
+    out[ap] = { med, q, f };
+  }
+  return out;
+}
+/**
+ * Volume inputs for a record: {vq, vr}. actual = true: this hour's scheduled flights vs the usual for the
+ * hour of week (training); false: the month factor, which is all the live scorer knows (test and live).
+ */
+export function volumeFor(table, r, { actual = true } = {}) {
+  const v = table?.[r.a];
+  if (!v) return { vq: null, vr: null };
+  const how = hourOfWeek(r.dw, r.lh);
+  const m = v.med[how];
+  return { vq: Number(v.q[how]), vr: actual ? (m && r.n > 0 ? r.n / m : null) : v.f[r.mo - 1] ?? null };
+}
+
+/** Feature family of a feature name (null = a base feature). */
+export function familyOf(name) {
+  if (/^(lp|cp|lcig|lvis):/.test(name)) return "lamp";
+  if (name.startsWith("pg:")) return "programs";
+  if (name.startsWith("hc:")) return "hubs";
+  if (name.startsWith("day:")) return "daytype";
+  if (/^(vol|volr):/.test(name)) return "volume";
+  return null;
+}
+
 // ---------- design matrix ----------
+
+/** encode() input for record r, bucket bi (plus training-time extras from aug). */
+export function featInput(r, bi, aug = null) {
+  const f = r.f[bi];
+  const o = { ap: r.a, lh: r.lh, dw: r.dw, mo: r.mo, y: Number(String(r.ym).slice(0, 4)), d: r.d, ...f };
+  return aug ? Object.assign(o, aug(r, bi)) : o;
+}
 
 class Grow {
   constructor(T, n = 1024) { this.T = T; this.a = new T(n); this.n = 0; }
@@ -347,9 +492,10 @@ class Grow {
 
 /**
  * Records -> rows (one per record x bucket with features): {rec, b, lvl, off, idx} typed arrays plus
- * the vocabulary (name -> column). lvl = TAF rule level (5 = no TAF).
+ * the vocabulary (name -> column). lvl = TAF rule level (5 = no TAF). feats: encode() options (FEATS);
+ * aug(record, bucketIndex) -> extra encode inputs computed at training time (pg, vq, vr).
  */
-export function buildRows(records, { lamp = false } = {}) {
+export function buildRows(records, feats = {}, aug = null) {
   const vocab = new Map();
   const rec = new Grow(Uint32Array);
   const bk = new Grow(Uint8Array);
@@ -360,7 +506,7 @@ export function buildRows(records, { lamp = false } = {}) {
   records.forEach((r, ri) => {
     r.f.forEach((f, bi) => {
       if (!f) return;
-      const names = encode({ ap: r.a, lh: r.lh, dw: r.dw, mo: r.mo, ...f }, BUCKETS[bi].key, { lamp });
+      const names = encode(featInput(r, bi, aug), BUCKETS[bi].key, feats);
       for (const nm of names) {
         let j = vocab.get(nm);
         if (j == null) { j = vocab.size; if (j >= 65535) throw new Error("vocabulary too large"); vocab.set(nm, j); }
@@ -583,9 +729,20 @@ export function contingency(f, o) {
 
 // ---------- safety gate ----------
 
-/** Deploy only if test Brier skill vs climatology > 0 and the model beats the rule-level mapping. */
-export function gate(test, { minN = 200 } = {}) {
+/**
+ * Deploy only if test Brier skill vs climatology > 0, the model beats the rule-level mapping and, when a
+ * model is deployed now (test.brier.current, scored on the same test hours), it beats that model too.
+ * current: {usable, comparable, why} from the training run; a deployed model that can't be compared fairly
+ * (it needs inputs this run didn't build) blocks the deploy; one this scorer can't use at all doesn't count.
+ */
+export function gate(test, { minN = 200, current = null } = {}) {
   const reasons = [];
+  if (current?.usable) {
+    const bm0 = test?.brier?.model;
+    const bc0 = test?.brier?.current;
+    if (!current.comparable) reasons.push(`the deployed model can't be compared on these test hours (${current.why || "missing inputs"})`);
+    else if (!(bm0 != null && bc0 != null && bm0 < bc0)) reasons.push(`model Brier ${bm0?.toFixed?.(4) ?? "–"} does not beat the deployed model's ${bc0?.toFixed?.(4) ?? "–"} on the same test hours`);
+  }
   if (!test || !(test.n >= minN)) reasons.push(`too few test hours (${test?.n ?? 0} < ${minN})`);
   const s = test?.bss?.climo;
   if (!(s > 0)) reasons.push(`Brier skill vs climatology ${s == null ? "unknown" : s.toFixed(3)} is not above 0`);
@@ -593,6 +750,36 @@ export function gate(test, { minN = 200 } = {}) {
   const br = test?.brier?.rule;
   if (!(bm != null && br != null && bm < br)) reasons.push(`model Brier ${bm?.toFixed?.(4) ?? "–"} does not beat the rule-level mapping ${br?.toFixed?.(4) ?? "–"}`);
   return { pass: reasons.length === 0, reasons };
+}
+
+// ---------- calibration by airport group ----------
+
+/** Airport groups for the calibration report. */
+export const AIRPORT_GROUPS = {
+  "Northeast": ["BOS", "JFK", "LGA", "EWR", "PHL", "BWI", "DCA", "IAD"],
+  "Southeast & Florida": ["ATL", "CLT", "BNA", "MCO", "MIA", "FLL", "TPA"],
+  "Central": ["ORD", "MDW", "DTW", "MSP", "DFW", "IAH", "AUS", "DEN"],
+  "West": ["LAX", "SFO", "SAN", "SEA", "LAS", "PHX", "SLC"],
+  "Alaska & Hawaii": ["ANC", "HNL"],
+};
+export const groupOf = (ap) => Object.keys(AIRPORT_GROUPS).find((g) => AIRPORT_GROUPS[g].includes(ap)) || "Other";
+
+/**
+ * Calibration summary: n, mean predicted, observed rate, Brier, expected calibration error over 10 bins
+ * (hour-weighted |mean predicted - observed|) and the observed rate where the model said 50-80%.
+ */
+export function calibrationSummary(p, y) {
+  const n = p.length;
+  if (!n) return { n: 0, meanP: null, rate: null, brier: null, ece: null, mid: null };
+  let sp = 0;
+  let k = 0;
+  for (let i = 0; i < n; i++) { sp += p[i]; k += y[i]; }
+  const bins = reliability(p, y);
+  let ece = 0;
+  for (const b of bins) if (b.n) ece += (b.n / n) * Math.abs(b.meanP - b.rate);
+  let mn = 0; let mk = 0; let mp = 0;
+  for (let i = 0; i < n; i++) if (p[i] >= 0.5 && p[i] < 0.8) { mn++; mk += y[i]; mp += p[i]; }
+  return { n, meanP: sp / n, rate: k / n, brier: brier(p, y), ece, mid: mn ? { n: mn, meanP: mp / mn, rate: mk / mn } : null };
 }
 
 // ---------- climatology & fallback tables ----------

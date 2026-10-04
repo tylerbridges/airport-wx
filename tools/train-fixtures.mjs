@@ -3,7 +3,10 @@
 // real TAFs' habit of over-warning thunder with PROB30/TEMPO groups), METARs, and flights whose
 // delays depend on the weather at both ends and at the hub. Everything is emitted in the real
 // formats (IEM taf.py row-per-group CSV, IEM asos.py CSV, BTS On-Time CSV, an assumed IEM mos.py
-// LAMP CSV) so the real parsers run end to end. Not real data: reports built from it say FIXTURE.
+// LAMP CSV) so the real parsers run end to end, plus a history-branch truth log (FAA programs, ops-plan
+// "possible" programs and staffing triggers) for its last months. Not real data: reports built from it
+// say FIXTURE.
+import { dayType } from "../poller/delay.mjs";
 
 const HOUR = 3600e3;
 export const FIX_AIRPORTS = [
@@ -173,15 +176,17 @@ function tafCsv(a, wx, start, from, to, rand) {
 
 // ---------- LAMP (assumed IEM mos.py CSV) ----------
 
+const LAMP_CAT = { [S.CLEAR]: [7, 7], [S.LOW]: [3, 5], [S.FOG]: [1, 2], [S.STORM]: [5, 5], [S.SNOW]: [4, 3], [S.WIND]: [6, 7] };
 function lampCsv(a, wx, start, from, to, rand) {
-  const lines = ["station,model,runtime,ftime,lp1,cp1"];
+  const lines = ["station,model,runtime,ftime,lp1,cp1,cig,vis"];
   for (let run = from; run < to; run += 3 * HOUR) {
     for (let k = 1; k <= 24; k++) {
       const ft = run + k * HOUR;
       const i = Math.round((ft - HOUR - start) / HOUR);
       const st = i >= 0 && i < wx.length ? wx[i] : S.CLEAR;
       const lp = Math.min(95, Math.max(0, Math.round((st === S.STORM ? 45 : 3) + (rand() - 0.5) * 30 - k)));
-      lines.push([a.icao, "LAV", iso(run), iso(ft), lp, Math.min(99, lp + 10)].join(","));
+      const [cig, vis] = rand() < 0.8 - k * 0.01 ? LAMP_CAT[st] : LAMP_CAT[S.CLEAR];
+      lines.push([a.icao, "LAV", iso(run), iso(ft), lp, Math.min(99, lp + 10), cig, vis].join(","));
     }
   }
   return lines.join("\n") + "\n";
@@ -192,7 +197,19 @@ function lampCsv(a, wx, start, from, to, rand) {
 const BTS_HEAD = '"Year","Quarter","Month","DayofMonth","DayOfWeek","FlightDate","Reporting_Airline","Flight_Number_Reporting_Airline","Origin","OriginCityName","Dest","DestCityName","CRSDepTime","DepTime","DepDelay","DepDel15","CRSArrTime","ArrTime","ArrDelay","Cancelled","CancellationCode","Diverted","CarrierDelay","WeatherDelay","NASDelay","SecurityDelay","LateAircraftDelay",';
 const SEV = { [S.CLEAR]: 0, [S.LOW]: 0.12, [S.FOG]: 0.3, [S.STORM]: 0.42, [S.SNOW]: 0.35, [S.WIND]: 0.16 };
 
-function btsCsv(airports, wx, start, month, rand) {
+/** Staffing triggers per airport: [{from, to}] (about one every 12 days, 3-5 h; NAS delays while they last). */
+function staffingEvents(airports, start, end, rand) {
+  const out = {};
+  for (const a of airports) {
+    const ev = [];
+    for (let t = start; t < end; t += HOUR) if (rand() < 1 / (12 * 24)) { const to = t + (3 + Math.floor(rand() * 3)) * HOUR; ev.push({ from: t, to }); t = to; }
+    out[a.iata] = ev;
+  }
+  return out;
+}
+const inEvent = (list, t) => (list || []).some((e) => t >= e.from && t < e.to);
+
+function btsCsv(airports, wx, start, month, rand, staff) {
   const [y, m] = month.split("-").map(Number);
   const from = Date.UTC(y, m - 1, 1) - 12 * HOUR;
   const to = Date.UTC(y, m, 1) + 12 * HOUR;
@@ -203,7 +220,10 @@ function btsCsv(airports, wx, start, month, rand) {
     for (let t = from; t < to; t += HOUR) {
       const L = local(t, a.tz);
       if (L.date.slice(0, 7) !== month || L.h < 5) continue;
-      const nDep = 5 + Math.floor(rand() * 4) + (L.h >= 7 && L.h <= 9 ? 3 : 0) + (L.h >= 16 && L.h <= 19 ? 3 : 0);
+      const dty = dayType(+L.date.slice(0, 4), +L.date.slice(5, 7), +L.date.slice(8, 10));
+      const busy = dty?.pk ? 1.35 : dty?.hol ? 0.8 : 1;
+      const nDep = Math.round((5 + Math.floor(rand() * 4) + (L.h >= 7 && L.h <= 9 ? 3 : 0) + (L.h >= 16 && L.h <= 19 ? 3 : 0)) * busy);
+      const staffed = inEvent(staff[a.iata], t);
       for (let k = 0; k < nDep; k++) {
         const dest = airports[(airports.indexOf(a) + 1 + Math.floor(rand() * (airports.length - 1))) % airports.length];
         const dep = t + Math.floor(rand() * 60) * 60e3;
@@ -211,7 +231,8 @@ function btsCsv(airports, wx, start, month, rand) {
         const so = state(a.iata, dep);
         const sd = state(dest.iata, arr);
         const hubStorm = (FIX_HUBS[a.iata] || []).some((h) => state(h, dep) === S.STORM);
-        const pWx = 0.05 + SEV[so] + SEV[sd] * 0.5 + (hubStorm ? 0.12 : 0);
+        // volume: busy hours turn bad weather into more delays; peak travel days and staffing add NAS delays
+        const pWx = 0.05 + SEV[so] + SEV[sd] * 0.5 + (hubStorm ? 0.12 : 0) + (nDep >= 11 && so !== S.CLEAR ? 0.08 : 0) + (dty?.pk ? 0.05 : 0) + (staffed ? 0.2 : 0);
         let cancelled = 0;
         let code = "";
         if (so === S.SNOW && rand() < 0.08) { cancelled = 1; code = "B"; } else if (so === S.STORM && rand() < 0.04) { cancelled = 1; code = "C"; } else if (rand() < 0.004) { cancelled = 1; code = "A"; }
@@ -245,11 +266,48 @@ function btsCsv(airports, wx, start, month, rand) {
 }
 
 /**
+ * History-branch truth lines (poller/record.mjs shape) every 20 min from `from`: FAA ground stops in
+ * storms and GDPs in snow/fog (NAS status), ops plans every 6 h with "possible" ground stops where storms
+ * come within 6 h (and some false alarms) and the staffing triggers; the FAA source is down now and then.
+ */
+function historyLines(airports, wx, start, from, end, staff, rand) {
+  const lines = [];
+  const st = (iata, t) => { const i = Math.floor((t - start) / HOUR); return i >= 0 && i < wx[iata].length ? wx[iata][i] : S.CLEAR; };
+  const isoS = (ms) => new Date(ms).toISOString().slice(0, 16) + "Z";
+  for (let t = from; t < end; t += 20 * 60e3) {
+    const L = { t: isoS(t), airports: {} };
+    if (rand() < 0.01) L.down = ["faa"];
+    const plan = t % (6 * HOUR) === 0;
+    for (const a of airports) {
+      const x = {};
+      const now = st(a.iata, t);
+      const staffed = inEvent(staff[a.iata], t);
+      if (!L.down && now === S.STORM && rand() < 0.7) x.faa = [{ type: "ground_stop", cause: "weather", reason: "WX:Thunderstorms" }];
+      else if (!L.down && (now === S.SNOW || now === S.FOG) && rand() < 0.6) x.faa = [{ type: "ground_delay", cause: "weather", reason: "WX:Low ceilings", detail: "avg 45m" }];
+      else if (!L.down && staffed && rand() < 0.5) x.faa = [{ type: "ground_delay", cause: "staffing", reason: "Staffing" }];
+      if (plan) {
+        const op = {};
+        let storm = false;
+        for (let k = 1; k <= 6; k++) if (st(a.iata, t + k * HOUR) === S.STORM) storm = true;
+        if ((storm && rand() < 0.7) || rand() < 0.03) op.programs = [{ codes: [a.iata], program: "GS", status: "possible", until: isoS(t + 6 * HOUR), raw: `${a.iata} GS POSSIBLE` }];
+        const ev = (staff[a.iata] || []).find((e) => e.to > t && e.from < t + 6 * HOUR);
+        if (ev) op.staffing = [{ kind: "trigger", facility: a.iata, until: isoS(ev.to), cause: "staffing", raw: `${a.iata} STAFFING TRIGGER` }];
+        if (Object.keys(op).length) x.opsplan = op;
+      }
+      if (Object.keys(x).length) L.airports[a.iata] = x;
+    }
+    if (plan) L.opsplan = { plan: { advisory: "ATCSCC ADVZY 001 DCC OPERATIONS PLAN", issued: isoS(t) } };
+    lines.push(L);
+  }
+  return lines;
+}
+
+/**
  * The synthetic world. Returns providers keyed like the live sources:
  *   taf(icao, from, to) -> CSV text, metar(id, from, to) -> CSV text, lamp(icao, from, to) -> CSV text,
- *   bts(month) -> CSV text; plus {airports, hubs, months}.
+ *   bts(month) -> CSV text, history() -> truth lines (the last `historyMonths` months); plus {airports, hubs, months}.
  */
-export function fixtureWorld({ seed = 20260922, months = FIX_MONTHS } = {}) {
+export function fixtureWorld({ seed = 20260922, months = FIX_MONTHS, historyMonths = 7 } = {}) {
   const rand = rng(seed);
   const [y0, m0] = months[0].split("-").map(Number);
   const [y1, m1] = months[months.length - 1].split("-").map(Number);
@@ -259,11 +317,15 @@ export function fixtureWorld({ seed = 20260922, months = FIX_MONTHS } = {}) {
   const byIcao = Object.fromEntries(FIX_AIRPORTS.map((a) => [a.icao, a]));
   const byId = Object.fromEntries(FIX_AIRPORTS.map((a) => [a.icao.slice(1), a]));
   const seeded = (k) => rng(seed ^ [...k].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7));
+  const staff = staffingEvents(FIX_AIRPORTS, start, end, seeded("staff"));
+  const hm = months[Math.max(0, months.length - historyMonths)].split("-").map(Number);
+  const histFrom = Date.UTC(hm[0], hm[1] - 1, 1);
   return {
     airports: FIX_AIRPORTS, hubs: FIX_HUBS, months, start, end,
     taf: (icao, from, to) => (byIcao[icao] ? tafCsv(byIcao[icao], wx[byIcao[icao].iata], start, from, to, seeded("taf" + icao + from)) : TAF_HEAD + "\n"),
     metar: (id, from, to) => (byId[id] ? metarCsv(byId[id], wx[byId[id].iata], start, from, to) : "station,valid,metar\n"),
     lamp: (icao, from, to) => (byIcao[icao] ? lampCsv(byIcao[icao], wx[byIcao[icao].iata], start, from, to, seeded("lamp" + icao + from)) : "station,model,runtime,ftime,lp1,cp1\n"),
-    bts: (month) => btsCsv(FIX_AIRPORTS, wx, start, month, seeded("bts" + month)),
+    bts: (month) => btsCsv(FIX_AIRPORTS, wx, start, month, seeded("bts" + month), staff),
+    history: () => historyLines(FIX_AIRPORTS, wx, start, histFrom, end, staff, seeded("history")),
   };
 }

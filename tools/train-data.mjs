@@ -6,11 +6,13 @@
 //        BTS On-Time CSV (file or stdin) -> <dir>/bts/2025-01.json.gz: per airport x local date x hour,
 //        departures (Origin, CRSDepTime) and arrivals (Dest, CRSArrTime): flights, late 15+, late 15+
 //        with weather/NAS cause, weather/NAS cancellations, delay minutes of late flights.
-//   node tools/train-data.mjs build --out <dir> [--airports all|ORD,MSP] [--lamp] [--chunk-months 3]
+//   node tools/train-data.mjs build --out <dir> [--airports all|ORD,MSP] [--lamp] [--hub-cascade] [--chunk-months 3]
+//        [--lamp-budget-min 150]
 //        BTS aggregates -> truth per airport-hour; IEM TAFs (taf.py) and METARs (asos.py) per airport
 //        (<= 1 request/s, retries with backoff, cached in <dir>/cache for the run) and optionally IEM
 //        LAMP (mos.py, model=LAV) -> <dir>/dataset.jsonl.gz (one record per airport-hour, features
 //        for each lead bucket), <dir>/meta.json and <dir>/samples/ (first 50 KB of every raw format).
+//        --hub-cascade adds the top-hub cascade (TOP_HUBS in train-lib.mjs) to every record (f[i].hc).
 //
 // tools/train.mjs --fixtures runs the same code against tools/train-fixtures.mjs in memory.
 import { readFile, writeFile, mkdir, readdir, stat } from "node:fs/promises";
@@ -22,7 +24,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseCsvLine, parseCsv, tafsFromIemCsv, metarsFromIemCsv, mergeTafs } from "./backtest-lib.mjs";
 import {
-  btsIndex2, btsAdd2, accEntries, mergeAcc, truthFromAcc, hubBitsMap, airportRecords, lampFromIemCsv, lampLookup, HOUR,
+  btsIndex2, btsAdd2, accEntries, mergeAcc, truthFromAcc, hubBitsMap, airportRecords, lampFromIemCsv, lampLookup, HOUR, TOP_HUBS,
 } from "./train-lib.mjs";
 import { HUBS } from "../poller/delay.mjs";
 
@@ -164,7 +166,10 @@ export function chunks(months, size) {
  * Build the dataset. src: {taf, metar, lamp} providers (live or fixture); acc: merged BTS accumulator;
  * writeLine(record) receives each record. Returns meta (counts, skipped, samples, diagnostics).
  */
-export async function buildDataset({ airports, months, acc, src, writeLine, lamp = false, chunkMonths = 3, saveSample = async () => {}, rwyOf = () => null, log = console.log }) {
+export async function buildDataset({
+  airports, months, acc, src, writeLine, lamp = false, hubCascade = false, topHubs = TOP_HUBS, lampBudgetMs = Infinity,
+  chunkMonths = 3, saveSample = async () => {}, rwyOf = () => null, log = console.log,
+}) {
   const tzByIata = Object.fromEntries(airports.map((a) => [a.iata, a.tz]));
   const truthAll = truthFromAcc(acc, tzByIata);
   const truth = new Map();
@@ -241,20 +246,33 @@ export async function buildDataset({ airports, months, acc, src, writeLine, lamp
     all.sort((x, y) => x.t - y.t);
     return all.filter((o, i) => i === 0 || o.t !== all[i - 1].t || o.raw !== all[i - 1].raw);
   };
+  // LAMP (format unverified): the header, the columns found and the first row are logged once; a chunk
+  // that fails is retried month by month; after lampBudgetMs the remaining chunks are skipped ("lp:none").
+  const lampT0 = Date.now();
   const getLamp = async (a) => {
     const byTime = new Map();
+    const fetchPart = async (p) => {
+      const text = await src.lamp(a.icao, p.from, p.to);
+      await saveSample("iem-lamp.csv", text);
+      const r = lampFromIemCsv(parseCsv(text));
+      diag.lamp[`${a.icao} ${p.label}`] = { rows: r.diag.rows, used: r.diag.used };
+      if (!diag.lampHeader) {
+        diag.lampHeader = r.diag.header;
+        diag.lampColumns = r.diag.columns;
+        log(`LAMP sample (${a.icao} ${p.label}): header ${JSON.stringify(r.diag.header)}; columns ${JSON.stringify(r.diag.columns)}; first row ${JSON.stringify(r.diag.firstRow)}`);
+      }
+      if (r.diag.rows && !r.diag.used) throw new Error(`no LAMP values parsed from ${r.diag.rows} rows (header ${JSON.stringify(r.diag.header).slice(0, 150)})`);
+      counts.lampRows += r.diag.used;
+      for (const [k, v] of r.byTime) byTime.set(k, (byTime.get(k) || []).concat(v).sort((x, y) => x.run - y.run));
+    };
     for (const p of parts) {
-      try {
-        const text = await src.lamp(a.icao, p.from, p.to);
-        await saveSample("iem-lamp.csv", text);
-        const r = lampFromIemCsv(parseCsv(text));
-        diag.lamp[`${a.icao} ${p.label}`] = { rows: r.diag.rows, used: r.diag.used };
-        diag.lampHeader ||= r.diag.header;
-        diag.lampColumns ||= r.diag.columns;
-        counts.lampRows += r.diag.used;
-        for (const [k, v] of r.byTime) byTime.set(k, (byTime.get(k) || []).concat(v).sort((x, y) => x.run - y.run));
-      } catch (e) {
-        skipped.push({ station: a.icao, what: "LAMP", month: p.label, error: String(e.message || e).slice(0, 200) });
+      if (Date.now() - lampT0 > lampBudgetMs) { skipped.push({ station: a.icao, what: "LAMP", month: p.label, error: "LAMP time budget used up" }); continue; }
+      try { await fetchPart(p); } catch (e) {
+        if (p.months.length > 1) {
+          for (const m of p.months) {
+            try { await fetchPart({ from: monthStart(m), to: monthEnd(m), label: m, months: [m] }); } catch (e2) { skipped.push({ station: a.icao, what: "LAMP", month: m, error: String(e2.message || e2).slice(0, 200) }); }
+          }
+        } else skipped.push({ station: a.icao, what: "LAMP", month: p.label, error: String(e.message || e).slice(0, 200) });
       }
     }
     return byTime;
@@ -264,7 +282,7 @@ export async function buildDataset({ airports, months, acc, src, writeLine, lamp
   const allHours = [];
   for (let H = Math.floor(start / HOUR) * HOUR; H < end; H += HOUR) allHours.push(H);
   const hubMaps = new Map();
-  const hubsNeeded = [...new Set(airports.flatMap((a) => HUBS[a.iata] || []))].filter((h) => byIata.has(h));
+  const hubsNeeded = [...new Set(airports.flatMap((a) => [...(HUBS[a.iata] || []), ...(hubCascade ? topHubs[a.iata] || [] : [])]))].filter((h) => byIata.has(h));
   for (const h of hubsNeeded) {
     const tafs = await getTafs(byIata.get(h));
     hubMaps.set(h, hubBitsMap(tafs, allHours));
@@ -281,6 +299,7 @@ export async function buildDataset({ airports, months, acc, src, writeLine, lamp
     const recs = airportRecords({
       iata: a.iata, tz: a.tz, tafs, obs, truth: tr, start, end, rwys: rwyOf(a.iata),
       hubMaps: (HUBS[a.iata] || []).map((h) => hubMaps.get(h)).filter(Boolean),
+      cascadeMaps: hubCascade ? (topHubs[a.iata] || []).map((h) => hubMaps.get(h) || null) : null,
       lampFn: L ? (H, pred) => lampLookup(L, H, pred) : null,
     });
     let kept = 0;
@@ -291,7 +310,7 @@ export async function buildDataset({ airports, months, acc, src, writeLine, lamp
     if (kept) used.push(a.iata);
     log(`${a.iata}: ${tafs.length} TAFs, ${obs.length} METARs, ${tr.size} BTS hours, ${kept} records`);
   }
-  return { counts, skipped, diagnostics: diag, airportsUsed: used, period: { months, start: new Date(start).toISOString(), end: new Date(end).toISOString() } };
+  return { counts, skipped, diagnostics: diag, airportsUsed: used, hubCascade: !!hubCascade, topHubs: hubCascade ? Object.fromEntries(airports.map((a) => [a.iata, (topHubs[a.iata] || []).filter((h) => byIata.has(h))])) : null, period: { months, start: new Date(start).toISOString(), end: new Date(end).toISOString() } };
 }
 
 /** Runway headings (true) per IATA from site/data/airports-all.json. */
@@ -334,7 +353,10 @@ async function buildStep(opts) {
   gz.pipe(outFile);
   const writeLine = (r) => (gz.write(JSON.stringify(r) + "\n") ? null : new Promise((res) => gz.once("drain", res)));
   const rwy = await runwayTable(airports.map((a) => a.iata));
-  const meta = await buildDataset({ airports, months, acc, src: iemSources(cacheDir), writeLine, lamp: opts.lamp, chunkMonths: opts.chunkMonths, saveSample, rwyOf: (i) => rwy[i] || null });
+  const meta = await buildDataset({
+    airports, months, acc, src: iemSources(cacheDir), writeLine, lamp: opts.lamp, hubCascade: opts.hubCascade, lampBudgetMs: opts.lampBudgetMin * 60e3,
+    chunkMonths: opts.chunkMonths, saveSample, rwyOf: (i) => rwy[i] || null,
+  });
   gz.end();
   await new Promise((r) => outFile.on("finish", r));
   const full = { ...meta, generated: new Date().toISOString(), lamp: !!opts.lamp, bts, samples, iem: iemStats, rwy };
@@ -352,7 +374,7 @@ export async function readDataset(dir) {
 }
 
 function parseArgs(argv) {
-  const o = { step: argv[0], month: null, file: null, out: null, airports: "all", lamp: false, chunkMonths: 3, months: null };
+  const o = { step: argv[0], month: null, file: null, out: null, airports: "all", lamp: false, hubCascade: false, lampBudgetMin: 150, chunkMonths: 3, months: null };
   for (let i = 1; i < argv.length; i++) {
     const a = argv[i];
     const v = () => argv[++i];
@@ -361,6 +383,8 @@ function parseArgs(argv) {
     else if (a === "--out") o.out = resolve(v());
     else if (a === "--airports") o.airports = v() || "all";
     else if (a === "--lamp") o.lamp = true;
+    else if (a === "--hub-cascade") o.hubCascade = true;
+    else if (a === "--lamp-budget-min") o.lampBudgetMin = Math.max(1, Number(v()) || 150);
     else if (a === "--chunk-months") o.chunkMonths = Math.max(1, Number(v()) || 3);
     else if (a === "--months") o.months = v().split(",").map((s) => s.trim()).filter(Boolean);
     else throw new Error(`unknown argument ${a}`);

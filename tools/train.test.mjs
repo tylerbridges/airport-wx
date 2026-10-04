@@ -96,8 +96,8 @@ test("LAMP (assumed IEM mos.py columns): latest run at or before the forecast ti
   const rows = parseCsv("station,model,runtime,ftime,lp1,cp1\nKORD,LAV,2026-07-14 12:00,2026-07-14 18:00,20,40\nKORD,LAV,2026-07-14 15:00,2026-07-14 18:00,45,60\nKORD,LAV,2026-07-14 15:00,2026-07-14 19:00,M,M\n");
   const { byTime, diag } = lampFromIemCsv(rows);
   assert.equal(diag.used, 2);
-  assert.deepEqual(lampLookup(byTime, Date.UTC(2026, 6, 14, 17), Date.UTC(2026, 6, 14, 16)), { lp: 45, cp: 60 });
-  assert.deepEqual(lampLookup(byTime, Date.UTC(2026, 6, 14, 17), Date.UTC(2026, 6, 14, 13)), { lp: 20, cp: 40 });
+  assert.deepEqual(lampLookup(byTime, Date.UTC(2026, 6, 14, 17), Date.UTC(2026, 6, 14, 16)), { lp: 45, cp: 60, lc: null, lv: null });
+  assert.deepEqual(lampLookup(byTime, Date.UTC(2026, 6, 14, 17), Date.UTC(2026, 6, 14, 13)), { lp: 20, cp: 40, lc: null, lv: null });
   assert.equal(lampLookup(byTime, Date.UTC(2026, 6, 14, 18), Date.UTC(2026, 6, 14, 16)), null);
   assert.equal(lampFromIemCsv(parseCsv("a,b\n1,2\n")).byTime.size, 0);
 });
