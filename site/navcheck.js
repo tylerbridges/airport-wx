@@ -49,6 +49,28 @@ export async function navChecks(add, url) {
     const back = await until(() => d.getElementById("tab-airports").getAttribute("aria-selected") === "true" && !d.getElementById("navAirports").hidden, 2000);
     add(toTrips && back ? "pass" : "fail", "Switching tabs updates the hash", `Trips → ${toTrips ? "#trips" : "hash " + JSON.stringify(w.location.hash)}; Back → ${back ? "Airports" : "not Airports"}`);
 
+    // Short tabs must not clamp page scroll or move the common header/content origin.
+    const airports = d.getElementById("navAirports");
+    const position = () => [d.querySelector("header").getBoundingClientRect().top,
+      d.querySelector("header").getBoundingClientRect().bottom,
+      d.querySelector(".awx-panel:not([hidden])").getBoundingClientRect().top,
+      bar.getBoundingClientRect().top, w.scrollY];
+    const origin = position();
+    airports.scrollTop = 200;
+    const saved = airports.scrollTop;
+    const jumps = [];
+    for (const tab of ["trips", "map", "airports"]) {
+      w.AWXNav.go(tab);
+      for (let i = 0; i < 3; i++) {
+        await sleep(20); // Offscreen check-page frames can suspend requestAnimationFrame.
+        if (position().some((n, j) => Math.abs(n - origin[j]) > 1)) jumps.push(tab);
+      }
+    }
+    const restored = Math.abs(airports.scrollTop - saved) < 1;
+    airports.scrollTop = 0;
+    add(!jumps.length && restored ? "pass" : "fail", "Tabs share a fixed header and content origin; scroll positions are restored",
+      jumps.length ? `vertical jumps: ${jumps.join(", ")}` : `header/content/bar unchanged; Airports scroll ${saved} px ${restored ? "restored" : "lost"}`);
+
     // menu opens and closes (Escape, outside tap)
     const btn = d.getElementById("navMenuBtn");
     btn.click();
@@ -75,7 +97,9 @@ export async function navChecks(add, url) {
       const before = sw.getAttribute("aria-checked") === "true";
       sw.click();
       const inPrefs = w.AWXNav.prefs().getPrefs().show[key] === !before;
-      await load(f, f.contentWindow.location.href);
+      const reloadUrl = new URL(f.contentWindow.location.href);
+      reloadUrl.searchParams.set("nav-check-reload", String(Date.now()));
+      await load(f, reloadUrl.href);
       w = await ready(f);
       d = f.contentDocument;
       const kept = w && w.AWXNav.prefs().getPrefs().show[key] === !before;
@@ -98,7 +122,8 @@ export async function navChecks(add, url) {
       const all = [...d.querySelectorAll("#seg button")].find((b) => /^All/.test(b.textContent));
       if (all) all.click();
       await sleep(150);
-      w.scrollTo(0, d.documentElement.scrollHeight);
+      const panel = d.getElementById("navAirports");
+      panel.scrollTop = panel.scrollHeight;
       await sleep(150);
       const cards = d.querySelectorAll("#list .card");
       const last = cards.length ? cards[cards.length - 1].getBoundingClientRect() : null;

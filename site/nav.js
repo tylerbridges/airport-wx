@@ -18,8 +18,9 @@ const $ = (id) => document.getElementById(id);
 export const tabFromHash = (hash) => { const k = String(hash || "").replace(/^#/, ""); return TABS.some((t) => t.id === k) ? k : "airports"; };
 
 let cur = null;
-const scrollBy = {}; // tab -> scrollY, restored when coming back
+const scrollBy = {}; // tab -> panel scrollTop, restored when coming back
 let bar, nav, menuBtn;
+const panelFor = (id) => $("nav" + id[0].toUpperCase() + id.slice(1));
 
 // ---------- theme ----------
 
@@ -75,13 +76,14 @@ function buildBar() {
 
 /** Switch tab through the hash (adds a history entry, so Back returns to the previous tab). */
 function go(id) {
-  if (id === cur) { window.scrollTo({ top: 0, behavior: reducedMotion() ? "auto" : "smooth" }); return; }
-  if (tabFromHash(location.hash) === id && location.hash) { show(id); return; }
-  location.hash = id;
+  if (id === cur) { panelFor(id).scrollTo({ top: 0, behavior: reducedMotion() ? "auto" : "smooth" }); return; }
+  // Avoid native anchor scrolling to the Airports page's existing #trips section.
+  if (tabFromHash(location.hash) !== id || !location.hash) history.pushState(null, "", "#" + id);
+  show(id);
 }
 
 function show(id) {
-  if (cur) scrollBy[cur] = window.scrollY;
+  if (cur) scrollBy[cur] = panelFor(cur).scrollTop;
   const prev = cur;
   cur = id;
   document.body.setAttribute("data-tab", id);
@@ -90,13 +92,14 @@ function show(id) {
     const b = $("tab-" + t.id);
     b.setAttribute("aria-selected", String(sel));
     b.tabIndex = sel ? 0 : -1;
-    $("nav" + t.id[0].toUpperCase() + t.id.slice(1)).hidden = !sel;
+    panelFor(t.id).hidden = !sel;
   }
   const h1 = document.querySelector(".wrap header h1");
   if (h1) h1.textContent = TABS.find((t) => t.id === id).title;
   if (id === "trips") renderTrips();
   if (id === "map") renderMap();
-  if (prev) window.scrollTo(0, scrollBy[id] || 0);
+  if (prev) panelFor(id).scrollTop = scrollBy[id] || 0;
+  if (id === "airports") requestAnimationFrame(() => app()?.placeLenses?.());
 }
 
 // ---------- Trips / Map ----------
