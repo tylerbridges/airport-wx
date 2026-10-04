@@ -4,7 +4,7 @@
 // Writes "CHECK PASS" or "CHECK FAIL n" plus one line per row into <pre id="result"> so headless
 // Chrome (--dump-dom) and the uptime workflow can read it. Warnings don't fail the check.
 import { loadAirports, rank } from "./search.js";
-import { navChecks } from "./navcheck.js?v=2"; // nav hook
+import { navChecks } from "./navcheck.js?v=3"; // nav hook
 import { tripChecks } from "./check-trips.js"; // trips hook
 import { dataAsserts, pageAsserts } from "./check-scenarios.js"; // scenarios hook
 
@@ -617,6 +617,7 @@ async function runMock() {
   searchChecks(group("Search"), list, error);
   if (!idx.ok) { group("Scenarios")("fail", "data/scenarios/index.json loads", `HTTP ${idx.status || idx.error}`); return; }
   if (RENDER) await navChecks(group("Navigation (390 px, hidden frame)"), "./index.html?test=all-clear"); // nav hook
+  if (RENDER) { try { await (await import("./map/check.js?v=1")).mapChecks(group("Map (thunderstorm-ground-stop, 390 px)"), "./index.html?test=thunderstorm-ground-stop"); } catch (e) { group("Map (thunderstorm-ground-stop, 390 px)")("fail", "Map checks load", String(e.message || e)); } } // map hook: site/map/check.js
   for (const sc of idx.data.scenarios) {
     const add = group(`Scenario: ${sc.name} — ${sc.title}`);
     const got = await getJson(`./data/scenarios/${sc.file}`);

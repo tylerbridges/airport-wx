@@ -71,15 +71,16 @@ export async function navChecks(add, url) {
     add(!jumps.length && restored ? "pass" : "fail", "Tabs share a fixed header and content origin; scroll positions are restored",
       jumps.length ? `vertical jumps: ${jumps.join(", ")}` : `header/content/bar unchanged; Airports scroll ${saved} px ${restored ? "restored" : "lost"}`);
 
+    // map hook: canvas map (site/map.js); deeper checks in site/map/check.js
     w.AWXNav.go("map");
-    const mapReady = await until(() => d.querySelectorAll(".map-airport-row").length > 0 && d.querySelectorAll(".map-land path").length > 0, 5000);
-    add(mapReady ? "pass" : "fail", "Map loads local geography and accessible airport choices", `${d.querySelectorAll(".map-airport-row").length} choices`);
+    const mapReady = await until(() => d.querySelectorAll(".map-airport-row").length > 0 && w.AWXMap && w.AWXMap._state().dots > 0, 5000);
+    add(mapReady ? "pass" : "fail", "Map draws airport dots and the accessible list", `${d.querySelectorAll(".map-airport-row").length} list rows, ${w.AWXMap ? w.AWXMap._state().dots : 0} dots`);
     if (mapReady) {
-      const row = d.querySelector(".map-airport-row");
-      row.click();
-      const a = w.AWXApp.state.data.airports.find((x) => x.iata === row.dataset.code);
-      const agrees = a && d.querySelector(".map-status").textContent === w.AWXApp.outlook(a).headline;
-      add(agrees ? "pass" : "fail", "Map and detail share the same airport-hour outlook", row.dataset.code);
+      const st = w.AWXMap._state();
+      const a = w.AWXApp.state.data.airports.find((x) => d.querySelector(`.map-airport-row[data-code="${x.iata}"]`));
+      const code = a ? a.iata : "no major in the list";
+      const agrees = a && st.heads[code] === w.AWXApp.outlook(a, st.at).headline;
+      add(agrees ? "pass" : "fail", "Map and detail share the same airport-hour outlook", code);
     }
     w.AWXNav.go("airports");
 
