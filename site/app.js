@@ -1865,7 +1865,8 @@
       aviation() ? h("div", { class: "chips" }, confChip("NWS", "medium")) : null));
     add(storms.length, () => section("Storms", "bolt", storms, null, { meta: [v.sigmets && v.sigmets.length && "NWS", v.spc && "SPC", v.tcf && v.tcf.length && "NWS"].filter(Boolean).filter((x, i, arr) => arr.indexOf(x) === i).join(" · "),
       raw: null }));
-    if (storms.length) secs[secs.length - 1].querySelector(".scard").append(srcLine(v.sigmets && v.sigmets.length ? "sigmet" : v.spc ? "spc" : "tcf", (v.sigmets || []).map((x) => x.raw)));
+    const stormSrc = storms.length ? srcLine(v.sigmets && v.sigmets.length ? "sigmet" : v.spc ? "spc" : "tcf", (v.sigmets || []).map((x) => x.raw)) : null; // null in Traveler mode
+    if (stormSrc) secs[secs.length - 1].querySelector(".scard").append(stormSrc);
     // movement hook: "Traffic right now" (site/movement.js), its card body inside a build2b section card
     const mv = window.AWXMovement && typeof AWXMovement.card === "function" ? safeCall(() => AWXMovement.card(a)) : null;
     if (mv) {
@@ -1911,7 +1912,7 @@
     if (window.AWXTrips) window.AWXTrips.decorateSheet(sheet, a); // trips hook: "Your flight" row + plane markers
     if (window.AWXBrief) safeCall(() => window.AWXBrief.decorateSheet(sheet, a)); // brief hook: "Today" card (site/brief.js)
     if (window.AWXTerminals) safeCall(() => window.AWXTerminals.decorateSheet(sheet, a)); // terminals hook: "Terminal map" + "Lounges" cards (site/terminals.js)
-    if (keepScroll) sheet.scrollTop = top;
+    sheet.scrollTop = keepScroll ? top : 0; // a newly opened sheet starts at the top; live refreshes keep the place
     requestAnimationFrame(placeLenses);
     fillCrosswind(a);
   }
@@ -2185,7 +2186,8 @@
     const w = m && m.wind;
     if (!w || w.spd == null) { el.textContent = "Crosswind: no wind reported"; return; }
     if (w.spd === 0) { el.textContent = "Calm wind — no crosswind on any runway"; return; }
-    if (w.dir === "VRB" || w.dir == null) { el.textContent = `Variable wind ${w.spd} kt — crosswind can come from any side`; return; }
+    const sp = (kt) => (aviation() ? Math.round(kt) + " kt" : mph1(kt) + " mph"); // Traveler mode: mph, never kt
+    if (w.dir === "VRB" || w.dir == null) { el.textContent = `Variable wind ${sp(w.spd)} — crosswind can come from any side`; return; }
     let rws = null;
     try { rws = window.AWXExtra && AWXExtra.runways ? await AWXExtra.runways(a.icao, a.iata) : null; } catch (e) { rws = null; }
     if (!document.body.contains(el)) return;
@@ -2206,7 +2208,7 @@
     }
     if (!best) { el.textContent = "Crosswind: runway headings unavailable"; return; }
     const xc = Math.round(Math.abs(best.cross)), hw = Math.round(best.head);
-    el.textContent = `Runway ${best.id}: ${xc} kt crosswind${xc ? " from the " + (best.cross > 0 ? "right" : "left") : ""}, ${Math.abs(hw)} kt ${hw >= 0 ? "headwind" : "tailwind"}` + (best.gx != null && Math.round(best.gx) > xc ? ` (gusts ${Math.round(best.gx)} kt across)` : "");
+    el.textContent = `Runway ${best.id}: ${sp(Math.abs(best.cross))} crosswind${xc ? " from the " + (best.cross > 0 ? "right" : "left") : ""}, ${sp(Math.abs(best.head))} ${hw >= 0 ? "headwind" : "tailwind"}` + (best.gx != null && Math.round(best.gx) > xc ? ` (gusts ${sp(best.gx)} across)` : "");
   }
 
   // ---------- panel: the national list (Settings is the nav shell's site/settings.js) ----------

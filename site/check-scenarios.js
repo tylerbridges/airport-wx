@@ -282,7 +282,8 @@ export async function pageAsserts(add, w, doc, asserts) {
   const A = w && w.AWXApp;
   if (!A || !doc) { for (const x of list) add("fail", `Expect on page: ${x.t}`, "the app didn't load"); return; }
   const P = w.AWXPrefs || (w.AWXNav && w.AWXNav.prefs && w.AWXNav.prefs());
-  if (P && P.setPref && P.getPrefs && P.getPrefs().mode !== "traveler") P.setPref("mode", "traveler"); // test mode: not saved (site/testmode.js)
+  // Traveler mode, airport time, 12-hour clock, IATA codes, whatever was left in this browser (test mode: not saved, site/testmode.js)
+  if (P && P.setPref && P.getPrefs) for (const [k, v] of Object.entries({ mode: "traveler", timeRef: "airport", clock: 12, codes: "iata" })) if (String(P.getPrefs()[k]) !== String(v)) P.setPref(k, v);
   const showAll = async () => { if (A.state.filter !== "all") { A.state.filter = "all"; A.render(); } await later(w, 60); };
   const sheetText = async (iata) => { A.openSheet(iata); await later(w, 80); const s = doc.getElementById("sheet"); return s ? s.textContent.replace(/\s+/g, " ") : ""; };
   const closeSheet = () => { if (A.closeSheet) A.closeSheet(); };

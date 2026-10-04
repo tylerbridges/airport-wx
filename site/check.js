@@ -250,12 +250,42 @@ const frameSleep = (w, ms) => new Promise((r) => w.setTimeout(r, ms));
 // TAF change groups, Zulu times, knots, and the report names.
 export const AVIATION_CODES = /\b(VFR|MVFR|IFR|LIFR|METAR|TAF|SIGMET|LAMP|TCF|CWA|TEMPO|PROB[34]0|BECMG|NOSIG|CLSD|(?:FEW|SCT|BKN|OVC)\d{3}|\d{4}Z|\d{3}°?\s?\d+G?\d*\s?kt|kt)\b/;
 
+// The settings every assertion expects (Traveler mode, each airport's own time, 12-hour clock, IATA codes, every
+// disruption type shown). main() pins them for the whole run and puts the user's settings back afterwards, so a
+// check never depends on what was left in this browser; checks that need another setting set it explicitly.
+const SETTINGS_KEY = "awx-settings";
+const BASELINE = Object.freeze({ mode: "traveler", timeRef: "airport", clock: 12, codes: "iata" });
+const baseline = (o = {}) => Object.assign({}, BASELINE, o);
+const dropTestOverlays = () => { // site/testmode.js keeps a scenario page's writes in sessionStorage ("awx-test:awx-…")
+  try { for (const k of Object.keys(sessionStorage)) if (k.indexOf("awx-test:awx-settings") === 0) sessionStorage.removeItem(k); } catch { /* storage blocked */ }
+};
+/** Pins BASELINE (keeping the theme); returns a function that restores the saved settings. */
+function pinSettings() {
+  let saved = null;
+  try { saved = localStorage.getItem(SETTINGS_KEY); } catch { return () => {}; }
+  let theme;
+  try { theme = (JSON.parse(saved || "null") || {}).theme; } catch { /* corrupt */ }
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(baseline(theme ? { theme } : {})));
+  dropTestOverlays();
+  return () => {
+    try { if (saved == null) localStorage.removeItem(SETTINGS_KEY); else localStorage.setItem(SETTINGS_KEY, saved); } catch { /* ignore */ }
+    dropTestOverlays();
+  };
+}
+/** In a loaded frame: Traveler mode, airport time, 12-hour clock and IATA codes, whatever the frame started with. */
+function frameBaseline(w) {
+  const P = w && (w.AWXPrefs || (w.AWXNav && w.AWXNav.prefs && w.AWXNav.prefs()));
+  if (!P || !P.getPrefs || !P.setPref) return;
+  const p = P.getPrefs();
+  for (const [k, v] of Object.entries(BASELINE)) if (String(p[k]) !== String(v)) P.setPref(k, v);
+}
+
 async function uiChecks(add, scenario) {
-  const KEY = "awx-settings";
+  const KEY = SETTINGS_KEY;
   const saved = localStorage.getItem(KEY);
   const savedFavs = localStorage.getItem("awx-favs");
   const url = scenario ? `./index.html?test=${scenario}` : "./index.html";
-  const set = (o) => localStorage.setItem(KEY, JSON.stringify(o));
+  const set = (o) => { localStorage.setItem(KEY, JSON.stringify(baseline(o))); dropTestOverlays(); };
   try {
     // settings persist (written through prefs.js in one page load, read back in the next)
     set({});
@@ -475,6 +505,8 @@ async function uiChecks(add, scenario) {
       const a = A.state.data.airports.find((x) => off(x.tz) !== off(mine));
       if (!a) { add("info", "Times setting changes the labels", "every airport is in this device's zone"); return; }
       const read = () => { A.openSheet(a.iata); const t = doc.querySelector("#sheet .sh-where").textContent + " | " + doc.querySelector("#sheet .bigwrap").dataset.start + " | " + doc.querySelector('#sheet .bx-layer[data-layer="rest"] .sc-when').textContent; A.closeSheet(); return t; };
+      frameBaseline(w); // airport time, 12-hour clock: explicitly, before reading the labels
+      await frameSleep(w, 50);
       const before = read();
       w.AWXPrefs.setPref("timeRef", "mine");
       await frameSleep(w, 50);
@@ -718,6 +750,7 @@ function draw() {
 }
 
 async function main() {
+  const restoreSettings = pinSettings(); // the checks run on BASELINE settings, then the user's come back
   document.getElementById("mode").textContent = MOCK ? "Test scenarios (not live data)" : "Live data";
   const tg = document.getElementById("toggle");
   tg.textContent = MOCK ? "Check live data" : "Run scenarios";
@@ -726,6 +759,8 @@ async function main() {
     if (MOCK) await runMock(); else await runLive();
   } catch (e) {
     group("Check page")("fail", "Check page ran to the end", String(e && e.stack || e));
+  } finally {
+    restoreSettings();
   }
   draw();
   const { text, fails, warns } = report();
