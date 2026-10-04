@@ -259,12 +259,21 @@ test("pack: flat ES modules, no node: imports, and the flattened bundle runs", a
     }
     assert.equal((await readFile(join(dir, "parts.txt"), "utf8")).trim().split("\n").length, r.modules.length);
     const mod = await import(pathToFileURL(join(dir, "worker.mjs")).href);
+    const catalog = (await import(pathToFileURL(join(dir,"airport-catalog.mjs")).href)).default;
+    assert.ok(catalog.length > 500);
+    assert.ok(catalog.some(a=>a.iata === "DAL") && catalog.some(a=>a.iata === "GUM"));
+    assert.ok(Buffer.byteLength(r.metadata.bindings.find(b=>b.name === "AIRPORTS").text) < 10000);
     mod._reset();
     globalThis.fetch = stubFetch(world);
     const env = Object.fromEntries(r.metadata.bindings.map((b) => [b.name, b.text]));
     const res = await mod.default.fetch(new Request("https://relay.test/status?ids=MSP,ORD"), { ...env, BUILD_BASE }, {});
     assert.equal(res.status, 200);
     assert.equal((await res.json()).airports.length, 2);
+    const regional = await mod.default.fetch(new Request("https://relay.test/status?ids=DAL"), {...env,BUILD_BASE}, {});
+    assert.equal(regional.status,200);
+    const regionalBody=await regional.json();
+    assert.equal(regionalBody.airports[0].iata,"DAL");
+    assert.deepEqual(regionalBody.unknown,[]);
     const h = await (await mod.default.fetch(new Request("https://relay.test/health"), env, {})).json();
     assert.equal(h.version, "test123");
   } finally {

@@ -19,6 +19,9 @@ import { prepareTrips } from "./trips-poll.mjs"; // trips hook: flight calendar 
 import { startMovement } from "./movement.mjs"; // movement hook: ADS-B departure/arrival rates -> site/data/movement.json
 import { fetchNotices } from "./notices-poll.mjs"; // restrictions hook: FAA TFRs (README "Notices")
 
+import { loadMonitoredAirports } from "./airports.mjs";
+import { mapNationalAlerts } from "./nws-wide.mjs";
+
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
 const UA = "airport-wx (github.com/tylerbridges/airport-wx)";
@@ -79,9 +82,7 @@ async function runSource(name, fn, raw) {
   }
 }
 
-export async function loadAirports() {
-  return JSON.parse(await readFile(join(ROOT, "airports.json"), "utf8"));
-}
+export const loadAirports = loadMonitoredAirports;
 
 /**
  * phase3: the delay model files (site/data/model, or DELAY_MODEL_DIR): model.json (only once a trained
@@ -98,7 +99,6 @@ export async function loadDelayModel(airports, dir = process.env.DELAY_MODEL_DIR
 // ---------- input providers (live vs fixtures) ----------
 
 function liveProviders(airports, now, raw) {
-  const icaos = airports.map((a) => a.icao).join(",");
   const want = new Set(airports.map((a) => a.icao));
   /** One request whose body is the raw sample for the source. */
   const get = async (name, file, url, headers) => {
@@ -107,36 +107,28 @@ function liveProviders(airports, now, raw) {
     raw.save(name, file, r.text, { http: r.status });
     return r.text;
   };
+  const weather = async (name, suffix = "", sample = true) => {
+    const chunks = [], size = suffix ? 10 : 100;
+    // History can contain many observations per station; avoid the API's record cap.
+    for (let i = 0; i < airports.length; i += size) chunks.push(airports.slice(i,i+size).map(a=>a.icao).join(","));
+    const groups = await pool(chunks, 2, async (ids, i) => {
+      const url = `${AWC}/${name}?ids=${ids}&format=json${suffix}`;
+      return parseJson(sample ? await get(name, `${name}-${i}.json`, url) : (await http(url)).text);
+    });
+    return groups.flat();
+  };
   return {
-    metar: async () => parseJson(await get("metar", "metar.json", `${AWC}/metar?ids=${icaos}&format=json`)),
-    taf: async () => parseJson(await get("taf", "taf.json", `${AWC}/taf?ids=${icaos}&format=json`)),
+    metar: () => weather("metar"),
+    taf: () => weather("taf"),
     sigmet: async () => parseJson(await get("sigmet", "airsigmet.json", `${AWC}/airsigmet?format=json`)),
     isigmet: async () => parseJson(await get("isigmet", "isigmet.json", `${AWC}/isigmet?format=json`)),
     faa: async () => get("faa", "faa.xml", "https://nasstatus.faa.gov/api/airport-status-information"),
     spc: async () => JSON.parse(await get("spc", "spc.geojson", "https://www.spc.noaa.gov/products/outlook/day1otlk_cat.nolyr.geojson")),
     nws: async () => {
-      let failures = 0;
-      let firstErr = null;
-      let sampled = false;
-      const results = await pool(airports, 6, async (a) => {
-        const url = `https://api.weather.gov/alerts/active?point=${a.lat.toFixed(4)},${a.lon.toFixed(4)}`;
-        try {
-          const r = await http(url, { Accept: "application/geo+json" });
-          const j = JSON.parse(r.text);
-          if (!sampled && (j?.features || []).length) {
-            sampled = true;
-            raw.save("nws", "nws.json", r.text, { http: r.status, url });
-          }
-          return [a.iata, j];
-        } catch (e) {
-          failures++;
-          firstErr ||= String(e.message || e);
-          return [a.iata, null];
-        }
-      });
-      if (failures === airports.length) throw new Error(`all ${failures} requests failed: ${firstErr}`);
-      raw.note("nws", { requests: airports.length, failed: failures, sample: sampled ? "first response with alerts" : "none had alerts" });
-      return { map: Object.fromEntries(results), partial: failures ? `${failures} of ${airports.length} requests failed: ${firstErr}` : null };
+      const snapshot = JSON.parse(await get("nws", "nws.json", "https://api.weather.gov/alerts/active", {Accept:"application/geo+json"}));
+      const map = await mapNationalAlerts({ airports, snapshot, getZone:async url=>JSON.parse((await http(url,{Accept:"application/geo+json"})).text) });
+      raw.note("nws", {requests:1, alerts:snapshot.features.length, sample:"national active alerts"});
+      return {map,partial:null};
     },
     lamp: async () => {
       const tries = [];
@@ -172,7 +164,7 @@ function liveProviders(airports, now, raw) {
     },
     cwa: async () => parseJson(await get("cwa", "cwa.json", `${AWC}/cwa?format=json`)),
     // build2b hook: the last 24 hours of METARs (observed past hours); not a status source, failure = no `observed`
-    metarHistory: async () => parseJson((await http(`${AWC}/metar?ids=${icaos}&format=json&hours=24`)).text),
+    metarHistory: () => weather("metar", "&hours=24", false),
   };
 }
 
@@ -252,7 +244,7 @@ async function writeRaw(dir, raw, sources) {
 
 export async function run({ fixtures = false, out = join(ROOT, "site/data/status.json"), now = new Date(), rawDir = null } = {}) {
   const trips = await prepareTrips({ fixtures, now }); // trips hook: reads the calendar (env FLIGHTY_ICS_URL), never throws
-  const airports = await trips.addAirports(await loadAirports()); // trips hook: trip airports join the full pipeline for this run
+  const airports = await trips.addAirports(await loadAirports({ fixtures })); // trips hook: trip airports join the full pipeline for this run
   const raw = makeRaw();
   const p = fixtures ? fixtureProviders(airports, now, raw) : liveProviders(airports, now, raw);
   const names = SOURCE_NAMES;
@@ -275,6 +267,7 @@ export async function run({ fixtures = false, out = join(ROOT, "site/data/status
   const notices = await noticesP; // restrictions hook
   const status = {
     generated: now.toISOString(),
+    monitoring: { count:airports.length, baseline:(await loadAirports({fixtures:true})).map(a=>a.iata) },
     sources: Object.fromEntries(names.map((n) => [n, res[n].meta])),
     noticeSources: notices.sources, // restrictions hook: {tfr} kept apart from core sources
     delayModel: modelInfo(delay.model, delay.fallback), // phase3 hook

@@ -2013,7 +2013,7 @@
       const when = (s.kind === "obs" ? (s.observed ? "Observed" : "Earlier forecast") : s.kind === "none" ? "No report" : s.kind === "na" ? "Forecast not available yet" : isNow ? "Now" : "Forecast") + zulu;
       const progs = past || s.kind === "na" ? [] : programsAt(v, s.key, isNow);
       const unsure = !past && !isNow && sm.uncertainFrom != null && s.key >= sm.uncertainFrom && s.level != null && s.level < sm.openLevel;
-      return stateCard({ a, kind: "hour", past, normalNote: isNow ? normalNote : unsure ? NO_END + " — the program may still be in place" : null, isNow, full: true, max: 3, label, level: s.level, when, delay: !past && s.h ? s.h.delay : null,
+      return stateCard({ a, kind: "hour", past, normalNote: isNow ? normalNote : unsure ? NO_END + " — the program may still be in place" : null, isNow, full: true, simple: !aviation(), max: 3, label, level: s.level, when, delay: !past && s.h ? s.h.delay : null,
         reasons: shortList(s.reasons, a), programs: progs, impact: s.level == null ? null : CATS.impact(s.reasons, progs),
         facts: c ? factsRow(c, a, s.key, past, true) : null, chips: s.level == null ? [] : cardSources(s.reasons, s.kind),
         empty: s.kind === "none" ? "No weather report for this hour" : s.kind === "na" ? "Forecast not available yet" : null });
@@ -2027,6 +2027,7 @@
         const on = i == null ? L.dataset.layer === "rest" : L.dataset.i === String(i);
         L.classList.toggle("on", on);
         L.setAttribute("aria-hidden", String(!on));
+        if (on && i != null) L.scrollTop = 0;
       }
     };
     const buildLayers = (slots) => {

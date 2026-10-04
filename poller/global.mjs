@@ -219,6 +219,8 @@ export async function runGlobal({
     for (const [k, a] of shards) await writeFile(join(outDir, `${k}.json`), JSON.stringify({ generated: index.generated, h0, a }) + "\n");
     index.ok = index.sources.metars?.ok || index.sources.tafs?.ok || false;
     index.airports = entries.size;
+    const listed = new Set(airports.map(a=>a.icao));
+    index.metarStations = [...new Set(metars.filter(m=>listed.has(m.icaoId) && +now-m.obsTime*1000 <= 2*HOUR && m.obsTime*1000 <= +now+10*60000).map(m=>m.icaoId))];
     index.metars = metars.length;
     index.tafs = tafs.length;
     index.letters = [...shards.keys()].sort();

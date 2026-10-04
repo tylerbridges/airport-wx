@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 const O = createRequire(import.meta.url)("../site/outlook.js");
 const now = Date.parse("2026-10-04T14:15:00Z"), H = 3600000;
-const sources = Object.fromEntries(["faa", "atcscc", "metar", "taf"].map((k) => [k, { ok: true }]));
+const sources = Object.fromEntries(["faa", "atcscc", "metar", "taf", "nws"].map((k) => [k, { ok: true }]));
 const base = () => ({ iata: "ORD", metar: { obsTime: "2026-10-04T14:00:00Z" }, taf: { issued: "2026-10-04T12:00:00Z" }, faa: [], atcscc: [], hours: Array.from({ length: 24 }, (_, i) => ({ t: new Date(now - 15 * 60000 + i * H).toISOString(), level: 0, reasons: [] })) });
 const options = (more = {}) => ({ now, generated: new Date(now).toISOString(), sources, ...more });
 test("outlook: a last-known active restriction remains visible without forecast hours", () => {
@@ -142,5 +142,15 @@ test("airport health: offline quiet is unknown but last-known material restricti
     assert.equal(r.level, 4);
     assert.equal(r.headline, "Ground Stop");
     assert.ok(r.quality);
+  }
+});
+
+
+test("airport health: missing, failed or stale NWS alerts qualify quiet airports while restrictions remain visible", () => {
+  for (const nws of [undefined, {ok:false}, {ok:true,error:"Zone geometry unavailable"}, {ok:true,stale:true}]) {
+    const opts = options({sources:{...sources,nws}});
+    assert.equal(O.evaluate(base(),opts).kind,"unknown");
+    const a=base();a.faa=[{type:"ground_stop",end:new Date(now+H).toISOString()}];
+    const o=O.evaluate(a,opts);assert.equal(o.kind,"active");assert.equal(o.level,4);assert.ok(o.quality);
   }
 });

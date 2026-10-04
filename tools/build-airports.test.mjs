@@ -42,6 +42,17 @@ test("AWC station list: TAF marker detected (siteType list) and logged fields", 
   assert.equal(parseStations(JSON.stringify({ features: [{ properties: { id: "KMSP" } }] }))[0].id, "KMSP");
 });
 
+test("AWC capability detection never mistakes the TAF airport code for a capability", () => {
+  const list = [
+    { id: "DAOL", icaoId: "DAOL", iataId: "TAF", site: "TAF", siteType: ["METAR"] },
+    { id: "KORD", icaoId: "KORD", iataId: "ORD", siteType: ["METAR", "TAF"] },
+  ];
+  const det = detectStationFields(list);
+  assert.equal(det.key, "siteType");
+  assert.deepEqual(stationIndex(list, det).get("KORD"), { metar: true, taf: true });
+  assert.deepEqual(stationIndex(list, det).get("DAOL"), { metar: true, taf: false });
+});
+
 test("selection: scheduled worldwide + US with a code; heliports/closed excluded; runways; compact rows", () => {
   const ap = csvObjects(read("ourairports-airports.csv")).rows;
   const st = stationIndex(parseStations(read("awc-stations.json")));

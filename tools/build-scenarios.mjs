@@ -164,6 +164,8 @@ async function buildOne(name) {
 
 export async function buildScenarios(names) {
   await mkdir(OUT, { recursive: true });
+  await mkdir(join(OUT,"fixtures"),{recursive:true});
+  await cp(join(HERE,"fixtures/airports-all.json"),join(OUT,"fixtures/airports-all.json"));
   const all = await scenarioNames();
   const pick = names && names.length ? names : all;
   for (const n of pick) if (!all.includes(n)) throw new Error(`unknown scenario ${n} (have: ${all.join(", ")})`);

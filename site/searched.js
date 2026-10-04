@@ -142,7 +142,7 @@ function timeline(e, h0, tz, code) {
 
 function scopeNote(a) {
   return US_AREAS.includes(a.country)
-    ? "Weather forecast only — FAA programs and alerts shown for major airports"
+    ? "Weather only — airport disruption data unavailable"
     : "Weather only — FAA/NWS data covers U.S. airports";
 }
 

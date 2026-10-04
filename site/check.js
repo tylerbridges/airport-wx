@@ -3,7 +3,7 @@
 //             &render=0             -> skip the render tests (hidden iframes)
 // Writes "CHECK PASS" or "CHECK FAIL n" plus one line per row into <pre id="result"> so headless
 // Chrome (--dump-dom) and the uptime workflow can read it. Warnings don't fail the check.
-import { loadAirports, rank } from "./search.js";
+import { loadAirports, rank, decodeList } from "./search.js";
 import { navChecks } from "./navcheck.js?v=3"; // nav hook
 import { tripChecks } from "./check-trips.js?v=3"; // trips hook
 import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=4"; // scenarios hook; More details page helpers
@@ -101,6 +101,10 @@ async function checkData(data, ctx) {
 
   // airports: METAR < 2 h, TAF where hasTaf
   const aps = data.airports || [];
+  const monitoring = data.monitoring;
+  const validMonitoring = !!(monitoring && monitoring.count === aps.length && Array.isArray(monitoring.baseline) && monitoring.baseline.length >= 32 && new Set(monitoring.baseline).size === monitoring.baseline.length && monitoring.baseline.every(c=>/^[A-Z0-9]{3}$/.test(c) && aps.some(a=>a.iata === c)));
+  r("monitoring", validMonitoring ? "pass" : "fail", "Monitored airport coverage metadata", validMonitoring ? `${aps.length} monitored; ${monitoring.baseline.length} baseline airports` : "missing or invalid baseline/count metadata");
+  const baseline = new Set(validMonitoring ? monitoring.baseline : aps.map(a=>a.iata));
   const noMetar = [];
   const noTaf = [];
   const tafUnknown = [];
@@ -110,8 +114,8 @@ async function checkData(data, ctx) {
     const info = ctx.byIcao.get(a.icao);
     if (!a.taf) (info ? (info.hasTaf ? noTaf : null) : tafUnknown)?.push(a.iata);
   }
-  r("metar", noMetar.length ? "fail" : "pass", "METAR under 2 h old at every airport", noMetar.length ? `missing/old: ${noMetar.join(", ")}` : `${aps.length} airports`);
-  r("taf", noTaf.length ? "fail" : tafUnknown.length ? "warn" : "pass", "TAF where the airport issues one",
+  r("metar", noMetar.some(c=>baseline.has(c)) ? "fail" : noMetar.length ? "warn" : "pass", "METAR under 2 h old at every airport", noMetar.length ? `missing/old: ${noMetar.join(", ")}` : `${aps.length} airports`);
+  r("taf", noTaf.some(c=>baseline.has(c)) ? "fail" : noTaf.length || tafUnknown.length ? "warn" : "pass", "TAF where the airport issues one",
     noTaf.length ? `missing: ${noTaf.join(", ")}` : tafUnknown.length ? `not in the airport list (TAF expected?): ${tafUnknown.join(", ")}` : "all present");
 
   // plausibility
@@ -167,7 +171,14 @@ async function checkData(data, ctx) {
       r(`wxsource:${k}`, s.ok ? "pass" : "fail", `Source: ${SOURCE_LABEL[k] || k}`, bits.join(" · "));
     }
   }
-  const want = ctx.list.filter((a) => a.hasMetar && a.icao);
+  const capable = ctx.list.filter((a) => a.hasMetar && a.icao);
+  const reporting = wxi.ok && Array.isArray(wxi.data.metarStations) ? new Set(wxi.data.metarStations) : null;
+  if (!ctx.mock) r("wxStations", reporting?.size ? "pass" : "fail", "Global weather snapshot identifies reporting stations", reporting ? `${reporting.size} listed stations reporting within 2 h` : "metarStations metadata missing");
+  const want = reporting ? capable.filter(a=>reporting.has(a.icao)) : capable;
+  if (!ctx.mock && reporting) {
+    const inactive = capable.length-want.length;
+    r("wxInactive", inactive ? "warn" : "pass", "Configured stations without a recent report", `${inactive} of ${capable.length}; their weather outlook stays unavailable`);
+  }
   if (want.length) {
     const letters = [...new Set(want.map((a) => a.icao[0].toUpperCase()))];
     const shards = {};
@@ -667,7 +678,7 @@ async function runLive() {
   await tripChecks(group("Trips"), { url: "./data/trips.json", data: st.ok ? st.data : null }); // trips hook
   try { await (await import("./brief.js")).checkRow(group("Change log"), { data: st.ok ? st.data : null }); } catch (e) { group("Change log")("warn", "Change log", "check failed: " + (e.message || e)); } // brief hook
   try { await (await import("./movement.js")).checkRow(group("Movement feed")); } catch (e) { group("Movement feed")("warn", "Movement feed", "check failed: " + (e.message || e)); } // movement hook
-  try { await (await import("./terminals.js")).checkRow(group("Terminal maps & lounges"), { majors: st.ok && Array.isArray(st.data.airports) ? st.data.airports.filter((a) => !a.trip).map((a) => a.iata) : null }); } catch (e) { group("Terminal maps & lounges")("warn", "Terminal maps & lounges", "check failed: " + (e.message || e)); } // terminals hook
+  try { await (await import("./terminals.js")).checkRow(group("Terminal maps & lounges"), { majors: st.ok && Array.isArray(st.data.airports) ? st.data.monitoring?.baseline?.length >= 32 ? st.data.monitoring.baseline : st.data.airports.filter((a) => !a.trip).map((a) => a.iata) : null }); } catch (e) { group("Terminal maps & lounges")("warn", "Terminal maps & lounges", "check failed: " + (e.message || e)); } // terminals hook
   // radar hook: one MRMS frame for MSP decoded in a hidden frame (warning if NOAA can't be reached). The uptime
   // monitor (check.html?ts=…) skips it to stay inside its 30-second budget.
   if (P.has("ts")) group("Radar")("info", "Radar: MSP frame", "skipped for the uptime monitor");
@@ -702,8 +713,11 @@ async function runMock() {
   const now = Date.now();
   if (RENDER) await uiChecks(group("App: settings, modes, timeline (thunderstorm-ground-stop, 390 px)"), "thunderstorm-ground-stop"); // build2b
   const idx = await getJson("./data/scenarios/index.json");
-  const { list, byIcao, error } = await airportList();
+  const { list, error } = await airportList();
   searchChecks(group("Search"), list, error);
+  const fixtureCatalog = await getJson("./data/scenarios/fixtures/airports-all.json");
+  if (!fixtureCatalog.ok) { group("Scenarios")("fail","Fixture airport catalog loads",fixtureCatalog.error || `HTTP ${fixtureCatalog.status}`); return; }
+  const fixtureList=decodeList(fixtureCatalog.data), byIcao=new Map(fixtureList.filter(a=>a.icao).map(a=>[a.icao,a]));
   try { await (await import("./terminals.js")).checkRow(group("Terminal maps & lounges"), {}); } catch (e) { group("Terminal maps & lounges")("fail", "Terminal maps & lounges", "check failed: " + (e.message || e)); } // terminals hook
   if (!idx.ok) { group("Scenarios")("fail", "data/scenarios/index.json loads", `HTTP ${idx.status || idx.error}`); return; }
   if (RENDER) await navChecks(group("Navigation (390 px, hidden frame)"), "./index.html?test=all-clear"); // nav hook
@@ -717,7 +731,7 @@ async function runMock() {
     const delta = now - Date.parse(meta.builtAt || got.data.generated) - (meta.lagMin || 0) * MIN;
     const data = shift(got.data, delta);
     const wxBase = `./data/scenarios/${sc.wx}`;
-    const checks = await checkData(data, { now, byIcao, list, wxBase, wxShift: (d) => shift(d, delta), mock: true });
+    const checks = await checkData(data, { now, byIcao, list:fixtureList, wxBase, wxShift: (d) => shift(d, delta), mock: true });
     const expected = new Map((sc.assert || []).filter((x) => x.t === "check").map((x) => [x.id, x.expect]));
     for (const c of checks) {
       if (expected.has(c.id)) continue; // reported by its assertion below

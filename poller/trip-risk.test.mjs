@@ -178,7 +178,7 @@ test("site/trip-risk.js is a byte-identical copy of poller/trip-risk.mjs", async
 });
 
 const Outlook = createRequire(import.meta.url)("../site/outlook.js");
-const healthySources = Object.fromEntries(["faa", "atcscc", "metar", "taf"].map((k) => [k, { ok: true }]));
+const healthySources = Object.fromEntries(["faa", "atcscc", "metar", "taf", "nws"].map((k) => [k, { ok: true }]));
 const healthFor = (more = {}) => (a) => Outlook.health(a, { now: NOW, generated: at(0), sources: healthySources, ...more });
 const healthyAirport = (code) => ap(code, "America/Chicago", {}, { metar: { obsTime: at(0) }, taf: { issued: at(0) } });
 const quietTrip = { legs: [{ from: "MSP", to: "ATL", dep: at(2), arr: at(4) }] };
@@ -186,7 +186,7 @@ const quietTrip = { legs: [{ from: "MSP", to: "ATL", dep: at(2), arr: at(4) }] }
 test("shared airport health: complete fresh Trips stay green, stale or failed sources do not", () => {
   const airports = by(healthyAirport("MSP"), healthyAirport("ATL"));
   assert.equal(tripStatus(quietTrip, airports, { now: NOW, health: healthFor() }).status, "ok");
-  for (const opts of [{ generated: at(-1) }, { generated: "invalid" }, { sample: true }, ...["faa", "atcscc", "metar", "taf"].flatMap((k) => [
+  for (const opts of [{ generated: at(-1) }, { generated: "invalid" }, { sample: true }, ...["faa", "atcscc", "metar", "taf", "nws"].flatMap((k) => [
     { sources: { ...healthySources, [k]: { ok: false } } },
     { sources: { ...healthySources, [k]: { ok: true, error: "Partial fetch failure" } } },
     { sources: { ...healthySources, [k]: { ok: true, stale: true } } },

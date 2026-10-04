@@ -63,6 +63,12 @@ jobs:
           path: .cache/notices
           key: notices-${{ github.run_id }}
           restore-keys: notices-
+      - name: NWS zone geometry cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/nws-zones
+          key: nws-zones-${{ github.run_id }}
+          restore-keys: nws-zones-
       # Exits 0 unless every source failed, so a partial outage still deploys.
       # Also writes raw response samples to .cache/raw for the history step.
       - name: Poll sources and compute risk

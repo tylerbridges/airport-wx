@@ -89,7 +89,7 @@
     const coverage = a.coverage || {}, weatherOnly = !!(coverage.weatherOnly || a.shard);
     const sources = coverage.sources || opts.sources || {};
     const generated = ms(coverage.generated || opts.generated);
-    const required = weatherOnly ? ["metar", "taf"] : ["faa", "atcscc", "metar", "taf"];
+    const required = weatherOnly ? ["metar", "taf"] : ["faa", "atcscc", "metar", "taf", "nws"];
     const unavailable = required.some((k) => !sources[k]?.ok || sources[k].error || sources[k].stale || Number.isFinite(ms(sources[k].at)) && now - ms(sources[k].at) > 30 * 60000);
     const outdated = !Number.isFinite(generated) || now - generated > 30 * 60000 || generated - now > 5 * 60000;
     const observed = ms(a.metar?.obsTime), forecastIssued = ms(a.taf?.issued);

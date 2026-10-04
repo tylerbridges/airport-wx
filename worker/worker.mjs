@@ -9,6 +9,7 @@
 // poller functions (poller/core.mjs -> risk.mjs), so results match the build except for being fresher.
 // Every source is independent: a failed live source falls back to the build's value (`stale: true`).
 // Pure ES modules only (no node: imports); README "Live relay" has the architecture and limits.
+import airportCatalog from "./airport-catalog.mjs";
 import { assemble, computeGlobal } from "../poller/core.mjs";
 import { parseFaaXml } from "../poller/lib.mjs";
 import { parseMetar, parseTaf } from "../poller/taf-parse.mjs";
@@ -320,9 +321,9 @@ function airportMeta(env, build) {
     if (metaCache.raw !== env.AIRPORTS) {
       try { metaCache = { raw: env.AIRPORTS, list: typeof env.AIRPORTS === "string" ? JSON.parse(env.AIRPORTS) : env.AIRPORTS }; } catch { metaCache = { raw: env.AIRPORTS, list: null }; }
     }
-    if (Array.isArray(metaCache.list) && metaCache.list.length) return metaCache.list;
+    if (Array.isArray(metaCache.list) && metaCache.list.length) return [...new Map([...airportCatalog,...metaCache.list].map(a=>[a.iata,a])).values()];
   }
-  return (build?.airports || []).map(({ iata, icao, name, city, state, tz, lat, lon }) => ({ iata, icao, name, city, state, tz, lat, lon }));
+  return [...new Map([...airportCatalog, ...(build?.airports || []).map(({ iata, icao, name, city, state, tz, lat, lon }) => ({ iata, icao, name, city, state, tz, lat, lon }))].map(a=>[a.iata,a])).values()];
 }
 
 /** ids -> {majors, others, unknown} against the curated list. */

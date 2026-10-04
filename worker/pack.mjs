@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { loadMonitoredAirports } from "../poller/airports.mjs";
 // Packs the live relay for Cloudflare's multipart module upload (used by .github/workflows/worker.yml).
 //   node worker/pack.mjs <outDir> [--version <text>]
 // Follows the static imports from worker/worker.mjs and writes every module FLAT into outDir:
@@ -50,6 +51,9 @@ export async function bundle({ entry = join(HERE, "worker.mjs"), version = "dev"
     for (const [s, dep] of m.deps) code = code.split(`"${s}"`).join(`"./${byPath.get(dep).name}"`).split(`'${s}'`).join(`'./${byPath.get(dep).name}'`);
     return { name: m.name, path: m.path, code };
   });
+  const catalog = await loadMonitoredAirports();
+  const airportModule = modules.find(m=>m.name === "airport-catalog.mjs");
+  if (airportModule) airportModule.code = `export default ${JSON.stringify(catalog)};\n`;
   const airports = JSON.parse(await readFile(join(ROOT, "airports.json"), "utf8"));
   const metadata = {
     main_module: MAIN,

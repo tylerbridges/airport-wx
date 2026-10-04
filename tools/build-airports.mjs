@@ -57,7 +57,8 @@ export function detectStationFields(list) {
   const keys = new Set(sample.flatMap((s) => Object.keys(s || {})));
   const idKey = ID_KEYS.find((k) => keys.has(k) && sample.some((s) => /^[A-Z0-9]{3,4}$/.test(String(s[k] || "")))) || null;
   // 1) an array/string field listing site types ("siteType": ["METAR", "TAF"] in the AWC API docs)
-  for (const k of keys) {
+  for (const k of [...keys].sort((a, b) => Number(b === "siteType") - Number(a === "siteType"))) {
+    if (/^(iata|icao|faa|wmo)?id$|station|ident|name|site$/i.test(k)) continue;
     const vals = sample.map((s) => s[k]).filter((v) => v != null);
     if (vals.some((v) => (Array.isArray(v) ? v.map(String) : typeof v === "string" ? v.split(/[\s,;|]+/) : []).some((x) => /^TAF$/i.test(x)))) {
       return { idKey, mode: "list", key: k, notes: `TAF marked in list field "${k}"` };

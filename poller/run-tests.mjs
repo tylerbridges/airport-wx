@@ -54,3 +54,6 @@ import "../tools/mrms.test.mjs";
 import "../tools/noaa-forecast.test.mjs";
 
 import "./aviation-advisories.test.mjs";
+
+import "./airports.test.mjs";
+import "./nws-wide.test.mjs";
