@@ -136,6 +136,11 @@ test("terminals: page helpers find gates and concourses and fit the drawing", ()
 test("lounges: lounges.json is well-formed for all 32 airports", () => {
   const doc = json("site/data/lounges.json");
   assert.deepEqual(loungeProblems(doc, new Set(AIRPORTS.map((a) => a.iata))), []);
+});
+
+test("lounges: the draft list (awaiting verification) is well-formed", () => {
+  const doc = json("tools/lounges-draft.json");
+  assert.deepEqual(loungeProblems(doc, new Set(AIRPORTS.map((a) => a.iata))), []);
   const st = staleLounges(doc, Date.parse("2026-10-04T00:00:00Z"));
   assert.ok(st.total > 0);
   for (const ap of Object.values(doc.airports)) for (const l of ap.lounges) {

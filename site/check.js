@@ -596,6 +596,10 @@ async function runLive() {
   try { await (await import("./brief.js")).checkRow(group("Change log"), { data: st.ok ? st.data : null }); } catch (e) { group("Change log")("warn", "Change log", "check failed: " + (e.message || e)); } // brief hook
   try { await (await import("./movement.js")).checkRow(group("Movement feed")); } catch (e) { group("Movement feed")("warn", "Movement feed", "check failed: " + (e.message || e)); } // movement hook
   try { await (await import("./terminals.js")).checkRow(group("Terminal maps & lounges"), { majors: st.ok && Array.isArray(st.data.airports) ? st.data.airports.filter((a) => !a.trip).map((a) => a.iata) : null }); } catch (e) { group("Terminal maps & lounges")("warn", "Terminal maps & lounges", "check failed: " + (e.message || e)); } // terminals hook
+  // radar hook: one MRMS frame for MSP decoded in a hidden frame (warning if NOAA can't be reached). The uptime
+  // monitor (check.html?ts=…) skips it to stay inside its 30-second budget.
+  if (P.has("ts")) group("Radar")("info", "Radar: MSP frame", "skipped for the uptime monitor");
+  else try { await (await import("./radar/card.js")).checkRow(group("Radar")); } catch (e) { group("Radar")("warn", "Radar", "check failed: " + (e.message || e)); }
 
   const up = group("Uptime");
   const u = await getJson("./data/uptime.json");
@@ -631,6 +635,7 @@ async function runMock() {
   try { await (await import("./terminals.js")).checkRow(group("Terminal maps & lounges"), {}); } catch (e) { group("Terminal maps & lounges")("fail", "Terminal maps & lounges", "check failed: " + (e.message || e)); } // terminals hook
   if (!idx.ok) { group("Scenarios")("fail", "data/scenarios/index.json loads", `HTTP ${idx.status || idx.error}`); return; }
   if (RENDER) await navChecks(group("Navigation (390 px, hidden frame)"), "./index.html?test=all-clear"); // nav hook
+  if (RENDER) try { await (await import("./radar/card.js")).checkRow(group("Radar card (all-clear, 390 px)"), { mock: true }); } catch (e) { group("Radar card (all-clear, 390 px)")("fail", "Radar card", "check failed: " + (e.message || e)); } // radar hook
   for (const sc of idx.data.scenarios) {
     const add = group(`Scenario: ${sc.name} — ${sc.title}`);
     const got = await getJson(`./data/scenarios/${sc.file}`);
