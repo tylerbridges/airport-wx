@@ -130,13 +130,13 @@ test("connections: same airport and a gap under 8 h form one trip", () => {
   assert.deepEqual(three.map((g) => g.length), [3, 1]);
 });
 
-test("window: trips departing from 6 h ago to 7 days ahead", () => {
+test("window: last scheduled arrival at most 24 h ago, first departure at most 7 days ahead", () => {
   const z = (ms) => new Date(ms).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
   const at = (h) => +NOW + h * 3600e3;
   const flight = (uid, h) => ev([`UID:${uid}`, `DTSTART:${z(at(h))}`, `DTEND:${z(at(h + 2))}`, "SUMMARY:MSP → ATL"]);
-  const r = tripsFromIcs(cal(flight("a", -7), flight("b", -5), flight("c", 24 * 6.9), flight("d", 24 * 7.2)), { now: NOW, lookup: LOOKUP });
+  const r = tripsFromIcs(cal(flight("a", -27), flight("b", -25), flight("c", 24 * 6.9), flight("d", 24 * 7.2)), { now: NOW, lookup: LOOKUP });
   assert.equal(r.trips.length, 2);
-  assert.deepEqual(r.trips.map((x) => x.legs[0].dep), [new Date(at(-5)).toISOString(), new Date(at(24 * 6.9)).toISOString()]);
+  assert.deepEqual(r.trips.map((x) => x.legs[0].dep), [new Date(at(-25)).toISOString(), new Date(at(24 * 6.9)).toISOString()]);
 });
 
 test("trip ids are salted hashes of the UID (stable, not the UID)", () => {
@@ -270,4 +270,13 @@ test("prepareTrips: not configured, fixtures, and a failing fetch that never sho
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+
+test("calendar retains long flights and delayed schedules until 24 h after scheduled arrival", () => {
+  const z = (h) => new Date(+NOW + h * 3600e3).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const text = cal(ev(["UID:long-flight", `DTSTART:${z(-12)}`, `DTEND:${z(1)}`, "SUMMARY:MSP → ATL"]));
+  assert.equal(tripsFromIcs(text, { now: NOW, lookup: LOOKUP }).trips.length, 1, "departure more than 6 h ago stays visible");
+  assert.equal(tripsFromIcs(text, { now: new Date(+NOW + 25 * 3600e3), lookup: LOOKUP }).trips.length, 1, "24 h scheduled-arrival boundary retained");
+  assert.equal(tripsFromIcs(text, { now: new Date(+NOW + 25 * 3600e3 + 1), lookup: LOOKUP }).trips.length, 0, "archives by schedule beyond boundary");
 });

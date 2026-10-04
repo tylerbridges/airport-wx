@@ -42,10 +42,13 @@ test("GDP at the destination: flights there are held at the origin", () => {
   assert.ok(!r.concerns.some((c) => c.kind === "weather" && /Ground delay/.test(c.text)));
   // the sheet line
   const [line] = flightLine(trip, r, "MSP", "America/Chicago", NOW);
-  assert.equal(line.text, "Your 6:05 PM departure to ORD: delays likely — ORD ground delay program");
-  // once airborne the GDP no longer holds the flight
-  const air = tripStatus(trip, by(ORD, MSP), { now: NOW + 2.5 * H });
-  assert.ok(!air.concerns.some((c) => /are held/.test(c.text)));
+  assert.equal(line.text, "Your scheduled 6:05 PM departure to ORD: delays likely — ORD ground delay program");
+  // The scheduled departure passing does not establish takeoff.
+  const scheduled = tripStatus(trip, by(ORD, MSP), { now: NOW + 2.5 * H });
+  assert.ok(scheduled.concerns.some((c) => /are held/.test(c.text)));
+  assert.equal(scheduled.status, "likely");
+  assert.equal(scheduled.legs[0].scheduledDepPassed, true);
+  assert.equal(scheduled.legs[0].departed, undefined);
 });
 
 test("ground stop at the origin", () => {
@@ -258,4 +261,66 @@ test("real source-outage and stale-data scenarios qualify Trips just like the ai
     assert.notEqual(r.cls, "l0");
     assert.equal(r.qualifications[0].quality, Outlook.evaluate(get.MSP, { now, generated: d.generated, sources: d.sources }).quality);
   }
+});
+
+test("scheduled departure and arrival passing never confirms progress or suppresses covered disruption", () => {
+  const MSP = ap("MSP", "America/Chicago", span(0, 5, [4, ["Ground stop — equipment outage, until 9 PM CT"]]));
+  const ATL = ap("ATL", "America/New_York");
+  const trip = { legs: [{ from: "MSP", to: "ATL", dep: at(1), arr: at(3) }] };
+  for (const h of [0, 1, 1.5, 3, 3.75, 6]) {
+    const r = tripStatus(trip, by(MSP, ATL), { now: NOW + h * H });
+    assert.equal(r.status, "disruption", `at schedule+${h}h`);
+    assert.match(r.top, /MSP ground stop/);
+    assert.equal(r.legs[0].scheduledDepPassed, h >= 1);
+    assert.equal(r.legs[0].scheduledArrPassed, h >= 3);
+    assert.equal(r.legs[0].landed, undefined);
+    assert.equal(r.legs[0].departed, undefined);
+    assert.match(r.scheduleNote, /[Aa]ctual flight status.*unavailable/);
+    assert.ok(!/This trip has landed|Arrived|Landed|Departed/.test(r.label + r.top));
+  }
+});
+
+test("quiet recent schedules are unconfirmed, days-old schedules are neutral and archived", () => {
+  const trip = { legs: [{ from: "MSP", to: "ATL", dep: at(1), arr: at(3) }] };
+  const aps = by(ap("MSP", "America/Chicago"), ap("ATL", "America/New_York"));
+  assert.equal(tripStatus(trip, aps, { now: NOW }).status, "ok");
+  for (const h of [1, 1.5, 3, 4]) {
+    const r = tripStatus(trip, aps, { now: NOW + h * H });
+    assert.equal(r.status, "scheduled");
+    assert.equal(r.label, "Flight status unconfirmed");
+    assert.equal(r.cls, "off");
+    assert.match(r.top, /actual flight progress is unconfirmed/);
+  }
+  const expired = tripStatus(trip, { MSP: ap("MSP", "America/Chicago", {}, { hours: [] }), ATL: ap("ATL", "America/New_York", {}, { hours: [] }) }, { now: NOW + 4 * H });
+  assert.equal(expired.status, "unknown");
+  assert.match(expired.top, /coverage.*expired/);
+  assert.ok(!/check back after/.test(expired.top));
+  const old = tripStatus(trip, by(ap("MSP", "America/Chicago", span(0, 5, [4, ["Ground stop until 9 PM"]])), aps.ATL), { now: NOW + 28 * H });
+  assert.equal(old.status, "past");
+  assert.equal(old.level, 0);
+  assert.match(old.top, /actual arrival is unconfirmed/);
+  assert.deepEqual(old.concerns, []);
+  assert.equal(old.legs[0].depAt, null);
+});
+
+test("past scheduled times cannot inherit a program first reported in later forecast hours", () => {
+  const ORD = ap("ORD", "America/Chicago", span(0, 5, [4, ["Ground stop until 9 PM"]]));
+  const r = tripStatus({ legs: [{ from: "MSP", to: "ORD", dep: at(-4), arr: at(-2) }] }, by(ap("MSP", "America/Chicago"), ORD), { now: NOW });
+  assert.equal(r.status, "unknown");
+  assert.ok(!r.concerns.some((c) => c.kind === "program"));
+});
+
+
+test("connection remains a schedule-based assessment after its planned arrival/departure", () => {
+  const legs = [{ from: "MSP", to: "ORD", dep: at(1), arr: at(2, 30) }, { from: "ORD", to: "ATL", dep: at(3, 15), arr: at(5) }];
+  const aps = by(ap("MSP", "America/Chicago"), ap("ORD", "America/Chicago", span(2, 4, [2, ["Snow"]])), ap("ATL", "America/New_York"));
+  const r = tripStatus({ legs }, aps, { now: NOW + 4 * H });
+  assert.equal(r.legs[0].scheduledArrPassed, true);
+  assert.equal(r.legs[1].scheduledDepPassed, true);
+  assert.equal(r.legs[0].conn.minutes, 45, "connection minutes remain a difference of schedules, not measured remaining time");
+  assert.equal(r.status, "possible");
+  assert.match(r.concerns.find(c => c.kind === "connection").text, /a late arrival could mean a missed connection/);
+  const line = flightLine({ legs }, r, "ORD", "America/Chicago", NOW + 4 * H)[0];
+  assert.match(line.text, /^Your scheduled connection/);
+  assert.match(r.scheduleNote, /Actual flight status is unavailable/);
 });

@@ -17,7 +17,7 @@
 
 const HOUR = 3600e3;
 export const CONNECT_MAX_MS = 8 * HOUR; // consecutive legs closer than this (same airport) form one trip
-export const KEEP_PAST_MS = 6 * HOUR; // keep trips departing from 6 h ago ...
+export const KEEP_PAST_MS = 24 * HOUR; // retain through 24 h after scheduled arrival ...
 export const KEEP_AHEAD_MS = 7 * 24 * HOUR; // ... to 7 days ahead
 
 // ---------- RFC 5545 lexing ----------
@@ -346,7 +346,7 @@ const iso = (ms) => new Date(ms).toISOString();
 
 /**
  * ICS text -> {trips: [{id, legs: [{from, to, dep, arr}]}], stats, cal}.
- * Keeps trips whose first departure is at most 7 days ahead and whose last departure is at most 6 h ago.
+ * Keeps trips whose first departure is at most 7 days ahead and whose last scheduled arrival is at most 24 h ago. This is archival, not confirmed arrival.
  * opts: {now, lookup (makeLookup), salt, hash (string -> hex)}.
  */
 export function tripsFromIcs(text, { now = new Date(), lookup, salt = "", hash = fnvHash } = {}) {
@@ -354,7 +354,7 @@ export function tripsFromIcs(text, { now = new Date(), lookup, salt = "", hash =
   const { legs, stats } = flightLegs(cal, lookup || makeLookup([]));
   const t = +now;
   const trips = groupTrips(legs)
-    .filter((g) => g[0].dep <= t + KEEP_AHEAD_MS && g[g.length - 1].dep >= t - KEEP_PAST_MS)
+    .filter((g) => g[0].dep <= t + KEEP_AHEAD_MS && g[g.length - 1].arr >= t - KEEP_PAST_MS)
     .map((g) => ({
       id: hash(salt + "\u0000" + g[0].uid).slice(0, 16),
       legs: g.map((l) => ({ from: l.from, to: l.to, dep: iso(l.dep), arr: iso(l.arr) })),

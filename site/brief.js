@@ -207,7 +207,7 @@ function airportItem(a) {
   return { a, level: Math.max(worst, progs.some((f) => f.type === "ground_stop" || f.type === "closure") ? 4 : progs.length ? 3 : 0), attention, text, ended: endedText };
 }
 
-/** Trips with a flight today (display zone of the origin) or in progress: [{id, level, text}]. */
+/** Trips with a flight today (display zone of the origin) or with recent scheduled travel: [{id, level, text}]. */
 function tripItems() {
   const Tr = window.AWXTrips;
   if (!Tr || typeof Tr._state !== "function") return [];
@@ -219,17 +219,17 @@ function tripItems() {
   try { list = Tr._state().trips || []; } catch { return []; }
   for (const t of list) {
     const legs = t.legs || [];
-    const leg = legs.find((l) => !l.landed);
-    if (!leg || t.status === "done") continue;
+    const leg = legs.find((l) => !l.scheduledArrPassed) || legs[legs.length - 1];
+    if (!leg || t.status === "past") continue;
     const tz = A.dispTz(by.get(leg.from) || { tz: "UTC" });
     const dep = Number(leg.dep) || Date.parse(leg.dep);
-    const today = B.dayKey(dep, tz) === B.dayKey(now, tz) || (leg.departed && !leg.landed);
+    const today = B.dayKey(dep, tz) === B.dayKey(now, tz) || (leg.scheduledDepPassed && dep >= now - 24 * 3600e3);
     if (!today) continue;
     const route = `${legs[0].from}→${legs[legs.length - 1].to}`;
     const level = { ok: 0, possible: 2, likely: 3, disruption: 4 }[t.status] ?? 0;
     const tail = t.short && t.status !== "ok" && t.status !== "early" ? " — " + t.short : "";
     const zt = B.zoneTag ? B.zoneTag(by.get(leg.from) || { tz: "UTC" }, dep) : "";
-    out.push({ id: t.id, level, codes: legs.flatMap((l) => [l.from, l.to]), text: `${route} ${A.clock(dep, tz)}${zt}: ${t.label}${tail}` });
+    out.push({ id: t.id, level, codes: legs.flatMap((l) => [l.from, l.to]), text: `${route} scheduled ${A.clock(dep, tz)}${zt}: ${t.label}${tail}` });
   }
   return out;
 }

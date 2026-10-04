@@ -10,7 +10,7 @@
 //   - manual trips (stored only on this device, localStorage "awx-trips"), and the Trips settings sheet
 //     (flight calendar status and how to connect it).
 // Calendar trips come from data/trips.json (airports and times only); concerns from ./trip-risk.js.
-import { tripStatus, flightLine, rolesAt, clockText, whenText, rangeText, LEVEL_LABELS, STATUS } from "./trip-risk.js?v=2";
+import { tripStatus, flightLine, rolesAt, clockText, whenText, rangeText, LEVEL_LABELS, STATUS, TRIP_KEEP_AFTER_ARRIVAL_MS } from "./trip-risk.js?v=3";
 import { mountSearch, loadAirports, airportsLoaded, placeLine } from "./search.js";
 
 const KEY = "awx-trips";
@@ -133,14 +133,14 @@ function tzFor(code, trip) {
   return (s && s.tz) || "UTC";
 }
 
-/** Calendar + manual trips that haven't landed more than an hour ago, soonest first. */
+/** Calendar + manual trips retained until 24 h after scheduled arrival, soonest first. */
 function allTrips() {
   const now = nowMs();
   const cal = ((S.cal && S.cal.trips) || []).map((t) => ({ ...t, source: "calendar" }));
   const man = S.manual.map((t) => ({ ...t, source: "manual" }));
   return [...cal, ...man]
     .map((t) => ({ ...t, legs: [...t.legs].sort((a, b) => Date.parse(a.dep) - Date.parse(b.dep)) }))
-    .filter((t) => Date.parse(t.legs[t.legs.length - 1].arr) > now - HOUR)
+    .filter((t) => Date.parse(t.legs[t.legs.length - 1].arr) >= now - TRIP_KEEP_AFTER_ARRIVAL_MS)
     .sort((a, b) => Date.parse(a.legs[0].dep) - Date.parse(b.legs[0].dep));
 }
 // build2b hook: delay chances in plain, calibrated words (site/delay.js likelihood), never a percentage
@@ -215,7 +215,7 @@ function miniTimeline(trip) {
     const mid = (legs[i].a + legs[i + 1].d) / 2;
     labels.push(h("span", { class: "mid", style: `left:${pos(mid)}` }, h("b", {}, legs[i].to), Math.round((legs[i + 1].d - legs[i].a) / MIN) + " min"));
   }
-  const label = `From ${first.from} at ${clockText(first.d, tzFor(first.from, trip))} to ${last.to} at ${clockText(last.a, tzFor(last.to, trip))}`;
+  const label = `Scheduled from ${first.from} at ${clockText(first.d, tzFor(first.from, trip))} to ${last.to} at ${clockText(last.a, tzFor(last.to, trip))}`;
   return h("div", { class: "tmini" }, h("div", { class: "tbar", role: "img", "aria-label": label }, segs), h("div", { class: "tlabels", "aria-hidden": "true" }, labels));
 }
 
@@ -234,6 +234,7 @@ function tripCard(trip) {
     h("div", { class: "tmeta" }, pillEl(r), h("span", { class: "tw" }, dateLine(Date.parse(first.dep), tz))),
     h("div", { class: "reason" }, r.top),
     r.quality && r.concerns.some((c) => c.level > 0) ? h("div", { class: "muted small" }, r.quality) : null,
+    h("div", { class: "muted small" }, "Scheduled times · actual flight status unavailable"),
     miniTimeline(trip));
   return el;
 }
@@ -317,12 +318,12 @@ function decorateSheet(sheet, a) {
     if (!roles.length) continue;
     const r = resultOf(trip);
     for (const line of flightLine(trip, r, a.iata, a.tz, now)) {
-      if (line.at < now - HOUR && (line.role !== "conn" || line.until < now)) continue;
+      if (line.at < now - TRIP_KEEP_AFTER_ARRIVAL_MS && (line.role !== "conn" || line.until < now - TRIP_KEEP_AFTER_ARRIVAL_MS)) continue;
       const sm = app()?.summary?.(a); // the card's level window (site/outlook.js summary)
       const overlaps = !!sm && sm.level >= 2 && window.AWXOutlook?.overlaps({ start: sm.start, end: sm.end }, line.at, line.until);
       const inRange = a.hours?.some((hr) => Date.parse(hr.t) <= line.at && line.at < Date.parse(hr.t) + HOUR);
       const context = overlaps ? (line.role === "dep" ? "Your departure overlaps the highest-risk window here." : line.role === "arr" ? "Your arrival overlaps the highest-risk window here." : "Your connection overlaps the highest-risk window here.")
-        : !inRange ? "Airport forecast not available for your travel time yet." : null;
+        : !inRange ? (line.at < now ? "Forecast coverage for this scheduled time has expired. Check your airline for flight updates." : "Airport forecast not available for your scheduled travel time yet.") : null;
       rows.push(h("button", { type: "button", class: "tfrow " + r.cls, "aria-label": `Your flight. ${line.text}. Open the trip`, onclick: () => openTrip(trip.id) },
         h("span", { class: "tfic" }, svg(PLANE, "tfi", line.role === "arr" ? 135 : line.role === "conn" ? 90 : 45)),
         h("span", { class: "tft" }, h("span", { class: "tfl" }, "Your flight"), line.text, context ? h("span", { class: "tfcontext" }, context) : null)));
@@ -434,7 +435,7 @@ function levelBox(title, sub, at, note) {
   return h("div", { class: "box" },
     h("h4", {}, title, at ? h("span", { class: "pill sm " + (at.level == null ? "off" : lv(at.level)) }, at.level == null ? "Unknown" : LEVEL_LABELS[at.level]) : null),
     h("div", { class: "muted small" }, sub),
-    h("div", { class: "tbx" }, note || (at ? (at.level == null ? at.quality : at.reason || (at.level ? "Minor weather conditions" : "No significant weather")) : byIata(title.split(" ").pop()) ? "Forecast not out yet" : "No data for this airport yet")),
+    h("div", { class: "tbx" }, note || (at ? (at.level == null ? at.quality : at.reason || (at.level ? "Minor weather conditions" : "No significant weather")) : byIata(title.split(" ").pop()) ? "Forecast unavailable for this scheduled time" : "No data for this airport yet")),
     at?.quality && at.level != null ? h("div", { class: "muted small" }, at.quality) : null,
     at && at.level != null && at.delay && at.delay.p != null ? h("div", { class: "muted small" }, delayWordsFor(at.delay, title.split(" ").pop()) || "") : null); // build2b hook: words, not %
 }
@@ -449,10 +450,10 @@ function tripView(trip) {
       h("div", { class: "tleg-h" }, h("b", {}, `${l.from} → ${l.to}`),
         h("span", { class: "muted" }, ` ${clockText(l.dep, tf)} ${tzAbbr(l.dep, tf)} → ${clockText(l.arr, tt)} ${tzAbbr(l.arr, tt)}`)),
       h("div", { class: "two" },
-        levelBox(`Departure ${l.from}`, whenText(l.dep, tf, nowMs()), l.departed ? null : l.depAt, l.departed ? "Departed" : null),
-        levelBox(`Arrival ${l.to}`, whenText(l.arr, tt, nowMs()), l.landed ? null : l.arrAt, l.landed ? "Landed" : null)),
+        levelBox(`Scheduled departure ${l.from}`, whenText(l.dep, tf, nowMs()), l.depAt, !l.depAt && l.scheduledDepPassed ? "Forecast coverage expired" : null),
+        levelBox(`Scheduled arrival ${l.to}`, whenText(l.arr, tt, nowMs()), l.arrAt, !l.arrAt && l.scheduledArrPassed ? "Forecast coverage expired" : null)),
       l.conn ? h("div", { class: "tconn" + (l.conn.tight ? " tight" : "") },
-        `Connection at ${l.conn.iata} · ${l.conn.minutes} min`, l.conn.tight ? h("span", { class: "badge l2" }, "Tight") : null) : null,
+        `Scheduled connection at ${l.conn.iata} · ${l.conn.minutes} min`, l.conn.tight ? h("span", { class: "badge l2" }, "Tight") : null) : null,
     );
   });
   const sideBox = (title, level, side) => {
@@ -464,16 +465,18 @@ function tripView(trip) {
     ? r.concerns.map((c) => h("div", { class: "item" + (c.level ? "" : " info") },
       c.level ? h("span", { class: "badge " + lv(c.level) }, LEVEL_LABELS[c.level]) : null,
       h("div", { class: c.level ? "" : "muted", style: c.level ? "margin-top:4px" : "" }, c.text)))
-    : [h("div", { class: "muted", style: "font-size:14px" }, r.quality || r.status === "early" ? r.top : "Nothing expected right now. We check FAA programs and the weather at every airport on your trip.")];
+    : [h("div", { class: "muted", style: "font-size:14px" }, r.quality || ["early", "unknown", "scheduled", "past"].includes(r.status) ? r.top : "Nothing expected right now. We check FAA programs and the weather at every airport on your trip.")];
   const codes = [...new Set(trip.legs.flatMap((l) => [l.from, l.to]))];
   const manual = trip.source === "manual";
   let delArmed = false;
   return [
     head(h("div", { id: "tripTitle" }, routeEl(trip, true))),
     h("div", { class: "where sh-where" }, dateLine(Date.parse(first.dep), tzF)),
-    h("div", { class: "box tstat" }, pillEl(r), h("div", { class: "tbx", style: "margin-top:8px;font-weight:600" }, r.top), r.quality && r.concerns.some((c) => c.level > 0) ? h("div", { class: "muted small" }, r.quality) : null),
-    sec(trip.legs.length > 1 ? "Flights" : "Flight", ...legsEls),
-    sec("Departure vs. arrival", h("div", { class: "two" },
+    h("div", { class: "box tstat" }, pillEl(r), h("div", { class: "tbx", style: "margin-top:8px;font-weight:600" }, r.top),
+      h("div", { class: "muted small", style: "margin-top:8px" }, r.scheduleNote), r.quality && r.concerns.some((c) => c.level > 0) ? h("div", { class: "muted small" }, r.quality) : null),
+    sec(trip.legs.length > 1 ? "Flights" : "Flight", ...legsEls,
+      trip.legs.length > 1 ? h("div", { class: "muted small", style: "margin-top:8px" }, "Connection time is based on the schedule. Actual arrival, gates and time to reach the next flight are not available.") : null),
+    r.status === "past" ? null : sec("Departure vs. arrival", h("div", { class: "two" },
       sideBox(`At departure · ${first.from}`, r.sides.dep, "dep"),
       sideBox(`At arrival · ${last.to}`, r.sides.arr, "arr")),
       trip.legs.length > 1 ? h("div", { style: "margin-top:10px" }, sideBox("Connection", r.sides.conn, "conn")) : null,

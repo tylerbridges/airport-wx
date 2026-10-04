@@ -27,10 +27,13 @@
 // Missing airports, uncovered flight hours and qualified health never receive green reassurance.
 // Known weather/FAA concerns and their levels remain visible even with incomplete data.
 // Status: "On track" (≤ Minor), "Possible delays" (Moderate), "Delays likely" (High), "Disruption"
-// (Severe); "Too early to tell" when no flight time is inside the airports' 24-hour forecasts yet.
+// (Severe); "Too early to tell" outside the future forecast. Scheduled time passing never
+// confirms takeoff/landing; recent schedules retain covered concerns, then archive after 24 h.
 
 const HOUR = 3600e3;
 const MIN = 60e3;
+// Retention is based on the schedule, never proof that a flight arrived.
+export const TRIP_KEEP_AFTER_ARRIVAL_MS = 24 * HOUR;
 export const LEVEL_LABELS = ["Clear", "Minor", "Moderate", "High", "Severe"];
 export const STATUS = {
   ok: { label: "On track", cls: "l0" },
@@ -39,7 +42,8 @@ export const STATUS = {
   disruption: { label: "Disruption", cls: "l4" },
   unknown: { label: "Data incomplete", cls: "off" },
   early: { label: "Too early to tell", cls: "off" },
-  done: { label: "Arrived", cls: "off" },
+  scheduled: { label: "Flight status unconfirmed", cls: "off" },
+  past: { label: "Past schedule", cls: "off" },
 };
 export const TIGHT_DOMESTIC_MIN = 60;
 export const TIGHT_INTL_MIN = 90;
@@ -245,7 +249,6 @@ function avgMinutes(detail) {
 export function programsAt(a, t) {
   if (!a || !Array.isArray(a.hours) || !a.hours.length) return [];
   let hr = a.hours.find((h) => { const s = Date.parse(h.t); return t >= s && t < s + HOUR; });
-  if (!hr && t < Date.parse(a.hours[0].t)) hr = a.hours[0];
   if (!hr) return [];
   const out = [];
   for (const r of hr.reasons || []) {
@@ -326,7 +329,11 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
   };
   const tzOf = (code) => (get(code) && get(code).tz) || "UTC";
   const legOut = [];
-  const done = legs.length && legs[legs.length - 1].arr < now - 30 * MIN;
+  const past = !!(legs.length && legs[legs.length - 1].arr < now - TRIP_KEEP_AFTER_ARRIVAL_MS);
+  const schedulePassed = !!(legs.length && legs[0].dep <= now);
+  const scheduleNote = schedulePassed
+    ? "The scheduled departure time has passed. Actual flight status is unavailable; check your airline for updates."
+    : "Scheduled times · actual flight status unavailable";
   let known = 0;
 
   legs.forEach((leg, i) => {
@@ -334,14 +341,14 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
     const prev = legs[i - 1], next = legs[i + 1];
     const connIn = !!(prev && prev.to === leg.from);
     const connOut = !!(next && next.from === leg.to);
-    const departed = leg.dep < now - 15 * MIN;
-    const landed = leg.arr < now - 15 * MIN;
+    const scheduledDepPassed = leg.dep <= now;
+    const scheduledArrPassed = leg.arr <= now;
     const depWin = F ? windowAt(F, leg.dep) : null;
     const arrWin = X ? windowAt(X, leg.arr) : null;
-    const depQuality = !landed && !departed ? qualify(F, connIn ? "conn" : "dep", i) : "";
-    const arrQuality = !landed ? qualify(X, connOut ? "conn" : "arr", i) : "";
+    const depQuality = past ? "" : qualify(F, connIn ? "conn" : "dep", i);
+    const arrQuality = past ? "" : qualify(X, connOut ? "conn" : "arr", i);
     const out = {
-      from: leg.from, to: leg.to, dep: leg.dep, arr: leg.arr, departed, landed,
+      from: leg.from, to: leg.to, dep: leg.dep, arr: leg.arr, scheduledDepPassed, scheduledArrPassed,
       depAt: displayAt(depWin, depQuality || (!covered(F, leg.dep) ? "Forecast unavailable for this time" : "")),
       arrAt: displayAt(arrWin, arrQuality || (!covered(X, leg.arr) ? "Forecast unavailable for this time" : "")),
       conn: null,
@@ -349,9 +356,10 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
     legOut.push(out);
     if (!F && !missing.includes(leg.from)) missing.push(leg.from);
     if (!X && !missing.includes(leg.to)) missing.push(leg.to);
-    if (landed) return;
+    // Days-old schedules are archived; no old forecast is presented as a current warning.
+    if (past) { out.depAt = out.arrAt = null; return; }
     // A neighbouring hour can contain a real concern without covering the scheduled flight hour.
-    if (F && !departed && !connIn && !covered(F, leg.dep)) unknown.push({ iata: leg.from, at: leg.dep, what: "departure", side: "dep" });
+    if (F && !connIn && !covered(F, leg.dep)) unknown.push({ iata: leg.from, at: leg.dep, what: "departure", side: "dep" });
     if (X && !covered(X, leg.arr)) unknown.push({ iata: leg.to, at: leg.arr, what: connOut ? "connection" : "arrival", side: connOut ? "conn" : "arr" });
     if (X && connOut && !covered(X, next.dep)) unknown.push({ iata: leg.to, at: next.dep, what: "connection", side: "conn" });
     const depClock = F ? whenText(leg.dep, F.tz, now) : null;
@@ -359,7 +367,7 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
     const route = `${leg.from}→${leg.to}`;
 
     // weather around the departure (a connection's departure is covered by the connection window)
-    if (F && !departed && !connIn) {
+    if (F && !connIn) {
       if (depWin) { known++; weather(F, depWin, `around your ${depClock} departure`, "dep", i); notices(F, depWin, `around your ${depClock} departure`, "dep", i); } // notams hook
       else if (!unknown.some((u) => u.iata === leg.from && u.at === leg.dep)) unknown.push({ iata: leg.from, at: leg.dep, what: "departure", side: "dep" });
     }
@@ -376,7 +384,7 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
     }
 
     // FAA programs that hit this flight
-    if (!departed) {
+    { // A passed scheduled departure does not establish takeoff. Keep applicable programs.
       // at the arrival airport, at the departure time: flights to it are held at their origin
       if (X) for (const p of programsAt(X, leg.dep)) {
         const until = untilText(p, X.tz, now);
@@ -430,7 +438,7 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
       if (p.kind === "closed") {
         add({ level: 4, kind: "program", side, iata: leg.to, leg: i, key: `closed-${leg.to}`, short: `${leg.to} closed`,
           text: `${leg.to} is closed${untilText(p, X.tz, now)} — your ${arrClock} arrival is likely cancelled or diverted.` });
-      } else if (p.kind === "cascade" && p.hub === leg.from && !departed) {
+      } else if (p.kind === "cascade" && p.hub === leg.from) {
         cascade(p, leg, i, side, `around your ${arrClock} arrival`);
       } else if (p.kind === "delay") {
         const d = delayParts(p.detail || p.reason.replace(/^Delays[^,]*,\s*/, ""));
@@ -442,10 +450,6 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
       } else if (p.kind === "note") {
         add({ level: 2, kind: "program", side, iata: leg.to, leg: i, key: `note-${leg.to}`, short: `FAA-reported delays at ${leg.to}`,
           text: `FAA reports delays at ${leg.to} — your ${arrClock} arrival may be late.` });
-      } else if (departed && (p.kind === "gs" || p.kind === "gdp")) {
-        // already in the air: the program no longer holds this flight, but arrivals are being metered
-        add({ level: 2, kind: "program", side, iata: leg.to, leg: i, key: `airborne-${leg.to}-${i}`, short: `${leg.to} ${PROGRAM_NAME[p.kind]}`,
-          text: `${leg.to} ${PROGRAM_NAME[p.kind]} in effect — arrivals are slowed, so your ${arrClock} arrival may be late.` });
       }
     }
 
@@ -524,12 +528,17 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
     : qualifications.length ? "Some airport data is unavailable" : missing.length ? "Some airports have no data yet" : unknown.length ? "Some flight times have no forecast yet" : "";
   const level = Math.max(0, ...concerns.map((c) => c.level));
   let key = level >= 4 ? "disruption" : level === 3 ? "likely" : level === 2 ? "possible" : "ok";
-  if (done) key = "done";
-  else if (!known && level < 2 && legs.length && !missing.length && !qualifications.length) key = "early";
+  const expiredCoverage = unknown.some((u) => u.at <= now);
+  if (past) key = "past";
+  else if (level < 2 && (missing.length || qualifications.length || expiredCoverage)) key = "unknown";
+  else if (!known && level < 2 && legs.length) key = "early";
   else if (key === "ok" && quality) key = "unknown";
+  else if (schedulePassed && level < 2) key = "scheduled";
   const first = legs[0];
-  const top = done ? "This trip has landed."
+  const top = past ? "This trip is outside the active schedule window. Its actual arrival is unconfirmed."
     : concerns[0] && concerns[0].level >= 1 ? concerns[0].text
+    : key === "unknown" ? (expiredCoverage && !missing.length && !qualifications.length ? "Airport forecast coverage for a scheduled time has expired. Actual flight status is unavailable; check your airline." : `${quality}. Check your airline for the latest flight status.`)
+    : key === "scheduled" ? "The scheduled departure time has passed; actual flight progress is unconfirmed."
     : key === "early" ? `Airport forecasts cover the next 24 hours — check back after ${first ? whenText(first.dep - 24 * HOUR, tzOf(first.from), now) : "tomorrow"}.`
     : quality ? `${quality}. Check your airline for the latest flight status.`
     : "No weather or FAA issues expected around your flight times.";
@@ -540,7 +549,7 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
   return {
     status: key, label: STATUS[key].label, cls: STATUS[key].cls, level, top,
     short: concerns[0] && concerns[0].level >= 1 ? concerns[0].short : null,
-    concerns, legs: legOut, unknown, missing, quality, qualifications,
+    concerns, legs: legOut, unknown, missing, quality, qualifications, scheduleNote,
     sides: { dep: side("dep"), arr: side("arr"), conn: legs.length > 1 ? side("conn") : null },
   };
 }
@@ -563,9 +572,9 @@ export function rolesAt(trip, iata) {
 export function flightLine(trip, result, iata, tz, now) {
   return rolesAt(trip, iata).map((r) => {
     const when = whenText(r.at, tz, now);
-    const what = r.role === "dep" ? `Your ${when} departure to ${r.other}`
-      : r.role === "arr" ? `Your ${when} arrival from ${r.other}`
-      : `Your connection here (${rangeText(r.at, r.until, tz)}) to ${r.other}`;
+    const what = r.role === "dep" ? `Your scheduled ${when} departure to ${r.other}`
+      : r.role === "arr" ? `Your scheduled ${when} arrival from ${r.other}`
+      : `Your scheduled connection here (${rangeText(r.at, r.until, tz)}) to ${r.other}`;
     const state = result.status === "ok" ? "on track" : result.label.toLowerCase();
     return { ...r, text: `${what}: ${state}${result.short && result.status !== "ok" && result.status !== "early" ? " — " + result.short : ""}` };
   });
