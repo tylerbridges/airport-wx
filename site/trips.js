@@ -143,7 +143,9 @@ function allTrips() {
     .filter((t) => Date.parse(t.legs[t.legs.length - 1].arr) > now - HOUR)
     .sort((a, b) => Date.parse(a.legs[0].dep) - Date.parse(b.legs[0].dep));
 }
-const resultOf = (trip) => tripStatus(trip, byIata, { now: nowMs() });
+// build2b hook: delay chances in plain, calibrated words (site/delay.js likelihood), never a percentage
+const delayWordsFor = (d, iata) => { const L = window.AWXDelay && window.AWXDelay.likelihood ? window.AWXDelay.likelihood(d, { iata }) : null; return L ? L.word : null; };
+const resultOf = (trip) => tripStatus(trip, byIata, { now: nowMs(), words: delayWordsFor });
 const findTrip = (id) => allTrips().find((t) => t.id === id) || S.manual.map((t) => ({ ...t, source: "manual" })).find((t) => t.id === id) || null;
 
 // ---------- home: "Your trips" ----------
@@ -303,12 +305,16 @@ function decorateSheet(sheet, a) {
   }
   if (!rows.length) return;
   const box = h("div", { class: "tflight" }, rows);
-  const anchor = sheet.querySelector(".sh-where") || sheet.querySelector(".sh-head");
+  // build2b hook: under the timeline (above it only the header, the Now/Peak card and the timeline)
+  const anchor = sheet.querySelector(".tlsec") || sheet.querySelector(".sh-where") || sheet.querySelector(".sh-head");
   if (anchor) anchor.after(box); else sheet.prepend(box);
   const tl = sheet.querySelector(".tl.big");
   if (tl && a.hours && a.hours.length) {
-    const t0 = Date.parse(a.hours[0].t);
-    const span = a.hours.length * HOUR;
+    // build2b hook: the sheet's timeline is a calendar day (data-start on .tl-wrap, one segment per hour)
+    const tw = tl.closest(".tl-wrap");
+    const segs = tl.querySelectorAll(".s").length;
+    const t0 = tw && tw.dataset.start ? Number(tw.dataset.start) : Date.parse(a.hours[0].t);
+    const span = (tw && tw.dataset.start && segs ? segs : a.hours.length) * HOUR;
     for (const m of marks) {
       const f = (m.at - t0) / span;
       if (!(f >= 0 && f <= 1)) continue;
@@ -337,15 +343,19 @@ function wrap() {
       h("div", { class: "backdrop", onclick: closeTrip }),
       h("div", { class: "sheet", id: "tripSheet", role: "dialog", "aria-modal": "true", "aria-labelledby": "tripTitle" }));
     document.body.append(w);
+    // build2b hook: drag the header / pull at the top to close, back gesture, scroll lock (site/sheet.js)
+    tripCtl = window.AWXSheet ? window.AWXSheet.makeSheet(w.querySelector(".sheet"), { onClose: closeTrip, header: ".grab, .sh-head", backdrop: w.querySelector(".backdrop"), noPull: "input, textarea, select" }) : null;
   }
   return w;
 }
+let tripCtl = null;
 function show() {
   const w = wrap();
   if (w.hidden) {
     S.lastFocus = document.activeElement;
     w.hidden = false;
     document.documentElement.classList.add("lock");
+    if (tripCtl) tripCtl.opened(); // build2b hook
     void w.offsetHeight;
     w.classList.add("open");
   }
@@ -358,6 +368,7 @@ function closeTrip() {
   S.view = null;
   w.classList.remove("open");
   if (!(app() && app().state.openIata)) document.documentElement.classList.remove("lock");
+  if (tripCtl) tripCtl.closed(); // build2b hook
   const done = () => { if (!S.view) w.hidden = true; };
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) done(); else setTimeout(done, 300);
   if (S.lastFocus && S.lastFocus.focus) S.lastFocus.focus({ preventScroll: true });
@@ -398,7 +409,7 @@ function levelBox(title, sub, at, note) {
     h("h4", {}, title, at ? h("span", { class: "pill sm " + lv(at.level) }, LEVEL_LABELS[at.level]) : null),
     h("div", { class: "muted small" }, sub),
     h("div", { class: "tbx" }, note || (at ? (at.reason || (at.level ? "Minor weather conditions" : "No significant weather")) : byIata(title.split(" ").pop()) ? "Forecast not out yet" : "No data for this airport yet")),
-    at && at.delay && at.delay.p != null ? h("div", { class: "muted small" }, `Delay chance about ${Math.round(at.delay.p * 100)}%`) : null);
+    at && at.delay && at.delay.p != null ? h("div", { class: "muted small" }, delayWordsFor(at.delay, title.split(" ").pop()) || "") : null); // build2b hook: words, not %
 }
 
 function tripView(trip) {
@@ -613,14 +624,14 @@ function settingsView() {
   const man = S.manual.map((t) => ({ ...t, source: "manual" })).sort((a, b) => Date.parse(a.legs[0].dep) - Date.parse(b.legs[0].dep));
   return [
     head(h("h2", { id: "tripTitle", class: "th2" }, "Trips")),
-    sec("Flighty calendar",
+    sec("Flight calendar",
       h("div", { class: "box" },
         h("div", { class: "tcal" + (st.ok ? " ok" : st.warn ? " warn" : "") }, st.text),
         g && S.cal.configured ? h("div", { class: "muted small" }, "Checked " + ago(Math.max(0, nowMs() - g))) : null),
       h("details", { class: "thelp", open: !st.ok || null },
         h("summary", {}, "How to connect your flight calendar"),
         h("ol", {},
-          h("li", {}, "In Flighty, turn on calendar sync to a dedicated calendar."),
+          h("li", {}, "If you use Flighty, turn on its calendar sync to a dedicated calendar."),
           h("li", {}, "In the Calendar app, share that calendar as a public calendar."),
           h("li", {}, "Copy the link."),
           h("li", {}, "Add it as the FLIGHTY_ICS_URL secret on GitHub (repository Settings → Secrets and variables → Actions).")),

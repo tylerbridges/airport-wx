@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   parseVisib, fmtVis, ceilingOf, flightCategory, parseWx, assessConditions, assessFaa, assessAlert, alertLevel,
-  spcLevel, spcText, assessAtcscc, assessCwa, cwaKind, lampThunderLevel, lampConvLevel, tcfLevel, uniqueItems, buildHours, summarize, tafHour, levelOf, nextUtcHour, fmtClock, fmtRange, tzAbbr, compareAirports, hoursOutput,
+  spcLevel, spcText, assessAtcscc, assessCwa, cwaKind, lampThunderLevel, lampConvLevel, tcfLevel, uniqueItems, buildHours, summarize, tafHour, levelOf, nextUtcHour, fmtClock, fmtRange, tzAbbr, compareAirports, hoursOutput, observedHours, condOf,
 } from "./risk.mjs";
 
 const lvl = (c) => levelOf(assessConditions(c));
@@ -402,4 +402,36 @@ test("reasons: one Visibility/Ceiling/Gusts per box (highest, observed on a tie)
   const s = summarize(hours, "America/New_York");
   assert.deepEqual(s.now.reasons, ["Visibility 5 sm"]);
   assert.equal(s.peak.reasons.length, 1);
+});
+
+test("build2b: hours carry the prevailing conditions (METAR in hour 0, TAF state later)", () => {
+  const hours = hoursOutput(buildHours({
+    now: NOW, tz: "America/Chicago", taf: taf([{ ...vfr, wgst: 22 }]),
+    metar: { wxString: "-RA", visib: 6, clouds: [{ cover: "BKN", base: 3500 }], wdir: 200, wspd: 10, wgst: null, temp: 14, fltCat: "MVFR" },
+  }));
+  assert.deepEqual({ ...hours[0], t: 0, reasons: 0 }, { t: 0, level: 1, reasons: 0, fltCat: "MVFR", cig: 3500, vis: 6, wdir: 200, wspd: 10, wx: "-RA", temp: 14 });
+  assert.equal(hours[1].vis, 6);
+  assert.equal(hours[1].wgst, 22);
+  assert.equal(hours[1].cig, undefined, "SCT is no ceiling");
+  assert.deepEqual(condOf({ wdir: "VRB", wspd: 3, visib: "10+", clouds: [] }), { vis: 10, wdir: "VRB", wspd: 3 });
+});
+
+test("build2b: observedHours files METARs by hour, max level, latest conditions, highest gust", () => {
+  const at = (min) => Math.round((+NOW + min * 60e3) / 1000);
+  const obs = observedHours([
+    { obsTime: at(-10), visib: "10+", clouds: [], wspd: 5 }, // current hour: left out
+    { obsTime: at(-30), visib: 2, wxString: "TSRA", clouds: [{ cover: "BKN", base: 800 }], wspd: 20, wgst: 30, temp: 20 },
+    { obsTime: at(-45), visib: "10+", clouds: [], wspd: 8, wgst: 36, temp: 21 },
+    { obsTime: at(-200), visib: "10+", clouds: [], wspd: 4 },
+    { obsTime: at(-26 * 60), visib: "1/4", wxString: "FG", clouds: [] }, // older than 24 h
+  ], NOW);
+  assert.deepEqual(obs.map((x) => x.t), ["2026-10-03T16:00:00.000Z", "2026-10-03T18:00:00.000Z"]);
+  const h = obs[1];
+  assert.equal(h.level, 3);
+  assert.ok(h.reasons.includes("Thunderstorms"));
+  assert.equal(h.fltCat, "IFR");
+  assert.equal(h.wgst, 36);
+  assert.equal(h.wx, "TSRA", "latest report's conditions");
+  assert.equal(obs[0].level, 0);
+  assert.deepEqual(observedHours(null, NOW), []);
 });

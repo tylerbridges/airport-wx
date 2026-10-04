@@ -6,15 +6,19 @@
 // trips from site/trips.js when present) and "data" (build time, live relay, sources, checks).
 import { h, icon, prefs, reducedMotion, trapFocus, app, appVersion } from "./navui.js";
 import { loadAirports, airportsLoaded } from "./search.js";
+import { SOURCES as MV_SOURCES } from "./movement.js"; // movement hook: aircraft-position feeds in Data & checks
 
 const GH = "https://github.com/tylerbridges/airport-wx";
 const SECRETS_URL = GH + "/settings/secrets/actions";
-// labels for the category keys in prefs DEFAULTS.show
-const CAT_LABELS = {
+// Disruption categories: keys from prefs.js CATEGORIES, labels from site/cats.js (AWXCats.LABELS, the same table
+// app.js filters with), so every switch drives the page's filtering. Fallback labels if cats.js is missing.
+const CAT_FALLBACK = {
   storms: "Thunderstorms", winter: "Winter weather", wind: "Wind", fog: "Low clouds & fog", heat: "Heat",
-  faa: "FAA delay programs", atc: "ATC staffing & equipment", runways: "Runway closures",
+  faa: "FAA delay programs & ground stops", atc: "ATC staffing & equipment", runways: "Runway closures",
   vip: "VIP / security restrictions", space: "Space launches", tstm: "General thunderstorm info",
 };
+const CAT_LABELS = new Proxy({}, { get: (t, k) => (window.AWXCats && window.AWXCats.LABELS && window.AWXCats.LABELS[k]) || CAT_FALLBACK[k] });
+const catKeys = () => (P().CATEGORIES || (window.AWXCats && window.AWXCats.KEYS) || Object.keys((P().DEFAULTS && P().DEFAULTS.show) || CAT_FALLBACK));
 const SOURCES = [
   ["FAA NAS Status", "Ground stops, delay programs and closures", ["faa"]],
   ["FAA Command Center", "Advisories and the daily operations plan", ["atcscc"]],
@@ -141,7 +145,7 @@ function buildRoot(body) {
   const p = P().getPrefs();
   const set = (k) => (v) => P().setPref(k, v);
   const favs = (app() && app().state.favs) || [];
-  const keys = Object.keys((P().DEFAULTS && P().DEFAULTS.show) || CAT_LABELS);
+  const keys = catKeys();
   const show = p.show || {};
   body.replaceChildren(
     group("Mode", [h("div", { class: "awx-row awx-wide" }, seg("Mode", [["traveler", "Traveler"], ["aviation", "Aviation"]], p.mode, set("mode"), "awx-mode"))],
@@ -165,7 +169,7 @@ function buildRoot(body) {
     group("Times", [checkList("Times", [["airport", "Each airport's local time"], ["mine", "My time zone"]], p.timeRef, set("timeRef"))],
       "Forecast hours, delays and timelines use this time zone."),
     group(null, [navRow("pulse", "Data & checks", null, () => push("data"), { "data-page": "data" })]),
-    group("About", [valueRow("Version", appVersion())],
+    group("About", [valueRow("App", "Airports"), valueRow("Version", appVersion())],
       "Your airports and settings stay on this device. Trips publish only airports and flight times, never names or booking details."),
   );
 }
@@ -350,7 +354,7 @@ function tripLabel(t, i) {
 function buildTrips(body, page, opts) {
   const status = valueRow("Status", "Checking…", { "data-id": "calstatus" });
   const steps = h("ol", { class: "awx-steps" },
-    h("li", {}, "In Flighty, turn on calendar sync to a dedicated calendar (only flights go in it)."), // trips hook: the user's wording
+    h("li", {}, "If you use Flighty, turn on its calendar sync to a dedicated calendar (only flights go in it)."), // trips hook: the user's wording
     h("li", {}, "In Calendar, share that calendar as a public calendar."),
     h("li", {}, "Copy the calendar's public link."),
     h("li", {}, "On GitHub, add the link as a repository secret named ", h("code", {}, "FLIGHTY_ICS_URL"), ". The next update reads it."));
@@ -400,6 +404,11 @@ function buildData(body) {
     const stat = !keys.length ? ["History", ""] : !have.length ? ["—", ""] : down === have.length ? ["Unavailable", "awx-bad"] : down || part ? ["Partly unavailable", "awx-warn"] : ["OK", "awx-good"];
     return h("div", { class: "awx-row" }, h("span", { class: "awx-rt" }, name, h("small", {}, what)), h("span", { class: "awx-rv " + stat[1] }, stat[0]));
   });
+  // movement hook: the ADS-B feeds behind "Traffic right now" (site/movement.js SOURCES)
+  for (const m of MV_SOURCES || []) {
+    srcRows.push(h("div", { class: "awx-row" }, h("span", { class: "awx-rt" }, m.name, h("small", {}, m.what)),
+      h("span", { class: "awx-rv" }, m.role === "primary" ? "Traffic" : m.role === "fallback" ? "Traffic backup" : "Traffic")));
+  }
   body.replaceChildren(
     group("Data", [valueRow("Last data build", buildText), relay],
       "The build runs every few minutes; the live relay adds fresher weather and FAA data on top when it's set up."),
@@ -425,7 +434,14 @@ function build() {
   wrap = h("div", { class: "awx-set-wrap", hidden: true }, h("div", { class: "awx-set-bd", onclick: () => close() }), sheet);
   wrap.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); } });
   document.body.append(wrap);
+  // build2b hook: drag the header (any page, any scroll position) or pull the content at the top to close the
+  // whole sheet; back gesture; page scroll lock (site/sheet.js)
+  sheetCtl = window.AWXSheet ? window.AWXSheet.makeSheet(sheet, {
+    onClose: () => close(), header: ".awx-ph", backdrop: wrap.querySelector(".awx-set-bd"), noPull: ".awx-favs",
+    scroller: (t) => (t.closest && t.closest(".awx-pb")) || (stack.length ? stack[stack.length - 1].el.querySelector(".awx-pb") : sheet),
+  }) : null;
 }
+let sheetCtl = null;
 
 function makePage(name, opts) {
   const def = PAGES[name] || PAGES.root;
@@ -485,6 +501,7 @@ export function openSettings(page, opts) {
   isOpen = true;
   wrap.hidden = false;
   document.documentElement.classList.add("awx-lock");
+  if (sheetCtl) sheetCtl.opened(); // build2b hook
   void wrap.offsetWidth;
   wrap.classList.add("open");
   untrap = trapFocus(sheet);
@@ -498,6 +515,7 @@ export function close(returnFocus = true) {
   isOpen = false;
   wrap.classList.remove("open");
   document.documentElement.classList.remove("awx-lock");
+  if (sheetCtl) sheetCtl.closed(); // build2b hook
   if (untrap) untrap();
   const done = () => { if (!isOpen) { wrap.hidden = true; stack.splice(0).forEach((p) => p.el.remove()); ctx.onToggle(false); } };
   if (reducedMotion()) done(); else setTimeout(done, 320);

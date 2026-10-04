@@ -18,7 +18,8 @@ function load(f, url) {
 }
 const ready = (f) => until(() => {
   const w = f.contentWindow, d = f.contentDocument;
-  return w && w.AWXNav && d.querySelector("#list .card, #list .empty") && !/Loading airports/.test(d.getElementById("list").textContent) ? w : null;
+  // readyState "complete": a hash change before the load event is a replacement, so Back would leave the page (build2b)
+  return w && w.AWXNav && d.readyState === "complete" && d.querySelector("#list .card, #list .empty") && !/Loading airports/.test(d.getElementById("list").textContent) ? w : null;
 });
 
 /** add(status, label, detail) from check.js's group(). url: the index.html to test. */
@@ -39,9 +40,12 @@ export async function navChecks(add, url) {
       bar ? tabs.map((t) => t.textContent + (t.getAttribute("aria-selected") === "true" ? " (selected)" : "")).join(", ") : "no .awx-tabbar");
 
     // tabs -> hash, Back returns
+    const len0 = w.history.length;
     d.getElementById("tab-trips").click();
     const toTrips = await until(() => w.location.hash === "#trips" && !d.getElementById("navTrips").hidden, 2000);
-    w.history.back();
+    // build2b: Back only when the tab change added an entry; otherwise Back would leave the check page itself
+    if (w.history.length > len0) w.history.back();
+    else add("warn", "Tab change added no history entry", `history.length ${len0} → ${w.history.length}; Back not tried`);
     const back = await until(() => d.getElementById("tab-airports").getAttribute("aria-selected") === "true" && !d.getElementById("navAirports").hidden, 2000);
     add(toTrips && back ? "pass" : "fail", "Switching tabs updates the hash", `Trips → ${toTrips ? "#trips" : "hash " + JSON.stringify(w.location.hash)}; Back → ${back ? "Airports" : "not Airports"}`);
 

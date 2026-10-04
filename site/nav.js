@@ -10,9 +10,9 @@ import { h, icon, prefs, reducedMotion, trapFocus, app } from "./navui.js";
 import { initSettings, openSettings, settingsOpen } from "./settings.js";
 
 const TABS = [
-  { id: "airports", label: "Airports", title: "Airports", icon: "tower" },
-  { id: "trips", label: "Trips", title: "Trips", icon: "case" },
-  { id: "map", label: "Map", title: "Map", icon: "map" },
+  { id: "airports", label: "Airports", title: "Airports", icon: "terminal" },
+  { id: "trips", label: "Trips", title: "Trips", icon: "ticket" },
+  { id: "map", label: "Map", title: "Map", icon: "foldmap" },
 ];
 const $ = (id) => document.getElementById(id);
 export const tabFromHash = (hash) => { const k = String(hash || "").replace(/^#/, ""); return TABS.some((t) => t.id === k) ? k : "airports"; };
@@ -68,7 +68,7 @@ function buildBar() {
     go(TABS[j].id);
     $("tab-" + TABS[j].id).focus();
   });
-  const sb = h("button", { type: "button", class: "awx-searchbtn glass", id: "navSearchBtn", "aria-label": "Search airports", onclick: () => openSearch() }, icon("lens"));
+  const sb = h("button", { type: "button", class: "awx-searchbtn glass", id: "navSearchBtn", "aria-label": "Search airports", onclick: () => openSearch() }, icon("wlens"));
   nav = h("nav", { class: "awx-nav", "aria-label": "Main" }, h("div", { class: "awx-navin" }, bar, sb));
   document.body.append(nav);
 }
@@ -146,7 +146,7 @@ function menuItems() {
     h("div", { class: "awx-msep", role: "separator" }),
     acc,
     row("pulse", "Data & checks", { fn: () => openSettings("data") }),
-    window.AWXTest && window.AWXTest.openPicker ? row("target", "Test scenarios", { fn: () => window.AWXTest.openPicker() }) : null, // scenarios hook: the scenario list in site/testmode.js
+    window.AWXTest && window.AWXTest.openPicker ? row("check", "Test scenarios", { fn: () => window.AWXTest.openPicker() }) : null, // scenarios hook: the scenario list in site/testmode.js
   ].filter(Boolean);
 }
 function buildMenu() {
@@ -223,13 +223,17 @@ function buildSearch() {
     onToggleFav: (code) => { if (app()) app().toggleFav(code); if (srchOpts.onFavs) srchOpts.onFavs(); },
   });
   srch.addEventListener("keydown", (e) => { if (e.key === "Escape" && !e.defaultPrevented) { e.preventDefault(); closeSearch(); } });
+  // build2b hook: drag the header or pull at the top to close; back gesture; page scroll lock (site/sheet.js)
+  srchCtl = window.AWXSheet ? window.AWXSheet.makeSheet(srch, { onClose: () => closeSearch(), header: ".awx-srch-head" }) : null;
 }
+let srchCtl = null;
 export function openSearch(opts = {}) {
   if (!srch) buildSearch();
   srchOpts = opts;
   srchReturn = document.activeElement;
   srch.querySelector("#navSearchT").textContent = opts.title || "Search";
   srch.hidden = false;
+  if (srchCtl) srchCtl.opened(); // build2b hook
   void srch.offsetWidth;
   srch.classList.add("open");
   untrapSrch = trapFocus(srch);
@@ -240,6 +244,7 @@ export function openSearch(opts = {}) {
 function closeSearch(returnFocus = true) {
   if (!srch || srch.hidden) return;
   srch.classList.remove("open");
+  if (srchCtl) srchCtl.closed(); // build2b hook
   srchApi.close();
   srchApi.input.blur();
   if (untrapSrch) untrapSrch();
@@ -251,10 +256,11 @@ const searchOpen = () => !!srch && !srch.hidden;
 
 // ---------- bar visibility ----------
 
-/** The bar hides while the airport sheet, Settings or search is open. */
+/** The bar hides while the airport sheet, the national list, Settings or search is open. */
 function syncBar() {
   const sw = $("sheetWrap");
-  const hide = (sw && !sw.hidden) || settingsOpen() || searchOpen();
+  const pw = $("panelWrap"); // build2b hook: the national list sheet (app.js)
+  const hide = (sw && !sw.hidden) || (pw && !pw.hidden) || settingsOpen() || searchOpen();
   nav.classList.toggle("hide", !!hide);
   if (hide) nav.setAttribute("inert", ""); else nav.removeAttribute("inert");
 }
@@ -272,6 +278,7 @@ function init() {
   initSettings({ openSearch, onToggle: () => syncBar() });
   const sw = $("sheetWrap");
   if (sw) new MutationObserver(syncBar).observe(sw, { attributes: true, attributeFilter: ["hidden"] });
+  if ($("panelWrap")) new MutationObserver(syncBar).observe($("panelWrap"), { attributes: true, attributeFilter: ["hidden"] }); // build2b hook
   window.addEventListener("hashchange", () => { closeMenu(false); show(tabFromHash(location.hash)); });
   window.addEventListener("resize", () => { if (menuOpen) placeMenu(); });
   show(tabFromHash(location.hash));

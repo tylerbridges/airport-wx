@@ -13,6 +13,7 @@ import { lampCycles, lampUrl, parseLamp, lampBlocks, ATCSCC_URL, collectAtcscc }
 import { parseOpsPlan, opsPlanNational } from "./opsplan.mjs";
 import { assemble } from "./core.mjs"; // live relay: pure assembly shared with worker/worker.mjs
 import { runGlobal } from "./global.mjs"; // build2a hook: global METAR/TAF shards for searched airports
+import { observedHours } from "./risk.mjs"; // build2b hook: observed past hours for the timeline
 import { modelInfo } from "./delay.mjs"; // phase3 hook: delay model
 import { prepareTrips } from "./trips-poll.mjs"; // trips hook: flight calendar -> trips.json + trip airports
 import { startMovement } from "./movement.mjs"; // movement hook: ADS-B departure/arrival rates -> site/data/movement.json
@@ -168,6 +169,8 @@ function liveProviders(airports, now, raw) {
       return r.status === 204 || !r.text.trim() ? { features: [] } : JSON.parse(r.text);
     },
     cwa: async () => parseJson(await get("cwa", "cwa.json", `${AWC}/cwa?format=json`)),
+    // build2b hook: the last 24 hours of METARs (observed past hours); not a status source, failure = no `observed`
+    metarHistory: async () => parseJson((await http(`${AWC}/metar?ids=${icaos}&format=json&hours=24`)).text),
   };
 }
 
@@ -226,6 +229,7 @@ function fixtureProviders(airports, now, raw) {
     },
     tcf: async () => JSON.parse(await fx("tcf", "tcf.json")),
     cwa: async () => JSON.parse(await fx("cwa", "cwa.json")),
+    metarHistory: async () => JSON.parse(await read("metar-history.json")), // build2b hook
   };
 }
 
@@ -249,6 +253,7 @@ export async function run({ fixtures = false, out = join(ROOT, "site/data/status
   const raw = makeRaw();
   const p = fixtures ? fixtureProviders(airports, now, raw) : liveProviders(airports, now, raw);
   const names = SOURCE_NAMES;
+  const histP = p.metarHistory().then((v) => ({ v }), (e) => ({ e })); // build2b hook: in parallel with the sources
   const res = Object.fromEntries(await Promise.all(names.map(async (n) => [n, await runSource(n, p[n], raw)])));
 
   const tzByIata = Object.fromEntries(airports.map((a) => [a.iata, a.tz]));
@@ -277,6 +282,14 @@ export async function run({ fixtures = false, out = join(ROOT, "site/data/status
     }),
     opsplan: opsPlanNational(res.atcscc.data?.plan ?? null, now),
   };
+  // build2b hook: observed[] per airport from the 24-hour METAR history (left out when that request fails)
+  const hist = await histP;
+  if (hist.e) console.log("observed history unavailable: " + (hist.e.message || hist.e));
+  else {
+    const by = new Map();
+    for (const m of hist.v || []) if (m && m.icaoId) (by.get(m.icaoId) || by.set(m.icaoId, []).get(m.icaoId)).push(m);
+    for (const a of status.airports) a.observed = observedHours(by.get(a.icao) || [], now);
+  }
   trips.markAirports(status.airports); // trips hook: airports added for trips carry trip: true
   await mkdir(dirname(out), { recursive: true });
   await writeFile(out, JSON.stringify(status) + "\n");

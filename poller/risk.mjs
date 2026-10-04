@@ -546,7 +546,21 @@ export function tafHour(taf, t0, t1) {
       } else items.push({ ...it, fc: true });
     }
   }
-  return { items: dedupe(items), fltCat: flightCategory(parseVisib(state.visib), ceilingOf(state.clouds)) };
+  return { items: dedupe(items), fltCat: flightCategory(parseVisib(state.visib), ceilingOf(state.clouds)), cond: state };
+}
+
+/**
+ * Prevailing conditions of a METAR or TAF state for the hour cards: {cig, vis, wdir, wspd, wgst, wx, temp}
+ * (ceiling ft, visibility sm, wind deg/kt, weather codes, °C; nulls dropped).
+ */
+export function condOf(c) {
+  if (!c) return {};
+  const o = {
+    cig: ceilingOf(c.clouds), vis: parseVisib(c.visib), wdir: c.wdir === "VRB" ? "VRB" : num(c.wdir), wspd: num(c.wspd), wgst: num(c.wgst),
+    wx: c.wxString ? String(c.wxString) : null, temp: num(c.temp),
+  };
+  for (const k of Object.keys(o)) if (o[k] == null) delete o[k];
+  return o;
 }
 
 // ---------- 24-hour build ----------
@@ -609,15 +623,17 @@ export function buildHours({
     const t1 = t0 + HOUR;
     let items = [];
     let fltCat = null;
+    let cond = null;
     // hour 0: the observation wins; the TAF only fills in when there is no current METAR
     if (taf && !(i === 0 && metar)) {
       const th = tafHour(taf, t0, t1);
-      if (th) { items.push(...th.items); fltCat = th.fltCat; }
+      if (th) { items.push(...th.items); fltCat = th.fltCat; cond = th.cond; }
     }
     if (i === 0) {
       if (metar) {
         items.push(...assessConditions(metar).map((x) => ({ ...x, fc: false })));
         fltCat = metar.fltCat || flightCategory(parseVisib(metar.visib), ceilingOf(metar.clouds));
+        cond = metar;
       }
       if (sigmet) items.push({ level: 3, text: "Convective SIGMET over airport", fixed: true });
     }
@@ -640,7 +656,7 @@ export function buildHours({
     }
     for (const x of tcfItems) if (x.from < t1 && x.to > t0) items.push({ level: x.level, text: x.text, fc: true });
     items = dedupe(items);
-    hours.push({ t: new Date(t0), items, level: levelOf(items), fltCat });
+    hours.push({ t: new Date(t0), items, level: levelOf(items), fltCat, cond: condOf(cond) });
   }
   return hours;
 }
@@ -702,7 +718,41 @@ export function summarize(hours, tz) {
 }
 
 export function hoursOutput(hours) {
-  return hours.map((h) => ({ t: h.t.toISOString(), level: h.level, reasons: uniqueItems(h.items).map((i) => i.text), fltCat: h.fltCat }));
+  return hours.map((h) => ({ t: h.t.toISOString(), level: h.level, reasons: uniqueItems(h.items).map((i) => i.text), fltCat: h.fltCat, ...(h.cond || {}) }));
+}
+
+/**
+ * Observed weather per past hour (build2b: the timeline's past hours) from one airport's METAR history
+ * (AWC JSON records, any order): the `count` hours before the current hour, oldest first. Each METAR is
+ * scored with assessConditions and filed under the hour its obsTime falls in; an hour takes the highest
+ * level of its reports, their reasons (uniqueItems), its worst flight category, the conditions of its
+ * latest report (condOf) and its highest gust. Hours with no
+ * report are left out.
+ */
+export function observedHours(metars, now = new Date(), count = 24) {
+  const cur = Math.floor(+now / HOUR) * HOUR;
+  const by = new Map();
+  const rank = { VFR: 0, MVFR: 1, IFR: 2, LIFR: 3 };
+  for (const m of metars || []) {
+    const t = toMs(m && m.obsTime);
+    if (t == null) continue;
+    const h0 = Math.floor(t / HOUR) * HOUR;
+    if (h0 >= cur || h0 < cur - count * HOUR) continue;
+    const e = by.get(h0) || { items: [], fltCat: null, last: null, lastT: -Infinity, gust: null };
+    e.items.push(...assessConditions(m));
+    if (t >= e.lastT) { e.last = m; e.lastT = t; }
+    if (num(m.wgst) != null && (e.gust == null || num(m.wgst) > e.gust)) e.gust = num(m.wgst);
+    const fc = m.fltCat || flightCategory(parseVisib(m.visib), ceilingOf(m.clouds));
+    if (e.fltCat == null || rank[fc] > rank[e.fltCat]) e.fltCat = fc;
+    by.set(h0, e);
+  }
+  return [...by.keys()].sort((a, b) => a - b).map((h0) => {
+    const e = by.get(h0);
+    const items = dedupe(e.items);
+    const cond = condOf(e.last);
+    if (e.gust != null) cond.wgst = e.gust;
+    return { t: new Date(h0).toISOString(), level: levelOf(items), reasons: uniqueItems(items).map((i) => i.text), fltCat: e.fltCat, ...cond };
+  });
 }
 
 export function compareAirports(a, b) {

@@ -103,7 +103,11 @@ test("all clear", () => {
 test("delay chance (Phase 3 hours[i].delay) is used when present and ignored otherwise", () => {
   const MSP = ap("MSP", "America/Chicago", span(1, 3, [2, ["Ceiling 800 ft"], { p: 0.45, minutes: 30, basis: "model" }]));
   const r = tripStatus({ legs: [{ from: "MSP", to: "ATL", dep: at(2), arr: at(4) }] }, by(MSP, ap("ATL", "America/New_York")), { now: NOW });
-  assert.equal(r.concerns[0].text, "Low clouds at MSP around your 6 PM departure — about 45% chance of delays.");
+  assert.equal(r.concerns[0].text, "Low clouds at MSP around your 6 PM departure — delays likely.");
+  // the page's calibrated words (site/delay.js likelihood) replace the built-in mapping; never a percentage
+  const r2 = tripStatus({ legs: [{ from: "MSP", to: "ATL", dep: at(2), arr: at(4) }] }, by(MSP, ap("ATL", "America/New_York")), { now: NOW, words: () => "Delays possible" });
+  assert.equal(r2.concerns[0].text, "Low clouds at MSP around your 6 PM departure — delays possible.");
+  assert.ok(!/%/.test(r.top + r.concerns.map((c) => c.text).join(" ")));
   assert.equal(r.legs[0].depAt.delay.p, 0.45);
   const plain = ap("MSP", "America/Chicago", span(1, 3, [2, ["Ceiling 800 ft"]]));
   assert.equal(tripStatus({ legs: [{ from: "MSP", to: "ATL", dep: at(2), arr: at(4) }] }, by(plain, ap("ATL", "America/New_York")), { now: NOW }).concerns[0].text,

@@ -27,6 +27,9 @@
   const HOUR = 3600e3;
   const REFRESH_MS = 120e3;
   const STALE_MS = 30 * 60e3;
+  const CATS = window.AWXCats;
+  const USER_TZ = (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch (e) { return "UTC"; } })();
+  const reduced = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const state = {
     data: null,
@@ -40,6 +43,42 @@
     build: null, // live relay: the build's status.json; `data` is it with live airports merged in
     liveWx: {}, // live relay: fresh shard-shaped entries for starred non-major airports (site/searched.js)
   };
+
+  // ---------- settings (build2b: the state lives in site/prefs.js, window.AWXPrefs) ----------
+
+  const PREFS = window.AWXPrefs || memoryPrefs();
+  /** Fallback when prefs.js didn't load (module scripts blocked): defaults, kept for this page only. */
+  function memoryPrefs() {
+    const keys = CATS.KEYS;
+    let p = { mode: "traveler", show: Object.fromEntries(keys.map((k) => [k, true])), theme: "auto", clock: 12, codes: "iata", timeRef: "airport" };
+    const subs = new Set();
+    return {
+      getPrefs: () => Object.assign({}, p, { show: Object.assign({}, p.show) }),
+      setPref: (k, v) => { p = Object.assign({}, p, { [k]: k === "show" ? Object.assign({}, p.show, v) : v }); subs.forEach((f) => f(p, k)); return p; },
+      onPrefs: (f) => { subs.add(f); return () => subs.delete(f); },
+    };
+  }
+  // internal view of the prefs: hide = categories switched off; tz "mine" = timeRef "mine"
+  const S = { mode: "traveler", hide: {}, theme: "auto", clock: "12", codes: "iata", tz: "local" };
+  function syncPrefs() {
+    const p = PREFS.getPrefs();
+    S.mode = p.mode === "aviation" ? "aviation" : "traveler";
+    S.theme = p.theme || "auto";
+    S.clock = String(p.clock) === "24" ? "24" : "12";
+    S.codes = p.codes === "icao" ? "icao" : "iata";
+    S.tz = p.timeRef === "mine" ? "mine" : "local";
+    S.hide = {};
+    for (const k of CATS.KEYS) if (p.show && p.show[k] === false) S.hide[k] = true;
+  }
+  syncPrefs();
+  PREFS.onPrefs(() => {
+    syncPrefs();
+    fmtCache.clear();
+    viewCache = new WeakMap();
+    render();
+  });
+  const aviation = () => S.mode === "aviation";
+  // the theme (data-theme on :root) is applied by index.html's pre-paint script and the nav shell (site/nav.js)
 
   // ---------- helpers ----------
 
@@ -59,6 +98,35 @@
     return el;
   }
   const $ = (id) => document.getElementById(id);
+  const NS = "http://www.w3.org/2000/svg";
+  /** Small stroke icon from path data (24×24). */
+  function icon(d, cls) {
+    const svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+    svg.setAttribute("class", "ico" + (cls ? " " + cls : ""));
+    for (const p of [].concat(d)) {
+      const e = document.createElementNS(NS, "path");
+      e.setAttribute("d", p);
+      svg.append(e);
+    }
+    return svg;
+  }
+  const ICONS = {
+    clock: ["M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18z", "M12 7v5l3 2"],
+    tower: ["M9 21l1.5-11h3L15 21", "M7 10h10", "M8 6.5a4 4 0 0 1 8 0", "M5.5 4a7 7 0 0 1 13 0"],
+    alert: ["M12 3.5L2.8 19.5h18.4z", "M12 10v4.5", "M12 17.2v.3"],
+    bolt: ["M13 2.5L5 13.5h6l-1 8 8-11h-6z"],
+    cloud: ["M7 18h10a4 4 0 0 0 .6-8A6 6 0 0 0 6 9.5 4.3 4.3 0 0 0 7 18z"],
+    radar: ["M12 21a9 9 0 1 1 9-9", "M12 16a4 4 0 1 1 4-4", "M12 12l7-7"],
+    plane: ["M21 15.5v-2l-8-5V3.5a1 1 0 0 0-2 0v5l-8 5v2l8-2.5v5l-2.2 1.6V21l3.2-1 3.2 1v-1.4L13 18v-5z"],
+    gear: ["M12 9a3 3 0 1 0 0 6a3 3 0 1 0 0-6z", "M19.4 13.5l1.6 1.2-1.8 3.1-1.9-.7a7 7 0 0 1-1.6.9L15.4 20h-3.6l-.3-2a7 7 0 0 1-1.6-.9l-1.9.7-1.8-3.1 1.6-1.2a7 7 0 0 1 0-1.9L6.2 10.4 8 7.3l1.9.7a7 7 0 0 1 1.6-.9l.3-2h3.6l.3 2a7 7 0 0 1 1.6.9l1.9-.7 1.8 3.1-1.6 1.2a7 7 0 0 1 0 1.9z"],
+    ops: ["M4 19h16", "M6 19V9h3v10", "M11 19V5h3v14", "M16 19v-7h3v7"],
+    sun: ["M12 8a4 4 0 1 0 0 8a4 4 0 1 0 0-8z", "M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8"],
+    next: ["M4 12h13", "M13 6l6 6-6 6"],
+    grip: ["M5 8h14", "M5 12h14", "M5 16h14"],
+    trash: ["M5 7h14", "M10 7V4.5h4V7", "M7 7l1 13h8l1-13"],
+  };
 
   function loadFavs() {
     try {
@@ -80,28 +148,86 @@
     saveFavs();
     render();
   }
+  // ---------- time (build2b: display zone, 12/24-hour, US zone abbreviations) ----------
 
   const fmtCache = new Map();
   function fmt(tz, opts, key) {
-    const k = tz + key;
-    if (!fmtCache.has(k)) fmtCache.set(k, new Intl.DateTimeFormat("en-US", Object.assign({ timeZone: tz }, opts)));
+    const k = tz + "|" + key + "|" + S.clock;
+    if (!fmtCache.has(k)) {
+      let f;
+      const o = Object.assign({ timeZone: tz }, opts);
+      if (o.hour) { delete o.hour12; o.hourCycle = S.clock === "24" ? "h23" : "h12"; }
+      try { f = new Intl.DateTimeFormat("en-US", o); } catch (e) { f = new Intl.DateTimeFormat("en-US", Object.assign(o, { timeZone: "UTC" })); }
+      fmtCache.set(k, f);
+    }
     return fmtCache.get(k);
   }
-  const tidy = (s) => s.replace(/[  ]/g, " ");
+  const tidy = (s) => s.replace(/[  ]/g, " ");
+  /** Zone used to show an airport's times: its own, or the device's ("My time zone"). */
+  const dispTz = (a) => (S.tz === "mine" ? USER_TZ : (a && a.tz) || "UTC");
   function clock(ms, tz) {
-    return tidy(fmt(tz, { hour: "numeric", minute: "2-digit", hour12: true }, "hm").format(ms)).replace(":00 ", " ");
+    const s = tidy(fmt(tz, { hour: "numeric", minute: "2-digit" }, "hm").format(ms));
+    return S.clock === "24" ? s.replace(/^24:/, "00:") : s.replace(":00 ", " ");
   }
   function hourLabel(ms, tz) {
-    return tidy(fmt(tz, { hour: "numeric", hour12: true }, "h").format(ms));
+    if (S.clock === "24") return clock(ms, tz).replace(/:\d\d$/, ":00");
+    return tidy(fmt(tz, { hour: "numeric" }, "h").format(ms));
+  }
+  /** Tick label: "12a", "6p" (24-hour: "00", "18"). */
+  function tickLabel(ms, tz) {
+    const s = hourLabel(ms, tz);
+    if (S.clock === "24") return s.slice(0, 2);
+    return s.replace(" AM", "a").replace(" PM", "p");
   }
   function dayClock(ms, tz) {
-    return tidy(fmt(tz, { weekday: "short", hour: "numeric", minute: "2-digit", hour12: true }, "wh").format(ms)).replace(":00 ", " ");
+    return fmt(tz, { weekday: "short" }, "wd").format(ms) + " " + clock(ms, tz);
   }
-  function tzAbbr(ms, tz) {
-    const p = fmt(tz, { timeZoneName: "short" }, "z").formatToParts(ms).find((x) => x.type === "timeZoneName");
-    const n = p ? p.value : "";
-    const map = { EDT: "ET", EST: "ET", CDT: "CT", CST: "CT", MDT: "MT", MST: "MT", PDT: "PT", PST: "PT", AKDT: "AKT", AKST: "AKT" };
-    return map[n] || n;
+  const dayKey = (ms, tz) => fmt(tz, { year: "numeric", month: "numeric", day: "numeric" }, "ymd").format(ms);
+  /** Minutes east of UTC for tz at ms. */
+  function tzOffset(ms, tz) {
+    const p = {};
+    for (const x of fmt(tz, { year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric" }, "full24x").formatToParts(ms)) p[x.type] = x.value;
+    let hr = Number(p.hour) % 12;
+    if (S.clock !== "24" && /PM/i.test(p.dayPeriod || "")) hr += 12;
+    if (S.clock === "24") hr = Number(p.hour) % 24;
+    const u = Date.UTC(Number(p.year), Number(p.month) - 1, Number(p.day), hr, Number(p.minute), Number(p.second));
+    return Math.round((u - Math.floor(ms / 1000) * 1000) / 60e3);
+  }
+  /** Instant of a local wall-clock time in tz. */
+  function localToUtc(y, mo, d, hr, mi, tz) {
+    const g = Date.UTC(y, mo - 1, d, hr, mi);
+    const o1 = tzOffset(g, tz);
+    let t = g - o1 * 60e3;
+    const o2 = tzOffset(t, tz);
+    if (o2 !== o1) t = g - o2 * 60e3;
+    return t;
+  }
+  function ymd(ms, tz) {
+    const p = {};
+    for (const x of fmt(tz, { year: "numeric", month: "numeric", day: "numeric" }, "ymdp").formatToParts(ms)) p[x.type] = Number(x.value);
+    return p;
+  }
+  /** Local midnight (dayOff days from the day of ms) in tz. */
+  function localMidnight(ms, tz, dayOff = 0) {
+    const p = ymd(ms, tz);
+    return localToUtc(p.year, p.month, p.day + dayOff, 0, 0, tz);
+  }
+  const US_ZONE = { 240: "A", 300: "E", 360: "C", 420: "M", 480: "P", 540: "AK", 600: "H" };
+  /** "CDT", "EST", "HST" for US zones (offset + DST), else Intl's short name ("GMT+1"). */
+  function zoneAbbr(ms, tz) {
+    try {
+      if (/^(America|US|Pacific\/Honolulu|Pacific\/Johnston)/.test(tz)) {
+        const y = new Date(ms).getUTCFullYear();
+        const jan = tzOffset(Date.UTC(y, 0, 15), tz), jul = tzOffset(Date.UTC(y, 6, 15), tz);
+        const std = Math.min(jan, jul);
+        const L = US_ZONE[-std];
+        if (L) return L + (tzOffset(ms, tz) > std ? "DT" : "ST");
+      }
+      if (tz === "Pacific/Guam" || tz === "Pacific/Saipan") return "ChST";
+      if (tz === "UTC" || tz === "Etc/UTC") return "UTC";
+      const p = fmt(tz, { timeZoneName: "short" }, "z").formatToParts(ms).find((x) => x.type === "timeZoneName");
+      return p ? p.value : "";
+    } catch (e) { return ""; }
   }
 
   function ago(ms) {
@@ -112,12 +238,82 @@
     if (hrs < 24) return hrs + " hr" + (m % 60 ? " " + (m % 60) + " min" : "") + " ago";
     return Math.floor(hrs / 24) + " d ago";
   }
+  /** Monospace source-line age: "3M AGO", "1H 5M AGO", "JUST NOW". */
+  function agoShort(ms) {
+    const m = Math.floor(Math.max(0, ms) / 60e3);
+    if (m < 1) return "JUST NOW";
+    if (m < 60) return m + "M AGO";
+    const hr = Math.floor(m / 60);
+    return hr < 24 ? hr + "H" + (m % 60 ? " " + (m % 60) + "M" : "") + " AGO" : Math.floor(hr / 24) + "D AGO";
+  }
 
   const refNow = () => (state.sample && state.data ? Date.parse(state.data.generated) : Date.now());
+  /** The time the reasons' texts were written relative to (their "until 7 PM" is after this). */
+  const dataRef = () => (state.data && Date.parse(state.data.live || state.data.generated)) || refNow();
+
+  /** "3 AM", "tomorrow 6 PM", "Mon 6 PM" relative to now, in tz. */
+  function whenLabel(ms, tz) {
+    const ref = refNow();
+    if (dayKey(ms, tz) === dayKey(ref, tz)) return clock(ms, tz);
+    if (dayKey(ms, tz) === dayKey(ref + 24 * HOUR, tz)) return "tomorrow " + clock(ms, tz);
+    return fmt(tz, { weekday: "short" }, "wd").format(ms) + " " + clock(ms, tz);
+  }
+
+  const WD = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 0 };
+  const TIME_RE = /\b(?:(Mon|Tue|Wed|Thu|Fri|Sat|Sun) )?(\d{1,2})(?::(\d\d))?(?:–(\d{1,2})(?::(\d\d))?)? (AM|PM)\b(?: (ET|CT|MT|PT|AKT|HT|[A-Z]{1,2}[SD]T))?( tomorrow)?/g;
+  /**
+   * Times written into reason texts by the poller are the airport's local 12-hour clock ("until 7:40 PM CT",
+   * "forecast 4–7 PM", "Sun 2:05 AM to Sun 10:05 AM"). Rewrites them for the display settings: zone suffix as
+   * "CDT"; with "My time zone" or 24-hour clock each time is resolved to an instant and written again.
+   */
+  function retime(text, a) {
+    const s = String(text || "");
+    if (!a || !/\d (AM|PM)\b/.test(s)) return s;
+    const src = a.tz || "UTC";
+    const tz = dispTz(a);
+    const convert = S.clock === "24" || tz !== src;
+    const ref = dataRef();
+    const base = ymd(ref, src);
+    const resolve = (h12, mi, ap, wd, tomorrow, after) => {
+      const hr = (Number(h12) % 12) + (ap === "PM" ? 12 : 0);
+      const cands = [];
+      for (let d = -1; d <= 7; d++) cands.push({ d, t: localToUtc(base.year, base.month, base.day + d, hr, Number(mi || 0), src) });
+      if (wd) {
+        const c = cands.find((x) => fmt(src, { weekday: "short" }, "wd").format(x.t) === wd && x.t >= ref - 24 * HOUR);
+        if (c) return c.t;
+      }
+      if (tomorrow) return cands.find((x) => x.d === 1).t;
+      const min = after != null ? after : ref - 3 * HOUR;
+      return (cands.find((x) => x.t >= min) || cands[1]).t;
+    };
+    return s.replace(TIME_RE, (all, wd, h1, m1, h2, m2, ap, zone, tmw) => {
+      if (!convert) {
+        if (!zone) return all;
+        const t = resolve(h2 || h1, h2 ? m2 : m1, ap, wd, !!tmw);
+        return all.replace(" " + zone, " " + zoneAbbr(t, src));
+      }
+      const end = resolve(h2 || h1, h2 ? m2 : m1, ap, wd, !!tmw);
+      let start = null;
+      if (h2) {
+        start = resolve(h1, m1, ap, wd, !!tmw);
+        if (start > end) start -= 24 * HOUR;
+      }
+      const one = (t) => (dayKey(t, tz) === dayKey(refNow(), tz) ? clock(t, tz) : whenLabel(t, tz));
+      let out;
+      if (start != null) {
+        const a1 = one(start), b1 = one(end);
+        const same = dayKey(start, tz) === dayKey(end, tz) && S.clock !== "24" && a1.slice(-2) === b1.slice(-2) && !/ /.test(a1.slice(0, -3));
+        out = same ? a1.slice(0, -3) + "–" + b1 : a1 + " – " + b1;
+      } else out = one(end);
+      if (zone && tz === src) out += " " + zoneAbbr(end, src);
+      return out;
+    }).replace(/ – tomorrow (\d)/g, " – $1").replace(/(\d{1,2}(?::\d\d)? [AP]M) tomorrow tomorrow/g, "$1 tomorrow");
+  }
 
   // ---------- plain wording (the data keeps aviation codes for history; the page shows plain English) ----------
 
   const mph = (kt) => Math.round((Number(kt) * 1.15) / 5) * 5;
+  const mph1 = (kt) => Math.round(Number(kt) * 1.15);
   function visNum(v) {
     let n = 0;
     for (const p of String(v).trim().split(/\s+/)) {
@@ -130,27 +326,39 @@
     let s = String(r || "");
     if (/^Convective SIGMET over airport/.test(s)) {
       const ends = ((a && a.sigmets) || []).map((x) => Date.parse(x.validTo)).filter(Number.isFinite);
-      return "Thunderstorms over the airport" + (ends.length ? " until " + clock(Math.max(...ends), a.tz) : "");
+      return "Thunderstorms over the airport" + (ends.length ? " until " + clock(Math.max(...ends), dispTz(a)) : "");
     }
     const c = /^(Chance of )?[Cc]eiling ([\d,]+) ft(.*)$/.exec(s);
     if (c) {
       const ft = Number(c[2].replace(/,/g, ""));
       if (ft >= 1000) return null;
       const w = ft < 500 ? "very low clouds" : "low clouds";
-      return (c[1] ? "Chance of " + w : cap(w)) + c[3];
+      return retime((c[1] ? "Chance of " + w : cap(w)) + c[3], a);
     }
     s = s.replace(/\b([Vv])isibility ((?:\d+ )?\d+(?:\/\d+)?) sm\b/g, (all, V, v) =>
       visNum(v) < 1 ? (V === "V" ? "Poor visibility" : "poor visibility") : `${V}isibility about ${v} ${visNum(v) === 1 ? "mile" : "miles"}`);
     s = s.replace(/\bThunderstorm gusts (\d+) kt\b/g, (all, n) => `Thunderstorm wind gusts to ${mph(n)} mph`);
     s = s.replace(/\b([Gg])usts (\d+) kt\b/g, (all, G, n) => `${G === "G" ? "Wind gusts" : "wind gusts"} to ${mph(n)} mph`);
     s = s.replace(/^Mist\b/, "Light fog / haze").replace(/\bmist\b/g, "light fog / haze");
-    s = s.replace(/^Center weather advisory: IFR conditions/, "Center weather advisory: low clouds or poor visibility");
+    s = s.replace(/^Center weather advisory: IFR conditions/, "Low clouds or poor visibility advisory").replace(/^Center weather advisory: thunderstorms/, "Thunderstorm advisory");
     s = s.replace(/^Thunderstorms, (\w+) coverage \(TCF\)/, "Thunderstorms forecast, $1 coverage");
     s = s.replace(/ \((LAMP|TCF|ATCSCC)\)/g, "");
     s = s.replace(/\b(\d+)h (\d+)m\b/g, "$1 hr $2 min").replace(/\b(\d+)h\b/g, "$1 hr").replace(/(\d)m\b/g, "$1 min");
-    return s;
+    return retime(s, a);
   }
   const plainList = (arr, a) => uniq((arr || []).map((r) => plainReason(r, a)).filter(Boolean));
+  /**
+   * A reason inside a card that already states its time window: drop the repeated time phrase ("Very low clouds
+   * forecast Sun 6 AM – 12 PM" -> "Very low clouds"; "Rain until 8 PM" -> "Rain"). Warnings and programs keep their
+   * own end times; only "forecast …" is dropped from them.
+   */
+  function shortRaw(r) {
+    let t = String(r || "").replace(/\s+forecast\b.*$/, "");
+    if (!CATS.reason(r).src) t = t.replace(/\s+(until|from)\s.*$/, "").replace(/\s+for the next \d+ hours$/, "");
+    else if (!/^(Ground stop|Ground delay program|Delays\b|Airport closed)/.test(t)) t = t.replace(/\s+until\s[^(]*?(?=\s*\(|$)/, "").replace(/\s+\S{3} \d.*? to .*$/, "");
+    return t.replace(/^FAA plans a possible /, "Possible ").replace(/^Possible ground stop or delay program/, "Possible ground stop or delay program");
+  }
+  const shortList = (arr, a) => plainList((arr || []).map(shortRaw), a);
   /** Badge words: "GDP avg 49m" -> "Arrival delays ~49 min". */
   function badgeText(b) {
     const s = String(b || "");
@@ -159,6 +367,50 @@
     return { "GROUND STOP": "Ground stop", DELAYS: "Delays", CLOSED: "Closed", "RUNWAY CLOSED": "Runway closed" }[s.toUpperCase()] || s;
   }
   const lv = (n) => "l" + Math.max(0, Math.min(4, n | 0));
+  const cap = (x) => (x ? x.charAt(0).toUpperCase() + x.slice(1) : x);
+  const uniq = (arr) => [...new Set(arr || [])];
+  const f1 = (c) => Math.round((c * 9) / 5 + 32);
+  /** Code shown for an airport: IATA (default) or ICAO (settings). */
+  const codeOf = (a) => (S.codes === "icao" && a.icao ? a.icao : a.iata || a.code || a.icao);
+
+  /** Short plain conditions for the lens label and the summary: "Light rain, low clouds", "Partly cloudy". */
+  function shortCond(c, raw) {
+    if (!c) return "";
+    const parts = [];
+    for (const tok of String(c.wx || "").trim().split(/\s+/).filter(Boolean)) {
+      const m = /^(\+|-|VC)?([A-Z]+)$/.exec(tok);
+      if (!m || m[2].startsWith("RE")) continue;
+      const k = m[2], i = m[1] || "";
+      const deg = i === "+" ? "Heavy " : i === "-" ? "Light " : "";
+      let p = null;
+      if (/TS/.test(k)) p = i === "VC" ? "Storms nearby" : (i === "+" ? "Heavy thunderstorms" : "Thunderstorms");
+      else if (/FZRA/.test(k)) p = "Freezing rain";
+      else if (/FZDZ/.test(k)) p = "Freezing drizzle";
+      else if (/FZFG/.test(k)) p = "Freezing fog";
+      else if (/SN/.test(k)) p = deg + "snow";
+      else if (/PL/.test(k)) p = "Sleet";
+      else if (/SHRA/.test(k)) p = i === "VC" ? "Showers nearby" : deg + "showers";
+      else if (/RA/.test(k)) p = deg + "rain";
+      else if (/DZ/.test(k)) p = deg + "drizzle";
+      else if (/FG/.test(k)) p = i === "VC" ? "Fog nearby" : "Fog";
+      else if (/BR/.test(k)) p = "Mist";
+      else if (/HZ/.test(k)) p = "Haze";
+      else if (/FU/.test(k)) p = "Smoke";
+      if (p && !parts.includes(cap(p.trim()))) parts.push(cap(p.trim()));
+    }
+    const cig = c.cig != null ? c.cig : c.ceiling;
+    if (cig != null && cig < 1000) parts.push(cig < 500 ? "very low clouds" : "low clouds");
+    if (!parts.length) {
+      const covers = (String(raw || "").match(/\b(FEW|SCT|BKN|OVC|VV)\d{3}/g) || []).map((x) => x.slice(0, 3));
+      parts.push(covers.includes("OVC") || covers.includes("VV0") ? "Overcast" : covers.includes("BKN") ? "Mostly cloudy" : covers.includes("SCT") ? "Partly cloudy"
+        : covers.includes("FEW") ? "Mostly clear" : cig != null ? "Cloudy" : raw ? "Clear" : "No significant weather");
+    }
+    const g = c.wgst != null ? c.wgst : c.gust;
+    if (g != null && g >= 25) parts.push("gusty");
+    return cap(parts.slice(0, 3).map((p, i) => (i ? p.charAt(0).toLowerCase() + p.slice(1) : p)).join(", "));
+  }
+  /** status.json metar -> the hour-condition shape {cig, vis, wdir, wspd, wgst, wx, temp}. */
+  const metarCond = (m) => (m ? { cig: m.ceiling, vis: m.visib, wdir: m.wind && m.wind.dir, wspd: m.wind && m.wind.spd, wgst: m.gust, wx: m.wx, temp: m.temp } : null);
 
   // ---------- data ----------
 
@@ -218,6 +470,7 @@
     const b = state.build;
     const L = live.data;
     state.liveWx = {};
+    viewCache = new WeakMap();
     if (!b || state.sample || live.failed || !L || !(Date.parse(L.generated) >= Date.parse(b.generated))) { state.data = b; return; }
     const by = new Map(L.airports.map((a) => [a.iata, a]));
     const airports = b.airports.map((a) => by.get(a.iata) || a)
@@ -239,6 +492,7 @@
   }
 
   let loading = false;
+  let reloading = false; // the refresh button is reloading the page: keep the spinner
   async function load(manual) {
     if (loading) return;
     loading = true;
@@ -266,9 +520,62 @@
       mergeLive();
       loading = false;
       state.loaded = true;
-      setTimeout(() => $("refresh").classList.remove("spin"), manual ? 500 : 0);
+      setTimeout(() => { if (!reloading) $("refresh").classList.remove("spin"); }, manual ? 500 : 0);
       render();
     }
+  }
+
+  // ---------- disruption filter (build2b: Settings → Show these disruptions) ----------
+
+  let viewCache = new WeakMap();
+  const anyHidden = () => CATS.KEYS.some((k) => S.hide[k]);
+  const isHidden = (cat) => CATS.hidden(cat, S.hide);
+  /**
+   * The airport as shown under the current settings: reasons, programs, alerts and notices in hidden
+   * categories removed, hour levels recomputed from what is left (site/cats.js), now/peak recomputed.
+   * Ground stops and full closures are never removed. `hiddenCats` lists the categories that removed something.
+   */
+  function view(a) {
+    const sig = JSON.stringify(S.hide);
+    const c = viewCache.get(a);
+    if (c && c.sig === sig) return c.v;
+    const hiddenCats = new Set();
+    const note = (cat) => hiddenCats.add(cat);
+    let v;
+    if (!anyHidden()) v = Object.assign({}, a, { hiddenCats });
+    else {
+      const fh = (hr) => {
+        const f = CATS.filterHour(hr, S.hide);
+        if (f.dropped) for (const r of hr.reasons || []) { const k = CATS.reason(r).cat; if (isHidden(k)) note(k); }
+        return Object.assign({}, hr, { level: f.level, reasons: f.reasons });
+      };
+      const hours = a.hours.map(fh);
+      const observed = (a.observed || []).map(fh);
+      let pi = 0;
+      hours.forEach((x, i) => { if (x.level > hours[pi].level) pi = i; });
+      const peak = hours[pi].t === a.peak.at
+        ? { level: hours[pi].level, at: a.peak.at, reasons: fh(a.peak).reasons }
+        : { level: hours[pi].level, at: hours[pi].t, reasons: hours[pi].reasons };
+      const keep = (arr, catOf) => (arr || []).filter((x) => { const k = catOf(x); if (isHidden(k)) { note(k); return false; } return true; });
+      const spcCat = a.spc === "TSTM" ? "tstm" : a.spc ? "storms" : null;
+      const op = a.opsplan ? Object.assign({}, a.opsplan, { items: keep(a.opsplan.items, CATS.planItem) }) : null;
+      v = Object.assign({}, a, {
+        hours, observed, peak,
+        now: { level: hours[0].level, reasons: fh(a.now).reasons },
+        faa: keep(a.faa, CATS.faa),
+        atcscc: keep(a.atcscc, CATS.adv),
+        alerts: keep(a.alerts, (x) => CATS.alert(x.event)),
+        spc: isHidden(spcCat) ? (note(spcCat), null) : a.spc,
+        sigmets: isHidden("storms") && (a.sigmets || []).length ? (note("storms"), []) : a.sigmets,
+        tcf: isHidden("storms") && (a.tcf || []).length ? (note("storms"), []) : a.tcf,
+        cwa: keep(a.cwa, (x) => (/^(TS|CONV|THUNDER|CB)/i.test(x.hazard || "") ? "storms" : "fog")),
+        opsplan: op,
+        hiddenCats,
+      });
+    }
+    v._src = a;
+    viewCache.set(a, { sig, v });
+    return v;
   }
 
   // ---------- rendering ----------
@@ -277,11 +584,13 @@
     renderHeader();
     renderSeg();
     renderBanner();
+    renderNational();
     renderList();
     renderNotes();
     if (state.openIata) renderSheet(true);
     if (window.AWXExtra) window.AWXExtra.render(); // build2a hook: search + searched/starred non-major airports (site/searched.js)
     if (window.AWXTrips) window.AWXTrips.render(); // trips hook: "Your trips" (site/trips.js)
+    if (panel.kind === "national") renderNationalPanel();
   }
 
   function renderHeader() {
@@ -298,19 +607,26 @@
     if (age > STALE_MS) el.classList.add("stale");
   }
 
+  /** My airports in the favourites' order; All / At risk sorted by level under the current settings. */
+  /** Airports for the lists and counts: trip-only airports stay off unless starred (trips hook). */
+  const listed = () => ((state.data && state.data.airports) || []).filter((a) => !a.trip || state.favs.includes(a.iata));
   function visibleAirports() {
-    const all = ((state.data && state.data.airports) || []).filter((a) => !a.trip || state.favs.includes(a.iata)); // trips hook: trip-only airports stay off the lists
-    if (state.filter === "mine") return all.filter((a) => state.favs.includes(a.iata));
-    if (state.filter === "risk") return all.filter((a) => a.peak.level >= 2);
-    return all;
+    const all = listed();
+    if (state.filter === "mine") {
+      const by = new Map(all.map((a) => [a.iata, a]));
+      return state.favs.map((c) => by.get(c)).filter(Boolean);
+    }
+    const sorted = all.slice().sort((x, y) => view(y).peak.level - view(x).peak.level || view(y).now.level - view(x).now.level || x.iata.localeCompare(y.iata));
+    if (state.filter === "risk") return sorted.filter((a) => view(a).peak.level >= 2);
+    return sorted;
   }
 
   function renderSeg() {
-    const all = ((state.data && state.data.airports) || []).filter((a) => !a.trip || state.favs.includes(a.iata)); // trips hook
+    const all = listed(); // trips hook
     const counts = {
       mine: all.filter((a) => state.favs.includes(a.iata)).length,
       all: all.length,
-      risk: all.filter((a) => a.peak.level >= 2).length,
+      risk: all.filter((a) => view(a).peak.level >= 2).length,
     };
     const tabs = [["mine", "My airports"], ["all", "All"], ["risk", "At risk"]];
     const seg = $("seg");
@@ -329,7 +645,6 @@
     const kids = [];
     if (state.sample) kids.push(h("div", { class: "banner" }, h("b", {}, "Sample data. "), "Live data isn't available yet; this is a frozen example snapshot."));
     if (window.AWXTest && AWXTest.name) kids.push(h("div", { class: "banner" }, h("b", {}, "Test scenario: " + ((state.data && state.data.scenario && state.data.scenario.title) || AWXTest.name) + " "), "(not live)")); // build2a hook
-    const mvAlert = window.AWXMovement && state.data ? AWXMovement.alerts() : null; if (mvAlert) kids.push(mvAlert); // movement hook: airline alerts (into #natstrip instead when it exists)
     b.replaceChildren(...kids);
   }
 
@@ -349,7 +664,9 @@
       list.replaceChildren(h("div", { class: "empty" }, msg));
       return;
     }
-    list.replaceChildren(...items.map(card));
+    list.classList.toggle("mine", state.filter === "mine");
+    list.replaceChildren(...items.map((a, i) => card(a, i, items.length)));
+    requestAnimationFrame(placeLenses);
   }
 
   function renderNotes() {
@@ -365,6 +682,7 @@
       for (const k of stale) kids.push(h("p", {}, SOURCE_NAMES[k] + ": live update failed, showing the last build")); // live relay
     }
     if (state.fetchError && d) kids.push(h("p", {}, state.fetchError + "; showing the last data"));
+    if (d && anyHidden()) kids.push(h("p", {}, "Some disruption types are hidden in Settings: " + CATS.KEYS.filter((k) => S.hide[k]).map((k) => CATS.LABELS[k]).join(", ") + ". Ground stops and airport closures are always shown."));
     n.replaceChildren(...kids);
   }
 
@@ -391,14 +709,6 @@
   function laterPeak(a) {
     return a.peak.level > a.now.level && a.peak.at !== a.hours[0].t;
   }
-  /** "3 AM", "tomorrow 6 PM", "Mon 6 PM" relative to the reference time, in the airport's zone. */
-  function whenLabel(ms, tz) {
-    const day = (x) => fmt(tz, { year: "numeric", month: "numeric", day: "numeric" }, "ymd").format(x);
-    const ref = refNow();
-    if (day(ms) === day(ref)) return clock(ms, tz);
-    if (day(ms) === day(ref + 24 * HOUR)) return "tomorrow " + clock(ms, tz);
-    return fmt(tz, { weekday: "short" }, "wd").format(ms) + " " + clock(ms, tz);
-  }
   /** End of the run of hours at the current level. */
   function levelEnd(a) {
     const l0 = a.hours[0].level;
@@ -406,26 +716,24 @@
     while (j + 1 < a.hours.length && a.hours[j + 1].level === l0) j++;
     return Date.parse(a.hours[j].t) + HOUR;
   }
-  /** "4–7 PM" (or "tomorrow 2–5 AM") for the run of peak-level hours starting at the peak. */
+  /** "4–7 PM" (or "tomorrow 2–5 AM") for the run of peak-level hours starting at the peak, in the display zone. */
   function peakRange(a) {
-    const tz = a.tz;
+    const tz = dispTz(a);
     let p = a.hours.findIndex((x) => x.t === a.peak.at);
     if (p < 0) p = 0;
     let q = p;
     while (q + 1 < a.hours.length && a.hours[q + 1].level === a.peak.level) q++;
     const start = Date.parse(a.hours[p].t);
     const end = Date.parse(a.hours[q].t) + HOUR;
-    const day = (x) => fmt(tz, { year: "numeric", month: "numeric", day: "numeric" }, "ymd").format(x);
     const sa = clock(start, tz), sb = clock(end, tz);
     const w = whenLabel(start, tz);
     const prefix = w.indexOf(" ") > 0 && !/^\d/.test(w) ? w.slice(0, w.indexOf(" ")) + " " : "";
     // compress "4–7 PM" only on the same day and the same AM/PM half; else "11 PM – 1 AM tomorrow"
-    if (day(start) === day(end) && sa.split(" ").pop() === sb.split(" ").pop()) return prefix + sa.slice(0, sa.lastIndexOf(" ")) + "–" + sb;
-    if (day(start) === day(end)) return prefix + sa + " – " + sb;
+    if (dayKey(start, tz) === dayKey(end, tz) && S.clock !== "24" && sa.split(" ").pop() === sb.split(" ").pop()) return prefix + sa.slice(0, sa.lastIndexOf(" ")) + "–" + sb;
+    if (dayKey(start, tz) === dayKey(end, tz)) return prefix + sa + " – " + sb;
     const wb = whenLabel(end, tz);
     return prefix + sa + " – " + (/^\d/.test(wb) ? wb : wb.slice(wb.indexOf(" ") + 1) + " " + wb.slice(0, wb.indexOf(" ")));
   }
-  const uniq = (arr) => [...new Set(arr || [])];
 
   // ---------- LAMP ----------
 
@@ -439,6 +747,9 @@
     }
     return p;
   }
+  function lampAt(a, ms) {
+    return ((a.lamp && a.lamp.hours) || []).find((x) => { const t = Date.parse(x.t); return t > ms && t <= ms + HOUR; }) || null;
+  }
   /** Flight category from LAMP ceiling (1-8) and visibility (1-7) categories. */
   function lampCat(x) {
     const c = x.cig == null ? 9 : x.cig, v = x.vis == null ? 9 : x.vis;
@@ -448,101 +759,609 @@
     return x.cig == null && x.vis == null ? null : "VFR";
   }
 
-  function timeline(a, big, onPick) {
-    const hours = a.hours;
-    const tz = a.tz;
-    const t0 = Date.parse(hours[0].t);
-    const frac = Math.max(0, Math.min(1, (refNow() - t0) / (hours.length * HOUR)));
-    const segs = hours.map((hr, i) => {
-      const top = plainList(hr.reasons, a)[0];
-      const label = hourLabel(Date.parse(hr.t), tz) + ": " + LEVELS[hr.level].label + (top ? " — " + top : "");
-      if (big) {
-        return h("button", { type: "button", class: "s " + lv(hr.level), "aria-label": label, "aria-pressed": "false", "data-i": i,
-          onclick: (e) => onPick && onPick(i, e.currentTarget) });
+  // ---------- timeline: the local calendar day (build2b) ----------
+
+  /**
+   * Slots for one calendar day in the display zone (dayOff 0 = today, 1 = tomorrow): one per hour from
+   * local midnight to the next. Past hours come from `observed` (METAR history), the current and later
+   * hours from the forecast `hours`. kind: obs | now | fc | none (past, no report) | na (no forecast yet).
+   */
+  function daySlots(a, dayOff = 0) {
+    const v = view(a);
+    const tz = dispTz(a);
+    const now = refNow();
+    const start = localMidnight(now, tz, dayOff);
+    const end = localMidnight(now, tz, dayOff + 1);
+    // data hours by their offset from the list's first hour; slots map to data hours through the hour that holds
+    // now (test scenarios shift every time by the same amount, so their hours aren't on the clock hour)
+    const index = (list) => {
+      const t0 = list.length ? Date.parse(list[0].t) : 0;
+      const m = new Map(list.map((x) => [Math.round((Date.parse(x.t) - t0) / HOUR), x]));
+      return (t) => m.get(Math.round((t - t0) / HOUR)) || null;
+    };
+    const fcAt = index(v.hours);
+    const obsAt = index(v.observed || []);
+    const nowSlot = Math.floor((now - start) / HOUR);
+    const k = v.hours.findIndex((x) => Date.parse(x.t) <= now && now < Date.parse(x.t) + HOUR);
+    const anchor = k >= 0 ? Date.parse(v.hours[k].t) : start + nowSlot * HOUR;
+    const out = [];
+    for (let t = start, j = 0; t < end - 60e3; t += HOUR, j++) {
+      const dt = anchor + (j - nowSlot) * HOUR; // the data hour shown in this slot
+      let s;
+      if (j < nowSlot) {
+        const o = obsAt(dt);
+        const f = o ? null : fcAt(dt);
+        const x = o || (f && Date.parse(f.t) < now ? f : null);
+        s = x && x.level != null ? { kind: "obs", level: x.level, reasons: x.reasons, h: x, observed: !!o } : { kind: "none", level: null, reasons: [], h: null };
+      } else {
+        const f = fcAt(dt);
+        s = f && f.level != null ? { kind: j === nowSlot ? "now" : "fc", level: f.level, reasons: f.reasons, h: f } : { kind: "na", level: null, reasons: [], h: null };
       }
-      return h("span", { class: "s " + lv(hr.level) });
-    });
-    const tl = h("div", { class: "tl" + (big ? " big" : ""), role: big ? "group" : "img", "aria-label": big ? "Hourly risk, next 24 hours" : timelineLabel(a) }, segs,
-      h("span", { class: "nowm", style: `left:${(frac * 100).toFixed(2)}%` }));
-    const ticks = h("div", { class: "ticks", "aria-hidden": "true" });
-    for (let i = 0; i < hours.length; i += 6) {
-      ticks.append(h("span", { style: `left:${(i / hours.length) * 100}%` }, i === 0 ? "Now" : hourLabel(Date.parse(hours[i].t), tz)));
+      s.t = t;
+      s.key = s.h ? Date.parse(s.h.t) : dt;
+      s.i = out.length;
+      out.push(s);
     }
-    ticks.append(h("span", { class: "tz" }, tzAbbr(t0, tz)));
-    return h("div", { class: "tl-wrap" }, tl, ticks);
+    return { slots: out, start, end, tz, cur: out.findIndex((x) => x.kind === "now") };
+  }
+
+  /** "Now · Light rain, low clouds" for the lens label at rest. */
+  function nowWords(a) {
+    if (a.nowText) return "Now · " + a.nowText;
+    const c = a.metar ? metarCond(a.metar) : a.hours[0];
+    const w = shortCond(c, a.metar && a.metar.raw);
+    return "Now · " + (w || LEVELS[view(a).now.level].label);
+  }
+  /** "9 PM · High · Very low clouds" (past hours: "9 AM · Observed · Minor · Rain"). */
+  function slotText(s, a) {
+    const tz = dispTz(a);
+    const when = hourLabel(s.t, tz);
+    if (s.kind === "none") return when + " · No report";
+    if (s.kind === "na") return when + " · Forecast not available yet";
+    const top = plainList(s.reasons, a)[0];
+    return [s.kind === "now" ? "Now" : when, s.kind === "obs" ? (s.observed ? "Observed" : "Earlier forecast") : null, LEVELS[s.level].label, top].filter(Boolean).join(" · ");
+  }
+
+  /**
+   * Timeline element. opts.big: the sheet's (44 px bar, instant pointer scrubbing); else a card's (hold or
+   * horizontal move to scrub). The lens sits on the current hour at rest.
+   */
+  function timeline(a, opts = {}) {
+    const big = !!opts.big;
+    const day = daySlots(a, opts.dayOff || 0);
+    const { slots, tz } = day;
+    const n = slots.length;
+    const segs = slots.map((s) => h("span", {
+      class: "s " + (s.level == null ? "nd" : lv(s.level)) + (s.kind === "obs" || s.kind === "none" ? " past" : "") + (s.kind === "now" ? " cur" : ""),
+      "data-i": s.i,
+    }));
+    const lensSeg = h("span", { class: "lens-seg" });
+    const lens = h("span", { class: "lens", "aria-hidden": "true" }, lensSeg);
+    const tl = h("div", { class: "tl" + (big ? " big" : ""), style: `grid-template-columns:repeat(${n},minmax(0,1fr))` }, segs, lens);
+    const ticks = h("div", { class: "ticks", "aria-hidden": "true" });
+    slots.forEach((s, i) => {
+      const lh = Number(fmt(tz, { hour: "numeric" }, "H24n").formatToParts(s.t).find((x) => x.type === "hour").value) % 24;
+      if (lh % 6 === 0) ticks.append(h("span", { style: `left:${(i / n) * 100}%`, class: i === 0 ? "first" : "" }, tickLabel(s.t, tz)));
+    });
+    ticks.append(h("span", { class: "last", style: "left:100%" }, tickLabel(day.end, tz)));
+    const label = h("div", { class: "lenslabel", "aria-hidden": "true" });
+    const na = slots.findIndex((x, i) => x.kind === "na" && slots.slice(i).every((y) => y.kind === "na"));
+    const naNote = na > 0 && opts.dayOff ? h("div", { class: "nanote" }, "Forecast not available yet after " + hourLabel(slots[na].t, tz)) : null;
+    const wrap = h("div", {
+      class: "tl-wrap" + (big ? " bigwrap" : " cardwrap"), tabindex: "0", role: "slider",
+      "aria-label": big ? "Hourly risk, " + (opts.dayOff ? "tomorrow" : "today") : timelineLabel(a),
+      "aria-valuemin": "0", "aria-valuemax": String(n - 1), "aria-valuenow": String(Math.max(0, day.cur)),
+      "aria-valuetext": day.cur >= 0 ? slotText(slots[day.cur], a) : slotText(slots[0], a),
+      "data-start": String(day.start), "data-tz": tz,
+    }, label, tl, ticks, naNote);
+    const T = { wrap, tl, lens, lensSeg, label, segs, slots, day, a, rest: day.cur, big, opts };
+    wrap._tl = T;
+    if (big) wireBigScrub(T);
+    else wireCardScrub(T);
+    return wrap;
   }
 
   function timelineLabel(a) {
-    const worst = a.peak.level;
-    return `Next 24 hours at ${a.iata}: peak ${LEVELS[worst].label}`;
+    return `Today at ${codeOf(a)}: peak ${LEVELS[view(a).peak.level].label}`;
   }
 
-  function card(a) {
+  /** Puts the lens (and its label) over slot i; i < 0 hides it. scrub: the grown magnifier. */
+  function placeLens(T, i, scrub) {
+    const { wrap, lens, lensSeg, label, segs } = T;
+    const W = wrap.clientWidth;
+    if (!W) return;
+    if (i == null || i < 0 || !segs[i]) {
+      lens.hidden = true;
+      label.textContent = "";
+      label.hidden = true;
+      return;
+    }
+    const seg = segs[i];
+    const sw = seg.offsetWidth;
+    const cx = seg.offsetLeft + sw / 2;
+    lens.hidden = false;
+    lens.style.left = cx + "px";
+    lens.style.width = sw + (T.big ? 14 : 10) + "px";
+    lensSeg.style.width = sw + "px";
+    lensSeg.className = "lens-seg " + (T.slots[i].level == null ? "nd" : lv(T.slots[i].level)) + (seg.classList.contains("past") ? " past" : "");
+    wrap.classList.toggle("scrub", !!scrub);
+    label.hidden = false;
+    label.textContent = scrub || i !== T.rest ? slotText(T.slots[i], T.a) : nowWords(T.a);
+    const lw = Math.min(W, label.offsetWidth);
+    label.style.left = Math.max(0, Math.min(W - lw, cx - lw / 2)) + "px";
+    wrap.setAttribute("aria-valuenow", String(i));
+    wrap.setAttribute("aria-valuetext", slotText(T.slots[i], T.a));
+  }
+  function placeLenses() {
+    for (const w of document.querySelectorAll(".tl-wrap")) if (w._tl && !w.classList.contains("scrub")) placeLens(w._tl, w._tl.shown != null ? w._tl.shown : w._tl.rest, false);
+  }
+  addEventListener("resize", () => requestAnimationFrame(placeLenses));
+  /** Segment index under clientX. */
+  function slotAt(T, x) {
+    const r = T.tl.getBoundingClientRect();
+    return Math.max(0, Math.min(T.segs.length - 1, Math.floor(((x - r.left) / Math.max(1, r.width)) * T.segs.length)));
+  }
+  function tickSeg(T, i) {
+    const s = T.segs[i];
+    if (!s || reduced()) return;
+    s.classList.remove("tick");
+    void s.offsetWidth;
+    s.classList.add("tick");
+  }
+  /** Lens back to the current hour (spring unless reduced motion). */
+  function springBack(T) {
+    T.wrap.classList.remove("scrub");
+    T.wrap.classList.toggle("spring", !reduced());
+    T.shown = null;
+    placeLens(T, T.rest, false);
+    setTimeout(() => T.wrap.classList.remove("spring"), 450);
+  }
+
+  let swallowClick = 0;
+  document.addEventListener("click", (e) => { if (Date.now() < swallowClick) { e.stopPropagation(); e.preventDefault(); } }, true);
+
+  /**
+   * Card timelines: a 150 ms hold or a horizontal move of 8 px starts scrubbing; a mostly vertical first
+   * move hands the gesture to the page (touch-action: pan-y on the row). While scrubbing the page doesn't
+   * scroll and the lens + label follow the finger; releasing springs back to now and does nothing else.
+   */
+  function wireCardScrub(T) {
+    const { wrap } = T;
+    let g = null;
+    const begin = () => {
+      g.on = true;
+      wrap.classList.add("scrub");
+      move(g.x);
+    };
+    const move = (x) => {
+      const i = slotAt(T, x);
+      if (i !== g.i) { if (g.i != null) g.moved = true; g.i = i; tickSeg(T, i); }
+      T.shown = i;
+      placeLens(T, i, true);
+    };
+    const end = () => {
+      if (!g) return;
+      clearTimeout(g.timer);
+      if (g.on) { if (g.moved || Math.abs(g.lx - g.x) > 8) swallowClick = Date.now() + 400; springBack(T); }
+      g = null;
+    };
+    wrap.addEventListener("touchstart", (e) => {
+      if (e.touches.length !== 1) { end(); return; }
+      const t = e.touches[0];
+      g = { x: t.clientX, y: t.clientY, lx: t.clientX, on: false, dead: false, moved: false, i: null };
+      g.timer = setTimeout(() => { if (g && !g.dead && !g.on) begin(); }, 150);
+    }, { passive: true });
+    wrap.addEventListener("touchmove", (e) => {
+      if (!g || g.dead) return;
+      const t = e.touches[0];
+      const dx = t.clientX - g.x, dy = t.clientY - g.y;
+      g.lx = t.clientX;
+      if (!g.on) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        if (Math.abs(dy) > Math.abs(dx)) { g.dead = true; clearTimeout(g.timer); return; } // the page scrolls
+        begin();
+      }
+      if (e.cancelable) e.preventDefault();
+      move(t.clientX);
+    }, { passive: false });
+    wrap.addEventListener("touchend", end);
+    wrap.addEventListener("touchcancel", end);
+    // mouse: drag sideways (or hold) to scrub; a click still opens the card
+    wrap.addEventListener("mousedown", (e) => {
+      if (e.button !== 0 || "ontouchstart" in window && e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return;
+      g = { x: e.clientX, y: e.clientY, lx: e.clientX, on: false, dead: false, moved: false, i: null, mouse: true };
+      g.timer = setTimeout(() => { if (g && !g.on) begin(); }, 150);
+      const mm = (ev) => {
+        if (!g) return;
+        g.lx = ev.clientX;
+        if (!g.on && Math.abs(ev.clientX - g.x) >= 8) begin();
+        if (g.on) move(ev.clientX);
+      };
+      const mu = () => { removeEventListener("mousemove", mm); removeEventListener("mouseup", mu); end(); };
+      addEventListener("mousemove", mm);
+      addEventListener("mouseup", mu);
+    });
+    wrap.addEventListener("keydown", (e) => {
+      const n = T.segs.length;
+      let i = T.shown != null ? T.shown : T.rest;
+      if (e.key === "ArrowRight") i = Math.min(n - 1, i + 1);
+      else if (e.key === "ArrowLeft") i = Math.max(0, i - 1);
+      else if (e.key === "Home") i = 0;
+      else if (e.key === "End") i = n - 1;
+      else if (e.key === "Escape") { springBack(T); return; }
+      else return;
+      e.preventDefault();
+      e.stopPropagation();
+      T.shown = i;
+      placeLens(T, i, true);
+    });
+    wrap.addEventListener("click", (e) => { if (T.shown != null && document.activeElement === wrap && e.detail === 0) e.stopPropagation(); });
+    wrap.addEventListener("blur", () => { if (T.shown != null) springBack(T); });
+  }
+
+  /**
+   * The sheet's timeline: the bar is the scrub surface (touch-action: none, pointer capture). Finger down
+   * selects the hour under it at once; sliding updates the card above live, hour by hour (rAF). Releasing
+   * after a drag returns to Now + Peak; a plain tap (no movement, under 200 ms) keeps that hour selected
+   * until "Back to now" or a second tap on it. Arrow keys move hour by hour.
+   */
+  function wireBigScrub(T) {
+    const bar = T.tl;
+    let g = null, raf = 0;
+    const show = (i) => {
+      if (T.shown !== i) tickSeg(T, i);
+      T.shown = i;
+      placeLens(T, i, true);
+      if (T.opts.onPreview) T.opts.onPreview(i);
+    };
+    bar.addEventListener("pointerdown", (e) => {
+      if (e.button > 0) return;
+      try { bar.setPointerCapture(e.pointerId); } catch (x) { /* ignore */ }
+      g = { id: e.pointerId, x0: e.clientX, t0: Date.now(), moved: false, i: slotAt(T, e.clientX), was: T.picked };
+      show(g.i);
+      e.preventDefault();
+    });
+    bar.addEventListener("pointermove", (e) => {
+      if (!g || e.pointerId !== g.id) return;
+      if (Math.abs(e.clientX - g.x0) > 4) g.moved = true;
+      const x = e.clientX;
+      if (!raf) raf = requestAnimationFrame(() => {
+        raf = 0;
+        if (!g) return;
+        const i = slotAt(T, x);
+        if (i !== g.i) { g.i = i; g.moved = true; show(i); }
+      });
+    });
+    const up = (e, cancel) => {
+      if (!g || (e && e.pointerId !== g.id)) return;
+      const tap = !cancel && !g.moved && Date.now() - g.t0 < 200;
+      const i = g.i;
+      const was = g.was;
+      g = null;
+      if (tap && was === i) { T.opts.onPick && T.opts.onPick(null); springBack(T); return; } // second tap on the selected hour
+      if (tap) { T.opts.onPick && T.opts.onPick(i); T.shown = i; placeLens(T, i, false); T.wrap.classList.remove("scrub"); return; }
+      T.opts.onPick && T.opts.onPick(null);
+      springBack(T);
+    };
+    bar.addEventListener("pointerup", (e) => up(e, false));
+    bar.addEventListener("pointercancel", (e) => up(e, true));
+    T.wrap.addEventListener("keydown", (e) => {
+      const n = T.segs.length;
+      let i = T.shown != null ? T.shown : Math.max(0, T.rest);
+      if (e.key === "ArrowRight") i = Math.min(n - 1, i + 1);
+      else if (e.key === "ArrowLeft") i = Math.max(0, i - 1);
+      else if (e.key === "Home") i = 0;
+      else if (e.key === "End") i = n - 1;
+      else if (e.key === "Escape" || e.key === "Backspace") { T.opts.onPick && T.opts.onPick(null); springBack(T); e.preventDefault(); return; }
+      else return;
+      e.preventDefault();
+      T.opts.onPick && T.opts.onPick(i);
+      T.shown = i;
+      placeLens(T, i, false);
+    });
+  }
+
+  // ---------- home cards ----------
+
+  function card(a, idx, count) {
+    const v = view(a);
     const fav = state.favs.includes(a.iata);
-    const later = laterPeak(a);
-    const reason = plainList(later ? a.peak.reasons : a.now.reasons, a)[0] || (a.peak.level ? "Minor weather conditions" : "No significant weather");
-    const nowDiffers = later;
+    const later = laterPeak(v);
+    const reason = plainList(later ? v.peak.reasons : v.now.reasons, a)[0] || (v.peak.level ? "Minor weather conditions" : "No significant weather");
+    const mine = state.filter === "mine";
+    const code = codeOf(a);
     const el = h("div", {
       class: "card", role: "button", tabindex: "0", "data-iata": a.iata,
-      "aria-label": `${a.iata}, ${a.city}. ${LEVELS[a.peak.level].label} risk. ${reason}`,
+      "aria-label": `${code}, ${a.city}. ${LEVELS[v.peak.level].label} risk. ${reason}`,
       onclick: () => openSheet(a.iata),
-      onkeydown: (e) => { if ((e.key === "Enter" || e.key === " ") && e.target === el) { e.preventDefault(); openSheet(a.iata); } },
+      onkeydown: (e) => {
+        if ((e.key === "Enter" || e.key === " ") && e.target === el) { e.preventDefault(); openSheet(a.iata); }
+        if (mine && e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown") && e.target === el) { e.preventDefault(); moveMine(a.iata, e.key === "ArrowUp" ? -1 : 1, true); }
+      },
     },
       h("div", { class: "top" },
-        h("div", { class: "code" }, a.iata),
+        h("div", { class: "code" }, code),
         h("div", { class: "right" },
-          pill(a.peak.level),
+          pill(v.peak.level),
           h("button", {
-            type: "button", class: "star", "aria-pressed": String(fav), "aria-label": (fav ? "Remove " : "Add ") + a.iata + (fav ? " from" : " to") + " my airports",
+            type: "button", class: "star", "aria-pressed": String(fav), "aria-label": (fav ? "Remove " : "Add ") + code + (fav ? " from" : " to") + " my airports",
             onclick: (e) => { e.stopPropagation(); toggleFav(a.iata); },
             onkeydown: (e) => e.stopPropagation(),
           }, starSvg()))),
       h("div", { class: "aname" }, a.name),
       h("div", { class: "where" }, `${a.city}, ${a.state}`),
       h("div", { class: "reason" }, reason),
-      window.AWXMovement ? AWXMovement.line(a) : null, // movement hook: "Departures running 38% below normal" (site/movement.js)
-      window.AWXDelay ? AWXDelay.delayLine(a) : null, // phase3 hook: chance of a real delay (site/delay.js)
-      nowDiffers ? h("div", { class: "sub" }, "Now: " + LEVELS[a.now.level].label) : null,
-      cardPrograms(a).length ? h("div", { class: "badges" }, faaBadges(a)) : null,
-      timeline(a, false));
+      window.AWXMovement ? safeCall(() => AWXMovement.line(a)) : null, // movement hook: "Departures running 38% below normal" (site/movement.js)
+      window.AWXDelay ? safeCall(() => AWXDelay.delayLine(a)) : null, // phase3 hook: chance of a real delay (site/delay.js)
+      later ? h("div", { class: "sub" }, "Now: " + LEVELS[v.now.level].label) : null,
+      cardPrograms(v).length ? h("div", { class: "badges" }, faaBadges(v)) : null,
+      timeline(a, {}),
+      mine && count > 1 ? h("div", { class: "sr-move" },
+        idx > 0 ? h("button", { type: "button", class: "sr", onclick: (e) => { e.stopPropagation(); moveMine(a.iata, -1, true); }, onkeydown: (e) => e.stopPropagation() }, `Move ${code} up`) : null,
+        idx < count - 1 ? h("button", { type: "button", class: "sr", onclick: (e) => { e.stopPropagation(); moveMine(a.iata, 1, true); }, onkeydown: (e) => e.stopPropagation() }, `Move ${code} down`) : null) : null);
+    if (mine) wireReorder(el);
     return el;
   }
 
+  /** Move a major airport one place up/down among the cards shown on My airports (non-majors keep their slots). */
+  function moveMine(iata, dir, refocus) {
+    const shown = visibleAirports().map((a) => a.iata);
+    const i = shown.indexOf(iata);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= shown.length) return;
+    [shown[i], shown[j]] = [shown[j], shown[i]];
+    setMineOrder(shown);
+    if (refocus) {
+      const c = document.querySelector(`#list .card[data-iata="${iata}"]`);
+      if (c) c.focus({ preventScroll: false });
+      announce(`${iata} moved to position ${j + 1} of ${shown.length}`);
+    }
+  }
+  /** New order of the majors shown on My airports -> favourites, with other entries left in their slots. */
+  function setMineOrder(order) {
+    const set = new Set(order);
+    let k = 0;
+    state.favs = state.favs.map((c) => (set.has(c) ? order[k++] : c));
+    saveFavs();
+    render();
+  }
+  function announce(msg) {
+    const el = $("announce");
+    if (el) { el.textContent = ""; setTimeout(() => { el.textContent = msg; }, 30); }
+  }
+
+  /**
+   * Hold-to-reorder on My airports: press and hold a card for 400 ms (not its timeline row, which scrubs).
+   * The card lifts and follows the finger, the others move aside; dropping saves the order in the favourites.
+   * A move before 400 ms is a normal scroll.
+   */
+  function wireReorder(el) {
+    let g = null;
+    const cards = () => [...$("list").querySelectorAll(":scope > .card")];
+    const lift = () => {
+      const list = cards();
+      const rects = list.map((c) => c.getBoundingClientRect());
+      g.list = list;
+      g.rects = rects;
+      g.from = list.indexOf(el);
+      g.to = g.from;
+      g.on = true;
+      el.classList.add("lifted");
+      $("list").classList.add("reordering");
+      if (navigator.vibrate) try { navigator.vibrate(10); } catch (e) { /* ignore */ }
+    };
+    const move = (y) => {
+      const dy = y - g.y;
+      el.style.transform = `translateY(${dy}px) scale(1.03)`;
+      const mid = g.rects[g.from].top + g.rects[g.from].height / 2 + dy;
+      let to = g.from;
+      g.rects.forEach((r, i) => {
+        if (i < g.from && mid < r.top + r.height / 2) to = Math.min(to, i);
+        if (i > g.from && mid > r.top + r.height / 2) to = Math.max(to, i);
+      });
+      g.to = to;
+      const H = g.rects[g.from].height + 12;
+      g.list.forEach((c, i) => {
+        if (c === el) return;
+        let s = 0;
+        if (g.from < to && i > g.from && i <= to) s = -H;
+        if (g.from > to && i < g.from && i >= to) s = H;
+        c.style.transform = s ? `translateY(${s}px)` : "";
+      });
+    };
+    const finish = () => {
+      if (!g) return;
+      clearTimeout(g.timer);
+      const was = g;
+      g = null;
+      if (!was.on) return;
+      swallowClick = Date.now() + 400;
+      for (const c of was.list) { c.style.transform = ""; }
+      el.classList.remove("lifted");
+      $("list").classList.remove("reordering");
+      if (was.to !== was.from) {
+        const order = was.list.map((c) => c.dataset.iata);
+        const [x] = order.splice(was.from, 1);
+        order.splice(was.to, 0, x);
+        setMineOrder(order);
+        announce(`${x} moved to position ${was.to + 1} of ${order.length}`);
+      }
+    };
+    el.addEventListener("touchstart", (e) => {
+      if (e.touches.length !== 1 || e.target.closest(".tl-wrap, .star, .sr-move")) { g = null; return; }
+      const t = e.touches[0];
+      g = { x: t.clientX, y: t.clientY, on: false };
+      g.timer = setTimeout(() => { if (g) lift(); }, 400);
+    }, { passive: true });
+    el.addEventListener("touchmove", (e) => {
+      if (!g) return;
+      const t = e.touches[0];
+      if (!g.on) {
+        if (Math.abs(t.clientX - g.x) > 8 || Math.abs(t.clientY - g.y) > 8) { clearTimeout(g.timer); g = null; } // a normal swipe scrolls
+        return;
+      }
+      if (e.cancelable) e.preventDefault();
+      move(t.clientY);
+    }, { passive: false });
+    el.addEventListener("touchend", finish);
+    el.addEventListener("touchcancel", finish);
+    el.addEventListener("contextmenu", (e) => { if (g || el.classList.contains("lifted")) e.preventDefault(); });
+    el.addEventListener("mousedown", (e) => {
+      if (e.button !== 0 || e.target.closest(".tl-wrap, .star, .sr-move")) return;
+      g = { x: e.clientX, y: e.clientY, on: false, mouse: true };
+      g.timer = setTimeout(() => { if (g) lift(); }, 400);
+      const mm = (ev) => {
+        if (!g) return;
+        if (!g.on) { if (Math.abs(ev.clientX - g.x) > 8 || Math.abs(ev.clientY - g.y) > 8) { clearTimeout(g.timer); g = null; } return; }
+        move(ev.clientY);
+      };
+      const mu = () => { removeEventListener("mousemove", mm); removeEventListener("mouseup", mu); finish(); };
+      addEventListener("mousemove", mm);
+      addEventListener("mouseup", mu);
+    });
+  }
+
   function starSvg() {
-    const ns = "http://www.w3.org/2000/svg";
-    const svg = document.createElementNS(ns, "svg");
+    const svg = document.createElementNS(NS, "svg");
     svg.setAttribute("viewBox", "0 0 24 24");
-    const p = document.createElementNS(ns, "path");
+    const p = document.createElementNS(NS, "path");
     p.setAttribute("d", "M12 3.5l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.8l6-.8z");
     p.setAttribute("stroke-linejoin", "round");
     svg.append(p);
     return svg;
   }
   function closeSvg() {
-    const ns = "http://www.w3.org/2000/svg";
-    const svg = document.createElementNS(ns, "svg");
+    const svg = document.createElementNS(NS, "svg");
     svg.setAttribute("viewBox", "0 0 16 16");
-    const p = document.createElementNS(ns, "path");
+    const p = document.createElementNS(NS, "path");
     p.setAttribute("d", "M3 3l10 10M13 3L3 13");
     p.setAttribute("stroke-linecap", "round");
     svg.append(p);
     return svg;
   }
 
+  // ---------- national summary strip (build2b) ----------
+
+  const REGION = {
+    Northeast: ["ME", "NH", "VT", "MA", "RI", "CT", "NY", "NJ", "PA", "DE", "MD", "DC", "VA"],
+    Southeast: ["NC", "SC", "GA", "FL", "AL", "MS", "TN", "KY", "WV", "PR", "VI"],
+    Midwest: ["OH", "MI", "IN", "IL", "WI", "MN", "IA", "MO", "ND", "SD", "NE", "KS"],
+    South: ["TX", "OK", "AR", "LA"],
+    West: ["NM", "AZ", "CO", "UT", "NV", "WY", "MT", "ID", "CA", "OR", "WA"],
+    Alaska: ["AK"], Hawaii: ["HI"],
+  };
+  const regionOf = (st) => Object.keys(REGION).find((k) => REGION[k].includes(st)) || null;
+  const CENTERS = {
+    ZAB: "Albuquerque", ZAN: "Anchorage", ZAU: "Chicago", ZBW: "Boston", ZDC: "Washington", ZDV: "Denver", ZFW: "Fort Worth", ZHU: "Houston",
+    ZID: "Indianapolis", ZJX: "Jacksonville", ZKC: "Kansas City", ZLA: "Los Angeles", ZLC: "Salt Lake City", ZMA: "Miami", ZME: "Memphis",
+    ZMP: "Minneapolis", ZNY: "New York", ZOA: "Oakland", ZOB: "Cleveland", ZSE: "Seattle", ZTL: "Atlanta", ZHN: "Honolulu",
+  };
+  const titleCase = (s) => String(s || "").toLowerCase().replace(/\b([a-z])/g, (m) => m.toUpperCase()).replace(/\b(Sfb|Afb|Ca|Fl|Tx|Nasa|Spacex|Ula|Ii)\b/g, (m) => m.toUpperCase());
+  const plural = (n, one, many) => n + " " + (n === 1 ? one : many);
+
+  /** Everything the strip and its sheet need, under the current settings. */
+  function nationalSummary() {
+    const d = state.data;
+    if (!d) return null;
+    const stops = [], closed = [], gdps = [], delays = [], storms = [];
+    for (const a of listed()) {
+      const v = view(a);
+      const has = (t) => (v.faa || []).some((f) => f.type === t && (t !== "closure" || ((f.scope || "full") === "full" && f.active !== false)));
+      const advGS = (v.atcscc || []).some((x) => x.type === "GS" && x.active);
+      if (has("ground_stop") || advGS) stops.push(a);
+      if (has("closure")) closed.push(a);
+      if (has("ground_delay") || (v.atcscc || []).some((x) => x.type === "GDP" && x.active)) gdps.push(a);
+      if (has("delay")) delays.push(a);
+      const st = v.hours.some((x) => x.reasons.some((r) => CATS.reason(r).cat === "storms" && CATS.reason(r).level >= 2));
+      if (st) storms.push(a);
+    }
+    const regions = {};
+    for (const a of storms) { const r = regionOf(a.state); if (r) (regions[r] = regions[r] || []).push(a); }
+    const stormRegions = Object.keys(regions).filter((r) => regions[r].length >= 2 || storms.length === 1).sort((x, y) => regions[y].length - regions[x].length);
+    // national ops-plan items
+    const op = d.opsplan || {};
+    const items = [];
+    const ref = refNow();
+    const tz = USER_TZ;
+    if (!isHidden("storms")) {
+      for (const c of (op.enroute && op.enroute.constraints) || []) {
+        const raw = String(c.raw || c.text || "");
+        if (!/THUNDER|TSTM|\bTS\b|CONVECT/i.test(raw)) continue;
+        const cs = uniq((raw.match(/\bZ[A-Z]{2}\b/g) || []).map((z) => CENTERS[z]).filter(Boolean));
+        items.push({ cat: "storms", text: "Thunderstorms slowing flights en route" + (cs.length ? " near " + cs.slice(0, -1).join(", ") + (cs.length > 1 ? " and " : "") + cs[cs.length - 1] : ""), raw });
+      }
+    }
+    if (!isHidden("atc")) {
+      for (const s of op.staffing || []) {
+        const name = CENTERS[s.facility] ? CENTERS[s.facility] + " Center" : null;
+        if (!name) continue;
+        items.push({ cat: "atc", text: `Air traffic control staffing shortage at ${name}` + (s.until ? " until " + whenLabel(Date.parse(s.until), tz) : "") + " — delays possible", raw: s.raw });
+      }
+    }
+    if (!isHidden("space")) {
+      for (const l of op.launches || []) {
+        const p = l.primary || {};
+        const end = Date.parse(p.end);
+        if (!Number.isFinite(end) || end < ref || Date.parse(p.start) - ref > 36 * HOUR) continue;
+        const what = /REENTRY|RE-ENTRY/i.test(l.name || "") ? "Space reentry" : "Space launch";
+        items.push({ cat: "space", text: `${what}: ${titleCase(String(l.name || "").replace(/\s*(REENTRY|RE-ENTRY)\s*/i, " ").trim())}${l.site ? " from " + titleCase(l.site) : ""}, ${whenLabel(Date.parse(p.start), tz)} – ${clock(end, tz)} — some flights may be rerouted`, raw: l.raw });
+      }
+    }
+    const parts = [];
+    if (closed.length) parts.push(plural(closed.length, "airport closed", "airports closed"));
+    if (stops.length) parts.push(plural(stops.length, "ground stop", "ground stops"));
+    if (gdps.length) parts.push(plural(gdps.length, "delay program", "delay programs"));
+    if (delays.length) parts.push(plural(delays.length, "airport with delays", "airports with delays"));
+    const tail = [];
+    if (stormRegions.length) tail.push("storms in " + (/^(Alaska|Hawaii)$/.test(stormRegions[0]) ? "" : "the ") + stormRegions[0]);
+    const launches = items.filter((x) => x.cat === "space").length;
+    if (launches) tail.push(plural(launches, "space launch", "space launches"));
+    const line = [parts.join(", "), ...tail].filter(Boolean).join(" · ");
+    return { line, stops, closed, gdps, delays, storms, regions, stormRegions, items };
+  }
+
+  function renderNational() {
+    const box = $("national");
+    const s = nationalSummary();
+    const strip = h("div", { class: "natbox", id: "natstrip" }); // movement.js puts airline alerts in #natstrip
+    if (s && s.line) {
+      const lvl = s.closed.length || s.stops.length ? 4 : s.gdps.length ? 3 : 2;
+      strip.append(h("button", { type: "button", class: "natline", onclick: openNational, "aria-haspopup": "dialog" },
+        h("span", { class: "dot " + lv(lvl), "aria-hidden": "true" }),
+        h("span", { class: "nat-t" }, h("b", {}, "U.S.: "), s.line),
+        h("span", { class: "chev", "aria-hidden": "true" }, "›")));
+    }
+    box.replaceChildren(strip);
+    if (window.AWXMovement && state.data) safeCall(() => AWXMovement.alerts()); // movement hook: airline alerts
+    box.hidden = !strip.children.length;
+  }
+
   // ---------- bottom sheet ----------
+
+  // build2b: drag to dismiss (header at any scroll position, content at the top), back gesture, scroll lock (site/sheet.js)
+  const noSheet = { opened() {}, closed() {}, isOpen: () => false };
+  const sheetCtl = window.AWXSheet ? AWXSheet.makeSheet($("sheet"), {
+    onClose: () => closeSheet(), header: ".grab, .sh-head", backdrop: $("backdrop"), noPull: ".tl.big, .tl-wrap, .lamp, .cw-bar",
+  }) : noSheet;
+  const panelCtl = window.AWXSheet ? AWXSheet.makeSheet($("panel"), { onClose: () => closePanel(), header: ".pn-head", backdrop: $("panelBackdrop") }) : noSheet;
 
   let lastFocus = null;
   function openSheet(iata) {
+    if (panel.kind) closePanel(true);
     state.openIata = iata;
+    sheetPick = null;
+    sheetDay = 0;
     lastFocus = document.activeElement;
     const wrap = $("sheetWrap");
     wrap.hidden = false;
     document.documentElement.classList.add("lock");
     renderSheet(false);
+    sheetCtl.opened();
     void wrap.offsetHeight; // reflow so the transition runs
     wrap.classList.add("open");
     const c = wrap.querySelector(".close");
     if (c) c.focus({ preventScroll: true });
+    requestAnimationFrame(placeLenses);
   }
 
   function closeSheet() {
@@ -553,9 +1372,10 @@
     wrap.classList.remove("open");
     sheet.style.transform = "";
     sheet.style.transition = "";
-    document.documentElement.classList.remove("lock");
+    if (!panel.kind) document.documentElement.classList.remove("lock");
+    sheetCtl.closed();
     const done = () => { if (!state.openIata) wrap.hidden = true; };
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) done();
+    if (reduced()) done();
     else setTimeout(done, 300);
     if (lastFocus && lastFocus.focus) lastFocus.focus({ preventScroll: true });
   }
@@ -577,7 +1397,13 @@
     }).join(", ");
   }
 
-  const f1 = (c) => Math.round((c * 9) / 5 + 32);
+  const windKt = (c) => {
+    if (!c || c.wspd == null) return null;
+    if (c.wspd === 0) return "Calm";
+    const dir = c.wdir === "VRB" || c.wdir == null ? "VRB" : String(c.wdir).padStart(3, "0") + "°";
+    return `${dir} ${c.wspd}${c.wgst != null ? "G" + c.wgst : ""} kt`;
+  };
+  const visTxt = (v) => (v == null ? "—" : (v >= 10 ? "10+" : String(Math.round(v * 100) / 100)) + " sm");
 
   function metarRows(m) {
     const rows = [];
@@ -589,22 +1415,51 @@
     else if (w.spd != null) wind = (w.dir === "VRB" || w.dir == null ? "Variable" : String(w.dir).padStart(3, "0") + "°") + " at " + w.spd + " kt";
     add("Wind", wind);
     add("Gusts", m.gust != null ? m.gust + " kt" : "None");
-    add("Visibility", m.visib != null ? (m.visib >= 10 ? "10+" : String(Math.round(m.visib * 100) / 100)) + " sm" : "—");
+    add("Visibility", m.visib != null ? visTxt(m.visib) : "—");
     add("Ceiling", m.ceiling != null ? m.ceiling.toLocaleString("en-US") + " ft" : "None");
     add("Weather", decodeWx(m.wx));
     add("Temp / dew", m.temp != null ? `${m.temp}° / ${m.dewp ?? "—"}°C (${f1(m.temp)}° / ${m.dewp != null ? f1(m.dewp) : "—"}°F)` : "—");
     return rows;
   }
 
-  function section(title, ...kids) {
-    return h("div", { class: "sec" }, h("h3", {}, title), ...kids);
+  // Section sources: monospace "SOURCE: FAA NAS STATUS · UPDATED 3M AGO" lines that expand to the raw text
+  const SEC_SRC = {
+    faa: "FAA NAS STATUS", atcscc: "FAA COMMAND CENTER", nws: "NWS ALERTS", spc: "NOAA STORM PREDICTION CENTER",
+    tcf: "AVIATIONWEATHER.GOV STORM FORECAST", sigmet: "AVIATIONWEATHER.GOV ADVISORIES",
+  };
+  function srcLine(key, raw) {
+    const s = state.data && state.data.sources && state.data.sources[key];
+    const when = s && s.at ? " · UPDATED " + agoShort(refNow() - Date.parse(s.at)) : "";
+    const text = "SOURCE: " + (SEC_SRC[key] || key.toUpperCase()) + when;
+    const r = (raw || []).filter(Boolean).join("\n\n");
+    if (!r) return h("div", { class: "srcl" }, h("span", {}, text));
+    return h("details", { class: "srcl" }, h("summary", {}, text + " ", h("span", { class: "car", "aria-hidden": "true" }, "⌄")), h("pre", { class: "raw" }, r));
   }
-  const cap = (x) => (x ? x.charAt(0).toUpperCase() + x.slice(1) : x);
-  const FAA_CLS = { ground_stop: "l4", closure: "l4", ground_delay: "l3", delay: "l2" };
-
+  const SEC_META = { faa: "FAA", atcscc: "FAA", nws: "NWS", spc: "SPC", tcf: "NWS", sigmet: "NWS", metar: "Observed" };
+  /**
+   * A detail section (build2b, weather-site pattern): small uppercase header row (icon, title, dotted rule, meta on
+   * the right) over one rounded card holding the content, ending with the monospace source line.
+   */
+  function section(title, ico, kids, src, opts = {}) {
+    const s = src && state.data && state.data.sources && state.data.sources[src.key];
+    const meta = opts.meta || (src ? (SEC_META[src.key] || "") + (s && s.at ? " · " + ago(Math.max(0, refNow() - Date.parse(s.at))).replace(" ago", "") : "") : "");
+    return h("section", { class: "sec", id: opts.id || null },
+      h("div", { class: "sec-h" }, ico ? icon(ICONS[ico]) : null, h("h3", {}, title), h("span", { class: "rule", "aria-hidden": "true" }), meta ? h("span", { class: "meta" }, meta) : null),
+      h("div", { class: "scard" + (opts.cls ? " " + opts.cls : "") }, ...kids, src ? srcLine(src.key, src.raw) : null));
+  }
   function rawToggle(text) {
-    return h("details", { class: "rawt" }, h("summary", {}, "Show raw"), h("pre", { class: "raw" }, text));
+    return text ? h("details", { class: "rawt" }, h("summary", {}, "Show raw"), h("pre", { class: "raw" }, text)) : null;
   }
+  const SRC_TRAVELER = { TAF: "Forecast", LAMP: "Hourly model", METAR: "Observed" };
+  const srcName = (s) => (s === "METAR" ? "Observed" : aviation() ? s : SRC_TRAVELER[s] || s);
+  const CONF = { high: "High", medium: "Medium", low: "Low" };
+  /** "FAA · High confidence" chip (placeholder confidence until Build 3 calibrates it). */
+  function confChip(src, conf) {
+    return h("span", { class: "cchip " + (conf || "medium"), "data-src": src, title: `${srcName(src)} · ${CONF[conf] || "Medium"} confidence (by source type)` },
+      h("i", { class: "cdot", "aria-hidden": "true" }), h("b", {}, srcName(src)), h("span", { class: "cw2" }, " · " + (CONF[conf] || "Medium") + " confidence"));
+  }
+
+  const FAA_CLS = { ground_stop: "l4", closure: "l4", ground_delay: "l3", delay: "l2" };
 
   /** Short plain cause for a NAS status reason: "RWY:Construction" -> "runway construction", "wind" -> "wind". */
   function plainCause(f) {
@@ -626,33 +1481,85 @@
       return i ? t.charAt(0).toLowerCase() + t.slice(1) : t;
     }).join("; ");
   }
+  /** "Departures 31–45 min, increasing ↑" lines for the summary's "Delays right now". */
+  function delaysNow(v) {
+    const out = [];
+    for (const f of v.faa || []) {
+      if (f.type !== "delay") continue;
+      for (const part of String(f.detail || "").split("; ")) {
+        const m = /^(Arrivals\/Departures|Arrivals|Departures|Delays)\s*(.*)$/.exec(part);
+        if (!m) continue;
+        const rest = m[2].replace(/\b(\d+)h (\d+)m\b/g, "$1 hr $2 min").replace(/(\d)m\b/g, "$1 min");
+        const arrow = /increasing/.test(rest) ? " ↑" : /decreasing/.test(rest) ? " ↓" : /steady/.test(rest) ? " →" : "";
+        out.push((m[1] === "Arrivals/Departures" ? "Arrivals and departures" : m[1]) + " " + rest + arrow);
+      }
+    }
+    return out;
+  }
+  const durTxt = (x) => x.replace(/\b(\d+)h (\d+)m\b/, "$1 hr $2 min").replace(/(\d)m\b/, "$1 min").replace(/(\d)h\b/, "$1 hr");
+  /** End of an FAA program for display: its end, or the hours it is held without one (risk.mjs faaSpan). */
+  function programEnd(f) {
+    const e = Date.parse(f.end);
+    return Number.isFinite(e) ? e : null;
+  }
+  /** FAA programs (and active Command Center GS/GDP not in the NAS status) covering the hour starting at t. */
+  function programsAt(v, t, isNow) {
+    const now = refNow();
+    const out = [];
+    for (const f of v.faa || []) {
+      if (f.type === "closure") { if (isNow && (f.scope || "full") === "full" && f.active !== false) out.push(f); continue; }
+      const end = programEnd(f) ?? now + (f.trend === "increasing" ? 5 : 3) * HOUR;
+      if (t < end && t + HOUR > now - HOUR) out.push(f);
+    }
+    for (const x of v.atcscc || []) {
+      if (!x.active || (x.type !== "GS" && x.type !== "GDP")) continue;
+      const type = x.type === "GS" ? "ground_stop" : "ground_delay";
+      if (out.some((f) => f.type === type)) continue;
+      const end = Date.parse(x.end);
+      if (!Number.isFinite(end) || t < end) out.push({ type, end: x.end, detail: "", atcscc: true });
+    }
+    return out;
+  }
+  /** "Ground stop until 7:30 PM" / "Delay program until 9 PM, avg 49 min" / "Delays: departures 16–30 min". */
+  function programLine(f, a) {
+    const tz = dispTz(a);
+    const end = programEnd(f);
+    const until = end ? "until " + whenLabel(end, tz) : /until /.test(f.detail || "") ? retime(/until [^,]+/.exec(f.detail)[0], a) : "until further notice";
+    const avg = /avg ([^,]+)/.exec(f.detail || "");
+    if (f.type === "closure") return "Airport closed";
+    if (f.type === "ground_stop") return "Ground stop " + until;
+    if (f.type === "ground_delay") return "Delay program " + until + (avg ? ", avg " + durTxt(avg[1]) : "");
+    return "Delays: " + delayText(f.detail).replace(/^Delays /, "").replace(/^./, (c) => c.toLowerCase());
+  }
 
   function faaItem(f, a) {
+    const chip = h("div", { class: "chips" }, confChip("FAA", "high"));
     if (f.type === "closure") {
       const info = f.scope === "limited" || f.active === false;
       const cls = f.scope === "runway" ? "l1" : "l4";
       return h("div", { class: "item" + (info ? " info" : "") },
         !info && f.badge ? h("span", { class: "badge " + cls }, badgeText(f.badge)) : null,
-        h("div", { class: info ? "muted" : "", style: info ? "" : "margin-top:4px" }, f.plain || [f.reason, f.detail].filter(Boolean).join(" · ")),
-        f.reason ? rawToggle(f.reason) : null);
+        h("div", { class: info ? "muted" : "", style: info ? "" : "margin-top:4px" }, retime(f.plain || [f.reason, f.detail].filter(Boolean).join(" · "), a)),
+        info ? null : chip, rawToggle(f.reason));
     }
     const why = plainCause(f);
-    const until = /until [^,]+$/.exec(f.detail || "");
     let text;
     if (f.type === "delay") text = delayText(f.detail) + (why ? ` (${why})` : "");
     else if (f.type === "ground_delay") {
       const avg = /avg ([^,]+)/.exec(f.detail || ""), max = /max ([^,]+)/.exec(f.detail || "");
-      const d = (x) => x.replace(/\b(\d+)h (\d+)m\b/, "$1 hr $2 min").replace(/(\d)m\b/, "$1 min").replace(/(\d)h\b/, "$1 hr");
-      text = "Flights to " + a.iata + " are held before departure" + (avg ? `: about ${d(avg[1])} on average` : "") + (max ? `, up to ${d(max[1])}` : "") + (why ? ` (${why})` : "");
-    } else text = "Flights to " + a.iata + " are held at their departure airports" + (why ? ` (${why})` : "");
-    const end = f.end ? "until " + whenLabel(Date.parse(f.end), a.tz) : until ? until[0] : "until further notice";
+      text = "Flights to " + codeOf(a) + " are held before departure" + (avg ? `: about ${durTxt(avg[1])} on average` : "") + (max ? `, up to ${durTxt(max[1])}` : "") + (why ? ` (${why})` : "");
+    } else text = "Flights to " + codeOf(a) + " are held at their departure airports" + (why ? ` (${why})` : "");
+    const until = /until [^,]+$/.exec(f.detail || "");
+    const end = f.end ? "until " + whenLabel(Date.parse(f.end), dispTz(a)) : until ? retime(until[0], a) : "until further notice";
     return h("div", { class: "item" },
       h("span", { class: "badge " + (FAA_CLS[f.type] || "l2") }, badgeText(f.badge || f.type)),
       h("div", { style: "margin-top:4px" }, text + ", " + end + "."),
-      f.reason ? rawToggle("FAA: " + f.reason + (f.detail ? "\n" + f.detail : "")) : null);
+      chip, rawToggle(faaRaw(f)));
   }
+  const faaRaw = (f) => (f.type === "closure" ? f.reason : "FAA: " + f.reason + (f.detail ? "\n" + f.detail : ""));
 
-  function advItem(x, tz) {
+  function advItem(x, a) {
+    const tz = dispTz(a);
     const now = refNow();
     const end = x.end ? Date.parse(x.end) : null;
     const start = x.start ? Date.parse(x.start) : null;
@@ -664,32 +1571,34 @@
       h("span", { class: "badge " + cls }, name), h("span", { class: "muted" }, " " + status),
       x.causeLabel || x.causeText ? h("div", { style: "margin-top:4px" }, cap(x.causeLabel || x.causeText)) : null,
       x.issued ? h("div", { class: "muted small" }, "Issued " + whenLabel(Date.parse(x.issued), tz)) : null,
-      x.title ? rawToggle(x.title) : null);
+      x.active ? h("div", { class: "chips" }, confChip("FAA", "high")) : null,
+      rawToggle(x.title));
   }
 
-  /** The FAA Command Center operations plan's items for this airport, as plain sentences with the original line. */
-  function planItems(a) {
-    const op = a.opsplan;
+  /** The FAA Command Center operations plan's items for this airport, as plain sentences. */
+  function planItems(v, a) {
+    const op = v.opsplan;
     if (!op || !(op.items || []).length) return [];
     const order = { program: 0, note: 1, staffing: 2, constraint: 3, sir: 4 };
     const items = [...op.items].sort((x, y) => (y.level - x.level) || ((order[x.kind] ?? 9) - (order[y.kind] ?? 9)));
     const lead = h("div", { class: "muted small", style: "margin:0 0 2px" },
-      "From the FAA Command Center" + (op.plan && op.plan.issued ? " · plan issued " + whenLabel(Date.parse(op.plan.issued), a.tz) : ""));
+      "From the FAA Command Center" + (op.plan && op.plan.issued ? " · plan issued " + whenLabel(Date.parse(op.plan.issued), dispTz(a)) : ""));
     return [lead, ...items.map((x) => h("div", { class: "item" + (x.level ? "" : " info") },
       x.level ? h("span", { class: "badge " + lv(x.level) }, LEVELS[x.level].label) : null,
       h("div", { class: x.level ? "" : "muted", style: x.level ? "margin-top:4px" : "" },
-        x.text + (x.ifr ? " — can slow landings in low clouds or poor visibility" : "") + "." + (x.dup ? " Also in Delays & closures above." : "")),
-      x.raw ? rawToggle(x.raw) : null))];
+        retime(x.text, a) + (x.ifr ? " — can slow landings in low clouds or poor visibility" : "") + "." + (x.dup ? " Also in Delays & closures above." : "")),
+      x.level ? h("div", { class: "chips" }, confChip("FAA", CATS.reason(x.text).conf || "high")) : null,
+      rawToggle(x.raw)))];
   }
 
   function lampTable(a) {
-    const tz = a.tz;
+    const tz = dispTz(a);
     const t0 = Date.parse(a.hours[0].t);
     const hrs = (a.lamp.hours || []).filter((x) => { const t = Date.parse(x.t); return t >= t0 && t < t0 + 24 * HOUR; });
     if (!hrs.length) return null;
     const notable = hrs.some((x) => (x.tstmProb || 0) >= 10 || (x.convProb || 0) >= 30 || (x.pPrecip || 0) >= 30 || (x.gust || 0) >= 20 || (lampCat(x) && lampCat(x) !== "VFR"));
     if (!notable) return null;
-    const short = (ms) => hourLabel(ms, tz).replace(" AM", "a").replace(" PM", "p");
+    const short = (ms) => tickLabel(ms, tz);
     const cell = (v, cls) => h("td", { class: cls || null }, v == null ? "" : String(v));
     const row = (label, f) => h("tr", {}, h("th", {}, label), hrs.map(f));
     const tcls = (p) => (p == null ? null : p >= 40 ? "l3 hot" : p >= 20 ? "l2 hot" : null);
@@ -726,168 +1635,542 @@
       any ? h("p", { class: "muted" }, `Checked FAA delays and NOAA weather${when ? " · " + when : ""}`) : null);
   }
 
-  /** Coded aviation detail, collapsed at the bottom of the sheet (until the aviation view exists). */
+  /** Coded aviation detail: collapsed at the bottom in Traveler mode, open and above the sections in Aviation mode. */
   function pilotDetails(a) {
     const kids = [];
+    const tz = dispTz(a);
+    const zl = (ms) => clock(ms, tz) + " " + zoneAbbr(ms, tz);
     const sub = (t) => h("h4", { class: "pd-h" }, t);
     if (a.metar) {
       kids.push(sub("Current METAR"),
         h("div", { class: "box" }, h("dl", { class: "kv", style: "margin:0" }, metarRows(a.metar))),
-        a.metar.obsTime ? h("div", { class: "muted small", style: "margin:6px 4px 0" }, "Observed " + ago(Math.max(0, refNow() - Date.parse(a.metar.obsTime)))) : null,
+        a.metar.obsTime ? h("div", { class: "muted small", style: "margin:6px 4px 0" }, "Observed " + ago(Math.max(0, refNow() - Date.parse(a.metar.obsTime))) + " · " + zl(Date.parse(a.metar.obsTime))) : null,
         h("pre", { class: "raw", style: "margin-top:10px" }, a.metar.raw));
     }
-    if (a.taf) kids.push(sub("TAF" + (a.taf.issued ? " · issued " + clock(Date.parse(a.taf.issued), a.tz) : "")), h("pre", { class: "raw" }, a.taf.raw));
+    if (a.taf) kids.push(sub("TAF" + (a.taf.issued ? " · issued " + zl(Date.parse(a.taf.issued)) : "")), h("pre", { class: "raw" }, a.taf.raw));
     const lt = a.lamp ? lampTable(a) : null;
-    if (lt) kids.push(sub("LAMP guidance · issued " + clock(Date.parse(a.lamp.issued), a.tz)), ...lt);
+    if (lt) kids.push(sub("LAMP guidance · issued " + zl(Date.parse(a.lamp.issued))), ...lt);
     if (a.sigmets && a.sigmets.length) kids.push(sub("Convective SIGMETs"), ...a.sigmets.map((x) => h("pre", { class: "raw", style: "margin-top:6px" }, x.raw)));
     if (a.cwa && a.cwa.length) kids.push(sub("Center weather advisories"), ...a.cwa.map((x) => h("div", { class: "item" },
       h("b", {}, x.hazard ? "CWA · " + x.hazard : "CWA"),
-      x.validTo ? h("span", { class: "muted" }, " · until " + whenLabel(Date.parse(x.validTo), a.tz)) : null,
+      x.validTo ? h("span", { class: "muted" }, " · until " + whenLabel(Date.parse(x.validTo), tz)) : null,
       x.raw ? h("pre", { class: "raw", style: "margin-top:6px" }, x.raw) : null)));
     if (a.tcf && a.tcf.length) kids.push(sub("TFM convective forecast"), ...a.tcf.map((x) => h("div", { class: "item" },
       h("b", {}, cap(x.coverageRaw || x.coverage || "Unknown") + " coverage"),
-      h("span", { class: "muted" }, [x.valid && " · valid " + whenLabel(Date.parse(x.valid), a.tz), x.confidence && " · confidence " + String(x.confidence).toLowerCase(), x.tops && " · tops " + x.tops].filter(Boolean).join("")))));
+      h("span", { class: "muted" }, [x.valid && " · valid " + whenLabel(Date.parse(x.valid), tz), x.confidence && " · confidence " + String(x.confidence).toLowerCase(), x.tops && " · tops " + x.tops].filter(Boolean).join("")))));
     if (!kids.length) return null;
-    return h("details", { class: "sec pilot" }, h("summary", {}, "Pilot details"), h("div", { class: "pd" }, ...kids));
+    return h("section", { class: "sec" }, h("details", { class: "scard pilot", open: aviation() || null },
+      h("summary", {}, icon(ICONS.plane), h("span", { class: "gt" }, "Pilot details"), h("span", { class: "car", "aria-hidden": "true" }, "⌄")), h("div", { class: "pd" }, ...kids)));
   }
 
-  let sheetPick = null; // hour index selected in the detail timeline
+  // ---------- Now / Peak / Hour cards (one structure, build2b) ----------
+
+  const FC_EXPLAIN = {
+    VFR: "Skies and visibility are clear enough for normal operations. Flights are usually unaffected.",
+    MVFR: "Visibility is good but not totally clear. Flights are usually unaffected.",
+    IFR: "Low clouds or poor visibility. Arrivals may be slowed and delays are possible.",
+    LIFR: "Very low clouds or very poor visibility. Arrivals are often slowed; delays are likely.",
+  };
+  const fcChip = (c) => (c ? h("span", { class: "fc " + c }, c) : null);
+  function precipWord(c, lamp) {
+    const wx = String((c && c.wx) || "");
+    if (/TS/.test(wx) && !/VCTS/.test(wx)) return "Thunderstorms";
+    if (/FZRA|FZDZ/.test(wx)) return "Freezing rain";
+    if (/PL/.test(wx)) return "Sleet";
+    if (/SN/.test(wx)) return "Snow";
+    if (/RA|SH/.test(wx)) return "Rain";
+    if (/DZ/.test(wx)) return "Drizzle";
+    if (lamp && (lamp.pPrecip || 0) >= 30) return { R: "Rain likely", S: "Snow likely", Z: "Freezing rain likely" }[lamp.typ] || "Precipitation likely";
+    return null;
+  }
+  /** Facts row: temperature, wind/gusts mph, precip type, thunder chance (+ category, ceiling, visibility, wind kt in Aviation mode). */
+  function factsRow(c, a, t, past, compact) {
+    const f = [];
+    const lamp = past ? null : lampAt(a, t);
+    if (c && c.temp != null) f.push(h("span", {}, f1(c.temp) + "°F"));
+    if (c && c.wspd != null) f.push(h("span", {}, c.wspd === 0 ? "Calm" : "Wind " + mph1(c.wspd) + (c.wgst != null ? "–" + mph1(c.wgst) : "") + " mph"));
+    const p = precipWord(c, compact ? null : lamp); // compact: observed / forecast precipitation only
+    if (p) f.push(h("span", {}, p));
+    const th = past || compact ? null : lampThunderAt(a, t);
+    if (th != null && th > 0) f.push(h("span", {}, "Thunder chance " + (th >= 40 ? "high" : th >= 20 ? "some" : "low")));
+    if (aviation() && c) {
+      const cat = c.fltCat || null;
+      if (cat) f.push(fcChip(cat));
+      f.push(h("span", { class: "mono" }, c.cig != null ? c.cig.toLocaleString("en-US") + " ft" : "No ceiling"));
+      if (c.vis != null) f.push(h("span", { class: "mono" }, visTxt(c.vis)));
+      const w = windKt(c);
+      if (w) f.push(h("span", { class: "mono" }, w));
+    }
+    return f.length ? h("div", { class: "facts" }, f) : null;
+  }
+  /** Distinct sources (with their best confidence) behind a card's reasons and facts. */
+  function cardSources(reasons, kind) {
+    const rank = { low: 0, medium: 1, high: 2 };
+    const m = new Map();
+    const add = (src, conf) => { if (!m.has(src) || rank[conf] > rank[m.get(src)]) m.set(src, conf); };
+    for (const r of reasons || []) {
+      const c = CATS.reason(r);
+      if (c.src) add(c.src, c.conf || "medium");
+      else if (kind === "obs" || kind === "now") add("METAR", "high");
+      else add("TAF", /^Chance of /.test(r) ? "low" : "medium");
+    }
+    if (!m.size) add(kind === "obs" || kind === "now" ? "METAR" : "TAF", kind === "obs" || kind === "now" ? "high" : "medium");
+    return [...m.entries()];
+  }
+  /** One state card (Now, Peak, Now · Peak, or an hour): label + pill, time line, delay chance, reasons, FAA status, impact, facts, chips. */
+  function stateCard(o) {
+    const a = o.a;
+    const max = 2; // compact: two reasons, the rest behind "+N more"
+    // FAA program reasons are shown once, as the program status line
+    const progTxt = o.programs && o.programs.length ? uniq(o.programs.map((f) => programLine(f, a))) : [];
+    const others = o.programs && o.programs.length ? o.reasons.filter((r) => !/^(Ground stop|Ground delay program|Delays\b|Airport closed)/.test(r)) : o.reasons;
+    // simple (Now / Peak / single) cards: the program status is one of the two reasons
+    const rs = o.simple ? [...progTxt, ...others] : others;
+    const moreBtn = rs.length > max ? h("button", { type: "button", class: "morebtn", "aria-expanded": "false",
+      onclick: (e) => { e.stopPropagation(); const box = e.currentTarget.closest(".sc"); const on = box.classList.toggle("expanded"); e.currentTarget.setAttribute("aria-expanded", String(on)); e.currentTarget.textContent = on ? "Show less" : "+" + (rs.length - max) + " more"; } },
+      "+" + (rs.length - max) + " more") : null;
+    // full-width cards: the reasons run on one line ("Rain · Light fog / haze +1 more"); split cards: a short list
+    const list = rs.length && o.full
+      ? h("p", { class: "rline" }, rs.map((r, i) => h("span", { class: i >= max ? "more" : null }, i ? " · " : "", r)), moreBtn ? [" ", moreBtn] : null)
+      : rs.length
+      ? h("ul", { class: "reasons" }, rs.map((r, i) => h("li", { class: i >= max ? "more" : null }, r, i === Math.min(max, rs.length) - 1 && moreBtn ? [" ", moreBtn] : null)))
+      : o.programs && o.programs.length && o.reasons.length ? null : h("div", { class: "none" }, o.empty || (o.level ? "Minor weather conditions" : "No significant weather"));
+    // delay chance (Phase 3 hours[].delay) in plain words via site/delay.js likelihood(); hidden when absent
+    const L = o.delay && o.delay.p != null && window.AWXDelay && AWXDelay.likelihood ? safeCall(() => AWXDelay.likelihood(o.delay, { iata: a.iata })) : null;
+    const progs = o.programs && o.programs.length;
+    const delay = L && !(L.key === "now" && progs && !o.simple) ? h("div", { class: "sc-delay" }, L.word, L.cue ? h("span", { class: "muted", style: "font-weight:500" }, " · " + L.cue) : null) : null;
+    // program status and the departure/arrival impact share one line; with source chips only in full-width cards
+    const prog = o.programs && o.programs.length ? o.programs.map((f) => programLine(f, a)).join(" · ") : "";
+    const imp = o.impact && prog ? o.impact.replace(/ \([^)]*\)$/, "") : o.impact;
+    const progLine = o.simple ? null : o.full && (prog || imp) ? h("div", { class: "sc-prog" }, prog, prog && imp ? h("span", { class: "sc-imp" }, " · " + imp) : !prog ? h("span", { class: "sc-imp" }, imp) : null)
+      : !o.full && prog ? h("div", { class: "sc-prog" }, prog) : null;
+    return h("div", { class: "box sc" + (o.full ? " full" : ""), "data-kind": o.kind },
+      h("div", { class: "sc-h" },
+        h("h4", {}, h("span", { class: "sc-label" }, o.label), o.level != null ? pill(o.level, true) : null, (o.full || o.simple) && o.when ? h("span", { class: "sc-when in" }, o.when) : null),
+        o.back ? h("button", { type: "button", class: "backnow", onclick: o.back, "aria-label": "Back to now" }, "Back to now") : null),
+      !o.full && !o.simple && o.when ? h("div", { class: "sc-when" }, o.when) : null,
+      delay,
+      list,
+      progLine,
+      o.simple ? null : o.facts);
+  }
+
+  let sheetPick = null; // slot index selected in the sheet timeline (kept until Back to now / second tap)
+  let sheetDay = 0; // 0 today, 1 tomorrow
   function renderSheet(keepScroll) {
     const a = state.data && state.data.airports.find((x) => x.iata === state.openIata);
     const sheet = $("sheet");
     if (!a) { closeSheet(); return; }
     const top = sheet.scrollTop;
-    const tz = a.tz;
-    const t0 = Date.parse(a.hours[0].t);
+    const v = view(a);
+    const tz = dispTz(a);
     const fav = state.favs.includes(a.iata);
-    // Now + Peak side by side; picking an hour swaps them for one full-width hour card.
-    const boxWrap = h("div", { class: "boxwrap", "aria-live": "polite" });
-    const reasonsList = (arr, level) => {
-      const rs = plainList(arr, a);
-      return rs.length ? h("ul", { class: "reasons" }, rs.map((r) => h("li", {}, r)))
-        : h("div", { class: "muted", style: "font-size:14px" }, level ? "Minor weather conditions" : "No significant weather");
-    };
-    const nowBox = () => h("div", { class: "box" },
-      h("h4", {}, "Now ", pill(a.now.level, true)),
-      h("div", { class: "muted small", style: "margin:-2px 0 6px" }, "through " + whenLabel(levelEnd(a), tz)),
-      reasonsList(a.now.reasons, a.now.level));
-    const peakBox = () => {
-      if (laterPeak(a)) {
-        return h("div", { class: "box" }, h("h4", {}, "Peak ", pill(a.peak.level, true)),
-          h("div", { class: "muted small", style: "margin:-2px 0 6px" }, peakRange(a)),
-          reasonsList(a.peak.reasons, a.peak.level));
-      }
-      // The peak is now: say so and what comes after, instead of repeating the Now reasons.
-      const endMs = levelEnd(a);
-      const nxt = a.hours.find((x) => Date.parse(x.t) >= endMs);
-      return h("div", { class: "box" }, h("h4", {}, "Peak ", pill(a.peak.level, true)),
-        h("div", { class: "muted small", style: "margin:-2px 0 6px" }, a.peak.level ? "Now" : "Next 24 hours"),
-        h("div", { style: "font-size:14px" },
-          !a.peak.level ? "Nothing expected"
-            : nxt ? (nxt.level ? "Highest right now. Eases to " + LEVELS[nxt.level].label + " after " : "Highest right now. Clear after ") + whenLabel(endMs, tz)
-            : "Highest right now, through the next 24 hours"));
-    };
-    const showBoxes = () => {
-      sheetPick = null;
-      sheet.querySelectorAll(".tl.big .s").forEach((b) => b.setAttribute("aria-pressed", "false"));
-      boxWrap.replaceChildren(window.AWXDelay ? AWXDelay.delayBlock(a, null) : "", h("div", { class: "two" }, nowBox(), peakBox())); // phase3 hook: "Will it cause delays?" above Now/Peak
-    };
-    const showHour = (i, btn) => {
-      if (sheetPick === i && btn && btn.getAttribute("aria-pressed") === "true") { showBoxes(); return; }
-      sheetPick = i;
-      sheet.querySelectorAll(".tl.big .s").forEach((b) => b.setAttribute("aria-pressed", String(b === btn)));
-      const hr = a.hours[i];
-      const th = lampThunderAt(a, Date.parse(hr.t));
-      boxWrap.replaceChildren(window.AWXDelay ? AWXDelay.delayBlock(a, i) : "", h("div", { class: "box hourbox" }, // phase3 hook: delay block for the picked hour
-        h("div", { class: "hb-top" },
-          h("h4", {}, h("span", { class: "hb-time" }, cap(whenLabel(Date.parse(hr.t), tz)))),
-          h("button", { type: "button", class: "backnow", onclick: showBoxes, "aria-label": "Back to now and peak" }, "Back to now")),
-        h("div", { class: "hb-lvl" }, pill(hr.level, true),
-          th != null && th > 0 ? h("span", { class: "muted small" }, `Thunder chance ${th}%`) : null),
-        reasonsList(hr.reasons, hr.level)));
-    };
-    showBoxes();
+    const code = codeOf(a);
+    const t0 = Date.parse(v.hours[0].t);
+    const nowCond = Object.assign({}, v.hours[0], a.metar ? metarCond(a.metar) : {}, { fltCat: (a.metar && a.metar.fltCat) || v.hours[0].fltCat });
+    const later = laterPeak(v);
+    const layout = CATS.restLayout(v.now.level, v.peak.level, later);
+    const endMs = levelEnd(v);
+    const lastMs = Date.parse(v.hours[v.hours.length - 1].t) + HOUR;
+    const nowPrograms = programsAt(v, t0, true);
 
+    // rest state: Now | Peak, or one full-width "Now · Peak" / clear card
+    const restCards = () => {
+      if (layout === "split") {
+        const pk = v.hours.find((x) => x.t === v.peak.at) || v.hours[0];
+        const pt = Date.parse(pk.t);
+        return h("div", { class: "two" },
+          stateCard({ a, kind: "now", simple: true, label: "Now", level: v.now.level, when: "through " + whenLabel(endMs, tz), delay: v.hours[0].delay,
+            reasons: shortList(v.now.reasons, a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true), chips: cardSources(v.now.reasons, "now") }),
+          stateCard({ a, kind: "peak", simple: true, label: "Peak", level: v.peak.level, when: peakRange(v), delay: pk.delay,
+            reasons: shortList(pk.reasons, a), programs: programsAt(v, pt, false), impact: CATS.impact(pk.reasons, programsAt(v, pt, false)), facts: factsRow(pk, a, pt, false, true), chips: cardSources(pk.reasons, "fc") }));
+      }
+      let when;
+      if (layout === "clear") when = "Clear through " + whenLabel(lastMs, tz);
+      else {
+        const nxt = v.hours.find((x) => Date.parse(x.t) >= endMs);
+        when = "through " + whenLabel(endMs, tz);
+        if (nxt) {
+          let j = v.hours.indexOf(nxt);
+          while (j + 1 < v.hours.length && v.hours[j + 1].level === nxt.level) j++;
+          const e2 = Date.parse(v.hours[j].t) + HOUR;
+          when += ", then " + LEVELS[nxt.level].label;
+        }
+      }
+      return stateCard({ a, kind: "nowpeak", full: true, simple: true, label: layout === "clear" ? "Now" : "Now · Peak", level: v.now.level, when, delay: v.hours[0].delay,
+        reasons: shortList(v.now.reasons, a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true),
+        chips: cardSources(v.now.reasons, "now"), empty: layout === "clear" ? "Nothing expected" : null });
+    };
+    const hourCard = (s) => {
+      const isNow = s.kind === "now";
+      const past = s.kind === "obs" || s.kind === "none";
+      const c = s.h ? (isNow ? nowCond : s.h) : null;
+      const label = cap(whenLabel(s.t, tz));
+      const zulu = aviation() ? " · " + new Date(s.t).toISOString().slice(11, 13) + "00Z" : "";
+      const when = (s.kind === "obs" ? (s.observed ? "Observed" : "Earlier forecast") : s.kind === "none" ? "No report" : s.kind === "na" ? "Forecast not available yet" : isNow ? "Now" : "Forecast") + zulu;
+      const progs = past || s.kind === "na" ? [] : programsAt(v, s.key, isNow);
+      return stateCard({ a, kind: "hour", full: true, max: 3, label, level: s.level, when, back: backToNow, delay: !past && s.h ? s.h.delay : null,
+        reasons: shortList(s.reasons, a), programs: progs, impact: s.level == null ? null : CATS.impact(s.reasons, progs),
+        facts: c ? factsRow(c, a, s.key, past, true) : null, chips: s.level == null ? [] : cardSources(s.reasons, s.kind),
+        empty: s.kind === "none" ? "No weather report for this hour" : s.kind === "na" ? "Forecast not available yet" : null });
+    };
+
+    const boxWrap = h("div", { class: "boxwrap", "aria-live": "polite" });
+    let tlEl = null;
+    const setLayer = (i, live) => {
+      boxWrap.classList.toggle("live", !!live);
+      for (const L of boxWrap.children) L.classList.toggle("on", i == null ? L.dataset.layer === "rest" : L.dataset.i === String(i));
+    };
+    const buildLayers = (slots) => {
+      boxWrap.replaceChildren(h("div", { class: "bx-layer on", "data-layer": "rest" }, restCards()),
+        ...slots.map((s) => h("div", { class: "bx-layer", "data-i": String(s.i), "aria-hidden": "true" }, hourCard(s))));
+    };
+    function backToNow() {
+      sheetPick = null;
+      setLayer(null, false);
+      if (tlEl) springBack(tlEl._tl);
+      if (tlEl) tlEl.focus({ preventScroll: true });
+    }
+    const onPick = (i) => {
+      sheetPick = i;
+      setLayer(i, false);
+      for (const L of boxWrap.children) L.setAttribute("aria-hidden", String(!L.classList.contains("on")));
+    };
+    const onPreview = (i) => setLayer(i, true);
+    const makeTl = () => {
+      tlEl = timeline(a, { big: true, dayOff: sheetDay, onPick, onPreview });
+      buildLayers(tlEl._tl.slots);
+      if (sheetDay) tlEl._tl.rest = -1;
+      return tlEl;
+    };
+    const tlHolder = h("div", { class: "tlhold" }, makeTl());
+    const dayBtn = h("button", { type: "button", class: "daybtn", "aria-pressed": String(sheetDay === 1),
+      onclick: () => {
+        sheetDay = sheetDay ? 0 : 1;
+        sheetPick = null;
+        tlHolder.replaceChildren(makeTl());
+        dayBtn.textContent = sheetDay ? "‹ Today" : "Tomorrow ›";
+        dayBtn.setAttribute("aria-pressed", String(sheetDay === 1));
+        tlTitle.textContent = sheetDay ? "Tomorrow" : "Today";
+        if (window.AWXTrips) window.AWXTrips.decorateSheet(sheet, a); // trips hook: plane markers on the shown day
+        requestAnimationFrame(placeLenses);
+      } }, sheetDay ? "‹ Today" : "Tomorrow ›");
+    const tlTitle = h("span", {}, sheetDay ? "Tomorrow" : "Today");
+
+    // detail cards (build2b), each only when it has content
     const secs = [];
     const add = (cond, fn) => { if (cond) secs.push(fn()); };
-    add(a.faa && a.faa.length, () => section("Delays & closures", ...a.faa.map((f) => faaItem(f, a))));
-    const notices = [...[...(a.atcscc || [])].sort((x, y) => (y.active ? 1 : 0) - (x.active ? 1 : 0)).map((x) => advItem(x, tz)), ...planItems(a)];
-    add(notices.length, () => section("FAA traffic notices", ...notices));
-    const mvCard = window.AWXMovement ? AWXMovement.card(a) : null; // movement hook: "Traffic right now" (site/movement.js)
-    if (mvCard) secs.push(mvCard); // movement hook
-    add(a.alerts && a.alerts.length, () => section("Weather warnings", ...a.alerts.map((x) => h("div", { class: "item" }, h("b", {}, x.event),
+    add(v.faa && v.faa.length, () => section("Delays & closures", "clock", v.faa.map((f) => faaItem(f, a)), { key: "faa" }));
+    const notices = [...[...(v.atcscc || [])].sort((x, y) => (y.active ? 1 : 0) - (x.active ? 1 : 0)).map((x) => advItem(x, a)), ...planItems(v, a)];
+    add(notices.length, () => section("FAA traffic notices", "tower", notices, { key: "atcscc" }));
+    add(a.metar, () => currentWeather(a));
+    add(v.alerts && v.alerts.length, () => section("Weather warnings", "alert", v.alerts.map((x) => h("div", { class: "item" }, h("b", {}, x.event),
       x.ends ? h("span", { class: "muted" }, " · until " + dayClock(Date.parse(x.ends), tz)) : null,
-      x.headline ? h("div", { class: "muted", style: "font-size:13px;margin-top:2px" }, x.headline) : null))));
-    add(a.sigmets && a.sigmets.length, () => section("Thunderstorms", h("div", { class: "item" }, plainReason("Convective SIGMET over airport", a) + ", or within 10 nautical miles.")));
-    add(a.spc, () => section("Storm outlook",
-      a.spc === "TSTM"
-        ? h("div", { class: "muted", style: "font-size:15px" }, "General thunderstorms possible in the area (no severe risk)")
-        : h("div", { style: "font-size:15px;font-weight:600" }, (SPC_NAMES[a.spc] || a.spc) + " risk of severe storms",
-            h("span", { class: "muted", style: "font-weight:400" }, " · today's outlook"))));
-    add(a.tcf && a.tcf.length, () => section("Storm forecast", ...a.tcf.map((x) => h("div", { class: "item" },
+      x.headline ? h("div", { class: "muted", style: "font-size:13px;margin-top:2px" }, retime(x.headline, a)) : null,
+      h("div", { class: "chips" }, confChip("NWS", /Warning/.test(x.event) ? "high" : "medium")))), { key: "nws", raw: v.alerts.map((x) => [x.event, x.headline].filter(Boolean).join("\n")) }));
+    // Storms: thunderstorms over the airport, the severe-storm outlook and the aviation storm forecast as sub-rows
+    const storms = [];
+    if (v.sigmets && v.sigmets.length) storms.push(h("div", { class: "item" }, h("div", { class: "subt" }, "Thunderstorms"),
+      h("div", {}, plainReason("Convective SIGMET over airport", v) + ", or within 10 nautical miles."), h("div", { class: "chips" }, confChip("NWS", "high"))));
+    if (v.spc) storms.push(h("div", { class: "item" }, h("div", { class: "subt" }, "Storm outlook"),
+      v.spc === "TSTM" ? h("div", { class: "muted" }, "General thunderstorms possible in the area (no severe risk)")
+        : h("div", { style: "font-weight:600" }, (SPC_NAMES[v.spc] || v.spc) + " risk of severe storms", h("span", { class: "muted", style: "font-weight:400" }, " · today's outlook")),
+      h("div", { class: "chips" }, confChip("SPC", "medium"))));
+    if (v.tcf && v.tcf.length) storms.push(h("div", { class: "item" }, h("div", { class: "subt" }, "Storm forecast"), ...v.tcf.map((x) => h("div", {},
       h("b", {}, "Thunderstorms, " + ({ high: "widespread", medium: "scattered", low: "isolated" }[x.coverage] || "some") + " coverage"),
       x.valid ? h("span", { class: "muted" }, " · around " + whenLabel(Date.parse(x.valid), tz)) : null,
-      x.confidence ? h("div", { class: "muted small" }, "Forecaster confidence " + String(x.confidence).toLowerCase()) : null))));
+      x.confidence ? h("div", { class: "muted small" }, "Forecaster confidence " + String(x.confidence).toLowerCase()) : null)),
+      h("div", { class: "chips" }, confChip("NWS", "medium"))));
+    add(storms.length, () => section("Storms", "bolt", storms, null, { meta: [v.sigmets && v.sigmets.length && "NWS", v.spc && "SPC", v.tcf && v.tcf.length && "NWS"].filter(Boolean).filter((x, i, arr) => arr.indexOf(x) === i).join(" · "),
+      raw: null }));
+    if (storms.length) secs[secs.length - 1].querySelector(".scard").append(srcLine(v.sigmets && v.sigmets.length ? "sigmet" : v.spc ? "spc" : "tcf", (v.sigmets || []).map((x) => x.raw)));
+    // movement hook: "Traffic right now" (site/movement.js), its card body inside a build2b section card
+    const mv = window.AWXMovement && typeof AWXMovement.card === "function" ? safeCall(() => AWXMovement.card(a)) : null;
+    if (mv) {
+      const box = mv.nodeType ? mv.querySelector(".mv-card") : null;
+      if (box) box.classList.remove("card");
+      secs.push(section("Traffic right now", "plane", [box || (mv.nodeType ? mv : String(mv))], null, { meta: "ADS-B" }));
+    }
     const pd = pilotDetails(a);
     if (pd) secs.push(pd);
+    if (secs.length) secs[0].id = "fullReport";
+    // Will it cause delays?: site/delay.js (Phase 3) when present, directly under the timeline
+    const dl = window.AWXDelay && typeof AWXDelay.delayBlock === "function" ? safeCall(() => AWXDelay.delayBlock(a, null)) : null; // phase3 hook
+    const hiddenNote = v.hiddenCats && v.hiddenCats.size
+      ? h("p", { class: "hidnote" }, "Hidden by your settings: " + [...v.hiddenCats].map((k) => CATS.LABELS[k]).join(", ") + ". Ground stops and airport closures are always shown.")
+      : null;
+    const zoneLine = S.tz === "mine" ? "Times in " + zoneAbbr(refNow(), USER_TZ) : zoneAbbr(refNow(), a.tz);
 
-    sheet.replaceChildren(
+    sheet.replaceChildren(...[
       h("div", { class: "grab", "aria-hidden": "true" }),
       h("div", { class: "sh-head" },
-        h("div", { class: "sh-code", id: "sheetTitle" }, a.iata),
+        h("div", { class: "sh-code", id: "sheetTitle" }, code),
         h("div", { class: "right", style: "gap:6px" },
-          h("button", { type: "button", class: "star", "aria-pressed": String(fav), "aria-label": (fav ? "Remove " : "Add ") + a.iata + (fav ? " from" : " to") + " my airports", onclick: () => toggleFav(a.iata) }, starSvg()),
+          h("button", { type: "button", class: "star", "aria-pressed": String(fav), "aria-label": (fav ? "Remove " : "Add ") + code + (fav ? " from" : " to") + " my airports", onclick: () => toggleFav(a.iata) }, starSvg()),
           h("button", { type: "button", class: "close", "aria-label": "Close", onclick: closeSheet }, closeSvg()))),
-      h("div", { class: "aname sh-aname" }, a.name),
-      h("div", { class: "where sh-where" }, `${a.city}, ${a.state}`),
+      h("div", { class: "sh-where" }, h("b", { class: "sh-aname" }, a.name), h("span", { class: "muted" }, " · " + `${a.city}, ${a.state}` + (S.tz === "mine" ? " · " + zoneLine : ""))),
+      // above the timeline: only the header, the Now / Peak (or single) card and the timeline itself
       boxWrap,
-      section("Next 24 hours (" + tzAbbr(t0, tz) + ")", timeline(a, true, showHour),
-        h("div", { class: "muted small", style: "margin-top:8px" }, "Tap an hour for details. Tap it again to go back.")),
+      h("section", { class: "sec tlsec" },
+        h("div", { class: "sec-h" }, icon(ICONS.clock), h("h3", {}, tlTitle), h("span", { class: "rule", "aria-hidden": "true" }), dayBtn),
+        tlHolder),
+      dl && (dl.nodeType ? dl.childNodes.length || dl.nodeType === 1 : true) ? section("Will it cause delays?", "clock", [dl.nodeType ? dl : String(dl)], null, { cls: "dlcard" }) : null, // phase3 hook
+      summaryCard(a, v, nowPrograms, () => {
+        const t = sheet.querySelector("#fullReport") || sheet.querySelector(".pilot");
+        if (t) sheet.scrollTo({ top: t.offsetTop - 64, behavior: reduced() ? "auto" : "smooth" });
+      }),
       ...secs,
-      checkedLine()
-    );
+      hiddenNote,
+      checkedLine(),
+    ].filter(Boolean));
     if (window.AWXTrips) window.AWXTrips.decorateSheet(sheet, a); // trips hook: "Your flight" row + plane markers
     if (keepScroll) {
       sheet.scrollTop = top;
-      if (sheetPick != null && a.hours[sheetPick]) showHour(sheetPick, sheet.querySelector(`.tl.big .s[data-i="${sheetPick}"]`));
+      if (sheetPick != null && tlEl && tlEl._tl.slots[sheetPick]) { onPick(sheetPick); tlEl._tl.shown = sheetPick; }
     } else sheetPick = null;
+    requestAnimationFrame(placeLenses);
+    fillCrosswind(a);
   }
 
-  // swipe down to close (from the top of the sheet)
-  (function wireSwipe() {
-    const sheet = $("sheet");
-    let d = null;
-    sheet.addEventListener("touchstart", (e) => {
-      if (e.touches.length !== 1) { d = null; return; }
-      d = { y: e.touches[0].clientY, t: Date.now(), dy: 0, on: false, ok: sheet.scrollTop <= 0 };
-    }, { passive: true });
-    sheet.addEventListener("touchmove", (e) => {
-      if (!d || !d.ok) return;
-      const dy = e.touches[0].clientY - d.y;
-      if (!d.on && dy > 8) { d.on = true; sheet.style.transition = "none"; }
-      if (d.on) {
-        d.dy = Math.max(0, dy);
-        sheet.style.transform = `translateY(${d.dy}px)`;
-        if (e.cancelable) e.preventDefault();
+  function safeCall(fn) {
+    try { return fn(); } catch (e) { console.warn(e); return null; }
+  }
+
+  /** Status summary at the top of the sheet (one line; rows behind the chevron). */
+  function summaryCard(a, v, nowPrograms, onMore) {
+    const tz = dispTz(a);
+    const closed = nowPrograms.find((f) => f.type === "closure");
+    const gs = nowPrograms.find((f) => f.type === "ground_stop");
+    const L = Math.max(v.now.level, v.peak.level);
+    let head, dot;
+    if (closed) { head = "Airport closed"; dot = 4; }
+    else if (gs) {
+      const end = programEnd(gs);
+      head = "Ground stop " + (end ? "until " + whenLabel(end, tz) : /until /.test(gs.detail || "") ? retime(/until [^,]+/.exec(gs.detail)[0], a) : "until further notice");
+      dot = 4;
+    } else {
+      dot = L;
+      const range = laterPeak(v) ? peakRange(v) : "until " + whenLabel(levelEnd(v), tz);
+      head = L === 0 ? "Normal operations" : L === 1 ? "Minor delays possible" : L === 2 ? "Delays possible " + range : "Delays likely " + range;
+    }
+    const ops = [];
+    for (const f of nowPrograms) ops.push(programLine(f, a));
+    for (const x of ((v.opsplan && v.opsplan.items) || []).filter((x) => x.level > 0 && !x.dup).sort((p, q) => q.level - p.level)) ops.push(retime(x.text, a));
+    for (const f of (v.faa || []).filter((f) => f.type === "closure" && f.scope === "runway")) ops.push(retime(f.plain || "Runway closed", a));
+    const dn = delaysNow(v);
+    const opsShown = uniq(ops).slice(0, 3);
+    const more = uniq(ops).length - opsShown.length;
+    const wxNow = shortCond(a.metar ? metarCond(a.metar) : v.hours[0], a.metar && a.metar.raw) + (a.metar && a.metar.temp != null ? " · " + f1(a.metar.temp) + "°F" : "");
+    let coming;
+    const pkh = v.hours.find((x) => x.t === v.peak.at) || v.hours[0];
+    if (laterPeak(v)) coming = `${LEVELS[v.peak.level].label} ${peakRange(v)}: ${plainList(pkh.reasons, a)[0] || "minor weather"}`;
+    else if (v.now.level > 0) {
+      const nxt = v.hours.find((x) => Date.parse(x.t) >= levelEnd(v));
+      coming = nxt ? `${LEVELS[v.now.level].label} until ${whenLabel(levelEnd(v), tz)}, then ${nxt.level ? LEVELS[nxt.level].label : "clear"}` : `${LEVELS[v.now.level].label} through the next 24 hours`;
+    } else coming = "Nothing significant expected";
+    const row = (ico, k, ...val) => h("div", { class: "sum-row" }, icon(ICONS[ico]), h("div", {}, h("div", { class: "sum-k" }, k), ...val));
+    // one line at rest (dot, headline, the most important fact); the rows open behind the chevron
+    const fact = dn[0] || uniq(ops).find((t) => t !== head && !t.startsWith(head)) || wxNow;
+    return h("details", { class: "summary", "aria-label": "Status summary" },
+      h("summary", { class: "sum-head" }, h("span", { class: "dot " + lv(dot), "aria-hidden": "true" }),
+        h("span", { class: "sum-line" }, h("h2", { class: "sum-h" }, head), fact ? h("span", { class: "sum-fact" }, fact) : null),
+        h("span", { class: "sum-chev", "aria-hidden": "true" }, "⌄")),
+      row("ops", "Operations",
+        opsShown.length ? opsShown.map((t) => h("div", { class: "sum-v" }, t)) : h("div", { class: "sum-v" }, "No operational issues reported"),
+        more > 0 ? h("div", { class: "sum-v muted" }, `and ${more} more below`) : null,
+        dn.length ? h("div", { class: "sum-v sum-delay" }, h("span", { class: "muted" }, "Delays right now: "), dn.join(" · ")) : null),
+      row("sun", "Weather now", h("div", { class: "sum-v" }, wxNow || "No current report")),
+      row("next", "Coming up", h("div", { class: "sum-v" }, coming)),
+      h("button", { type: "button", class: "sum-more", onclick: onMore }, "View full report", h("span", { "aria-hidden": "true" }, " ›")));
+  }
+
+  // ---------- Current weather card ----------
+
+  /** Position 0..1 on a LIFR | IFR | MVFR | VFR scale (equal quarters). */
+  function scalePos(val, b) {
+    if (val == null) return 1;
+    const [x1, x2, x3, top] = b;
+    if (val < x1) return (val / x1) * 0.25;
+    if (val < x2) return 0.25 + ((val - x1) / (x2 - x1)) * 0.25;
+    if (val <= x3) return 0.5 + ((val - x2) / (x3 - x2)) * 0.25;
+    return Math.min(1, 0.75 + ((val - x3) / (top - x3)) * 0.25);
+  }
+  function catScale(label, valueText, pos) {
+    return h("div", { class: "cw-scale" },
+      h("div", { class: "cw-sl" }, h("span", {}, label), h("b", {}, valueText)),
+      h("div", { class: "cw-bar" }, ["LIFR", "IFR", "MVFR", "VFR"].map((c) => h("span", { class: "seg " + c }, h("i", {}, c))),
+        h("span", { class: "mark", style: `left:${(pos * 100).toFixed(1)}%` })));
+  }
+  function tickBar(label, kt, max, cls) {
+    const n = kt == null ? 0 : kt;
+    return h("div", { class: "cw-wind" + (cls ? " " + cls : "") },
+      h("div", { class: "cw-sl" }, h("span", {}, label), h("b", {}, kt == null ? "None" : kt + " kt")),
+      h("div", { class: "ticks-bar", style: `--f:${Math.min(1, n / max).toFixed(3)}` }));
+  }
+  /** Raw METAR with hazard groups highlighted: TS, FZ, +, BKN/OVC/VV below 1000 ft, visibility below 3 sm. */
+  function metarMarked(raw) {
+    const toks = String(raw || "").split(/\s+/);
+    const out = [];
+    for (let i = 0; i < toks.length; i++) {
+      const t = toks[i];
+      let hz = false;
+      if (i > 1) {
+        if (/^(\+|-|VC)?[A-Z]*TS[A-Z]*$/.test(t) && !/^TS[A-Z]{0,1}$/.test("") && /TS/.test(t) && !/^RMK$/.test(t)) hz = /^(\+|-|VC)?(TS|[A-Z]{2})*$/.test(t);
+        if (/^(\+|-)?FZ[A-Z]+$/.test(t)) hz = true;
+        if (/^\+[A-Z]{2,}$/.test(t)) hz = true;
+        const c = /^(BKN|OVC|VV)(\d{3})/.exec(t);
+        if (c && Number(c[2]) * 100 < 1000) hz = true;
+        const vm = /^M?(\d+\/\d+|\d+)SM$/.exec(t);
+        if (vm) {
+          let val = visNum(vm[1]);
+          if (/^\d+\/\d+SM$/.test(t) && /^\d+$/.test(toks[i - 1] || "")) val += Number(toks[i - 1]);
+          if (val < 3) { hz = true; if (/^\d+$/.test(toks[i - 1] || "") && out.length) { const prev = out.pop(); out.push(h("mark", {}, prev.textContent || prev)); out.push(" "); } }
+        }
       }
-    }, { passive: false });
-    const end = () => {
-      if (!d) return;
-      const { on, dy, t } = d;
-      d = null;
-      if (!on) return;
-      sheet.style.transition = "";
-      const v = dy / Math.max(1, Date.now() - t);
-      if (dy > 110 || v > 0.6) closeSheet();
-      else sheet.style.transform = "";
-    };
-    sheet.addEventListener("touchend", end);
-    sheet.addEventListener("touchcancel", end);
-  })();
+      if (t === "RMK") { out.push(toks.slice(i).join(" ")); break; }
+      out.push(hz ? h("mark", {}, t) : t);
+      if (i < toks.length - 1) out.push(" ");
+    }
+    return out;
+  }
+  /** Visibility in plain words: "Good (10+ miles)", "Poor (2 miles)". */
+  function visWords(v) {
+    if (v == null) return "—";
+    const mi = v >= 10 ? "10+ miles" : v < 1 ? "under 1 mile" : (Math.round(v * 4) / 4) + (v === 1 ? " mile" : " miles");
+    return (v > 5 ? "Good" : v >= 3 ? "Moderate" : v >= 1 ? "Poor" : "Very poor") + " (" + mi + ")";
+  }
+  function currentWeather(a) {
+    const m = a.metar;
+    if (!m) return null;
+    const cond = shortCond(metarCond(m), m.raw);
+    const cat = m.fltCat;
+    const temp = m.temp != null ? f1(m.temp) + "°" : "—";
+    const head = h("div", { class: "cw-top" },
+      h("div", { class: "cw-temp" }, temp, aviation() && m.temp != null ? h("span", { class: "cw-c" }, m.temp + "°C") : null),
+      h("div", { class: "cw-cond" }, cond));
+    const w = m.wind || {};
+    const kv = [
+      ["Temperature", m.temp != null ? `${f1(m.temp)}°F` + (aviation() ? ` · ${m.temp}°C` : "") : "—"],
+      ["Wind", w.spd == null ? "—" : w.spd === 0 ? "Calm" : (w.dir == null || w.dir === "VRB" ? "Variable" : "From " + compass(w.dir)) + " " + mph1(w.spd) + " mph"],
+      ["Gusts", m.gust != null ? mph1(m.gust) + " mph" : "None"],
+      ["Visibility", visWords(m.visib)],
+    ];
+    if (aviation() && cat) kv.push(["Flight category", fcChip(cat)]);
+    const grid = h("dl", { class: "kv2" }, kv.map(([k, val]) => h("div", {}, h("dt", {}, k), h("dd", {}, val))));
+    const obs = m.obsTime ? "Observed " + ago(Math.max(0, refNow() - Date.parse(m.obsTime))) : "";
+    if (!aviation()) {
+      return section("Current weather", "sun", [head, cat ? h("p", { class: "cw-expl" }, FC_EXPLAIN[cat]) : null, grid], null, { cls: "cw", meta: obs });
+    }
+    const age = m.obsTime ? agoShort(refNow() - Date.parse(m.obsTime)) : "";
+    const maxW = Math.max(40, Math.ceil(((m.gust || 0) + 5) / 10) * 10);
+    return section("Current weather", "sun", [head,
+      cat ? h("div", { class: "cw-cat" }, fcChip(cat), h("span", {}, " — " + FC_EXPLAIN[cat])) : null,
+      grid,
+      catScale("Ceiling", m.ceiling != null ? m.ceiling.toLocaleString("en-US") + " ft" : "None", scalePos(m.ceiling, [500, 1000, 3000, 12000])),
+      catScale("Visibility", visTxt(m.visib), scalePos(m.visib, [1, 3, 5, 10])),
+      tickBar("Wind " + (w.dir != null ? (w.dir === "VRB" ? "variable" : String(w.dir).padStart(3, "0") + "°") : ""), w.spd, maxW),
+      tickBar("Gusts", m.gust, maxW, "gust"),
+      h("div", { class: "cw-xw", "data-icao": a.icao }, "Crosswind: checking runways…"),
+      h("details", { class: "srcl metar" }, h("summary", {}, "METAR · REPORTED " + age + " ", h("span", { class: "car", "aria-hidden": "true" }, "›")),
+        h("pre", { class: "raw" }, metarMarked(m.raw)))], null, { cls: "cw av", meta: obs });
+  }
+  const compass = (d) => ["north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"][Math.round(((Number(d) % 360) + 360) % 360 / 45) % 8];
+  /** Crosswind/headwind for the best-aligned runway (headings from data/airports-all.json via site/searched.js). */
+  async function fillCrosswind(a) {
+    const el = document.querySelector(`.cw-xw[data-icao="${a.icao}"]`);
+    if (!el) return;
+    const m = a.metar;
+    const w = m && m.wind;
+    if (!w || w.spd == null) { el.textContent = "Crosswind: no wind reported"; return; }
+    if (w.spd === 0) { el.textContent = "Calm wind — no crosswind on any runway"; return; }
+    if (w.dir === "VRB" || w.dir == null) { el.textContent = `Variable wind ${w.spd} kt — crosswind can come from any side`; return; }
+    let rws = null;
+    try { rws = window.AWXExtra && AWXExtra.runways ? await AWXExtra.runways(a.icao, a.iata) : null; } catch (e) { rws = null; }
+    if (!document.body.contains(el)) return;
+    if (!rws || !rws.length) { el.textContent = "Crosswind: runway headings unavailable"; return; }
+    let best = null;
+    for (const r of rws) {
+      const ends = String(r.ids || "").split("/");
+      const n1 = parseInt(ends[0], 10);
+      const h1 = r.headingTrue != null ? Number(r.headingTrue) : Number.isFinite(n1) ? n1 * 10 : null;
+      if (h1 == null) continue;
+      ends.forEach((id, k) => {
+        const hd = (h1 + (k ? 180 : 0)) % 360;
+        const d = ((Number(w.dir) - hd) * Math.PI) / 180;
+        const head = w.spd * Math.cos(d), cross = w.spd * Math.sin(d);
+        const gx = m.gust != null ? Math.abs(m.gust * Math.sin(d)) : null;
+        if (!best || head > best.head + 0.5 || (Math.abs(head - best.head) <= 0.5 && Math.abs(cross) < Math.abs(best.cross))) best = { id, head, cross, gx };
+      });
+    }
+    if (!best) { el.textContent = "Crosswind: runway headings unavailable"; return; }
+    const xc = Math.round(Math.abs(best.cross)), hw = Math.round(best.head);
+    el.textContent = `Runway ${best.id}: ${xc} kt crosswind${xc ? " from the " + (best.cross > 0 ? "right" : "left") : ""}, ${Math.abs(hw)} kt ${hw >= 0 ? "headwind" : "tailwind"}` + (best.gx != null && Math.round(best.gx) > xc ? ` (gusts ${Math.round(best.gx)} kt across)` : "");
+  }
+
+  // ---------- panel: the national list (Settings is the nav shell's site/settings.js) ----------
+
+  const panel = { kind: null };
+  function openPanel(kind) {
+    panel.kind = kind;
+    const wrap = $("panelWrap");
+    wrap.hidden = false;
+    document.documentElement.classList.add("lock");
+    renderNationalPanel();
+    $("panel").scrollTop = 0;
+    panelCtl.opened();
+    void wrap.offsetHeight;
+    wrap.classList.add("open");
+    const c = $("panel").querySelector(".close");
+    if (c) c.focus({ preventScroll: true });
+  }
+  function closePanel(keepLock) {
+    if (!panel.kind) return;
+    panel.kind = null;
+    const wrap = $("panelWrap");
+    wrap.classList.remove("open");
+    $("panel").style.transform = "";
+    if (!keepLock && !state.openIata) document.documentElement.classList.remove("lock");
+    panelCtl.closed();
+    const done = () => { if (!panel.kind) wrap.hidden = true; };
+    if (reduced()) done(); else setTimeout(done, 300);
+  }
+  const panelHead = (title) => h("div", { class: "pn-head" }, h("h2", { id: "panelTitle" }, title),
+    h("button", { type: "button", class: "close", "aria-label": "Close", onclick: () => closePanel() }, closeSvg()));
+
+  function openNational() { openPanel("national"); }
+  function renderNationalPanel() {
+    const s = nationalSummary();
+    const p = $("panel");
+    if (!s) { p.replaceChildren(panelHead("Across the U.S.")); return; }
+    const row = (a, what) => h("button", { type: "button", class: "nrow", onclick: () => { closePanel(true); openSheet(a.iata); } },
+      h("span", { class: "ncode" }, codeOf(a)), h("span", { class: "ntext" }, h("span", {}, a.city + ", " + a.state), h("span", { class: "muted" }, what)), pill(view(a).peak.level, true));
+    const grp = (title, list, what) => (list.length ? h("div", { class: "ngrp" }, h("h3", {}, title), h("div", { class: "glist" }, list.map((a) => row(a, what(a))))) : null);
+    const progText = (a, t) => { const f = (view(a).faa || []).find((x) => x.type === t); return f ? programLine(f, a) : t === "ground_stop" ? "Ground stop" : "Delay program"; };
+    p.replaceChildren(...[panelHead("Across the U.S."),
+      grp("Airports closed", s.closed, () => "Airport closed"),
+      grp("Ground stops", s.stops, (a) => progText(a, "ground_stop")),
+      grp("Delay programs", s.gdps, (a) => progText(a, "ground_delay")),
+      grp("Delays", s.delays, (a) => delaysNow(view(a)).join(" · ") || "Delays"),
+      ...s.stormRegions.map((r) => grp("Storms in the " + r, s.regions[r], (a) => plainList(view(a).peak.reasons, a)[0] || "Thunderstorms")),
+      s.items.length ? h("div", { class: "ngrp" }, h("h3", {}, "National FAA notices"), h("div", { class: "glist" }, s.items.map((x) => h("div", { class: "nrow static" }, h("span", { class: "ntext" }, x.text)))),
+        srcLine("atcscc", s.items.map((x) => x.raw))) : null,
+      !s.line ? h("p", { class: "muted" }, "Nothing affecting flights nationally right now.") : null].filter(Boolean));
+  }
+
+  // ---------- wiring ----------
 
   $("backdrop").addEventListener("click", closeSheet);
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSheet(); });
-  $("refresh").addEventListener("click", () => load(true));
+  $("panelBackdrop").addEventListener("click", () => closePanel());
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { if (panel.kind) closePanel(); else closeSheet(); } });
+  // Refresh = a full page reload, like the browser's: refetch index.html past the HTTP cache first so the reload
+  // (and checkVersion) see any new version; the icon spins until the page goes. The 2-minute background refresh stays.
+  $("refresh").addEventListener("click", () => {
+    reloading = true;
+    $("refresh").classList.add("spin");
+    const go = () => location.reload();
+    const t = setTimeout(go, 2500);
+    fetch("./index.html", { cache: "reload" }).catch(() => null).then(() => { clearTimeout(t); go(); });
+  });
 
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
@@ -901,7 +2184,13 @@
   setInterval(() => { if (state.data && state.data.live && document.visibilityState === "visible") renderHeader(); }, 10e3); // live relay: "Live · 40 s ago"
   setInterval(() => { if (document.visibilityState === "visible") checkVersion(); }, 10 * 60e3); // live relay: self-update
 
-  window.AWXApp = { state, openSheet, toggleFav, render }; // build2a hook: used by site/searched.js
+  window.AWXApp = {
+    state, openSheet, closeSheet, toggleFav, render, // build2a hook: used by site/searched.js
+    // build2b: for site/searched.js, the settings UI and check.js
+    prefs: PREFS, codeOf, view, dispTz, zoneAbbr, clock, hourLabel, daySlots, openNational, closePanel, placeLenses,
+    timeline: (a) => timeline(a, {}), // a status.json-shaped airport (searched.js builds one from a shard entry)
+    version: APP_V,
+  };
   window.AWXApp.setFavs = (list) => { state.favs = list.filter((x) => typeof x === "string"); saveFavs(); render(); }; // nav hook: Settings → Your airports (site/settings.js)
   if (!testMode()) liveConfig(); // live relay: read data/config.json on load
   render();

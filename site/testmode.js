@@ -247,6 +247,7 @@
       ".awx-tp-bd { position: absolute; inset: 0; background: var(--backdrop, rgba(0,0,0,.5)); }",
       ".awx-tp-sh { position: relative; width: 100%; max-width: 560px; max-height: 88dvh; overflow: auto; overscroll-behavior: contain; background: var(--bg, #000); color: var(--text, #fff);",
       "  border-radius: 18px 18px 0 0; padding: 14px 16px calc(24px + env(safe-area-inset-bottom)); font: 15px/1.35 var(--font, system-ui, sans-serif); box-shadow: 0 -8px 30px rgba(0,0,0,.35); }",
+      ".awx-tp-grab { width: 36px; height: 5px; border-radius: 3px; background: var(--line, rgba(255,255,255,.2)); margin: -4px auto 8px; }",
       ".awx-tp-hd { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }",
       ".awx-tp-hd h2 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -.02em; }",
       ".awx-tp-x { font: inherit; font-weight: 600; color: var(--l1, #2ec4d6); background: none; border: 0; min-height: 44px; padding: 0 4px; cursor: pointer; }",
@@ -278,6 +279,7 @@
     sh.setAttribute("role", "dialog");
     sh.setAttribute("aria-modal", "true");
     sh.setAttribute("aria-labelledby", "awxTpTitle");
+    sh.append(mk("div", "awx-tp-grab"));
     var hd = mk("div", "awx-tp-hd");
     var h2 = mk("h2", null, "Test scenarios");
     h2.id = "awxTpTitle";
@@ -288,7 +290,16 @@
     body.append(mk("p", "awx-tp-note", "Sample situations run through the real data pipeline, with every time moved to now. Nothing you change while one is open is saved."));
     sh.append(hd, body);
     wrap.append(bd, sh);
-    var close = function () { wrap.remove(); document.removeEventListener("keydown", onKey, true); if (prevFocus && prevFocus.focus) prevFocus.focus({ preventScroll: true }); };
+    var ctl = null; // site/sheet.js: drag the header (or pull at the top) to close, back gesture, page scroll lock
+    var closed = false;
+    var close = function () {
+      if (closed) return;
+      closed = true;
+      if (ctl) ctl.closed();
+      wrap.remove();
+      document.removeEventListener("keydown", onKey, true);
+      if (prevFocus && prevFocus.focus) prevFocus.focus({ preventScroll: true });
+    };
     var onKey = function (e) {
       if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); return; }
       if (e.key !== "Tab") return;
@@ -323,6 +334,10 @@
     var loading = mk("p", "awx-tp-note", "Loading scenarios…");
     body.append(loading);
     document.body.append(wrap);
+    if (window.AWXSheet && window.AWXSheet.makeSheet) {
+      ctl = window.AWXSheet.makeSheet(sh, { onClose: function () { close(); }, header: ".awx-tp-grab, .awx-tp-hd", backdrop: bd });
+      ctl.opened();
+    }
     x.focus({ preventScroll: true });
     fetch("./data/scenarios/index.json", { cache: "no-store" }).then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); }).then(function (idx) {
       loading.remove();
