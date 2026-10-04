@@ -45,15 +45,23 @@
       "t": "level",
       "iata": "LAX",
       "of": "peak",
-      "op": "==",
-      "v": 0
+      "op": "<=",
+      "v": 1,
+      "note": "at most a Low hub cascade note from SFO (poller/hubs.mjs)"
+    },
+    {
+      "t": "cascade",
+      "iata": "LAX",
+      "hub": "SFO",
+      "re": "^SFO ground delay program may delay some flights to and from San Francisco$"
     },
     {
       "t": "level",
       "iata": "SAN",
       "of": "peak",
-      "op": "==",
-      "v": 0
+      "op": "<=",
+      "v": 1,
+      "note": "at most a Low hub cascade note from SFO (poller/hubs.mjs)"
     },
     {
       "t": "noFaa",

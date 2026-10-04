@@ -35,3 +35,6 @@ import "./movement.test.mjs";
 // brief hook: per-airport change log
 import "./changes.test.mjs";
 import "../tools/brief.test.mjs";
+// closures and hub cascades
+import "./closures.test.mjs";
+import "./hubs.test.mjs";

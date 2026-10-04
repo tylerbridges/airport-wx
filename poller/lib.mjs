@@ -223,13 +223,18 @@ export function parseFaaXml(xml, { now = new Date(), tzFor = () => "America/New_
         const arpt = textOf(e.body, "ARPT");
         const tz = tzFor(arpt);
         const reason = textOf(e.body, "Reason");
-        const reopen = formatFaaTime(textOf(e.body, "Reopen"), tz, now);
+        const reopenRaw = textOf(e.body, "Reopen");
+        const reopen = formatFaaTime(reopenRaw, tz, now);
         // The reason is usually NOTAM text: scope (full / runway / limited) and times come from it.
         const d = describeClosure(reason, { tz, now, reopen });
+        // effective window (risk.mjs closureSpan): NOTAM start/end, else the Reopen time as the end
+        const end = d.end ?? (d.perm ? null : faaTimeMs(reopenRaw, tz, now));
+        const iso = (ms) => (ms != null && Number.isFinite(ms) ? new Date(ms).toISOString() : null);
         push(arpt, {
           type: "closure", reason, detail: d.detail,
           badge: d.scope === "full" ? "CLOSED" : d.scope === "runway" ? "RUNWAY CLOSED" : null,
           scope: d.scope, active: d.active, plain: d.plain, runways: d.runways,
+          start: iso(d.start), end: iso(end), ...(d.perm ? { perm: true } : {}),
         });
       }
     } else if (/ground stop/.test(name)) {

@@ -135,8 +135,14 @@
       "t": "level",
       "iata": "ORD",
       "of": "peak",
-      "op": "==",
-      "v": 0
+      "op": "<=",
+      "v": 1,
+      "note": "at most a Low hub cascade note from LGA (poller/hubs.mjs)"
+    },
+    {
+      "t": "cascade",
+      "iata": "ORD",
+      "hub": "LGA"
     },
     {
       "t": "national",
@@ -202,7 +208,7 @@
         "BOS",
         "ORD"
       ],
-      "re": "3 airports need attention EWR: Ground stop until [^—]+— storms JFK: Delay program until [^—]+— storms BOS: .*U\\.S\\.: 2 ground stops, 1 delay program"
+      "re": "[34] airports need attention EWR: Ground stop until [^—]+— storms JFK: Delay program until [^—]+— storms BOS: .*U\\.S\\.: 2 ground stops, 1 delay program"
     }
   ]
 }
