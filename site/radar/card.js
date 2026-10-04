@@ -89,11 +89,11 @@ function drawOverlay(ctx, o) {
   for (const g of rings) { ctx.beginPath(); ctx.arc(o.x, o.y, g.r, 0, 2 * Math.PI); ctx.stroke(); }
   ctx.setLineDash([]);
   ctx.font = `600 ${(10.5 * d).toFixed(1)}px -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif`;
-  ctx.textAlign = "left"; ctx.textBaseline = "middle"; ctx.lineJoin = "round";
+  ctx.textAlign = "right"; ctx.textBaseline = "middle"; ctx.lineJoin = "round"; // labels just inside each ring
   const ang = (-24 * Math.PI) / 180;
   for (const g of rings) {
     if (g.r < 14 * d) continue;
-    const x = o.x + g.r * Math.cos(ang) + 4 * d, y = o.y + g.r * Math.sin(ang), t = ringLabel(g.nm, av);
+    const x = o.x + g.r * Math.cos(ang) - 5 * d, y = o.y + g.r * Math.sin(ang), t = ringLabel(g.nm, av);
     ctx.strokeStyle = dark ? "rgba(0,0,0,.85)" : "rgba(255,255,255,.92)"; ctx.lineWidth = 3 * d; ctx.strokeText(t, x, y);
     ctx.fillStyle = dark ? "rgba(255,255,255,.88)" : "rgba(20,20,24,.82)"; ctx.fillText(t, x, y);
   }
@@ -108,17 +108,19 @@ function drawOverlay(ctx, o) {
   ctx.fillStyle = "#FFB020";
   for (let y = -L / 2 + 3 * d; y < L / 2 - 4 * d; y += 4.4 * d) ctx.fillRect(-0.65 * d, y, 1.3 * d, 2.4 * d);
 }
-// main runway heading (first listed runway) from the airport list search already loads; the glyph is north-up until then
+// main runway heading from the airport list search already loads: the direction most runways share (parallels), else
+//   the first listed; the glyph is north-up until then
 function loadHeading(a) {
   S.heading = null;
   const X = window.AWXExtra;
   if (!X || typeof X.runways !== "function") return;
   Promise.resolve(X.runways(a.icao, a.iata)).then((rws) => {
     if (S.a !== a || !rws || !rws.length) return;
-    const r = rws[0], n = parseInt(String(r.ids || "").split("/")[0], 10);
-    const hd = r.headingTrue != null ? Number(r.headingTrue) : Number.isFinite(n) ? n * 10 : null;
-    if (hd == null || !Number.isFinite(hd)) return;
-    S.heading = hd;
+    const hds = rws.map((r) => { const n = parseInt(String(r.ids || "").split("/")[0], 10); return r.headingTrue != null ? Number(r.headingTrue) : Number.isFinite(n) ? n * 10 : NaN; }).filter(Number.isFinite);
+    if (!hds.length) return;
+    const key = (x) => Math.round((((x % 180) + 180) % 180) / 10) % 18, count = {};
+    for (const x of hds) count[key(x)] = (count[key(x)] || 0) + 1;
+    S.heading = hds.reduce((best, x) => (count[key(x)] > count[key(best)] ? x : best), hds[0]);
     if (S.R && S.shown) S.R.repaint();
   }).catch(() => {});
 }
@@ -132,7 +134,7 @@ const RAIN_SPAN = [15, 70], SNOW_SPAN = [5, 42]; // dBZ shown along each bar
 const TICKS = { rain: [20, 35, 50, 65], snow: [10, 20, 30, 40] };
 function makeLegend() {
   const bar = (kind) => h("span", { class: "awr-li awr-l" + kind[0] }, h("b", {}, kind === "rain" ? "Rain" : "Snow"), h("i", { class: "awr-bar", "data-k": kind }));
-  const el = h("div", { class: "awr-leg" }, bar("rain"), h("span", { class: "awr-dot", "aria-hidden": "true" }, "·"), bar("snow"), h("span", { class: "awr-unit" }, "dBZ"), h("span", { class: "awr-cr" }, "NOAA · © OpenStreetMap"));
+  const el = h("div", { class: "awr-leg" }, bar("rain"), h("span", { class: "awr-dot", "aria-hidden": "true" }, "·"), bar("snow"), h("span", { class: "awr-unit" }, "dBZ"), h("span", { class: "awr-cr" }, "© OpenStreetMap"));
   S.legs.push(el);
   updateLegends();
   return el;
@@ -143,7 +145,7 @@ function updateLegends() {
     el.classList.toggle("av", av);
     el.querySelector(".awr-ls").hidden = !S.snow;
     el.querySelector(".awr-dot").hidden = !S.snow;
-    el.querySelector(".awr-unit").hidden = !av;
+    const u = el.querySelector(".awr-unit"); u.hidden = !av; u.textContent = av ? "dBZ" : ""; // Traveler: no numbers at all
     for (const b of el.querySelectorAll(".awr-bar")) {
       const k = b.dataset.k, span = k === "rain" ? RAIN_SPAN : SNOW_SPAN;
       if (S.pal) b.style.background = grad(k === "rain" ? S.pal.RAIN : S.pal.SNOW, span[0], span[1]);
@@ -354,11 +356,12 @@ const CSS = `
 .awr-leg{display:flex;align-items:center;gap:8px;margin:9px 2px 0;font-size:12px;color:var(--muted);min-height:16px}
 .awr-li{display:flex;align-items:center;gap:6px}.awr-li[hidden],.awr-dot[hidden],.awr-unit[hidden]{display:none}
 .awr-li b{font-weight:600;color:var(--text)}
-.awr-bar{position:relative;display:block;width:54px;height:6px;border-radius:3px;background:var(--line)}
+.awr-bar{position:relative;display:block;width:50px;flex:none;height:6px;border-radius:3px;background:var(--line)}
 .awr-leg.av{padding-bottom:9px}
 .awr-bar em{position:absolute;top:7px;transform:translateX(-50%);font-style:normal;font-size:9px;line-height:1;color:var(--muted)}
 .awr-unit{font-size:10.5px}
-.awr-cr{margin-left:auto;font-size:10.5px;white-space:nowrap}
+.awr-cr{margin-left:auto;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.awr-fsheet .awr-cr{display:none}
 .awr-note{margin:6px 2px 0;font-size:12.5px;color:var(--muted)}
 .awr-late{color:var(--crit)!important}
 .awr-fwrap{z-index:12}
@@ -446,7 +449,7 @@ async function cardCheck(add) {
     const title = sec.querySelector(".sec-h h3");
     const leg = sec.querySelector(".awr-leg");
     const txt = leg ? leg.textContent : "";
-    const ok = title && /radar/i.test(title.textContent) && /Rain/.test(txt) && !/dBZ|%|\d/.test(txt.replace("© OpenStreetMap", "")) && sec.querySelector(".awr-box[role=button]");
+    const ok = title && /radar/i.test(title.textContent) && /Rain/.test(txt) && !/dBZ|%|\d/.test(txt) && sec.querySelector(".awr-box[role=button]");
     add(ok ? "pass" : "fail", "Radar card in the MSP sheet (Traveler wording)", ok ? `legend "${txt.replace(/\s+/g, " ").trim()}"` : `title "${title && title.textContent}", legend "${txt}"`);
     w.AWXApp.closeSheet();
   } finally {

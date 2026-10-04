@@ -762,7 +762,8 @@
     if (r >= 1) at(RV.R, planMotion);
     // once the view is complete, ask for the ring around it (preload skipped it while the view was still loading)
     if (r >= 1) { var rk = rz() + ":" + Math.floor(view.x * 64) + "," + Math.floor(view.y * 64) + ":" + playing + ":" + (frames && frames.bucket); if (rk !== ringK) { ringK = rk; preload(); } }
-    if (r >= 1 && !playing && !userPaused && !started) { started = true; if (!reduced()) play(true); }
+    if (r >= 1 && !playing && !userPaused && !started && !ui.msg) { started = true; if (!reduced()) play(true); }
+    if (ui.msg && playing && !userPaused) play(false); // nothing to loop (this app: saves battery when radar failed)
   }
   var started = false, outUS = false, lastR = 0, ringK = "";
   // no loading percentage: radar fills in as it arrives; only real problems get a message
