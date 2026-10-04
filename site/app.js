@@ -1671,15 +1671,15 @@
     return null;
   }
   /** Facts row: temperature, wind/gusts mph, precip type, thunder chance (+ category, ceiling, visibility, wind kt in Aviation mode). */
-  function factsRow(c, a, t, past) {
+  function factsRow(c, a, t, past, compact) {
     const f = [];
     const lamp = past ? null : lampAt(a, t);
     if (c && c.temp != null) f.push(h("span", {}, f1(c.temp) + "°F"));
     if (c && c.wspd != null) f.push(h("span", {}, c.wspd === 0 ? "Calm" : "Wind " + mph1(c.wspd) + (c.wgst != null ? "–" + mph1(c.wgst) : "") + " mph"));
-    const p = precipWord(c, lamp);
+    const p = precipWord(c, compact ? null : lamp); // compact: observed / forecast precipitation only
     if (p) f.push(h("span", {}, p));
-    const th = past ? null : lampThunderAt(a, t);
-    if (th != null && th > 0) f.push(h("span", {}, "Thunder " + th + "%"));
+    const th = past || compact ? null : lampThunderAt(a, t);
+    if (th != null && th > 0) f.push(h("span", {}, "Thunder chance " + (th >= 40 ? "high" : th >= 20 ? "some" : "low")));
     if (aviation() && c) {
       const cat = c.fltCat || null;
       if (cat) f.push(fcChip(cat));
@@ -1707,30 +1707,37 @@
   /** One state card (Now, Peak, Now · Peak, or an hour): label + pill, time line, delay chance, reasons, FAA status, impact, facts, chips. */
   function stateCard(o) {
     const a = o.a;
-    const max = o.max || 2;
+    const max = 2; // compact: two reasons, the rest behind "+N more"
     // FAA program reasons are shown once, as the program status line
     const rs = o.programs && o.programs.length ? o.reasons.filter((r) => !/^(Ground stop|Ground delay program|Delays\b|Airport closed)/.test(r)) : o.reasons;
-    const list = rs.length
-      ? h("ul", { class: "reasons" }, rs.map((r, i) => h("li", { class: i >= max ? "more" : null }, r)))
-      : o.programs && o.programs.length && o.reasons.length ? null : h("div", { class: "none" }, o.empty || (o.level ? "Minor weather conditions" : "No significant weather"));
     const moreBtn = rs.length > max ? h("button", { type: "button", class: "morebtn", "aria-expanded": "false",
       onclick: (e) => { e.stopPropagation(); const box = e.currentTarget.closest(".sc"); const on = box.classList.toggle("expanded"); e.currentTarget.setAttribute("aria-expanded", String(on)); e.currentTarget.textContent = on ? "Show less" : "+" + (rs.length - max) + " more"; } },
       "+" + (rs.length - max) + " more") : null;
-    // delay chance (Phase 3 hours[].delay: p 0..1, minutes); hidden when absent
-    const dp = o.delay && Number.isFinite(Number(o.delay.p)) ? Math.round(Number(o.delay.p) * 100) : null;
-    const happening = dp != null && dp >= 99 && /^(ground_stop|ground_delay|delay)$/.test(o.delay.override || "");
-    const delay = dp != null ? h("div", { class: "sc-delay" }, (happening ? "Delays happening now" : `${dp}% chance of delays`) + (o.delay.minutes ? ` · about ${Math.round(o.delay.minutes)} min` : "")) : null;
+    // full-width cards: the reasons run on one line ("Rain · Light fog / haze +1 more"); split cards: a short list
+    const list = rs.length && o.full
+      ? h("p", { class: "rline" }, rs.map((r, i) => h("span", { class: i >= max ? "more" : null }, i ? " · " : "", r)), moreBtn ? [" ", moreBtn] : null)
+      : rs.length
+      ? h("ul", { class: "reasons" }, rs.map((r, i) => h("li", { class: i >= max ? "more" : null }, r, i === Math.min(max, rs.length) - 1 && moreBtn ? [" ", moreBtn] : null)))
+      : o.programs && o.programs.length && o.reasons.length ? null : h("div", { class: "none" }, o.empty || (o.level ? "Minor weather conditions" : "No significant weather"));
+    // delay chance (Phase 3 hours[].delay) in plain words via site/delay.js likelihood(); hidden when absent
+    const L = o.delay && o.delay.p != null && window.AWXDelay && AWXDelay.likelihood ? safeCall(() => AWXDelay.likelihood(o.delay, { iata: a.iata })) : null;
+    const progs = o.programs && o.programs.length;
+    const delay = L && !(L.key === "now" && progs) ? h("div", { class: "sc-delay" }, L.word, L.cue ? h("span", { class: "muted", style: "font-weight:500" }, " · " + L.cue) : null) : null;
+    // program status and the departure/arrival impact share one line; with source chips only in full-width cards
+    const prog = o.programs && o.programs.length ? o.programs.map((f) => programLine(f, a)).join(" · ") : "";
+    const imp = o.impact && prog ? o.impact.replace(/ \([^)]*\)$/, "") : o.impact;
+    const progLine = o.full && (prog || imp) ? h("div", { class: "sc-prog" }, prog, prog && imp ? h("span", { class: "sc-imp" }, " · " + imp) : !prog ? h("span", { class: "sc-imp" }, imp) : null)
+      : !o.full && prog ? h("div", { class: "sc-prog" }, prog) : null;
     return h("div", { class: "box sc" + (o.full ? " full" : ""), "data-kind": o.kind },
       h("div", { class: "sc-h" },
-        h("h4", {}, h("span", { class: "sc-label" }, o.label), o.level != null ? pill(o.level, true) : null),
+        h("h4", {}, h("span", { class: "sc-label" }, o.label), o.level != null ? pill(o.level, true) : null, o.full && o.when ? h("span", { class: "sc-when in" }, o.when) : null),
         o.back ? h("button", { type: "button", class: "backnow", onclick: o.back, "aria-label": "Back to now" }, "Back to now") : null),
-      o.when ? h("div", { class: "sc-when" }, o.when) : null,
+      !o.full && o.when ? h("div", { class: "sc-when" }, o.when) : null,
       delay,
-      list, moreBtn,
-      o.programs && o.programs.length ? h("div", { class: "sc-prog" }, o.programs.map((f) => programLine(f, a)).join(" · ")) : null,
-      o.impact ? h("div", { class: "sc-imp" }, o.impact) : null,
+      list,
+      progLine,
       o.facts,
-      o.chips && o.chips.length ? h("div", { class: "chips" }, o.chips.map(([s, c]) => confChip(s, c))) : null);
+      o.full && o.chips && o.chips.length ? h("div", { class: "chips compact" }, o.chips.slice(0, 4).map(([s, c]) => confChip(s, c))) : null);
   }
 
   let sheetPick = null; // slot index selected in the sheet timeline (kept until Back to now / second tap)
@@ -1759,9 +1766,9 @@
         const pt = Date.parse(pk.t);
         return h("div", { class: "two" },
           stateCard({ a, kind: "now", label: "Now", level: v.now.level, when: "through " + whenLabel(endMs, tz), delay: v.hours[0].delay,
-            reasons: plainList(v.now.reasons, a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false), chips: cardSources(v.now.reasons, "now") }),
+            reasons: plainList(v.now.reasons, a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true), chips: cardSources(v.now.reasons, "now") }),
           stateCard({ a, kind: "peak", label: "Peak", level: v.peak.level, when: peakRange(v), delay: pk.delay,
-            reasons: plainList(pk.reasons, a), programs: programsAt(v, pt, false), impact: CATS.impact(pk.reasons, programsAt(v, pt, false)), facts: factsRow(pk, a, pt, false), chips: cardSources(pk.reasons, "fc") }));
+            reasons: plainList(pk.reasons, a), programs: programsAt(v, pt, false), impact: CATS.impact(pk.reasons, programsAt(v, pt, false)), facts: factsRow(pk, a, pt, false, true), chips: cardSources(pk.reasons, "fc") }));
       }
       let when;
       if (layout === "clear") when = "Clear through " + whenLabel(lastMs, tz);
@@ -1772,11 +1779,11 @@
           let j = v.hours.indexOf(nxt);
           while (j + 1 < v.hours.length && v.hours[j + 1].level === nxt.level) j++;
           const e2 = Date.parse(v.hours[j].t) + HOUR;
-          when += ", then " + LEVELS[nxt.level].label + (e2 < lastMs ? " until " + whenLabel(e2, tz) : "");
+          when += ", then " + LEVELS[nxt.level].label;
         }
       }
       return stateCard({ a, kind: "nowpeak", full: true, max: 3, label: layout === "clear" ? "Now" : "Now · Peak", level: v.now.level, when, delay: v.hours[0].delay,
-        reasons: plainList(v.now.reasons, a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false),
+        reasons: plainList(v.now.reasons, a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true),
         chips: cardSources(v.now.reasons, "now"), empty: layout === "clear" ? "Nothing expected" : null });
     };
     const hourCard = (s) => {
@@ -1789,7 +1796,7 @@
       const progs = past || s.kind === "na" ? [] : programsAt(v, s.key, isNow);
       return stateCard({ a, kind: "hour", full: true, max: 3, label, level: s.level, when, back: backToNow, delay: !past && s.h ? s.h.delay : null,
         reasons: plainList(s.reasons, a), programs: progs, impact: s.level == null ? null : CATS.impact(s.reasons, progs),
-        facts: c ? factsRow(c, a, s.key, past) : null, chips: s.level == null ? [] : cardSources(s.reasons, s.kind),
+        facts: c ? factsRow(c, a, s.key, past, true) : null, chips: s.level == null ? [] : cardSources(s.reasons, s.kind),
         empty: s.kind === "none" ? "No weather report for this hour" : s.kind === "na" ? "Forecast not available yet" : null });
     };
 
@@ -1877,7 +1884,7 @@
     const hiddenNote = v.hiddenCats && v.hiddenCats.size
       ? h("p", { class: "hidnote" }, "Hidden by your settings: " + [...v.hiddenCats].map((k) => CATS.LABELS[k]).join(", ") + ". Ground stops and airport closures are always shown.")
       : null;
-    const zoneLine = S.tz === "mine" ? "Times in " + zoneAbbr(refNow(), USER_TZ) : "Local time · " + zoneAbbr(refNow(), a.tz);
+    const zoneLine = S.tz === "mine" ? "Times in " + zoneAbbr(refNow(), USER_TZ) : zoneAbbr(refNow(), a.tz);
 
     sheet.replaceChildren(...[
       h("div", { class: "grab", "aria-hidden": "true" }),
@@ -1886,8 +1893,7 @@
         h("div", { class: "right", style: "gap:6px" },
           h("button", { type: "button", class: "star", "aria-pressed": String(fav), "aria-label": (fav ? "Remove " : "Add ") + code + (fav ? " from" : " to") + " my airports", onclick: () => toggleFav(a.iata) }, starSvg()),
           h("button", { type: "button", class: "close", "aria-label": "Close", onclick: closeSheet }, closeSvg()))),
-      h("div", { class: "aname sh-aname" }, a.name),
-      h("div", { class: "where sh-where" }, `${a.city}, ${a.state}`, h("span", { class: "zone" }, " · " + zoneLine)),
+      h("div", { class: "sh-where" }, h("b", { class: "sh-aname" }, a.name), h("span", { class: "muted" }, " · " + `${a.city}, ${a.state}` + " · " + zoneLine)),
       summaryCard(a, v, nowPrograms, () => {
         const t = sheet.querySelector("#fullReport") || sheet.querySelector(".pilot") || sheet.querySelector(".tlsec");
         if (t) sheet.scrollTo({ top: t.offsetTop - 64, behavior: reduced() ? "auto" : "smooth" });
@@ -1895,9 +1901,8 @@
       boxWrap,
       h("section", { class: "sec tlsec" },
         h("div", { class: "sec-h" }, icon(ICONS.clock), h("h3", {}, tlTitle), h("span", { class: "rule", "aria-hidden": "true" }), dayBtn),
-        tlHolder,
-        h("div", { class: "muted small", style: "margin-top:6px" }, "Slide along the bar to read each hour. Tap an hour to keep it.")),
-      dl ? (dl.nodeType ? dl : section("Will it cause delays?", "clock", [String(dl)], null)) : null,
+        tlHolder),
+      dl && (dl.nodeType ? dl.childNodes.length || dl.nodeType === 1 : true) ? section("Will it cause delays?", "clock", [dl.nodeType ? dl : String(dl)], null, { cls: "dlcard" }) : null, // phase3 hook
       ...secs,
       hiddenNote,
       checkedLine(),
@@ -1948,8 +1953,12 @@
       coming = nxt ? `${LEVELS[v.now.level].label} until ${whenLabel(levelEnd(v), tz)}, then ${nxt.level ? LEVELS[nxt.level].label : "clear"}` : `${LEVELS[v.now.level].label} through the next 24 hours`;
     } else coming = "Nothing significant expected";
     const row = (ico, k, ...val) => h("div", { class: "sum-row" }, icon(ICONS[ico]), h("div", {}, h("div", { class: "sum-k" }, k), ...val));
-    return h("div", { class: "summary", role: "group", "aria-label": "Status summary" },
-      h("div", { class: "sum-head" }, h("span", { class: "dot " + lv(dot), "aria-hidden": "true" }), h("h2", { class: "sum-h" }, head)),
+    // one line at rest (dot, headline, the most important fact); the rows open behind the chevron
+    const fact = dn[0] || uniq(ops).find((t) => t !== head && !t.startsWith(head)) || wxNow;
+    return h("details", { class: "summary", "aria-label": "Status summary" },
+      h("summary", { class: "sum-head" }, h("span", { class: "dot " + lv(dot), "aria-hidden": "true" }),
+        h("span", { class: "sum-line" }, h("h2", { class: "sum-h" }, head), fact ? h("span", { class: "sum-fact" }, fact) : null),
+        h("span", { class: "sum-chev", "aria-hidden": "true" }, "⌄")),
       row("ops", "Operations",
         opsShown.length ? opsShown.map((t) => h("div", { class: "sum-v" }, t)) : h("div", { class: "sum-v" }, "No operational issues reported"),
         more > 0 ? h("div", { class: "sum-v muted" }, `and ${more} more below`) : null,

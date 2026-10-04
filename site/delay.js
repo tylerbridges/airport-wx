@@ -1,7 +1,9 @@
 // Phase 3: "Will it cause delays?" — renders the delay model's numbers from status.json
 // (airports[].hours[].delay, top-level delayModel; README "Delay model"). No scoring happens here.
-//   delayLine(airport)            card line: "62% chance of delays 6–9 PM" + muted "usually 18%"
-//   delayBlock(airport, hourIdx)  sheet block (hourIdx null = the peak window)
+//   likelihood(delay, opts)       plain words for a delay chance (build2b): "Delays likely · higher than usual"
+//   delayLine(airport)            card line: "Delays likely 6–9 PM · higher than usual"
+//   delayBlock(airport, hourIdx)  sheet card (hourIdx null = the peak window); the numbers sit behind "Why?"
+// Traveler mode never shows a percentage; Aviation mode adds the calibrated % in brackets.
 // Loaded as a module by index.html; app.js calls it through window.AWXDelay (marked "phase3 hook").
 
 const HOUR = 3600e3;
@@ -18,7 +20,8 @@ const STYLE = `
 .dl-min, .dl-now, .dl-faa { margin-top: 6px; font-size: 14px; }
 .dl-analog { margin-top: 8px; font-size: 13.5px; line-height: 1.4; color: var(--text); opacity: .9; }
 .dl-srcline { margin-top: 10px; font-size: 12px; color: var(--muted); line-height: 1.4; }
-.dl-srcline a { color: var(--l1); text-decoration: none; white-space: nowrap; }
+.dl-why { margin-top: 8px; }
+.dl-why summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--l1); width: max-content; min-height: 32px; display: flex; align-items: center; }
 .dl-srcline a:focus-visible { outline: 2px solid var(--l1); outline-offset: 2px; border-radius: 4px; }
 `;
 
@@ -69,9 +72,104 @@ function rangeLabel(start, end, tz, fromNow) {
   const suffix = !pre && dayPrefix(end, tz) === "tomorrow " ? " tomorrow" : " " + dayPrefix(end, tz).trim();
   return pre + a + " – " + b + suffix;
 }
-const pct = (p) => Math.round(p * 100) + "%";
-const tone = (p) => (p >= 0.6 ? "dl-hi" : p >= 0.35 ? "dl-mid" : "dl-lo");
 const NOW_KINDS = { ground_stop: "FAA ground stop", ground_delay: "FAA ground delay program", delay: "FAA-reported delays" };
+
+// ---------- likelihood words (build2b) ----------
+
+let REPORT = null; // data/model/report.json (test reliability table and per-airport skill); loaded once below
+export function setReport(r) { REPORT = r && r.test ? r : null; }
+const MIN_BIN = 200; // test hours a reliability bin needs before its word is trusted
+const LOW_SKILL = 0.02; // Brier skill vs climatology at or below this: cap at "Delays possible"
+const WORDS = [
+  ["unlikely", "Delays unlikely"],
+  ["small", "Small chance of delays"],
+  ["usual", "Usual delays"],
+  ["possible", "Delays possible"],
+  ["likely", "Delays likely"],
+  ["very", "Delays very likely"],
+];
+const WORD = Object.fromEntries(WORDS);
+const STEP_DOWN = { very: "likely", likely: "possible", possible: "small", small: "unlikely", usual: "unlikely", unlikely: "unlikely" };
+const RANK = { unlikely: 0, small: 1, usual: 1, possible: 2, likely: 3, very: 4 };
+
+/**
+ * Observed delay rate for a model score p, read through the test reliability table (what actually happened at each
+ * predicted level), interpolated between bins' mean scores; with no report, p itself. Also returns the bin of p.
+ */
+export function calibrate(p, report = REPORT) {
+  const rel = report && report.test && Array.isArray(report.test.reliability) ? report.test.reliability : null;
+  if (!rel || p == null || !Number.isFinite(Number(p))) return { rate: p, bin: null };
+  p = Number(p);
+  const pts = rel.filter((b) => b.n > 0 && b.meanP != null && b.rate != null).sort((a, b) => a.meanP - b.meanP);
+  if (!pts.length) return { rate: p, bin: null };
+  let rate;
+  if (p <= pts[0].meanP) rate = pts[0].rate * (pts[0].meanP > 0 ? Math.max(0, p) / pts[0].meanP : 1);
+  else if (p >= pts[pts.length - 1].meanP) rate = pts[pts.length - 1].rate;
+  else {
+    for (let i = 0; i + 1 < pts.length; i++) {
+      const a = pts[i], b = pts[i + 1];
+      if (p >= a.meanP && p <= b.meanP) { rate = a.rate + ((b.rate - a.rate) * (p - a.meanP)) / Math.max(1e-9, b.meanP - a.meanP); break; }
+    }
+  }
+  const bin = rel.find((b) => p >= b.lo && (p < b.hi || (b.hi >= 1 && p <= 1))) || null;
+  return { rate, bin };
+}
+
+/** "typically 30–45 min": the median ± 10, rounded to 5, never one number. */
+export function minutesRange(m) {
+  if (m == null || !Number.isFinite(Number(m))) return "";
+  const r5 = (x) => Math.max(5, Math.round(x / 5) * 5);
+  const lo = r5(Number(m) - 10), hi = Math.max(lo + 10, r5(Number(m) + 10));
+  return `typically ${lo}–${hi} min`;
+}
+
+const FAA_NOW = { ground_stop: true, ground_delay: true, delay: true };
+/**
+ * Plain, conservative words for one hour's delay numbers ({p, pTypical, minutes, minutesFrom, override}):
+ * {key, word, sentence, cue, rate, size}. opts: {iata, report, aviation}. Rules (README "Delay words"):
+ * FAA ground stop / delay program / reported delays in effect -> "Delays happening now" (+ the FAA average);
+ * else the calibrated observed rate: < 12% unlikely; 12–25% "Usual delays" within ±25% of the typical rate, else
+ * "Small chance"; 25–45% possible; 45–70% likely; >= 70% very likely only when that bin's observed rate was >= 70%
+ * over >= 200 test hours. A bin with < 200 test hours steps down one word; airports where the model's skill vs
+ * climatology is <= 0.02 are capped at "Delays possible". Cue: "higher than usual" at >= 1.25x the typical rate,
+ * "lower than usual" at <= 0.75x.
+ */
+export function likelihood(d, opts = {}) {
+  if (!d || d.p == null) return null;
+  const report = opts.report !== undefined ? opts.report : REPORT;
+  const aviation = opts.aviation !== undefined ? opts.aviation : !!(globalThis.AWXPrefs && globalThis.AWXPrefs.getPrefs().mode === "aviation");
+  if (Number(d.p) >= 1 && FAA_NOW[d.override]) {
+    const avg = d.minutes && d.minutesFrom === "faa" ? `FAA average about ${Math.round(d.minutes)} min` : "";
+    return { key: "now", word: "Delays happening now", sentence: "Delays happening now" + (avg ? " · " + avg : ""), cue: "", rate: 1, size: avg };
+  }
+  const { rate, bin } = calibrate(Number(d.p), report);
+  const typ = d.pTypical != null ? Number(d.pTypical) : null;
+  let key;
+  if (rate < 0.12) key = "unlikely";
+  else if (rate < 0.25) key = typ != null && Math.abs(rate - typ) <= 0.25 * typ ? "usual" : "small";
+  else if (rate < 0.45) key = "possible";
+  else if (rate < 0.7) key = "likely";
+  else key = "very";
+  const small = !!report && (!bin || !(bin.n >= MIN_BIN));
+  if (key === "very" && !(bin && bin.rate >= 0.7 && bin.n >= MIN_BIN)) key = "likely"; // the one step down for this bin
+  else if (small) key = STEP_DOWN[key];
+  const ap = opts.iata && report && report.test && report.test.byAirport && report.test.byAirport[opts.iata];
+  const skill = ap && ap.bss ? ap.bss.climo : null;
+  if (skill != null && skill <= LOW_SKILL && RANK[key] > RANK.possible) key = "possible";
+  const cue = typ > 0 ? (rate >= 1.25 * typ ? "higher than usual" : rate <= 0.75 * typ ? "lower than usual" : "") : "";
+  const word = WORD[key] + (aviation ? ` (${Math.round(rate * 100)}%)` : "");
+  const size = key !== "unlikely" ? minutesRange(d.minutes) : "";
+  return { key, word, sentence: word + (cue ? " · " + cue : ""), cue, rate, size };
+}
+/** "about 6 in 10" for a share. */
+export const inTen = (x) => `about ${Math.max(0, Math.min(10, Math.round(Number(x) * 10)))} in 10`;
+/** Analog sentence without percentages: "…, 131 (61%) had delays…" -> "…, about 6 in 10 had delays…". */
+export function analogWords(an) {
+  if (!an || !an.text) return "";
+  let t = String(an.text).replace(/(\d[\d,]*) \((\d+)%\) had/, (all, k, p) => `${inTen(Number(p) / 100)} had`);
+  if (/%/.test(t) && an.n) t = t.replace(/[\d.]+%/g, inTen(an.k / an.n));
+  return t;
+}
 
 /** {i (peak hour), s, e (window), p} over the 24 hours, or null without delay numbers. */
 function peakWindow(a) {
@@ -88,29 +186,22 @@ function peakWindow(a) {
   return { i, s, e, p };
 }
 
-function usualText(d, short) {
-  if (d.pTypical == null) return "";
-  return "usually " + pct(d.pTypical) + (short ? "" : d.typicalScope === "airport" ? " here" : " at this hour");
-}
 
-/** Card line under the reason. Returns an element, or null when there are no delay numbers. */
+/** Card line under the reason: plain words (no % in Traveler mode). Returns an element, or null when there are no delay numbers. */
 export function delayLine(a) {
   injectStyle();
   const w = a && peakWindow(a);
   if (!w) return null;
   const h0 = a.hours[0].delay;
-  if (h0 && h0.p >= 1 && NOW_KINDS[h0.override]) {
-    return el("div", "dl-line dl-hi", "Delays happening now" + (h0.minutes && h0.minutesFrom === "faa" ? ` · about ${h0.minutes} min` : ""),
-      el("span", "dl-usual", " · " + NOW_KINDS[h0.override]));
-  }
+  const L0 = h0 ? likelihood(h0, { iata: a.iata }) : null;
+  if (L0 && L0.key === "now") return el("div", "dl-line dl-hi", L0.sentence, NOW_KINDS[h0.override] ? el("span", "dl-usual", " · " + NOW_KINDS[h0.override]) : null);
   const d = a.hours[w.i].delay;
-  if (w.p < 0.2) {
-    return el("div", "dl-line dl-lo", "Delays unlikely · up to " + pct(w.p), d.pTypical != null ? el("span", "dl-usual", " · " + usualText(d, true)) : null);
-  }
+  const L = likelihood(d, { iata: a.iata });
+  const cls = RANK[L.key] >= 3 ? "dl-hi" : RANK[L.key] === 2 ? "dl-mid" : "dl-lo";
   const start = Date.parse(a.hours[w.s].t);
   const end = Date.parse(a.hours[w.e].t) + HOUR;
-  const when = w.s === 0 && w.e === a.hours.length - 1 ? "in the next 24 hours" : rangeLabel(start, end, tzOf(a), w.s === 0);
-  return el("div", "dl-line " + tone(w.p), `${pct(w.p)} chance of delays ${when}`, d.pTypical != null ? el("span", "dl-usual", " · " + usualText(d, true)) : null);
+  const when = L.key === "unlikely" || (w.s === 0 && w.e === a.hours.length - 1) ? "" : " " + rangeLabel(start, end, tzOf(a), w.s === 0);
+  return el("div", "dl-line " + cls, L.word + when, L.cue ? el("span", "dl-usual", " · " + L.cue) : null);
 }
 
 function monthYear(ym) {
@@ -137,12 +228,14 @@ function sourceLine() {
     const u = /^(\d{4})-(\d{2})-(\d{2})/.exec(info.updated || "");
     if (u) parts.push((info.basis === "model" ? "model updated " : "updated ") + `${monthYear(u[1] + "-" + u[2]).split(" ")[0]} ${+u[3]}, ${u[1]}`);
   } else parts.push("Based on FAA/BTS flight records");
-  const link = el("a", null, "How accurate? ›");
-  link.href = "accuracy.html";
-  return el("div", "dl-srcline", parts.join(" · ") + " · ", link);
+  return el("div", "dl-srcline", parts.join(" · ")); // the accuracy page is in the menu
 }
 
-/** Sheet block "Will it cause delays?" for hour i (null = the peak window). Always returns a node. */
+/**
+ * Sheet card "Will it cause delays?" for hour i (null = the peak window): the words big, the size ("typically
+ * 30–45 min") and the FAA status; "Why?" reveals the analog ("about 6 in 10 had delays"), how often warnings like
+ * this were right, and what the numbers are based on. Always returns a node.
+ */
 export function delayBlock(a, i) {
   injectStyle();
   const w = a && peakWindow(a);
@@ -152,32 +245,48 @@ export function delayBlock(a, i) {
   const d = hr && hr.delay;
   if (!d || d.p == null) return document.createDocumentFragment();
   const t0 = Date.parse(hr.t);
-  let what;
-  if (i == null) {
+  const L = likelihood(d, { iata: a.iata });
+  let when;
+  if (L.key === "now") when = "";
+  else if (i == null) {
     const start = Date.parse(a.hours[w.s].t);
     const end = Date.parse(a.hours[w.e].t) + HOUR;
-    what = w.s === 0 && w.e === a.hours.length - 1 ? "chance of delays in the next 24 hours" : "chance of delays " + rangeLabel(start, end, tzOf(a), w.s === 0);
-  } else what = "chance of delays " + (idx === 0 ? "this hour" : "at " + dayPrefix(t0, a.tz) + clock(t0, a.tz));
-  const kids = [el("h3", null, "Will it cause delays?")];
-  const faaNow = d.p >= 1 && NOW_KINDS[d.override];
-  kids.push(el("div", "dl-main", el("span", "dl-big " + tone(d.p), faaNow ? "Now" : pct(d.p)), el("span", "dl-what", faaNow ? "delays are happening" : what)));
-  if (faaNow) {
-    kids.push(el("div", "dl-faa", NOW_KINDS[d.override] + " in effect" + (d.minutes && d.minutesFrom === "faa" ? ` · FAA average delay about ${d.minutes} min` : "")));
-    if (d.minutes && d.minutesFrom !== "faa") kids.push(el("div", "dl-min", `Delays like this typically run about ${d.minutes} min`));
-  }
-  else if (d.pTypical != null) kids.push(el("div", "dl-usual-b", usualText(d) + (d.p >= 2 * d.pTypical && d.pTypical > 0 ? ` — about ${Math.round(d.p / d.pTypical)}× the usual chance` : "")));
+    when = w.s === 0 && w.e === a.hours.length - 1 ? "in the next 24 hours" : rangeLabel(start, end, tzOf(a), w.s === 0);
+  } else when = idx === 0 ? "this hour" : "at " + dayPrefix(t0, tzOf(a)) + clock(t0, tzOf(a));
+  const cls = L.key === "now" || RANK[L.key] >= 3 ? "dl-hi" : RANK[L.key] === 2 ? "dl-mid" : "dl-lo";
+  const kids = [el("div", "dl-main", el("span", "dl-big " + cls, L.word), when ? el("span", "dl-what", when) : null)];
+  const sub = [L.cue, L.size].filter(Boolean).join(" · ");
+  if (sub) kids.push(el("div", "dl-usual-b", sub));
+  if (L.key === "now" && NOW_KINDS[d.override]) kids.push(el("div", "dl-faa", NOW_KINDS[d.override] + " in effect"));
   if (/^possible_/.test(d.override || "")) {
-    kids.push(el("div", "dl-faa", "The FAA plans a possible " + (d.override === "possible_ground_stop" ? "ground stop" : "ground delay program") + (d.rateFrom === "history" ? ` — in our records about ${pct(d.p)} of these went ahead` : " — counted as an even chance until we have its track record")));
+    kids.push(el("div", "dl-faa", "The FAA plans a possible " + (d.override === "possible_ground_stop" ? "ground stop" : "ground delay program")));
   }
-  if (!faaNow && d.minutes) kids.push(el("div", "dl-min", `If delays hit: typically about ${d.minutes} min`));
-  if (i == null && w.i !== 0 && a.hours[0].delay && a.hours[0].delay.p != null) kids.push(el("div", "dl-now", "Right now: " + pct(a.hours[0].delay.p)));
-  if (d.analog && d.analog.text) kids.push(el("div", "dl-analog", d.analog.text));
-  kids.push(sourceLine());
+  if (i == null && w.i !== 0 && a.hours[0].delay && a.hours[0].delay.p != null) {
+    const N = likelihood(a.hours[0].delay, { iata: a.iata });
+    if (N && N.key !== L.key) kids.push(el("div", "dl-now", "Right now: " + N.word.charAt(0).toLowerCase() + N.word.slice(1)));
+  }
+  // Why?: analog, how often warnings like this were right, basis
+  const why = [];
+  const an = analogWords(d.analog);
+  if (an) why.push(el("div", "dl-analog", an));
+  const { bin } = calibrate(Number(d.p));
+  if (L.key !== "now" && bin && bin.rate != null && bin.n) why.push(el("div", "dl-analog", `For ${a.iata}, warnings like this were right ${inTen(bin.rate)} times.`));
+  if (d.pTypical != null && L.key !== "now") why.push(el("div", "dl-analog", `On a typical day at this hour, delays happen ${inTen(d.pTypical)} times.`));
+  why.push(sourceLine());
+  kids.push(el("details", "dl-why", el("summary", null, "Why?"), ...why));
   return el("div", "dl-block", ...kids);
 }
 
-const api = { delayLine, delayBlock };
-window.AWXDelay = api;
+const api = { delayLine, delayBlock, likelihood, calibrate, analogWords, minutesRange, setReport };
+if (typeof window !== "undefined" && window.document) {
+  window.AWXDelay = api;
+  // the calibration table; until it arrives (or if it is missing) the raw score is used
+  fetch("./data/model/report.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).then((r) => {
+    if (!r) return;
+    setReport(r);
+    if (window.AWXApp && window.AWXApp.render && window.AWXApp.state && window.AWXApp.state.data) window.AWXApp.render();
+  }).catch(() => {});
+}
 // app.js may have rendered before this module ran: render again so the lines appear
-if (window.AWXApp && window.AWXApp.render && window.AWXApp.state && window.AWXApp.state.data) window.AWXApp.render();
+if (typeof window !== "undefined" && window.AWXApp && window.AWXApp.render && window.AWXApp.state && window.AWXApp.state.data) window.AWXApp.render();
 export default api;

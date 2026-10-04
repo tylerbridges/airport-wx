@@ -20,6 +20,7 @@ import "../tools/uptime-parse.test.mjs";
 // build2b
 import "../tools/cats.test.mjs";
 import "../tools/prefs.test.mjs";
+import "../tools/delay-words.test.mjs";
 // live relay
 import "../worker/worker.test.mjs";
 // phase3: delay model

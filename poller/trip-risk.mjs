@@ -256,7 +256,16 @@ function isIntl(a) { return !!(a && a.state && !US.has(a.state)); }
  * Returns {status, label, cls, level, top, concerns: [{level, text, short, kind, side, iata, leg}],
  *          legs: [{from, to, dep, arr, depAt, arrAt, conn}], sides: {dep, arr, conn}, unknown: [...], missing: [...]}.
  */
-export function tripStatus(trip, byIata, { now = Date.now() } = {}) {
+/**
+ * Delay chance in plain words, never a percentage (build2b): the page passes site/delay.js likelihood() (calibrated,
+ * conservative) as tripStatus's `words` option; without it, this mapping of the raw score is used.
+ */
+export function delayWords(p) {
+  const x = Number(p);
+  return x < 0.12 ? "Delays unlikely" : x < 0.25 ? "Small chance of delays" : x < 0.45 ? "Delays possible" : "Delays likely";
+}
+
+export function tripStatus(trip, byIata, { now = Date.now(), words = null } = {}) {
   const legs = (trip.legs || []).map((l) => ({ from: l.from, to: l.to, dep: toMs(l.dep), arr: toMs(l.arr) })).sort((x, y) => x.dep - y.dep);
   const get = typeof byIata === "function" ? byIata : (c) => (byIata && byIata[c]) || null;
   const concerns = [];
@@ -409,14 +418,14 @@ export function tripStatus(trip, byIata, { now = Date.now() } = {}) {
 
   function weather(A, w, when, side, legIdx) {
     const d = w.delay && !w.delay.override && w.delay.p >= 0.2 ? w.delay : null;
-    const pct = d ? Math.round(d.p * 100) : null;
+    const said = d ? (words ? words(d, A.iata) : null) || delayWords(d.p) : null; // plain words, no percentage
     if (w.wxLevel >= 1) {
       const reason = w.reasons[0] || (w.wxLevel ? "Minor weather" : "");
       add({ level: w.wxLevel, kind: "weather", side, iata: A.iata, leg: legIdx, key: `wx-${A.iata}-${side}-${legIdx}`, short: `${lower(reason)} at ${A.iata}`,
-        text: `${cap(reason)} at ${A.iata} ${when}${pct != null ? ` — about ${pct}% chance of delays` : ""}.` });
-    } else if (pct != null && pct >= 35) {
-      add({ level: pct >= 50 ? 2 : 1, kind: "weather", side, iata: A.iata, leg: legIdx, key: `wx-${A.iata}-${side}-${legIdx}`, short: `delays possible at ${A.iata}`,
-        text: `About ${pct}% chance of delays at ${A.iata} ${when}.` });
+        text: `${cap(reason)} at ${A.iata} ${when}${said ? ` — ${said.charAt(0).toLowerCase() + said.slice(1)}` : ""}.` });
+    } else if (d && d.p >= 0.35) {
+      add({ level: d.p >= 0.5 ? 2 : 1, kind: "weather", side, iata: A.iata, leg: legIdx, key: `wx-${A.iata}-${side}-${legIdx}`, short: `delays possible at ${A.iata}`,
+        text: `${said} at ${A.iata} ${when}.` });
     }
   }
 

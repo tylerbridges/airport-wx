@@ -206,9 +206,10 @@ async function renderPage(url, expect = []) {
 // ---------- build2b: app UI checks (settings, filters, modes, timeline) ----------
 
 /** Loads url in a hidden 390 px frame, waits for cards, runs fn(win, doc), removes the frame. */
-async function withPage(url, fn) {
+async function withPage(url, fn, size) {
   const holder = document.getElementById("frames");
   const f = document.createElement("iframe");
+  if (size) { f.style.width = size[0] + "px"; f.style.height = size[1] + "px"; }
   f.src = url;
   holder.append(f);
   const t0 = Date.now();
@@ -366,6 +367,47 @@ async function uiChecks(add, scenario) {
       }
       A.closeSheet();
       add(wrong.length ? "fail" : "pass", "Sheet shows Now | Peak, one Now · Peak card, or a Clear card as the levels say", wrong.join("; ") || `split ${counts.split}, single ${counts.single}, clear ${counts.clear}`);
+    });
+
+    // iPhone first screen: at 390×700 in Traveler mode the sheet's timeline is visible without scrolling (busy + quiet airport)
+    set({ mode: "traveler" });
+    await withPage(url, async (w, doc) => {
+      const A = w.AWXApp;
+      const aps = A.state.data.airports;
+      const busy = aps.find((x) => (x.faa || []).some((f) => f.type === "ground_stop")) || aps[0];
+      const quiet = aps.find((x) => x.peak.level === 0) || aps[aps.length - 1];
+      const out = [];
+      for (const a of [busy, quiet]) {
+        A.openSheet(a.iata);
+        await frameSleep(w, 450);
+        const bottom = doc.querySelector("#sheet .bigwrap .tl").getBoundingClientRect().bottom;
+        out.push({ iata: a.iata, bottom: Math.round(bottom), ok: bottom <= w.innerHeight && doc.getElementById("sheet").scrollTop === 0 });
+        A.closeSheet();
+        await frameSleep(w, 350);
+      }
+      add(out.every((x) => x.ok) ? "pass" : "fail", "Traveler: the sheet's timeline is on the first screen at 390×700",
+        out.map((x) => `${x.iata} bar ends at ${x.bottom} px`).join(", ") + " (viewport 700)");
+    }, [390, 700]);
+
+    // no percentages in Traveler-mode delay text (cards, Now/Peak/hour cards, the delay card, trips)
+    await withPage(url, async (w, doc) => {
+      const A = w.AWXApp;
+      const hits = [];
+      const scan = (root, where) => {
+        for (const el of root.querySelectorAll(".dl-line, .dl-block, .sc-delay, #trips, .tflight")) if (/\d\s?%/.test(el.textContent)) hits.push(`${where}: "${el.textContent.trim().slice(0, 60)}"`);
+      };
+      A.state.filter = "all";
+      A.render();
+      await frameSleep(w, 80);
+      scan(doc, "home");
+      for (const a of A.state.data.airports) {
+        A.openSheet(a.iata);
+        await frameSleep(w, 15);
+        scan(doc.getElementById("sheet"), a.iata);
+        A.closeSheet();
+      }
+      const n = doc.querySelectorAll(".dl-line, .sc-delay").length;
+      add(hits.length ? "fail" : "pass", "Traveler: delay chances in words, no % (cards, sheets, trips)", hits.slice(0, 4).join("; ") || `${n} delay lines checked`);
     });
 
     // switching the Times setting changes the labels

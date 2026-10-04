@@ -143,7 +143,9 @@ function allTrips() {
     .filter((t) => Date.parse(t.legs[t.legs.length - 1].arr) > now - HOUR)
     .sort((a, b) => Date.parse(a.legs[0].dep) - Date.parse(b.legs[0].dep));
 }
-const resultOf = (trip) => tripStatus(trip, byIata, { now: nowMs() });
+// build2b hook: delay chances in plain, calibrated words (site/delay.js likelihood), never a percentage
+const delayWordsFor = (d, iata) => { const L = window.AWXDelay && window.AWXDelay.likelihood ? window.AWXDelay.likelihood(d, { iata }) : null; return L ? L.word : null; };
+const resultOf = (trip) => tripStatus(trip, byIata, { now: nowMs(), words: delayWordsFor });
 const findTrip = (id) => allTrips().find((t) => t.id === id) || S.manual.map((t) => ({ ...t, source: "manual" })).find((t) => t.id === id) || null;
 
 // ---------- home: "Your trips" ----------
@@ -406,7 +408,7 @@ function levelBox(title, sub, at, note) {
     h("h4", {}, title, at ? h("span", { class: "pill sm " + lv(at.level) }, LEVEL_LABELS[at.level]) : null),
     h("div", { class: "muted small" }, sub),
     h("div", { class: "tbx" }, note || (at ? (at.reason || (at.level ? "Minor weather conditions" : "No significant weather")) : byIata(title.split(" ").pop()) ? "Forecast not out yet" : "No data for this airport yet")),
-    at && at.delay && at.delay.p != null ? h("div", { class: "muted small" }, `Delay chance about ${Math.round(at.delay.p * 100)}%`) : null);
+    at && at.delay && at.delay.p != null ? h("div", { class: "muted small" }, delayWordsFor(at.delay, title.split(" ").pop()) || "") : null); // build2b hook: words, not %
 }
 
 function tripView(trip) {
