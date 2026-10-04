@@ -109,6 +109,7 @@
     const current = at < Math.floor(now / HOUR) * HOUR + HOUR;
     const { outdated, incomplete, quality } = health(a, opts);
     const programs = restrictions(a, at, now);
+    const impacts = directionRows(programs, current);
     const s = score(h, opts);
     const first = programs[0];
     let kind = "normal", headline = current ? "Operating normally" : "Normal conditions expected", level = s.level;
@@ -116,12 +117,13 @@
       kind = current ? "active" : "forecast";
       headline = first.type === "closure" ? current ? "Airport closed" : "Airport closure scheduled"
         : first.type === "ground_stop" ? current ? "Ground Stop" : "Ground Stop scheduled"
-        : first.type === "ground_delay" ? current ? "Arrival delays in effect" : "Arrival delay program scheduled" : "Delays happening now";
+        : first.type === "ground_delay" ? current ? "Flights to " + a.iata + " delayed" : "Arrival delay program scheduled"
+        : impacts.length === 1 ? impacts[0].label + (current ? " delayed" : " delays scheduled") : current ? "Flight delays in effect" : "Flight delays scheduled";
       level = Math.max(level, first.type === "closure" || first.type === "ground_stop" ? 4 : first.type === "ground_delay" ? 3 : 2);
     } else if (!h) { kind = "unknown"; headline = "Forecast unavailable for this time"; level = null; }
     else if (s.meaningful || s.level > 0) {
       kind = "forecast";
-      headline = s.meaningful ? s.L.word.replace(/^Delays/, "Airport disruption") : s.level >= 3 ? "Airport disruption likely" : s.level >= 2 ? "Airport disruption possible" : "Minor disruption possible";
+      headline = s.meaningful ? s.L.word.replace(/^Delays/, "Flight delays") : s.level >= 3 ? "Flight delays likely" : s.level >= 2 ? "Flight delays possible" : "Minor flight disruption possible";
     }
     if ((outdated || incomplete) && kind === "normal") { kind = "unknown"; headline = opts.offline ? "Offline · status unconfirmed" : outdated ? "Status may be outdated" : opts.noticesDown ? "No disruptions reported · notices unavailable" : "No disruptions reported · some data unavailable"; }
     else if (opts.hidden && kind === "normal") headline = "No issues in your selected categories";
@@ -137,7 +139,7 @@
       if (lower) recovery = ms(lower.t);
     }
     const reasons = uniq((h?.reasons || []).map((r) => opts.plain ? opts.plain(r, a) : r)).slice(0, 2);
-    return { kind, headline, level, at, current, quality, reasons, programs, impacts: directionRows(programs, current),
+    return { kind, headline, level, at, current, quality, reasons, programs, impacts,
       scheduledEnd: Number.isFinite(end) ? end : null,
       extension: first?.extension || null, window, recovery,
       cue: s.meaningful ? s.L.cue : "", size: s.meaningful ? s.L.size : "",

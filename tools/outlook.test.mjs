@@ -55,7 +55,7 @@ test("outlook: probability describes an airport hour; delay words raise its disp
   const a = base(); a.hours[0].delay = { p: 0.5 };
   const words = () => ({ key: "likely", word: "Delays likely", rate: 0.5, cue: "higher than usual" });
   const o = O.evaluate(a, options({ words }));
-  assert.equal(o.headline, "Airport disruption likely"); assert.equal(o.level, 2); assert.match(o.definition, /airport during an hour/);
+  assert.equal(o.headline, "Flight delays likely"); assert.equal(o.level, 2); assert.match(o.definition, /airport during an hour/);
   assert.equal(O.evaluate(a, options({ words: () => ({ key: "usual", word: "Usual delays", rate: 0.2 }) })).kind, "normal");
 });
 

@@ -331,7 +331,7 @@ export function whyBlock(a, now = refNow()) {
     if (o.from === "routine") head = o.routine.text;
     else if (o.from === "card" && L.key !== "now") {
       const start = Date.parse(a.hours[o.s].t), end = Date.parse(a.hours[o.e].t) + HOUR;
-      head = L.word.replace(/^Delays/, "Airport disruption") + " " + (o.s === 0 && o.e === a.hours.length - 1 ? "in the next 24 hours" : rangeLabel(start, end, tzOf(a), o.s === 0));
+      head = L.word.replace(/^Delays/, "Flight delays") + " " + (o.s === 0 && o.e === a.hours.length - 1 ? "in the next 24 hours" : rangeLabel(start, end, tzOf(a), o.s === 0));
     }
     kids.push(el("div", "dl-why-h", head));
     const an = analogWords(d.analog);
@@ -379,7 +379,7 @@ export function delayBlock(a, i, opts = {}) {
   } else when = idx === 0 ? "this hour" : "at " + dayPrefix(t0, tzOf(a)) + clock(t0, tzOf(a));
   const cls = L.key === "now" || RANK[L.key] >= 3 ? "dl-hi" : RANK[L.key] === 2 ? "dl-mid" : "dl-lo";
   const covered = !aviation && opts.coveredHours?.includes(hr.t);
-  const kids = covered ? [] : [el("div", "dl-main", el("span", "dl-big " + cls, L.key === "now" ? L.word : L.word.replace(/^Delays/, "Airport disruption")), when ? el("span", "dl-what", when) : null)];
+  const kids = covered ? [] : [el("div", "dl-main", el("span", "dl-big " + cls, L.key === "now" ? L.word : L.word.replace(/^Delays/, "Flight delays")), when ? el("span", "dl-what", when) : null)];
   const sub = [L.cue, L.size ? "When disrupted: " + L.size : ""].filter(Boolean).join(" · ");
   if (sub) kids.push(el("div", "dl-usual-b", sub));
   if (L.key === "now" && NOW_KINDS[d.override]) kids.push(el("div", "dl-faa", d.override === "closure" ? "Airport closed" : NOW_KINDS[d.override] + " in effect"));

@@ -1097,7 +1097,7 @@
     return !v.hours.some((x) => Date.parse(x.t) + HOUR > now && (x.reasons || []).some((r) => !isNote(r) && (CATS.reason(r).level || 0) >= sm.level));
   }
   /**
-   * The card's one time line for its level (the sheet's words and window): "Airport disruption likely 5–10 PM",
+   * The card's one time line for its level (the sheet's words and window): "Flight delays likely 5–10 PM",
    * "Delays happening now until 6 PM", "High — FAA gives no end time"; routine days keep site/delay.js's line.
    * progs: the badges shown (their program isn't named again).
    */
@@ -1817,7 +1817,7 @@
     const normal = o.level === 0 && !progTxt.length && !meaningful && !o.empty;
     const shared = o.outlook;
     const status = shared ? shared.headline : normal ? o.normalNote || (o.kind === "hour" && o.past ? "No disruption reported" : o.kind === "peak" || o.kind === "hour" && !o.isNow ? "No disruption expected" : "Operating normally")
-      : meaningful ? L.word : o.level > 0 ? o.level === 1 ? "Minor disruption possible" : "Disruption possible" : null;
+      : meaningful ? L.word : o.level > 0 ? o.level === 1 ? "Minor flight disruption possible" : "Disruption possible" : null;
     const delay = status ? h("div", { class: "sc-delay" }, status) : null;
     const primaryProgram = !aviation() && o.simple && shared?.programs.length === 1 && shared.programs[0].type !== "closure";
     const cause = primaryProgram ? plainCause(shared.programs[0]).toLowerCase() : "";
@@ -1919,10 +1919,10 @@
     }
     return why ? [why, ...rs.filter((r) => r !== why)] : rs;
   }
-  /** Words for a level window, the same as the sheet's headline: "Airport disruption likely", "Delays happening now". */
+  /** Words for a level window, the same as the sheet's headline: "Flight delays likely", "Delays happening now". */
   function levelWords(level, words) {
-    if (words) return words.key === "now" ? words.word : words.word.replace(/^Delays/, "Airport disruption");
-    return level >= 3 ? "Airport disruption likely" : level >= 2 ? "Airport disruption possible" : level >= 1 ? "Minor disruption possible" : "";
+    if (words) return words.key === "now" ? words.word : words.word.replace(/^Delays/, "Flight delays");
+    return level >= 3 ? "Flight delays likely" : level >= 2 ? "Flight delays possible" : level >= 1 ? "Minor flight disruption possible" : "";
   }
   /** " EDT" when the airport's display zone isn't the device's, else "" (card and brief times). */
   function zoneTag(a, ms = refNow()) {
