@@ -10,6 +10,96 @@
     "type": "FeatureCollection",
     "features": [
         {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.79dcf9b199846aeda71d0bff5e0fe43d1d33fcae.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.79dcf9b199846aeda71d0bff5e0fe43d1d33fcae.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.79dcf9b199846aeda71d0bff5e0fe43d1d33fcae.001.1",
+                "areaDesc": "Catalina and Santa Barbara Islands; Ventura County Beaches; Malibu Coast; Los Angeles County Beaches",
+                "geocode": {
+                    "SAME": [
+                        "006037",
+                        "006111"
+                    ],
+                    "UGC": [
+                        "CAZ087",
+                        "CAZ354",
+                        "CAZ362",
+                        "CAZ366"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/CAZ087",
+                    "https://api.weather.gov/zones/forecast/CAZ354",
+                    "https://api.weather.gov/zones/forecast/CAZ362",
+                    "https://api.weather.gov/zones/forecast/CAZ366"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.69eb3df3ba26d4e8bd8a87330ebe7a015235ae00.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.69eb3df3ba26d4e8bd8a87330ebe7a015235ae00.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-04T10:46:00-07:00"
+                    }
+                ],
+                "sent": "2026-10-04T13:26:00-07:00",
+                "effective": "2026-10-04T13:26:00-07:00",
+                "onset": "2026-10-06T16:00:00-07:00",
+                "expires": "2026-10-04T22:15:00-07:00",
+                "ends": "2026-10-09T23:00:00-07:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Beach Hazards Statement",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Los Angeles/Oxnard CA",
+                "headline": "Beach Hazards Statement issued October 4 at 1:26PM PDT until October 9 at 11:00PM PDT by NWS Los Angeles/Oxnard CA",
+                "description": "* WHAT...Dangerous rip currents and breaking waves are expected\ndue to elevated surf of 3 to 6 feet. Abnormally high morning\nand evening tides of 6.5 to 7 ft is expected.\n\n* WHERE...Catalina and Santa Barbara Islands, Ventura County\nBeaches, Malibu Coast and Los Angeles County Beaches. Most\nsusceptible areas will be Long Beach and Avalon Harbor Tuesday\nand Wednesday. Then, Mailbu to Ventura Wednesday through\nFriday.\n\n* WHEN...From Tuesday afternoon through Friday evening.\n\n* IMPACTS...There is an increased risk of ocean drowning. Rip\ncurrents can pull swimmers and surfers out to sea. Waves can\nwash people off beaches and rocks, and capsize small boats\nnearshore. Moderate flooding of sea water is possibly over\nsome vulnerable low-lying coastal areas, especially around the\nmorning and evening high tides, including over beach parking\nlots, bike paths, and harbor walkways. Moderate beach erosion\nis possible to likely.\n\n* ADDITIONAL DETAILS...There is a moderate chance that an\nupgrade to Coastal Flood Advisory and/or High Surf Advisory\nwill be needed. These products will likely need to be extended\ninto the weekend.",
+                "instruction": "Remain out of the water due to hazardous swimming conditions, or\nstay near occupied lifeguard towers. Rock jetties can be deadly\nin such conditions, stay off the rocks.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "CFWLOX"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS46 KLOX 042026"
+                    ],
+                    "NWSheadline": [
+                        "BEACH HAZARDS STATEMENT REMAINS IN EFFECT FROM TUESDAY AFTERNOON THROUGH FRIDAY EVENING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KLOX.BH.S.0020.261006T2300Z-261010T0600Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-09T23:00:00-07:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "BHS"
+                    ]
+                }
+            }
+        },
+        {
             "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.1f7b086a6ad56d044bb16dca148157a534b80015.002.1",
             "type": "Feature",
             "geometry": null,
@@ -143,91 +233,8 @@
                     ]
                 }
             }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.69eb3df3ba26d4e8bd8a87330ebe7a015235ae00.001.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.69eb3df3ba26d4e8bd8a87330ebe7a015235ae00.001.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.69eb3df3ba26d4e8bd8a87330ebe7a015235ae00.001.1",
-                "areaDesc": "Catalina and Santa Barbara Islands; Ventura County Beaches; Malibu Coast; Los Angeles County Beaches",
-                "geocode": {
-                    "SAME": [
-                        "006037",
-                        "006111"
-                    ],
-                    "UGC": [
-                        "CAZ087",
-                        "CAZ354",
-                        "CAZ362",
-                        "CAZ366"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/CAZ087",
-                    "https://api.weather.gov/zones/forecast/CAZ354",
-                    "https://api.weather.gov/zones/forecast/CAZ362",
-                    "https://api.weather.gov/zones/forecast/CAZ366"
-                ],
-                "references": [],
-                "sent": "2026-10-04T10:46:00-07:00",
-                "effective": "2026-10-04T10:46:00-07:00",
-                "onset": "2026-10-06T16:00:00-07:00",
-                "expires": "2026-10-04T19:00:00-07:00",
-                "ends": "2026-10-09T23:00:00-07:00",
-                "status": "Actual",
-                "messageType": "Alert",
-                "category": "Met",
-                "severity": "Moderate",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Beach Hazards Statement",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Los Angeles/Oxnard CA",
-                "headline": "Beach Hazards Statement issued October 4 at 10:46AM PDT until October 9 at 11:00PM PDT by NWS Los Angeles/Oxnard CA",
-                "description": "* WHAT...Dangerous rip currents and breaking waves are expected\ndue to elevated surf of 3 to 6 feet. Abnormally high morning and\nevening tides of 6.5 to 7 ft is expected.\n\n* WHERE...Catalina and Santa Barbara Islands, Ventura County\nBeaches, Malibu Coast and Los Angeles County Beaches. Most\nsusceptible areas will be Long Beach and Avalon Harbor Tuesday\nand Wednesday. Then, Mailbu to Ventura Wednesday through\nFriday.\n\n* WHEN...From Tuesday afternoon through Friday evening.\n\n* IMPACTS...There is an increased risk of ocean drowning. Rip\ncurrents can pull swimmers and surfers out to sea. Waves can\nwash people off beaches and rocks, and capsize small boats\nnearshore. Moderate flooding of sea water is possibly over some\nvulnerable low-lying coastal areas, especially around the\nmorning and evening high tides, including over beach parking\nlots, bike paths, and harbor walkways. Moderate beach erosion is\npossible to likely.\n\n* ADDITIONAL DETAILS...There is a moderate chance that an upgrade\nto Coastal Flood Advisory and/or High Surf Advisory will be\nneeded. These products will likely need to be extended into the\nweekend.",
-                "instruction": "Remain out of the water due to hazardous swimming conditions, or\nstay near occupied lifeguard towers. Rock jetties can be deadly\nin such conditions, stay off the rocks.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "CFWLOX"
-                    ],
-                    "WMOidentifier": [
-                        "WHUS46 KLOX 041746"
-                    ],
-                    "NWSheadline": [
-                        "BEACH HAZARDS STATEMENT IN EFFECT FROM TUESDAY AFTERNOON THROUGH FRIDAY EVENING"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.NEW.KLOX.BH.S.0020.261006T2300Z-261010T0600Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-09T23:00:00-07:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "BHS"
-                    ]
-                }
-            }
         }
     ],
     "title": "Current watches, warnings, and advisories for 33.9416 N, 118.4085 W",
-    "updated": "2026-10-04T20:00:00+00:00"
+    "updated": "2026-10-04T21:00:00+00:00"
 }
