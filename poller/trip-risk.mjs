@@ -339,6 +339,17 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
   legs.forEach((leg, i) => {
     const F = get(leg.from), X = get(leg.to);
     const prev = legs[i - 1], next = legs[i + 1];
+    // Published advisories near a trip endpoint at its scheduled time, with altitude retained.
+    // The actual flight route/altitude is unknown: these are notes, never delay predictions.
+    for (const [A, at, side] of [[F, leg.dep, "dep"], [X, leg.arr, "arr"]]) {
+      if (!A) continue;
+      for (const x of (A.aviationAdvisories || []).slice(0, 20)) {
+        const start = Date.parse(x.from), end = Date.parse(x.to);
+        if (!Number.isFinite(start) || !Number.isFinite(end) || !(start <= at && at < end) || !x.text) continue;
+        add({ level: 0, kind: "note", side, iata: A.iata, leg: i, key: `flight-weather-${A.iata}-${side}-${i}-${x.id}`, short: null,
+          text: `${A.iata}: ${x.text} at your scheduled ${side === "dep" ? "departure" : "arrival"}. Routing changes are possible; your flight's route and altitude are unknown.` });
+      }
+    }
     const connIn = !!(prev && prev.to === leg.from);
     const connOut = !!(next && next.from === leg.to);
     const scheduledDepPassed = leg.dep <= now;

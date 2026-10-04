@@ -168,10 +168,10 @@ test("fixture run writes a schema-shaped status.json", async () => {
   const here = dirname(fileURLToPath(import.meta.url));
   const out = join(process.env.TMPDIR || "/tmp", `awx-test-${process.pid}.json`);
   const { status, okCount } = await run({ fixtures: true, out, now: NOW });
-  assert.equal(okCount, 10);
+  assert.equal(okCount, 11);
   const disk = JSON.parse(await readFile(out, "utf8"));
   assert.equal(disk.generated, NOW.toISOString());
-  assert.deepEqual(Object.keys(disk.sources).sort(), ["atcscc", "cwa", "faa", "lamp", "metar", "nws", "sigmet", "spc", "taf", "tcf"]);
+  assert.deepEqual(Object.keys(disk.sources).sort(), ["atcscc", "cwa", "faa", "isigmet", "lamp", "metar", "nws", "sigmet", "spc", "taf", "tcf"]);
   for (const s of Object.values(disk.sources)) assert.deepEqual(Object.keys(s).sort(), ["at", "error", "ok"]);
   assert.equal(disk.airports.length, 32);
   const by = Object.fromEntries(disk.airports.map((a) => [a.iata, a]));

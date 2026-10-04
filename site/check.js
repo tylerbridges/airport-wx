@@ -5,7 +5,7 @@
 // Chrome (--dump-dom) and the uptime workflow can read it. Warnings don't fail the check.
 import { loadAirports, rank } from "./search.js";
 import { navChecks } from "./navcheck.js?v=3"; // nav hook
-import { tripChecks } from "./check-trips.js?v=2"; // trips hook
+import { tripChecks } from "./check-trips.js?v=3"; // trips hook
 import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=4"; // scenarios hook; More details page helpers
 
 const P = new URLSearchParams(location.search);
@@ -20,7 +20,7 @@ const SHARD_MIN_SHARE = 0.95; // live: share of hasMetar airports that must have
 // Raw coded aviation text that must not reach traveler-facing strings.
 export const CODED = /\b(CLSD|(?:FEW|SCT|BKN|OVC)\d{3}|TEMPO|PROB[34]0|NOSIG|\d{4}Z)\b/;
 const SOURCE_LABEL = {
-  metar: "METAR", taf: "TAF", sigmet: "SIGMETs", faa: "FAA NAS status", nws: "NWS alerts", spc: "SPC outlook", lamp: "LAMP",
+  metar: "METAR", taf: "TAF", sigmet: "Convective SIGMETs", isigmet: "Additional SIGMETs", faa: "FAA NAS status", nws: "NWS alerts", spc: "SPC outlook", lamp: "LAMP",
   atcscc: "ATCSCC advisories", tcf: "TCF", cwa: "CWAs", metars: "Global METAR cache", tafs: "Global TAF cache",
 };
 

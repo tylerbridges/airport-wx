@@ -52,3 +52,5 @@ import "../tools/offline.test.mjs";
 // Research-only NOAA extraction, provenance and promotion guards
 import "../tools/mrms.test.mjs";
 import "../tools/noaa-forecast.test.mjs";
+
+import "./aviation-advisories.test.mjs";

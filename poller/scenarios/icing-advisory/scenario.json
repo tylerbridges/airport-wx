@@ -1,0 +1,25 @@
+{
+  "title": "Severe icing advisory",
+  "blurb": "Severe icing near DEN; altitude and expiry shown, airport risk unchanged.",
+  "description": "Published additional SIGMET advisory in otherwise quiet conditions. Informational only: aircraft route and altitude are unknown.",
+  "group": "weather",
+  "assert": [
+    {
+      "t": "allLevels",
+      "max": 0
+    },
+    {
+      "t": "source",
+      "name": "isigmet",
+      "ok": true
+    },
+    {
+      "t": "sheet",
+      "iata": "DEN",
+      "re": "Flight weather.*Severe icing.*13,000\u201322,000 ft"
+    },
+    {
+      "t": "noPercent"
+    }
+  ]
+}

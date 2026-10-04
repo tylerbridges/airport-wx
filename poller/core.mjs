@@ -12,6 +12,7 @@ import { plainMetar, travelerImpact } from "./plain.mjs";
 import { opsPlanFor } from "./opsplan.mjs";
 import { scoreHours, HUBS } from "./delay.mjs"; // phase3 hook: delay model (README "Delay model")
 import { cascades, applyCascade } from "./hubs.mjs"; // hubs hook: hub cascade warnings (README "Hub cascade")
+import { sigmetAdvisoriesAt } from "./aviation-advisories.mjs";
 import { noticesFor, applyNotices } from "./notices.mjs"; // restrictions hook: FAA TFRs (README "Notices")
 
 const HOUR = 3600e3;
@@ -27,7 +28,7 @@ const ADV_KEYS = ["id", "type", "airport", "issued", "cause", "causeText", "titl
  * notices (restrictions hook, optional): {tfrs: parsed | null}
  * adds airports[].notices (poller/notices.mjs); over(a).notices (the build's) replaces it.
  */
-export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc, nws, lamp = null, atcscc = null, tcf = null, cwa = null, plan = null, over = null, delay = null, hubsFrom = null, notices = null }) {
+export function assemble({ airports, now, metars, tafs, sigmets, isigmets = null, faaParsed, spc, nws, lamp = null, atcscc = null, tcf = null, cwa = null, plan = null, over = null, delay = null, hubsFrom = null, notices = null }) {
   const metarBy = latestBy(metars, "icaoId", "obsTime");
   const tafBy = latestBy(tafs, "icaoId", "issueTime");
   const validTaf = (x) => (x && !(toMs(x.validTimeTo) != null && toMs(x.validTimeTo) < +now) ? x : null);
@@ -53,6 +54,7 @@ export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc,
     });
     const alertsFull = has("alerts") ? o.alerts : nws ? normalizeAlerts(nws[a.iata], now) : [];
     const sigs = has("sigmets") ? o.sigmets : sigmets ? convectiveSigmetsAt(a.lon, a.lat, sigmets, now) : [];
+    const aviationAdvisories = has("aviationAdvisories") ? (o.aviationAdvisories || []).filter((x) => toMs(x.to) > +now && toMs(x.from) < +now + 24 * 3600e3) : [...sigmetAdvisoriesAt(a.lon, a.lat, sigmets, now, "sigmet"), ...sigmetAdvisoriesAt(a.lon, a.lat, isigmets, now)];
     const spcCat = has("spc") ? o.spc : spc ? spcCategoryAt(a.lon, a.lat, spc) : null;
     const lampSt = lamp?.stations?.[a.icao] || null;
     const adv = (atcscc || []).filter((x) => x.airport === a.iata)
@@ -119,6 +121,7 @@ export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc,
       alerts: alertsFull.slice(0, 10).map(({ event, severity, headline, onset, ends }) => ({ event, severity, headline, onset, ends })),
       spc: spcCat,
       sigmets: sigs,
+      aviationAdvisories,
       lamp: lampSt,
       tcf: tcfHere,
       cwa: cwaHere,

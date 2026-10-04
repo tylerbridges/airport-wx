@@ -21,7 +21,7 @@ export const BUILD_BASE = "https://tylerbridges.github.io/airport-wx/data/";
 export const MAX_IDS = 12;
 export const TTL = { live: 60e3, build: 120e3, response: 30e3, model: 6 * 3600e3 }; // model: phase3 delay model files
 export const LIVE_SOURCES = ["metar", "taf", "sigmet", "faa", "nws"];
-export const BUILD_SOURCES = ["spc", "lamp", "atcscc", "tcf", "cwa"];
+export const BUILD_SOURCES = ["spc", "lamp", "atcscc", "tcf", "cwa", "isigmet"];
 const HOUR = 3600e3;
 const TIMEOUT = { live: 8e3, build: 8e3 };
 
@@ -259,6 +259,7 @@ export function overlay({ now = new Date(), majors = [], others = [], build = nu
       const b = buildBy.get(a.iata);
       // the build's per-airport ops plan ({...plan items, items}) stands in for opsPlanFor(plan)
       const o = { spc: b?.spc ?? null, tcf: b?.tcf || [], cwa: b?.cwa || [], opsplan: b?.opsplan ?? null };
+      o.aviationAdvisories = b?.aviationAdvisories || []; // Additional SIGMETs refresh with the build; assemble drops expired items.
       o.notices = b?.notices ? { items: (b.notices.items || []).filter((x) => x.src === "tfr"), count: (b.notices.items || []).filter((x) => x.src === "tfr").length } : null; // restrictions hook: the build's TFRs, rescored against the live hours
       if (!faaParsed) o.faa = (b?.faa || []).map((f) => ({ ...f })); // copies: assemble may add an ops-plan end
       if (!ok("sigmet")) o.sigmets = b?.sigmets || [];

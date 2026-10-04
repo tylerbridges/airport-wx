@@ -22,7 +22,7 @@ const catKeys = () => (P().CATEGORIES || (window.AWXCats && window.AWXCats.KEYS)
 const SOURCES = [
   ["FAA NAS Status", "Ground stops, delay programs and closures", ["faa"]],
   ["FAA Command Center", "Advisories and the daily operations plan", ["atcscc"]],
-  ["aviationweather.gov", "Airport reports, forecasts and storm advisories", ["metar", "taf", "sigmet", "tcf", "cwa"]],
+  ["aviationweather.gov", "Airport reports, forecasts and flight weather advisories", ["metar", "taf", "sigmet", "isigmet", "tcf", "cwa"]],
   ["National Weather Service", "Warnings and advisories", ["nws"]],
   ["Storm Prediction Center", "Severe storm outlook", ["spc"]],
   ["NOAA LAMP", "Hourly thunder, wind and cloud guidance", ["lamp"]],

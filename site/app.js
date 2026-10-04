@@ -13,12 +13,12 @@
   // plain names for failures ("FAA delay info unavailable") and what may be missing then
   const SOURCE_NAMES = {
     faa: "FAA delay info", atcscc: "FAA traffic notices", nws: "Weather warnings", spc: "Storm outlook", metar: "Current weather",
-    taf: "Airport forecast", sigmet: "Thunderstorm alerts", lamp: "Hourly storm chances", tcf: "Storm forecast", cwa: "Center weather advisories",
+    taf: "Airport forecast", sigmet: "Thunderstorm alerts", isigmet: "Flight weather advisories", lamp: "Hourly storm chances", tcf: "Storm forecast", cwa: "Center weather advisories",
   };
   const SOURCE_MISSING = {
     faa: "delays may be missing", atcscc: "ground stops may be missing", nws: "warnings may be missing",
     spc: "severe-storm risk may be missing", metar: "current conditions may be missing", taf: "forecast hours may be missing",
-    sigmet: "thunderstorm alerts may be missing", lamp: "thunder chances may be missing", tcf: "storm forecasts may be missing",
+    sigmet: "thunderstorm alerts may be missing", isigmet: "flight weather advisories may be missing", lamp: "thunder chances may be missing", tcf: "storm forecasts may be missing",
     cwa: "center weather advisories may be missing",
   };
   // restrictions hook: FAA TFRs (status.noticeSources); when the source failed, quiet statuses say so
@@ -594,6 +594,7 @@
         atcscc: keep(a.atcscc, CATS.adv),
         alerts: keep(a.alerts, (x) => CATS.alert(x.event)),
         spc: isHidden(spcCat) ? (note(spcCat), null) : a.spc,
+        aviationAdvisories: keep(a.aviationAdvisories, (x) => x.cat),
         sigmets: isHidden("storms") && (a.sigmets || []).length ? (note("storms"), []) : a.sigmets,
         tcf: isHidden("storms") && (a.tcf || []).length ? (note("storms"), []) : a.tcf,
         cwa: keep(a.cwa, (x) => (/^(TS|CONV|THUNDER|CB)/i.test(x.hazard || "") ? "storms" : "fog")),
@@ -2105,6 +2106,15 @@
     if (stormCard && v.sigmets && v.sigmets.length) secs.push(stormCard);
     const stormSrc = storms.length ? srcLine(v.sigmets && v.sigmets.length ? "sigmet" : v.spc ? "spc" : "tcf", (v.sigmets || []).map((x) => x.raw)) : null; // null in Traveler mode
     if (stormSrc && stormCard) stormCard.querySelector(".scard").append(stormSrc);
+    const extraAdvisories = (v.aviationAdvisories || []).filter((x) => Date.parse(x.to) > refNow() && Date.parse(x.from) < refNow() + 24 * 3600e3);
+    if (extraAdvisories.length) secs.push(section("Flight weather", "plane", [
+      ...extraAdvisories.slice(0, 5).map((x) => h("div", { class: "item info" },
+        h("div", {}, x.text),
+        h("div", { class: "muted small" }, Date.parse(x.from) > refNow() ? "From " + whenLabel(Date.parse(x.from), tz) + " to " + whenLabel(Date.parse(x.to), tz) : "Until " + whenLabel(Date.parse(x.to), tz)),
+        aviation() && x.raw ? h("pre", { class: "raw rawt" }, x.raw) : null)),
+      extraAdvisories.length > 5 ? h("div", { class: "muted small" }, "+" + (extraAdvisories.length - 5) + " more") : null,
+      h("div", { class: "muted small" }, "Routing changes are possible. An advisory alone does not confirm airport delays.")
+    ], null, { meta: "NOAA", id: "flight-weather" }));
     // movement hook: "Traffic right now" (site/movement.js), its card body inside a build2b section card
     const mv = window.AWXMovement && typeof AWXMovement.card === "function" ? safeCall(() => AWXMovement.card(a)) : null;
     // Show a meaningful delay outlook directly below the timeline.

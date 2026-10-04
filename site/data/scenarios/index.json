@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-04T22:56:09.342Z",
+ "generated": "2026-10-04T23:19:51.996Z",
  "groups": {
   "delays": "Delays & programs",
   "weather": "Weather",
@@ -838,6 +838,38 @@
     {
      "t": "rendered",
      "text": "Test scenario: Hurricane: MIA and FLL closed"
+    }
+   ]
+  },
+  {
+   "name": "icing-advisory",
+   "title": "Severe icing advisory",
+   "group": "weather",
+   "blurb": "Severe icing near DEN; altitude and expiry shown, airport risk unchanged.",
+   "description": "Published additional SIGMET advisory in otherwise quiet conditions. Informational only: aircraft route and altitude are unknown.",
+   "file": "icing-advisory.json",
+   "wx": "icing-advisory/wx/",
+   "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
+   "assert": [
+    {
+     "t": "allLevels",
+     "max": 0
+    },
+    {
+     "t": "source",
+     "name": "isigmet",
+     "ok": true
+    },
+    {
+     "t": "sheet",
+     "iata": "DEN",
+     "re": "Flight weather.*Severe icing.*13,000–22,000 ft"
+    },
+    {
+     "t": "noPercent"
     }
    ]
   },
@@ -1708,6 +1740,38 @@
    ]
   },
   {
+   "name": "turbulence-advisory",
+   "title": "Severe turbulence advisory",
+   "group": "weather",
+   "blurb": "Severe turbulence near ORD; altitude and expiry shown, airport risk unchanged.",
+   "description": "Published additional SIGMET advisory in otherwise quiet conditions. Informational only: aircraft route and altitude are unknown.",
+   "file": "turbulence-advisory.json",
+   "wx": "turbulence-advisory/wx/",
+   "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
+   "assert": [
+    {
+     "t": "allLevels",
+     "max": 0
+    },
+    {
+     "t": "source",
+     "name": "isigmet",
+     "ok": true
+    },
+    {
+     "t": "sheet",
+     "iata": "ORD",
+     "re": "Flight weather.*Severe turbulence.*28,000–42,000 ft"
+    },
+    {
+     "t": "noPercent"
+    }
+   ]
+  },
+  {
    "name": "vip-tfr",
    "title": "VIP movement (TFR)",
    "group": "nonweather",
@@ -1795,6 +1859,38 @@
      "t": "sheet",
      "iata": "DCA",
      "re": "Flight restrictions.*VIP movement nearby: flight restrictions"
+    },
+    {
+     "t": "noPercent"
+    }
+   ]
+  },
+  {
+   "name": "volcanic-ash-advisory",
+   "title": "Volcanic ash advisory",
+   "group": "weather",
+   "blurb": "Volcanic ash near MCO; altitude and expiry shown, airport risk unchanged.",
+   "description": "Published additional SIGMET advisory in otherwise quiet conditions. Informational only: aircraft route and altitude are unknown.",
+   "file": "volcanic-ash-advisory.json",
+   "wx": "volcanic-ash-advisory/wx/",
+   "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
+   "assert": [
+    {
+     "t": "allLevels",
+     "max": 0
+    },
+    {
+     "t": "source",
+     "name": "isigmet",
+     "ok": true
+    },
+    {
+     "t": "sheet",
+     "iata": "MCO",
+     "re": "Flight weather.*Volcanic ash.*surface to 18,000 ft"
     },
     {
      "t": "noPercent"

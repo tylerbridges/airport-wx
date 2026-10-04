@@ -31,3 +31,13 @@ test("offline cache expires after six hours and rejects oversized, malformed or 
   st.setItem(O.KEY, "x".repeat(O.MAX_BYTES + 1)); assert.equal(O.load(st, now), null);
   assert.equal(O.save({ setItem() { throw Error("quota"); } }, data(), now), false);
 });
+
+test("offline snapshot preserves flight weather altitude but removes raw reports", () => {
+  const d = data();
+  d.sources.isigmet = { ok: true, at: new Date(now).toISOString() };
+  d.airports[0] = { ...airport, aviationAdvisories: [{ hazard: "TURB", text: "Severe turbulence advisory nearby · 28,000–42,000 ft", baseFt: 28000, topFt: 42000, from: new Date(now - 60000).toISOString(), to: new Date(now + 3600000).toISOString(), raw: "SEV TURB FL280/420" }] };
+  const s = O.snapshot(d, now);
+  assert.equal(s.sources.isigmet.ok, true);
+  assert.equal(s.airports[0].aviationAdvisories[0].baseFt, 28000);
+  assert.equal(s.airports[0].aviationAdvisories[0].raw, undefined);
+});

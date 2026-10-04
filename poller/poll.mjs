@@ -25,7 +25,7 @@ const UA = "airport-wx (github.com/tylerbridges/airport-wx)";
 const TIMEOUT_MS = 20_000;
 const AWC = "https://aviationweather.gov/api/data";
 const RAW_MAX = 200 * 1024;
-export const SOURCE_NAMES = ["metar", "taf", "sigmet", "faa", "nws", "spc", "lamp", "atcscc", "tcf", "cwa"];
+export const SOURCE_NAMES = ["metar", "taf", "sigmet", "isigmet", "faa", "nws", "spc", "lamp", "atcscc", "tcf", "cwa"];
 export const DEFAULT_RAW_DIR = join(ROOT, ".cache/raw");
 
 class HttpError extends Error {
@@ -111,6 +111,7 @@ function liveProviders(airports, now, raw) {
     metar: async () => parseJson(await get("metar", "metar.json", `${AWC}/metar?ids=${icaos}&format=json`)),
     taf: async () => parseJson(await get("taf", "taf.json", `${AWC}/taf?ids=${icaos}&format=json`)),
     sigmet: async () => parseJson(await get("sigmet", "airsigmet.json", `${AWC}/airsigmet?format=json`)),
+    isigmet: async () => parseJson(await get("isigmet", "isigmet.json", `${AWC}/isigmet?format=json`)),
     faa: async () => get("faa", "faa.xml", "https://nasstatus.faa.gov/api/airport-status-information"),
     spc: async () => JSON.parse(await get("spc", "spc.geojson", "https://www.spc.noaa.gov/products/outlook/day1otlk_cat.nolyr.geojson")),
     nws: async () => {
@@ -202,6 +203,7 @@ function fixtureProviders(airports, now, raw) {
     metar: async () => JSON.parse(await fx("metar", "metar.json")),
     taf: async () => JSON.parse(await fx("taf", "taf.json")),
     sigmet: async () => JSON.parse(await fx("sigmet", "airsigmet.json")),
+    isigmet: async () => JSON.parse(await fx("isigmet", "isigmet.json")),
     faa: async () => fx("faa", "faa.xml"),
     spc: async () => JSON.parse(await fx("spc", "spc.geojson")),
     nws: async () => {
@@ -278,7 +280,7 @@ export async function run({ fixtures = false, out = join(ROOT, "site/data/status
     delayModel: modelInfo(delay.model, delay.fallback), // phase3 hook
     airports: assemble({
       airports, now,
-      metars: res.metar.data, tafs: res.taf.data, sigmets: res.sigmet.data,
+      metars: res.metar.data, tafs: res.taf.data, sigmets: res.sigmet.data, isigmets: res.isigmet.data,
       faaParsed, spc: res.spc.data, nws: res.nws.data?.map ?? null,
       lamp: res.lamp.data, atcscc: res.atcscc.data?.list ?? null, tcf: res.tcf.data, cwa: res.cwa.data,
       plan: res.atcscc.data?.plan ?? null,

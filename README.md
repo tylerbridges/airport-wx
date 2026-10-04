@@ -27,6 +27,7 @@ A Cloudflare Worker ("Live relay" below) can add fresher data on top: when `data
 - METAR: https://aviationweather.gov/api/data/metar (plus one `&hours=24` request for the major airports: the timeline's observed past hours, `observed[]`; not a status source, so if it fails `observed` is simply left out and those hours show grey)
 - TAF: https://aviationweather.gov/api/data/taf
 - Convective SIGMETs: https://aviationweather.gov/api/data/airsigmet (point-in-polygon, currently valid CONVECTIVE only)
+- Additional operational SIGMETs: https://aviationweather.gov/api/data/isigmet?format=json. Severe turbulence (`TURB` + `SEV`), severe icing (`ICE` + `SEV`) and volcanic ash (`VA`), with `validTimeFrom/To`, `base/top` in feet, AREA polygon coordinates, and raw text. Also accepts these hazards from the existing domestic SIGMET feed. Free public NOAA AWC API; no key, one shared fetch per poll.
 - FAA NAS status (ground stops, ground delay programs, delays, closures): https://nasstatus.faa.gov/api/airport-status-information. Closure reasons are NOTAM text; `poller/notam.mjs` reads the scope (full airport / particular runways / limited to some users such as GA), the effective times (`YYMMDDHHMM-YYMMDDHHMM`, `PERM`, `EST`; preferred over the Reopen field) and writes a plain-English summary.
 - FAA ATCSCC: https://www.fly.faa.gov/adv/advADB.jsp is "The Most Recent ATCSCC Advisory" (a single advisory, not a list). Usually that is the Command Center's **operations plan** ("ATCSCC ADVZY 072 DCC 10/03/2026 OPERATIONS PLAN", body after "RAW TEXT:" in a `<pre>`), parsed by `poller/opsplan.mjs` (see "FAA operations plan"). When it is a program advisory (ground stop, GDP, AFP with "IMPACTING CONDITION"), it is parsed as before; program advisories linked from the page are followed too (up to 40, 4 at a time, 45 s budget). Per control element and program type the latest advisory decides; it is active when it isn't a cancellation (CNX), its period has started and its end is after now.
 - NWS alerts per airport: https://api.weather.gov/alerts/active?point=lat,lon
@@ -87,6 +88,14 @@ The sheet shows one box ("Minor · through 3 AM") while the level holds; a separ
 - **Effect:** one reason per hub and hour, raising the hour's level by at most one step and never above Moderate: ground stop / delay program / closure turn Low into Moderate ("ORD ground stop may delay flights to and from Chicago") and None into Low ("… may delay some flights …"); hub delays are Low ("DFW delays may spread to some flights to and from Dallas–Fort Worth") and never raise past Low. The delay chance is untouched, so a note never makes an hour "Delays happening now". Category "FAA delay programs" (hidden with it in Settings).
 - **Shown:** `airports[].cascade` summarises the runs that raised a level (strongest kind first, then earliest; a note that changed nothing stays in the hour's reasons only); the card and the sheet show one short line for the first one ("ORD ground stop may delay flights to and from Chicago later today"), only when the reasons on screen don't already say it (`// hubs hook` in `site/app.js`). Trips: see "Trips". The live relay assembles only the requested airports and takes other hubs from the last build (`assemble({hubsFrom})`). On the home card the line appears only when the airport's own level is Moderate or worse or the note is what set its level; otherwise it is in the sheet only.
 
+## Additional flight weather advisories
+
+`poller/aviation-advisories.mjs` interprets severe turbulence, severe icing and volcanic ash SIGMETs, including international advisories from the AWC. AREA polygons within 10 NM of the airport are matched with date-line handling. Invalid geometry/time/altitude ranges, expired advisories, moderate turbulence/icing, and starts beyond the next 24 hours are omitted. Missing altitude stays explicitly unknown. The parser is checked against real NOAA responses retrieved October 4, 2026 (`sigmet-advisories-real.json`). Unsupported line/circle geometry is not interpreted; this is additional coverage, not comprehensive flight-route monitoring.
+
+The airport detail sheet shows a concise **Flight weather** card only when relevant, with altitude and local valid times; raw text is available in Aviation mode. Wind/winter toggles apply to turbulence/icing; volcanic ash remains visible. Trip endpoint notes require an exact overlap with the scheduled departure or arrival and retain the altitude. The actual flight route and altitude are unknown, so these informational advisories do not alter risk levels, delay probabilities, trip status, or imply an airport closure. The delay model needs no retraining for this addition.
+
+The live relay carries these advisories from the latest build and drops expired entries; their source freshness/availability remains labeled as build data. They are also retained in the bounded offline snapshot. Scenarios: `turbulence-advisory`, `icing-advisory`, `volcanic-ash-advisory`.
+
 ## Flight restrictions
 
 FAA Temporary Flight Restrictions are fetched from `https://tfr.faa.gov/tfrapi/exportTfrList` and XML details at `https://tfr.faa.gov/download/detail_<id>.xml`, without an API key. The list is refreshed each run; up to 60 relevant details are cached for one hour, with a three-hour fallback on detail failure. The source reports availability separately in `status.noticeSources.tfr`.
@@ -98,7 +107,7 @@ Airport NOTAM fetching, credentials, cache, parsing, scoring and monitoring were
 ## status.json
 
 ```
-{ generated, sources: {metar,taf,sigmet,faa,nws,spc,lamp,atcscc,tcf,cwa: {ok, at, error}},
+{ generated, sources: {metar,taf,sigmet,isigmet,faa,nws,spc,lamp,atcscc,tcf,cwa: {ok, at, error}},
   noticeSources: {tfr: {ok, at, error, listed?, tfrs?}},          // README "Flight restrictions"; not in `sources` (they warn, never fail the checks)
   delayModel: {basis: model|fallback, updated (YYYY-MM-DD), since, through, months, source?: seed|train} | null,
   opsplan: {plan: {advisory, issued, eventTime, eventText, validEnd}, remarks, staffing[], enroute: {constraints[], active[], planned[]},
@@ -118,6 +127,7 @@ Airport NOTAM fetching, credentials, cache, parsing, scoring and monitoring were
     cascade?: [{hub, kind: closure|"ground stop"|"ground delay program"|delays, from, to (ISO hour bounds), text}] (hub cascade notes that raised a level, README "Hub cascade"; absent when none),
     atcscc: [{id, type: GS|GDP|AFP|other, airport, issued, cause, causeText, causeLabel, title, active, cnx, start, end, extension: low|medium|high|none|null}],
     alerts: [{event, severity, headline, onset, ends}], spc: "ENH"|null, sigmets: [{hazard, raw, validTo}],
+    aviationAdvisories: [{id, source: sigmet|isigmet, hazard: TURB|ICE|VA, cat, title, text, from, to, baseFt, topFt, raw}],
     lamp: {issued, hours: [{t, gust, tstmProb, convProb, probHrs, cig, vis, typ, pFrz, pPrecip}]} | null,
     tcf: [{valid, coverage: high|medium|low|null, coverageRaw, confidence, tops, props}],
     cwa: [{hazard, validFrom, validTo, raw}],

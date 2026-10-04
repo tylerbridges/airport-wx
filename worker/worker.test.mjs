@@ -327,3 +327,11 @@ test("phase3: with a trained model the relay scores exactly like the build; hubs
   const only = await run2("MSP"); // hub ORD not requested: its TAF comes from the build
   assert.ok(only.airports[0].hours.every((h) => h.delay && h.delay.basis === "model"));
 });
+
+test("additional SIGMET build fallback retains altitude and removes expired advisories", () => {
+  const current = { id: "test-turbulence", hazard: "TURB", title: "Severe turbulence", text: "Severe turbulence advisory nearby · 28,000–42,000 ft", from: new Date(+NOW - 3600e3).toISOString(), to: new Date(+NOW + 3600e3).toISOString(), baseFt: 28000, topFt: 42000 };
+  const b = { ...buildAp("ORD"), aviationAdvisories: [current, { ...current, id: "expired", to: new Date(+NOW - 1).toISOString() }] };
+  const r = W.overlay({ now: NOW, majors: [world.airports.find((x) => x.iata === "ORD")], build: { ...world.status, airports: [b] }, src: {} });
+  assert.deepEqual(r.airports[0].aviationAdvisories, [current]);
+  assert.equal(r.sources.isigmet.from, "build");
+});
