@@ -9,7 +9,7 @@ const options = (more = {}) => ({ now, generated: new Date(now).toISOString(), s
 test("outlook: a last-known active restriction remains visible without forecast hours", () => {
   const a = base(); a.hours = []; a.faa = [{ type: "ground_stop", end: new Date(now + H).toISOString() }];
   const o = O.evaluate(a, options({ offline: true, generated: new Date(now - H).toISOString() }));
-  assert.equal(o.kind, "active"); assert.equal(o.level, 4); assert.match(o.headline, /held/); assert.match(o.quality, /Offline/);
+  assert.equal(o.kind, "active"); assert.equal(o.level, 4); assert.equal(o.headline, "Ground Stop"); assert.match(o.quality, /Offline/);
   assert.match(o.impacts[0].value, /Held before departure/);
 });
 test("outlook: quiet status, absent forecast, missing and stale data remain distinct", () => {
@@ -30,7 +30,7 @@ test("outlook: scheduled end and FAA extension are not a forecast recovery time"
 test("outlook: future FAA periods apply only to their valid time; cancelled and superseded stay absent", () => {
   const a = base(); a.atcscc = [{ type: "GS", active: false, start: new Date(now + 2 * H).toISOString(), end: new Date(now + 4 * H).toISOString(), issued: new Date(now - H).toISOString() }];
   assert.equal(O.evaluate(a, options()).kind, "normal");
-  assert.equal(O.evaluate(a, options({ at: now + 3 * H })).headline, "Ground stop scheduled");
+  assert.equal(O.evaluate(a, options({ at: now + 3 * H })).headline, "Ground Stop scheduled");
   a.atcscc.push({ ...a.atcscc[0], issued: new Date(now).toISOString(), cnx: true });
   assert.equal(O.evaluate(a, options({ at: now + 3 * H })).kind, "normal");
 });
@@ -140,7 +140,7 @@ test("airport health: offline quiet is unknown but last-known material restricti
     const r = O.evaluate(a, options(extra));
     assert.equal(r.kind, "active");
     assert.equal(r.level, 4);
-    assert.match(r.headline, /held/);
+    assert.equal(r.headline, "Ground Stop");
     assert.ok(r.quality);
   }
 });

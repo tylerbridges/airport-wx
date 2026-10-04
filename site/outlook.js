@@ -26,7 +26,7 @@
       const type = x.type === "GS" ? "ground_stop" : "ground_delay";
       const existing = out.find((f) => f.type === type);
       if (existing) { existing.extension = x.extension || null; continue; }
-      out.push({ type, end: x.end, start: x.start, extension: x.extension, detail: "", source: "atcscc", cause: x.cause || null });
+      out.push({ type, end: x.end, start: x.start, extension: x.extension, detail: "", source: "atcscc", cause: x.cause || null, causeLabel: x.causeLabel || x.causeText || "" });
     }
     return out.sort((x, y) => ({ closure: 0, ground_stop: 1, ground_delay: 2, delay: 3 }[x.type] ?? 4) - ({ closure: 0, ground_stop: 1, ground_delay: 2, delay: 3 }[y.type] ?? 4));
   }
@@ -115,7 +115,7 @@
     if (first) {
       kind = current ? "active" : "forecast";
       headline = first.type === "closure" ? current ? "Airport closed" : "Airport closure scheduled"
-        : first.type === "ground_stop" ? current ? "Flights to " + a.iata + " held" : "Ground stop scheduled"
+        : first.type === "ground_stop" ? current ? "Ground Stop" : "Ground Stop scheduled"
         : first.type === "ground_delay" ? current ? "Arrival delays in effect" : "Arrival delay program scheduled" : "Delays happening now";
       level = Math.max(level, first.type === "closure" || first.type === "ground_stop" ? 4 : first.type === "ground_delay" ? 3 : 2);
     } else if (!h) { kind = "unknown"; headline = "Forecast unavailable for this time"; level = null; }

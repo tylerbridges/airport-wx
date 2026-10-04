@@ -377,7 +377,7 @@
     const s = String(b || "");
     const g = /^GDP(?: avg (.+))?$/i.exec(s);
     if (g) return g[1] ? "Arrival delays ~" + g[1].replace(/(\d+)h(\d+)m/, "$1 hr $2 min").replace(/(\d+)m$/, "$1 min").replace(/(\d+)h$/, "$1 hr") : "Arrival delays";
-    return { "GROUND STOP": "Ground stop", DELAYS: "Delays", CLOSED: "Closed", "RUNWAY CLOSED": "Runway closed" }[s.toUpperCase()] || s;
+    return { "GROUND STOP": "Ground Stop", DELAYS: "Delays", CLOSED: "Closed", "RUNWAY CLOSED": "Runway closed" }[s.toUpperCase()] || s;
   }
   const lv = (n) => "l" + Math.max(0, Math.min(4, n | 0));
   const cap = (x) => (x ? x.charAt(0).toUpperCase() + x.slice(1) : x);
@@ -1609,7 +1609,7 @@
     return "Delays: " + delayText(f.detail).replace(/^Delays /, "").replace(/^./, (c) => c.toLowerCase());
   }
 
-  function faaItem(f, a) {
+  function faaItem(f, a, compact = false, current = true) {
     const chip = aviation() ? h("div", { class: "chips" }, confChip("FAA", "high")) : null;
     if (f.type === "closure") {
       const info = f.scope === "limited" || f.active === false;
@@ -1626,11 +1626,12 @@
       const avg = /avg ([^,]+)/.exec(f.detail || ""), max = /max ([^,]+)/.exec(f.detail || "");
       text = "Flights to " + codeOf(a) + " are held before departure" + (avg ? `: about ${durTxt(avg[1])} on average` : "") + (max ? `, up to ${durTxt(max[1])}` : "") + (why ? ` (${why})` : "");
     } else text = "Flights to " + codeOf(a) + " are held at their departure airports" + (why ? ` (${why})` : "");
+    if (compact && !current) text = text.replace("are held", "are scheduled to be held");
     const until = /until [^,]+$/.exec(f.detail || "");
     const end = f.end ? "until " + whenLabel(Date.parse(f.end), dispTz(a)) : until ? retime(until[0], a) : "until further notice";
     return h("div", { class: "item" },
-      h("span", { class: "badge " + (FAA_CLS[f.type] || "l2") }, badgeText(f.badge || f.type)),
-      h("div", { style: "margin-top:4px" }, text + ", " + end + "."),
+      compact ? null : h("span", { class: "badge " + (FAA_CLS[f.type] || "l2") }, badgeText(f.badge || f.type)),
+      h("div", { style: "margin-top:4px" }, text + (compact ? "." : ", " + end + ".")),
       chip, rawToggle(faaRaw(f)));
   }
   const faaRaw = (f) => (f.type === "closure" ? f.reason : "FAA: " + f.reason + (f.detail ? "\n" + f.detail : ""));
@@ -1643,7 +1644,7 @@
     const status = x.cnx ? "Cancelled" : x.active ? (end ? "Active until " + whenLabel(end, tz) : "Active")
       : end != null && end < now ? "Ended" : start != null && start > now ? "Starts " + whenLabel(start, tz) : "Superseded";
     const cls = x.active ? ({ GS: "l4", GDP: "l3", AFP: "l2" }[x.type] || "l1") : "off";
-    const name = { GS: "Ground stop", GDP: "Ground delay program", AFP: "Airspace flow program" }[x.type] || "Advisory";
+    const name = { GS: "Ground Stop", GDP: "Ground delay program", AFP: "Airspace flow program" }[x.type] || "Advisory";
     return h("div", { class: "item" },
       h("span", { class: "badge " + cls }, name), h("span", { class: "muted" }, " " + status),
       x.causeLabel || x.causeText ? h("div", { style: "margin-top:4px" }, cap(x.causeLabel || x.causeText)) : null,
@@ -1818,7 +1819,10 @@
     const status = shared ? shared.headline : normal ? o.normalNote || (o.kind === "hour" && o.past ? "No disruption reported" : o.kind === "peak" || o.kind === "hour" && !o.isNow ? "No disruption expected" : "Operating normally")
       : meaningful ? L.word : o.level > 0 ? o.level === 1 ? "Minor disruption possible" : "Disruption possible" : null;
     const delay = status ? h("div", { class: "sc-delay" }, status) : null;
-    const list = normal ? null : rs.length
+    const primaryProgram = !aviation() && o.simple && shared?.programs.length === 1 && shared.programs[0].type !== "closure";
+    const cause = primaryProgram ? plainCause(shared.programs[0]).toLowerCase() : "";
+    const extraReasons = primaryProgram ? shortList(others, a).filter((r) => !cause || !r.toLowerCase().includes(cause) || /\d/.test(r)).slice(0, max) : [];
+    const list = primaryProgram ? h("div", {}, faaItem(shared.programs[0], a, true, shared.current), extraReasons.length ? h("p", { class: "rline" }, extraReasons.join(" · ")) : null) : normal ? null : rs.length
       ? o.full ? h("p", { class: "rline" }, rs.join(" · ")) : h("ul", { class: "reasons" }, rs.map((r) => h("li", {}, r)))
       : o.empty ? h("div", { class: "none" }, o.empty) : null;
     // program status and the departure/arrival impact share one line; with source chips only in full-width cards
@@ -1826,9 +1830,12 @@
     const imp = o.impact && prog ? o.impact.replace(/ \([^)]*\)$/, "") : o.impact;
     const progLine = o.simple ? null : o.full && (prog || imp) ? h("div", { class: "sc-prog" }, prog, prog && imp ? h("span", { class: "sc-imp" }, " · " + imp) : !prog ? h("span", { class: "sc-imp" }, imp) : null)
       : !o.full && prog ? h("div", { class: "sc-prog" }, prog) : null;
+    const programStart = primaryProgram && !shared.current && Date.parse(shared.programs[0].start);
+    const startText = Number.isFinite(programStart) ? "From " + whenLabel(programStart, dispTz(a)) + " · " : "";
+    const when = primaryProgram ? startText + (shared.scheduledEnd ? "Until " + whenLabel(shared.scheduledEnd, dispTz(a)) + " · may change" : NO_END) : o.when;
     return h("div", { class: "box sc" + (o.full ? " full" : ""), "data-kind": o.kind, "data-layout": o.layout },
       h("div", { class: "sc-h" },
-        h("h4", {}, h("span", { class: "sc-label" }, o.label), shared?.kind === "unknown" ? null : (shared?.level ?? o.level) != null ? pill(shared?.level ?? o.level, true) : null, (o.full || o.simple) && o.when ? h("span", { class: "sc-when in" }, o.when) : null)),
+        h("h4", {}, h("span", { class: "sc-label" }, o.label), shared?.kind === "unknown" ? null : (shared?.level ?? o.level) != null ? pill(shared?.level ?? o.level, true) : null, (o.full || o.simple) && when ? h("span", { class: "sc-when in" }, when) : null)),
       !o.full && !o.simple && o.when ? h("div", { class: "sc-when" }, o.when) : null,
       delay,
       list,
@@ -1943,8 +1950,9 @@
   const NO_END = "FAA gives no end time";
   function travelOutlook(a) {
     const o = outlook(a);
-    const rows = o.impacts.map((r) => h("div", { class: "outlook-row" }, h("b", {}, r.label), h("span", {}, r.value)));
-    if (o.scheduledEnd) rows.push(h("div", { class: "outlook-row" }, h("b", {}, "Scheduled end"), h("span", {}, whenLabel(o.scheduledEnd, dispTz(a)) + " · may change")));
+    const covered = !aviation() && o.programs.length === 1 && o.programs[0].type !== "closure";
+    const rows = covered ? [] : o.impacts.map((r) => h("div", { class: "outlook-row" }, h("b", {}, r.label), h("span", {}, r.value)));
+    if (o.scheduledEnd && !covered) rows.push(h("div", { class: "outlook-row" }, h("b", {}, "Scheduled end"), h("span", {}, whenLabel(o.scheduledEnd, dispTz(a)) + " · may change")));
     if (o.extension) rows.push(h("div", { class: "outlook-row" }, h("b", {}, "FAA extension outlook"), h("span", {}, cap(o.extension))));
     if (o.recovery) rows.push(h("div", { class: "outlook-row" }, h("b", {}, "Forecast improvement"), h("span", {}, "Conditions may improve after " + whenLabel(o.recovery, dispTz(a)))));
     if (!rows.length) return null;
@@ -2050,8 +2058,20 @@
     // detail cards (build2b), each only when it has content
     const secs = [];
     const add = (cond, fn) => { if (cond) secs.push(fn()); };
-    add(v.faa && v.faa.length, () => section("Delays & closures", "clock", v.faa.map((f) => faaItem(f, a)), { key: "faa" }));
-    const notices = [...[...(v.atcscc || [])].filter((x) => aviation() || !x.cnx && (x.active || Date.parse(x.start) > refNow())).sort((x, y) => (y.active ? 1 : 0) - (x.active ? 1 : 0)).map((x) => advItem(x, a)),
+    const primary = outlook(a).programs;
+    const covered = !aviation() && primary.length === 1 && primary[0].type !== "closure" ? primary : [];
+    const sameProgram = (f) => covered.some((p) => p.type === f.type && (p.end || null) === (f.end || null) && f.active !== false && f.scope !== "limited" && f.scope !== "runway");
+    const extraFaa = (v.faa || []).filter((f) => !sameProgram(f));
+    add(extraFaa.length, () => section("Delays & closures", "clock", extraFaa.map((f) => faaItem(f, a)), { key: "faa" }));
+    const extraAdvisory = (x) => {
+      if (aviation()) return true;
+      if (x.cnx || !x.active && !(Date.parse(x.start) > refNow())) return false;
+      const type = { GS: "ground_stop", GDP: "ground_delay" }[x.type] || x.type;
+      const repeated = x.active && sameProgram({ type, end: x.end });
+      const cause = x.causeLabel || x.causeText || "";
+      return !repeated || !!cause && cause.toLowerCase() !== plainCause(covered[0]).toLowerCase();
+    };
+    const notices = [...[...(v.atcscc || [])].filter(extraAdvisory).sort((x, y) => (y.active ? 1 : 0) - (x.active ? 1 : 0)).map((x) => advItem(x, a)),
       ...planItems(aviation() ? v : { ...v, opsplan: v.opsplan ? { ...v.opsplan, items: (v.opsplan.items || []).filter((x) => x.level > 0 && !x.dup) } : null }, a)];
     add(notices.length, () => section("FAA traffic notices", "tower", notices, { key: "atcscc" }));
     const noticeContext = { h, section, aviation: aviation(), retime: (t) => retime(t, a), hidden: isHidden, now: refNow(), sources: state.data.noticeSources || {} };
@@ -2088,7 +2108,7 @@
     // movement hook: "Traffic right now" (site/movement.js), its card body inside a build2b section card
     const mv = window.AWXMovement && typeof AWXMovement.card === "function" ? safeCall(() => AWXMovement.card(a)) : null;
     // Show a meaningful delay outlook directly below the timeline.
-    const dl = window.AWXDelay && typeof AWXDelay.delayBlock === "function" ? safeCall(() => AWXDelay.delayBlock(a, null)) : null; // phase3 hook
+    const dl = window.AWXDelay && typeof AWXDelay.delayBlock === "function" ? safeCall(() => AWXDelay.delayBlock(a, null, { coveredHours: [v.hours[0].t, ...(layout === "split" && sm.peakHour ? [sm.peakHour.t] : [])] })) : null; // phase3 hook
     const hiddenNote = v.hiddenCats && v.hiddenCats.size
       ? h("p", { class: "hidnote" }, "Hidden by your settings: " + [...v.hiddenCats].map((k) => CATS.LABELS[k]).join(", ") + ". Ground stops and airport closures are always shown.")
       : null;

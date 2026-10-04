@@ -358,7 +358,7 @@ export function whyBlock(a, now = refNow()) {
  * 30–45 min") and timing. Quiet or active-delay Traveler views omit this duplicate card; Aviation mode also
  * shows the analog, calibration and source explanation as visible text. Always returns a node.
  */
-export function delayBlock(a, i) {
+export function delayBlock(a, i, opts = {}) {
   injectStyle();
   const aviation = isAviation();
   const w = cardWindow(a, aviation);
@@ -378,7 +378,8 @@ export function delayBlock(a, i) {
     when = w.s === 0 && w.e === a.hours.length - 1 ? "in the next 24 hours" : rangeLabel(start, end, tzOf(a), w.s === 0);
   } else when = idx === 0 ? "this hour" : "at " + dayPrefix(t0, tzOf(a)) + clock(t0, tzOf(a));
   const cls = L.key === "now" || RANK[L.key] >= 3 ? "dl-hi" : RANK[L.key] === 2 ? "dl-mid" : "dl-lo";
-  const kids = [el("div", "dl-main", el("span", "dl-big " + cls, L.key === "now" ? L.word : L.word.replace(/^Delays/, "Airport disruption")), when ? el("span", "dl-what", when) : null)];
+  const covered = !aviation && opts.coveredHours?.includes(hr.t);
+  const kids = covered ? [] : [el("div", "dl-main", el("span", "dl-big " + cls, L.key === "now" ? L.word : L.word.replace(/^Delays/, "Airport disruption")), when ? el("span", "dl-what", when) : null)];
   const sub = [L.cue, L.size ? "When disrupted: " + L.size : ""].filter(Boolean).join(" · ");
   if (sub) kids.push(el("div", "dl-usual-b", sub));
   if (L.key === "now" && NOW_KINDS[d.override]) kids.push(el("div", "dl-faa", d.override === "closure" ? "Airport closed" : NOW_KINDS[d.override] + " in effect"));

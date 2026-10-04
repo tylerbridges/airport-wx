@@ -309,7 +309,14 @@ async function uiChecks(add, scenario) {
         A.openSheet(a.iata);
         await frameSleep(w, 50);
         const t = doc.getElementById("sheet").innerText;
-        if (!/Ground stop/.test(t)) bad.push(`${a.iata} sheet has no ground stop`);
+        if (!/Ground stop/i.test(t)) bad.push(`${a.iata} sheet has no ground stop`);
+        const o = w.AWXOutlook.evaluate(a, { now: Date.now() });
+        if (o.programs.length === 1 && o.programs[0].type === "ground_stop") {
+          const sh = doc.getElementById("sheet");
+          if (sh.querySelector(".sc-delay")?.textContent !== "Ground Stop") bad.push(`${a.iata} missing simple Ground Stop label`);
+          if (!/departure airports/.test(t)) bad.push(`${a.iata} missing flight impact`);
+          if ([...sh.querySelectorAll("h3")].some((e) => e.textContent === "Delays & closures")) bad.push(`${a.iata} repeats its only restriction`);
+        }
         A.closeSheet();
       }
       add(bad.length ? "fail" : "pass", "With every disruption type hidden, ground stops still show and still set Severe", bad.join("; ") || gs.map((a) => a.iata).join(", "));
