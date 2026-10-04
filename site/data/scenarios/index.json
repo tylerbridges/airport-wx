@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-04T21:33:55.422Z",
+ "generated": "2026-10-04T21:40:22.268Z",
  "groups": {
   "delays": "Delays & programs",
   "weather": "Weather",
@@ -153,8 +153,8 @@
    "name": "all-quiet-holiday-peak",
    "title": "All quiet on a holiday evening",
    "group": "delays",
-   "blurb": "No weather or FAA programs on a busy evening: usual delays only.",
-   "description": "The Sunday evening after Thanksgiving: no weather and no FAA programs anywhere, traffic 10–15% above normal at the big hubs. Delay words follow the usual rate for a busy evening (\"Usual delays\" at MDW, BWI, CLT; EWR's usual evening delays still show).",
+   "blurb": "Normal airport operations on a busy holiday evening.",
+   "description": "The Sunday evening after Thanksgiving: no weather or FAA programs. Routine airport delay rates remain available internally; Traveler cards show Operating normally without usual-delay commentary.",
    "file": "all-quiet-holiday-peak.json",
    "wx": "all-quiet-holiday-peak/wx/",
    "lagMin": 0,
@@ -216,7 +216,7 @@
     {
      "t": "card",
      "iata": "MDW",
-     "re": "Usual delays"
+     "re": "Operating normally"
     },
     {
      "t": "noPercent"
@@ -224,6 +224,11 @@
     {
      "t": "rendered",
      "text": "Test scenario: All quiet on a holiday evening"
+    },
+    {
+     "t": "sheet",
+     "iata": "MDW",
+     "re": "Operating normally"
     }
    ]
   },

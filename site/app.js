@@ -714,8 +714,8 @@
     n.replaceChildren(...kids);
   }
 
-  function pill(level, small) {
-    return h("span", { class: "pill " + lv(level) + (small ? " sm" : "") }, LEVELS[level].label);
+  function pill(level, small, prefix = "") {
+    return h("span", { class: "pill " + lv(level) + (small ? " sm" : "") }, prefix + LEVELS[level].label);
   }
 
   // Programs that affect airline flights. GA-only (limited) and runway closures stay in the sheet.
@@ -848,7 +848,8 @@
 
   /** "Now · Light rain, low clouds" for the lens label at rest. */
   function nowWords(a) {
-    if (a.nowText) return "Now · " + a.nowText;
+    const cascadeText = (a.cascade || []).some((c) => a.nowText && a.nowText.indexOf(c.hub + " ") === 0);
+    if (a.nowText && !cascadeText) return "Now · " + a.nowText;
     const c = a.metar ? metarCond(a.metar) : a.hours[0];
     const w = shortCond(c, a.metar && a.metar.raw);
     return "Now · " + (w || LEVELS[view(a).now.level].label);
@@ -1101,7 +1102,7 @@
       const head = levelWords(sm.level, sm.words);
       return [h("div", { class: cls(sm.level) }, head + " " + rangeText(sm.start, sm.end, tz) + zt, sm.words && sm.words.cue ? h("span", { class: "dl-usual" }, " · " + sm.words.cue) : null)];
     }
-    return [window.AWXDelay ? safeCall(() => AWXDelay.delayLine(a)) : null]; // phase3 hook: routine delay words (site/delay.js)
+    return aviation() ? [window.AWXDelay ? safeCall(() => AWXDelay.delayLine(a)) : null] : [];
   }
 
   function card(a, idx, count) {
@@ -1113,12 +1114,12 @@
     // a program shows once: its badge and one sentence (cardWhen); reasons that only repeat it are left out
     const rsn = (rs) => shortList((rs || []).filter((r) => !(progs.length && PROG_RE.test(r))), a);
     const reason = rsn(later && sm.peakHour ? hourReasons(a, sm.peakHour, sm.level) : ((n) => hourReasons(a, n.x, sm.nowLevel, n.reasons))(nowHourOf(a, v, sm)))[0] || (progs.length ? programCause(v.now.reasons) : null)
-      || (sm.level ? (sm.words ? "Busier than usual" : "Minor weather conditions") : "No significant weather");
+      || (sm.level ? (sm.words ? "Busier than usual" : "Minor weather conditions") : sm.current?.headline || "Operating normally");
     const mine = state.filter === "mine";
     const code = codeOf(a);
     const el = h("div", {
       class: "card", role: "button", tabindex: "0", "data-iata": a.iata, "data-level": String(sm.level),
-      "aria-label": `${code}, ${a.city}. ${LEVELS[sm.level].label} risk. ${reason}`,
+      "aria-label": `${code}, ${a.city}. ${later ? "Upcoming " : ""}${LEVELS[sm.level].label} risk. ${reason}`,
       onclick: () => openSheet(a.iata),
       onkeydown: (e) => {
         if ((e.key === "Enter" || e.key === " ") && e.target === el) { e.preventDefault(); openSheet(a.iata); }
@@ -1129,7 +1130,7 @@
         h("div", { class: "code" }, code),
         h("div", { class: "right" },
           staleTag(),
-          pill(sm.level),
+          pill(sm.level, false, later ? "Upcoming · " : ""),
           h("button", {
             type: "button", class: "star", "aria-pressed": String(fav), "aria-label": (fav ? "Remove " : "Add ") + code + (fav ? " from" : " to") + " my airports",
             onclick: (e) => { e.stopPropagation(); toggleFav(a.iata); },
@@ -2079,7 +2080,7 @@
       isStale() ? h("p", { class: "stale-line" }, "Last updated " + ago(dataAge()) + " — may be outdated") : null,
       // above the timeline: only the header, the Now / Peak (or single) card and the timeline itself
       boxWrap,
-      routine, // phase3 hook: "Delays unlikely today" / "Usual delays this evening" (site/delay.js routineOutlook)
+      routine, // phase3 hook: routine baseline detail in Aviation mode only
       safeCall(() => cascadeLine(v, [...shortList(v.now.reasons, a).slice(0, 3), ...shortList((sm.peakHour || v.peak).reasons, a).slice(0, 3)], "sh-hub")), // hubs hook
       h("section", { class: "sec tlsec" },
         h("div", { class: "sec-h" }, icon(ICONS.clock), h("h3", {}, tlTitle), h("span", { class: "rule", "aria-hidden": "true" }), dayBtn),
@@ -2110,12 +2111,12 @@
   }
 
   /**
-   * phase3 hook: the routine delay line. Shown only in routine conditions: the Delay outlook card is left out, the
+   * phase3 hook: Aviation mode's routine delay line. Shown only when the Delay outlook card is left out, the
    * outlook isn't unknown (stale / missing data) or an active FAA restriction, and the rest of the local day has
    * delay numbers. Words only (site/delay.js likelihood), no %.
    */
   function routineLine(a, dlShown) {
-    if (dlShown || !window.AWXDelay || typeof AWXDelay.routineOutlook !== "function") return null;
+    if (!aviation() || dlShown || !window.AWXDelay || typeof AWXDelay.routineOutlook !== "function") return null;
     const o = safeCall(() => outlook(a));
     if (!o || o.kind === "unknown" || o.kind === "active") return null;
     const r = safeCall(() => AWXDelay.routineOutlook(a, refNow()));

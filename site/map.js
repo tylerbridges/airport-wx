@@ -77,7 +77,8 @@ export function mountMap(container) {
   const slider = h("input", { type: "range", class: "mapx-slider", min: "0", max: "23", step: "1", value: "0", "aria-label": "Forecast hour" });
   const legendBox = h("div", { class: "mapx-legend", "aria-hidden": "true" });
   const attrib = h("a", { class: "mapx-attr", hidden: true, href: "https://www.openstreetmap.org/copyright", target: "_blank", rel: "noopener" }, "© OpenStreetMap");
-  const timeBox = h("div", { class: "mapx-time glass" }, h("div", { class: "mapx-when" }, h("span", { "aria-hidden": "true" }, whenB, whenS), attrib), slider, legendBox);
+  const timeBox = h("div", { class: "mapx-time glass" }, h("div", { class: "mapx-when" }, h("span", { "aria-hidden": "true" }, whenB, whenS), attrib), slider, legendBox,
+    h("span", { class: "map-open-hint", style: "font-size:12px;color:var(--muted)" }, "Tap an airport for current status"));
   const stage = h("div", { class: "mapx-stage", tabindex: "0", role: "group", "aria-label": "Airport risk map. Drag or use the arrow keys to pan, plus and minus to zoom. The airport list below has the same information." },
     base, over, h("div", { class: "mapx-top" }, seg, layersBtn), layers, tools, timeBox);
   const list = h("ul", { class: "map-airport-list", "aria-label": "Airports on the map" });
@@ -246,7 +247,7 @@ export function mountMap(container) {
       const status = e.lv == null || (e.head && e.head.toLowerCase().includes(word.toLowerCase())) ? e.head || word : e.head ? word + " · " + e.head : word;
       const ring = hasRing(e) && !/held|program|closed|closure/i.test(status) ? ". FAA program in effect" : "";
       return h("li", {}, h("button", { type: "button", class: "map-airport-row " + (e.lv == null ? "unknown" : "l" + e.lv), "data-code": e.code,
-        "aria-label": `${code}, ${e.a.city || e.a.name || ""}. ${status}${ring}${e.a.shard ? ". Weather only" : ""}`, onclick: () => openAirport(e) },
+        "aria-label": `${code}, ${e.a.city || e.a.name || ""}. ${status}${ring}${e.a.shard ? ". Weather only" : ""}. Open current airport status`, onclick: () => openAirport(e) },
       h("b", {}, code), h("span", {}, e.a.city || e.a.name || ""), h("span", { class: "map-row-status" }, h("i", { "aria-hidden": "true" }), status)));
     });
     if (!shown.length) rows.push(h("li", { class: "mapx-empty" }, filter === "mine" ? "Star an airport or add a trip to see it here." : "No airport is at risk at this hour."));
@@ -257,7 +258,7 @@ export function mountMap(container) {
   }
   function renderFoot() {
     const b = baseKind === "vector" ? "Map data © OpenStreetMap contributors, tiles by OpenFreeMap. " : baseKind === "outline" && vmState === "fail" ? "Simplified outlines (Natural Earth): the detailed base map couldn't load. " : "";
-    foot.textContent = b + "Colours show airport disruption risk for each hour, not the chance that a particular flight is delayed. Starred and trip airports outside the major list use weather forecasts only.";
+    foot.textContent = b + "Colours show airport disruption risk at the selected hour. Tap an airport to open its current status. Starred and trip airports outside the major list use weather forecasts only.";
     attrib.hidden = baseKind !== "vector";
   }
   function openAirport(e) {

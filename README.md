@@ -441,3 +441,5 @@ Every poll also downloads AWC's global bulk caches (`metars.cache.csv.gz`, `tafs
 - **Checks.** `window.AWXMap._state()` (dots, list rows, base kind, offset, levels and headlines per airport), `pos(code)`, `setOffset(k)`, `setFilter(k)`. The check page (`site/map/check.js`, mock mode, `?test=thunderstorm-ground-stop` in a hidden 390 px frame) requires the tab to render, one dot and one list row per airport, a tap on ORD's dot to open its sheet, the slider to recolour dots, every dot to match `AWXApp.outlook` at that hour, and no errors. The Navigation group also checks the map's dots and list.
 
 The map does not imply worldwide forecast coverage: airports outside status.json carry weather forecasts only, as the footnote says.
+
+**Quiet traveler flow.** Normal airport cards and sheets omit routine baseline delay commentary. A higher future severity is labeled Upcoming on the airport card; Now and Coming up retain their own conditions and windows. Map colours and the list describe the selected hour, while tapping explicitly opens current airport status.

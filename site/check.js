@@ -6,7 +6,7 @@
 import { loadAirports, rank } from "./search.js";
 import { navChecks } from "./navcheck.js?v=3"; // nav hook
 import { tripChecks } from "./check-trips.js"; // trips hook
-import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=2"; // scenarios hook; More details page helpers
+import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=3"; // scenarios hook; More details page helpers
 
 const P = new URLSearchParams(location.search);
 const MOCK = P.get("mock") === "1";
@@ -500,6 +500,7 @@ async function uiChecks(add, scenario) {
         A.closeSheet();
       }
       const n = doc.querySelectorAll(".dl-line, .sc-delay").length;
+      add(routines ? "fail" : "pass", "Traveler sheets omit routine delay commentary", `${routines} routine lines`);
       add(hits.length ? "fail" : "pass", "Traveler: delay chances in words, no % (cards, sheets, routine lines, More details, trips)", hits.slice(0, 4).join("; ") || `${n} delay lines, ${routines} routine lines and every More details page checked`);
     });
 

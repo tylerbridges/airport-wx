@@ -446,9 +446,10 @@ export async function consistencyChecks(add, w, doc, where = "") {
     const a = A.state.data.airports.find((x) => x.iata === iata);
     if (!a) continue;
     const pillEl = card.querySelector(".top .pill");
-    const cardLv = pillEl ? LV[pillEl.textContent.trim()] : null;
+    const cardLv = pillEl ? LV[pillEl.textContent.trim().replace(/^Upcoming · /, "")] : null;
     // words and colours: the headline's hours on the card's timeline
     const sm = A.summary(a);
+    if (pillEl && /^Upcoming · /.test(pillEl.textContent.trim()) !== !!sm.later) levels.push(`${iata}: upcoming label doesn't match the forecast window`);
     const tl = card.querySelector(".tl-wrap");
     const T = tl && tl._tl;
     if (T && sm.level >= 1 && Number.isFinite(sm.end)) {
