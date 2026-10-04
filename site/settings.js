@@ -26,6 +26,7 @@ const SOURCES = [
   ["National Weather Service", "Warnings and advisories", ["nws"]],
   ["Storm Prediction Center", "Severe storm outlook", ["spc"]],
   ["NOAA LAMP", "Hourly thunder, wind and cloud guidance", ["lamp"]],
+  ["Notices (NOTAMs, TFRs)", "Runway closures, airport notices and flight restrictions", ["notam", "tfr"], "notice"], // notams hook: status.noticeSources
   ["Bureau of Transportation Statistics", "On-time history for delay chances", []],
 ];
 
@@ -397,11 +398,15 @@ function buildData(body) {
   const buildText = test ? "Test scenario (not live)" : st.sample ? "Sample data (no live build yet)" : build ? when(Date.parse(build.generated)) : st.loaded ? "Couldn't load" : "Loading…";
   const relay = valueRow("Live relay", "Checking…", { "data-id": "relay" });
   const src = (st.data && st.data.sources) || {};
-  const srcRows = SOURCES.map(([name, what, keys]) => {
-    const have = keys.filter((k) => src[k]);
-    const down = have.filter((k) => !src[k].ok).length;
-    const part = have.filter((k) => src[k].ok && src[k].error).length;
-    const stat = !keys.length ? ["History", ""] : !have.length ? ["—", ""] : down === have.length ? ["Unavailable", "awx-bad"] : down || part ? ["Partly unavailable", "awx-warn"] : ["OK", "awx-good"];
+  const nsrc = (st.data && st.data.noticeSources) || {}; // notams hook: NOTAM and TFR sources live apart from `sources`
+  const srcRows = SOURCES.map(([name, what, keys, from]) => {
+    const S = from === "notice" ? nsrc : src;
+    const have = keys.filter((k) => S[k]);
+    const down = have.filter((k) => !S[k].ok).length;
+    const part = have.filter((k) => S[k].ok && S[k].error).length;
+    const failed = have.filter((k) => !S[k].ok).map((k) => ({ notam: "NOTAMs", tfr: "TFRs" }[k] || k));
+    const stat = !keys.length ? ["History", ""] : !have.length ? ["—", ""] : down === have.length ? [from === "notice" ? "Failed" : "Unavailable", "awx-bad"]
+      : from === "notice" && down ? [failed.join(", ") + " failed", "awx-warn"] : down || part ? ["Partly unavailable", "awx-warn"] : ["OK", "awx-good"];
     return h("div", { class: "awx-row" }, h("span", { class: "awx-rt" }, name, h("small", {}, what)), h("span", { class: "awx-rv " + stat[1] }, stat[0]));
   });
   // movement hook: the ADS-B feeds behind "Traffic right now" (site/movement.js SOURCES)

@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-04T15:33:14.104Z",
+ "generated": "2026-10-04T16:01:32.454Z",
  "groups": {
   "delays": "Delays & programs",
   "weather": "Weather",
@@ -1547,8 +1547,8 @@
    "name": "source-outage",
    "title": "FAA status feed down",
    "group": "system",
-   "blurb": "The FAA status feed fails; the page says so.",
-   "description": "The FAA NAS status request fails; everything else works. The page must say FAA delay info is unavailable.",
+   "blurb": "The FAA status feed and the NOTAM search fail; the page says so.",
+   "description": "The FAA NAS status request fails, and so does the airport NOTAM search; everything else works. The page must say FAA delay info and airport notices are unavailable.",
    "file": "source-outage.json",
    "wx": "source-outage/wx/",
    "lagMin": 0,
@@ -1574,6 +1574,21 @@
     {
      "t": "rendered",
      "text": "FAA delay info unavailable"
+    },
+    {
+     "t": "noticeSource",
+     "name": "notam",
+     "ok": false
+    },
+    {
+     "t": "noticeSource",
+     "name": "tfr",
+     "ok": true
+    },
+    {
+     "t": "sheet",
+     "iata": "MSP",
+     "re": "Airport notices \\(runway closures, flight restrictions\\) unavailable right now.*Airport notices unavailable — runway closures and flight restrictions may be missing"
     }
    ]
   },

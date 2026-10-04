@@ -99,6 +99,7 @@
     }
     if (outdated || incomplete && kind === "normal") { kind = "unknown"; headline = outdated ? "Status may be outdated" : "No disruptions reported · some data unavailable"; }
     else if (opts.hidden && kind === "normal") headline = "No issues in your selected categories";
+    if (kind === "normal" && opts.noticesDown) headline += " · notices unavailable"; // airport NOTAMs/TFRs couldn't be read: never an unqualified "normal"
     const window = h ? windowFor(a, opts, at) : null;
     const end = first && ms(first.end);
     // Recovery is a forecast, never a promise tied to an FAA program's scheduled end.

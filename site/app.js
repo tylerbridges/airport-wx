@@ -21,6 +21,12 @@
     sigmet: "thunderstorm alerts may be missing", lamp: "thunder chances may be missing", tcf: "storm forecasts may be missing",
     cwa: "center weather advisories may be missing",
   };
+  // notams hook: airport NOTAMs and TFRs (status.noticeSources); when either failed, quiet statuses say so
+  const NOTICES_DOWN = "Airport notices (runway closures, flight restrictions) unavailable right now";
+  function noticesDown() {
+    const ns = (state.data && state.data.noticeSources) || {};
+    return ["notam", "tfr"].some((k) => ns[k] && ns[k].ok === false);
+  }
   const SPC_NAMES = { MRGL: "Marginal", SLGT: "Slight", ENH: "Enhanced", MDT: "Moderate", HIGH: "High" };
   const FAV_KEY = "awx-favs";
   const DEFAULT_FAVS = ["MSP", "ORD", "DEN", "ATL"];
@@ -1603,6 +1609,7 @@
       if (x.error) warn.push(`${SOURCE_NAMES[k]} partly unavailable — ${SOURCE_MISSING[k]}`);
       else if (x.stale) warn.push(`${SOURCE_NAMES[k]}: live update unavailable — showing the last known data`);
     }
+    if (noticesDown()) warn.push("Airport notices unavailable — runway closures and flight restrictions may be missing"); // notams hook
     const when = state.sample ? "sample data" : d ? ago(Math.max(0, Date.now() - Date.parse(d.generated))) : "";
     if (d && !state.sample && refNow() - Date.parse(d.generated) > STALE_MS) warn.unshift("Data is " + when + " — status may have changed");
     return h("div", { class: "checked" },
@@ -1726,7 +1733,7 @@
 
   function outlook(a, at = refNow()) {
     const v = a.hours?.length ? view(a) : a;
-    return AWXOutlook.evaluate(v, { now: refNow(), at, generated: state.data?.generated, sources: state.data?.sources, sample: state.sample,
+    return AWXOutlook.evaluate(v, { now: refNow(), at, generated: state.data?.generated, sources: state.data?.sources, sample: state.sample, noticesDown: noticesDown(),
       hidden: v.hiddenCats?.size, plain: (r) => plainReason(shortRaw(r), a),
       words: (d) => window.AWXDelay?.likelihood(d, { iata: a.iata, aviation: aviation() }), notable: window.AWXDelay?.notable });
   }
@@ -1761,7 +1768,7 @@
     const incomplete = state.sample || !a.metar || refNow() - Date.parse(a.metar.obsTime) > 2 * HOUR || ["faa", "atcscc", "metar", "taf"].some((k) => !sources[k] || !sources[k].ok || sources[k].error || sources[k].stale);
     const stale = refNow() - Date.parse(state.data.generated) > STALE_MS;
     const normalNote = stale ? "Status may be outdated" : incomplete ? "No disruptions reported · some data unavailable"
-      : v.hiddenCats && v.hiddenCats.size ? "No issues in your selected categories" : null;
+      : v.hiddenCats && v.hiddenCats.size ? "No issues in your selected categories" : noticesDown() ? "Operating normally · notices unavailable" : null;
 
     // rest state: Now | Peak, or one full-width "Now · Peak" / clear card
     const restCards = () => {
@@ -1850,7 +1857,9 @@
       ...planItems(aviation() ? v : { ...v, opsplan: v.opsplan ? { ...v.opsplan, items: (v.opsplan.items || []).filter((x) => x.level > 0 && !x.dup) } : null }, a)];
     add(notices.length, () => section("FAA traffic notices", "tower", notices, { key: "atcscc" }));
     const nts = window.AWXNotices ? safeCall(() => AWXNotices.section(v, a, { h, section, aviation: aviation(), retime: (t) => retime(t, a), hidden: isHidden, now: refNow(), sources: state.data.noticeSources || {} })) : null; // notams hook: "Notices" (site/notices.js)
-    if (nts) secs.push(nts);
+    const ntsDown = noticesDown() ? h("p", { class: "ntc-down muted" }, NOTICES_DOWN) : null; // never silently missing
+    if (nts) { secs.push(nts); if (ntsDown) nts.querySelector(".scard").append(ntsDown); }
+    else if (ntsDown) secs.push(ntsDown);
     add(a.metar, () => currentWeather(a));
     add(v.alerts && v.alerts.length, () => section("Weather warnings", "alert", v.alerts.map((x) => h("div", { class: "item" }, h("b", {}, x.event),
       x.ends ? h("span", { class: "muted" }, " · until " + dayClock(Date.parse(x.ends), tz)) : null,
