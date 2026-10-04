@@ -175,8 +175,11 @@ export function applyNotices(hours, notices, { faa = [], opsplan = null, tz = "U
       const shown = level > 1 ? rw : level === 1 ? fresh : [];
       if (shown.length) {
         const ids = [...new Set(shown.flatMap((x) => x.runways || []))];
-        const endAt = Math.min(...shown.map((x) => stretchEnd(x, t0) ?? Infinity));
-        const until = shown.length === 1 || every ? untilWords(Number.isFinite(endAt) ? endAt : null, tz, now, shown.length === 1 && !shown[0].to && /PERM/.test(shown[0].raw || "")) : "";
+        const endsAt = shown.map((x) => stretchEnd(x, t0) ?? Infinity);
+        const endAt = Math.min(...endsAt);
+        // one end for all of them (or the airport reopens when the first one does): "until …"
+        const same = endsAt.every((e) => e === endsAt[0]);
+        const until = same || every ? untilWords(Number.isFinite(endAt) ? endAt : null, tz, now, same && shown.every((x) => !x.to && /PERM/.test(x.raw || ""))) : "";
         const tail = most ? ` — ${nClosed} of ${n} runways` : wind ? " — the runway best lined up with the wind" : "";
         add(level, every ? `Airport closed — all runways closed${until}` : `${runwayNames(ids)} closed${until}${tail}`);
         for (const x of shown) {

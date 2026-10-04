@@ -148,7 +148,7 @@ test("runway rule: 1 of N Low; more than half Moderate; all closed Severe", () =
   assert.deepEqual(one.reasons[0], ["1 Runway 16R/34L closed until 3:20 PM"]);
   assert.deepEqual(one.reasons[4], []); // ended
   const four = score(DEN, DEN_RWY, ["16L/34R", "16R/34L", "17L/35R", "17R/35L"].map((r) => `!DEN 10/1 DEN RWY ${r} CLSD ${span(-1, 3)}`));
-  assert.deepEqual(four.reasons[0], ["2 Runways 16L/34R, 16R/34L, 17L/35R and 17R/35L closed — 4 of 6 runways"]);
+  assert.deepEqual(four.reasons[0], ["2 Runways 16L/34R, 16R/34L, 17L/35R and 17R/35L closed until 3:20 PM — 4 of 6 runways"]);
   assert.equal(four.n.items[0].why, "most");
   const three = score(DEN, DEN_RWY, ["16L/34R", "16R/34L", "17L/35R"].map((r) => `!DEN 10/1 DEN RWY ${r} CLSD ${span(-1, 3)}`), { wspd: 5 });
   assert.equal(three.hs[0].level, 1); // exactly half: Low

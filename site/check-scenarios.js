@@ -10,6 +10,9 @@
 //   {t:"alert", iata, event}   {t:"spc", iata, cat}   {t:"sigmet", iata}   {t:"model", basis}
 //   {t:"movement", iata, line: re | null, arrBelow?: share}   {t:"airlineAlert", re}
 //   {t:"tripConcern", i, re}  one of trip i's concerns (site/trip-risk.js) matches
+//   {t:"notice", iata, kind?, re?, level?}  one of the airport's notices (README "Notices") of that kind matches re;
+//        level = the highest level it set in the 24 hours (0 = information)            (notams hook)
+//   {t:"noticeSource", name: notam|tfr, ok}   {t:"hourReason", iata, hour, re, none?}  (notams hook)
 // Page assertions:
 //   {t:"card", iata, re}   the airport's card on the All list
 //   {t:"sheet", iata, re}  the airport's sheet (text, including closed "Why?" parts)
@@ -19,7 +22,7 @@
 //   {t:"noPercent"}        Traveler mode: no "%" in delay-chance text (cards, every sheet, trips)
 import { tripStatus } from "./trip-risk.js";
 
-const DATA = new Set(["words", "badge", "noFaa", "opsplan", "atcscc", "alert", "spc", "sigmet", "model", "movement", "airlineAlert", "tripConcern"]);
+const DATA = new Set(["words", "badge", "noFaa", "opsplan", "atcscc", "alert", "spc", "sigmet", "model", "movement", "airlineAlert", "tripConcern", "notice", "noticeSource", "hourReason"]); // notams hook: the last three
 const PAGE = new Set(["card", "sheet", "national", "header", "banner", "noPercent"]);
 export const isPageAssert = (x) => PAGE.has(x.t);
 
@@ -159,6 +162,28 @@ export async function dataAsserts(add, { sc, data, delta, shift }) {
         ok = texts.some((v) => re(x.re).test(v));
         label = `trip ${x.i || 0} concern /${x.re}/`;
         got = r ? `got ${short(texts)}` : "no such trip";
+        break;
+      }
+      case "notice": { // notams hook
+        const items = ((a && a.notices && a.notices.items) || []).filter((v) => !x.kind || v.kind === x.kind);
+        ok = items.some((v) => (!x.re || re(x.re).test(v.text)) && (x.level == null || (v.peak || 0) === x.level));
+        label = `${x.iata} notice ${x.kind || ""}${x.re ? ` /${x.re}/` : ""}${x.level != null ? ` at level ${x.level}` : ""}`;
+        got = `got ${short(((a && a.notices && a.notices.items) || []).map((v) => [v.kind, v.peak || 0, v.text]))}`;
+        break;
+      }
+      case "noticeSource": { // notams hook
+        const s = (data.noticeSources || {})[x.name];
+        ok = !!s && !!s.ok === x.ok;
+        label = `notice source ${x.name} ${x.ok ? "ok" : "unavailable"}`;
+        got = `got ${s ? (s.ok ? "ok" : "error: " + s.error) : "missing"}`;
+        break;
+      }
+      case "hourReason": { // notams hook
+        const h = a && a.hours && a.hours[x.hour];
+        const hit = !!h && (h.reasons || []).some((r) => re(x.re).test(r));
+        ok = !!h && (x.none ? !hit : hit);
+        label = `${x.iata} hour ${x.hour} reasons ${x.none ? "don't include" : "include"} /${x.re}/`;
+        got = `got ${short(h ? h.reasons : "no such hour")}`;
         break;
       }
       case "airlineAlert": {

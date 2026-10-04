@@ -42,9 +42,12 @@
     var h = ctx.h;
     var shown = list.slice(0, MAX);
     var more = list.length - shown.length + Math.max(0, ((n.count || 0) - (n.items || []).length));
+    var said = {};
     var kids = shown.map(function (x) {
       var lvl = x.peak || 0;
-      var text = ctx.retime(x.text) + (x.why && x.peak > 1 ? WHY[x.why] || "" : "") + (x.dup && ctx.aviation ? " Also reported by the FAA above." : "");
+      var why = x.why && x.peak > 1 && !said[x.why] ? WHY[x.why] || "" : ""; // explained once, on the first runway it applies to
+      if (why) said[x.why] = true;
+      var text = ctx.retime(x.text) + why + (x.dup && ctx.aviation ? " Also reported by the FAA above." : "");
       return h("div", { class: "item" + (lvl ? "" : " info"), "data-kind": x.kind },
         h("div", { class: lvl ? "" : "muted", style: lvl >= 2 ? "font-weight:600" : "" }, text),
         ctx.aviation && x.raw ? h("pre", { class: "raw rawt" }, x.raw + (x.src === "tfr" && x.nm != null ? "\n(" + (x.nm ? x.nm + " NM from the airport" : "over the airport") + ")" : "")) : null);

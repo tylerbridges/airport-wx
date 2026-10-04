@@ -1,0 +1,17 @@
+{
+  "title": "ILS out in low clouds",
+  "blurb": "SEA's runway 16R ILS is out while low clouds hang on; PHX's glideslope outage doesn't matter in clear skies.",
+  "description": "NOTAMs take the runway 16R instrument landing system at SEA out of service while SEA is IFR (ceiling 700 ft, 4 miles in rain and mist) for the next 6 hours, then clears. The ILS outage is Low only in the IFR hours. PHX has a glideslope outage in clear weather: information only, no reason and no level.",
+  "group": "nonweather",
+  "assert": [
+    { "t": "level", "iata": "SEA", "of": "now", "op": "==", "v": 2 },
+    { "t": "reason", "iata": "SEA", "re": "^Runway 16R ILS out of service until " },
+    { "t": "hourReason", "iata": "SEA", "hour": 2, "re": "^Runway 16R ILS out of service" },
+    { "t": "hourReason", "iata": "SEA", "hour": 8, "re": "ILS out of service", "none": true },
+    { "t": "level", "iata": "PHX", "of": "peak", "op": "==", "v": 0 },
+    { "t": "noReason", "iata": "PHX", "re": "glideslope" },
+    { "t": "notice", "iata": "PHX", "kind": "ils", "re": "^Runway 26 glideslope", "level": 0 },
+    { "t": "sheet", "iata": "SEA", "re": "Notices.*instrument landing system \\(ILS\\) out of service" },
+    { "t": "noPercent" }
+  ]
+}
