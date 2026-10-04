@@ -834,8 +834,8 @@
   }
 
   /**
-   * Timeline element. opts.big: the sheet's (compact bar, instant pointer scrubbing); else a card's (hold or
-   * horizontal move to scrub). The lens sits on the current hour at rest.
+   * Timeline element. Cards are read-only; opts.big enables held previews in the detail sheet.
+   * The lens sits on the current hour at rest.
    */
   function timeline(a, opts = {}) {
     const big = !!opts.big;
@@ -864,16 +864,16 @@
     const na = slots.findIndex((x, i) => x.kind === "na" && slots.slice(i).every((y) => y.kind === "na"));
     const naNote = na >= 0 ? h("div", { class: "nanote" }, "Forecast not available yet from " + timelineDay(slots[na].t, tz) + " " + hourLabel(slots[na].t, tz)) : null;
     const wrap = h("div", {
-      class: "tl-wrap" + (big ? " bigwrap" : " cardwrap"), tabindex: "0", role: "slider",
+      class: "tl-wrap" + (big ? " bigwrap" : " cardwrap"), tabindex: big ? "0" : null, role: big ? "slider" : "img",
       "aria-label": big ? "Hourly risk, " + (opts.dayOff ? "tomorrow" : "past 12 hours and next 24 hours") : timelineLabel(a),
-      "aria-valuemin": "0", "aria-valuemax": String(n - 1), "aria-valuenow": String(Math.max(0, day.cur)),
-      "aria-valuetext": day.cur >= 0 ? slotText(slots[day.cur], a) : slotText(slots[0], a),
+      "aria-description": big ? "Hold and slide to preview an hour. Release to return to the normal view." : null,
+      "aria-valuemin": big ? "0" : null, "aria-valuemax": big ? String(n - 1) : null, "aria-valuenow": big ? String(Math.max(0, day.cur)) : null,
+      "aria-valuetext": big ? (day.cur >= 0 ? slotText(slots[day.cur], a) : slotText(slots[0], a)) : null,
       "data-start": String(day.start), "data-tz": tz,
     }, label, tl, ticks, naNote);
     const T = { wrap, tl, lens, lensSeg, label, segs, slots, day, a, rest: day.cur, big, opts };
     wrap._tl = T;
     if (big) wireBigScrub(T);
-    else wireCardScrub(T);
     return wrap;
   }
 
@@ -890,6 +890,10 @@
       lens.hidden = true;
       label.textContent = "";
       label.hidden = true;
+      if (T.big) {
+        wrap.setAttribute("aria-valuenow", "0");
+        wrap.setAttribute("aria-valuetext", "No hour selected. Hold and slide to preview.");
+      }
       return;
     }
     const seg = segs[i];
@@ -905,8 +909,10 @@
     label.textContent = scrub || i !== T.rest || T.slots[i].kind === "na" ? slotText(T.slots[i], T.a) : nowWords(T.a);
     const lw = Math.min(W, label.offsetWidth);
     label.style.left = Math.max(0, Math.min(W - lw, cx - lw / 2)) + "px";
-    wrap.setAttribute("aria-valuenow", String(i));
-    wrap.setAttribute("aria-valuetext", slotText(T.slots[i], T.a));
+    if (T.big) {
+      wrap.setAttribute("aria-valuenow", String(i));
+      wrap.setAttribute("aria-valuetext", slotText(T.slots[i], T.a));
+    }
   }
   function placeLenses() {
     for (const w of document.querySelectorAll(".tl-wrap")) if (w._tl && !w.classList.contains("scrub")) placeLens(w._tl, w._tl.shown != null ? w._tl.shown : w._tl.rest, false);
@@ -936,145 +942,65 @@
   let swallowClick = 0;
   document.addEventListener("click", (e) => { if (Date.now() < swallowClick) { e.stopPropagation(); e.preventDefault(); } }, true);
 
-  /**
-   * Card timelines: a 150 ms hold or a horizontal move of 8 px starts scrubbing; a mostly vertical first
-   * move hands the gesture to the page (touch-action: pan-y on the row). While scrubbing the page doesn't
-   * scroll and the lens + label follow the finger; releasing springs back to now and does nothing else.
-   */
-  function wireCardScrub(T) {
-    const { wrap } = T;
-    let g = null;
-    const begin = () => {
-      g.on = true;
-      wrap.classList.add("scrub");
-      move(g.x);
-    };
-    const move = (x) => {
-      const i = slotAt(T, x);
-      if (i !== g.i) { if (g.i != null) g.moved = true; g.i = i; tickSeg(T, i); }
-      T.shown = i;
-      placeLens(T, i, true);
-    };
-    const end = () => {
-      if (!g) return;
-      clearTimeout(g.timer);
-      if (g.on) { if (g.moved || Math.abs(g.lx - g.x) > 8) swallowClick = Date.now() + 400; springBack(T); }
-      g = null;
-    };
-    wrap.addEventListener("touchstart", (e) => {
-      if (e.touches.length !== 1) { end(); return; }
-      const t = e.touches[0];
-      g = { x: t.clientX, y: t.clientY, lx: t.clientX, on: false, dead: false, moved: false, i: null };
-      g.timer = setTimeout(() => { if (g && !g.dead && !g.on) begin(); }, 150);
-    }, { passive: true });
-    wrap.addEventListener("touchmove", (e) => {
-      if (!g || g.dead) return;
-      const t = e.touches[0];
-      const dx = t.clientX - g.x, dy = t.clientY - g.y;
-      g.lx = t.clientX;
-      if (!g.on) {
-        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
-        if (Math.abs(dy) > Math.abs(dx)) { g.dead = true; clearTimeout(g.timer); return; } // the page scrolls
-        begin();
-      }
-      if (e.cancelable) e.preventDefault();
-      move(t.clientX);
-    }, { passive: false });
-    wrap.addEventListener("touchend", end);
-    wrap.addEventListener("touchcancel", end);
-    // mouse: drag sideways (or hold) to scrub; a click still opens the card
-    wrap.addEventListener("mousedown", (e) => {
-      if (e.button !== 0 || "ontouchstart" in window && e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return;
-      g = { x: e.clientX, y: e.clientY, lx: e.clientX, on: false, dead: false, moved: false, i: null, mouse: true };
-      g.timer = setTimeout(() => { if (g && !g.on) begin(); }, 150);
-      const mm = (ev) => {
-        if (!g) return;
-        g.lx = ev.clientX;
-        if (!g.on && Math.abs(ev.clientX - g.x) >= 8) begin();
-        if (g.on) move(ev.clientX);
-      };
-      const mu = () => { removeEventListener("mousemove", mm); removeEventListener("mouseup", mu); end(); };
-      addEventListener("mousemove", mm);
-      addEventListener("mouseup", mu);
-    });
-    wrap.addEventListener("keydown", (e) => {
-      const n = T.segs.length;
-      let i = T.shown != null ? T.shown : T.rest;
-      if (e.key === "ArrowRight") i = Math.min(n - 1, i + 1);
-      else if (e.key === "ArrowLeft") i = Math.max(0, i - 1);
-      else if (e.key === "Home") i = 0;
-      else if (e.key === "End") i = n - 1;
-      else if (e.key === "Escape") { springBack(T); return; }
-      else return;
-      e.preventDefault();
-      e.stopPropagation();
-      T.shown = i;
-      placeLens(T, i, true);
-    });
-    wrap.addEventListener("click", (e) => { if (T.shown != null && document.activeElement === wrap && e.detail === 0) e.stopPropagation(); });
-    wrap.addEventListener("blur", () => { if (T.shown != null) springBack(T); });
-  }
-
-  /**
-   * The sheet's timeline: the bar is the scrub surface (touch-action: none, pointer capture). Finger down
-   * selects the hour under it at once; sliding updates the card above live, hour by hour (rAF). Releasing
-   * after a drag returns to Now + Peak; a plain tap (no movement, under 200 ms) keeps that hour selected
-   * until "Back to now" or a second tap on it. Arrow keys move hour by hour.
-   */
+  /** Detail timelines preview only while a pointer or navigation key is held. */
   function wireBigScrub(T) {
     const bar = T.tl;
     let g = null, raf = 0;
+    const heldKeys = new Set();
+    const keys = new Set(["ArrowRight", "ArrowLeft", "Home", "End"]);
     const show = (i) => {
       if (T.shown !== i) tickSeg(T, i);
       T.shown = i;
       placeLens(T, i, true);
       if (T.opts.onPreview) T.opts.onPreview(i);
     };
+    const finish = () => {
+      const pointer = g;
+      g = null;
+      heldKeys.clear();
+      if (raf) { cancelAnimationFrame(raf); raf = 0; }
+      if (pointer && bar.hasPointerCapture(pointer.id)) bar.releasePointerCapture(pointer.id);
+      if (T.opts.onRelease) T.opts.onRelease();
+      springBack(T);
+    };
     bar.addEventListener("pointerdown", (e) => {
-      if (e.button > 0) return;
+      if (e.button > 0 || g) return;
+      heldKeys.clear();
+      g = { id: e.pointerId, x: e.clientX };
       try { bar.setPointerCapture(e.pointerId); } catch (x) { /* ignore */ }
-      g = { id: e.pointerId, x0: e.clientX, t0: Date.now(), moved: false, i: slotAt(T, e.clientX), was: T.picked };
-      show(g.i);
+      show(slotAt(T, g.x));
       e.preventDefault();
     });
     bar.addEventListener("pointermove", (e) => {
       if (!g || e.pointerId !== g.id) return;
-      if (Math.abs(e.clientX - g.x0) > 4) g.moved = true;
-      const x = e.clientX;
+      g.x = e.clientX;
       if (!raf) raf = requestAnimationFrame(() => {
         raf = 0;
-        if (!g) return;
-        const i = slotAt(T, x);
-        if (i !== g.i) { g.i = i; g.moved = true; show(i); }
+        if (g) show(slotAt(T, g.x));
       });
     });
-    const up = (e, cancel) => {
-      if (!g || (e && e.pointerId !== g.id)) return;
-      const tap = !cancel && !g.moved && Date.now() - g.t0 < 200;
-      const i = g.i;
-      const was = g.was;
-      g = null;
-      if (tap && was === i) { T.opts.onPick && T.opts.onPick(null); springBack(T); return; } // second tap on the selected hour
-      if (tap) { T.opts.onPick && T.opts.onPick(i); T.shown = i; placeLens(T, i, false); T.wrap.classList.remove("scrub"); return; }
-      T.opts.onPick && T.opts.onPick(null);
-      springBack(T);
-    };
-    bar.addEventListener("pointerup", (e) => up(e, false));
-    bar.addEventListener("pointercancel", (e) => up(e, true));
+    const up = (e) => { if (g && e.pointerId === g.id) finish(); };
+    bar.addEventListener("pointerup", up);
+    bar.addEventListener("pointercancel", up);
+    bar.addEventListener("lostpointercapture", up);
     T.wrap.addEventListener("keydown", (e) => {
-      const n = T.segs.length;
+      if (e.key === "Escape" || e.key === "Backspace") { finish(); e.preventDefault(); return; }
+      if (!keys.has(e.key) || g) return;
+      e.preventDefault();
+      heldKeys.add(e.key);
       let i = T.shown != null ? T.shown : Math.max(0, T.rest);
-      if (e.key === "ArrowRight") i = Math.min(n - 1, i + 1);
+      if (e.key === "ArrowRight") i = Math.min(T.segs.length - 1, i + 1);
       else if (e.key === "ArrowLeft") i = Math.max(0, i - 1);
       else if (e.key === "Home") i = 0;
-      else if (e.key === "End") i = n - 1;
-      else if (e.key === "Escape" || e.key === "Backspace") { T.opts.onPick && T.opts.onPick(null); springBack(T); e.preventDefault(); return; }
-      else return;
-      e.preventDefault();
-      T.opts.onPick && T.opts.onPick(i);
-      T.shown = i;
-      placeLens(T, i, false);
+      else if (e.key === "End") i = T.segs.length - 1;
+      show(i);
     });
+    T.wrap.addEventListener("keyup", (e) => {
+      if (!heldKeys.delete(e.key)) return;
+      e.preventDefault();
+      if (!heldKeys.size) finish();
+    });
+    T.wrap.addEventListener("blur", finish);
   }
 
   // ---------- home cards ----------
@@ -1147,7 +1073,7 @@
   }
 
   /**
-   * Hold-to-reorder on My airports: press and hold a card for 400 ms (not its timeline row, which scrubs).
+   * Hold-to-reorder on My airports: press and hold a card for 400 ms (outside its timeline row).
    * The card lifts and follows the finger, the others move aside; dropping saves the order in the favourites.
    * A move before 400 ms is a normal scroll.
    */
@@ -1365,7 +1291,6 @@
   function openSheet(iata) {
     if (panel.kind) closePanel(true);
     state.openIata = iata;
-    sheetPick = null;
     sheetDay = 0;
     lastFocus = document.activeElement;
     const wrap = $("sheetWrap");
@@ -1762,8 +1687,7 @@
       : !o.full && prog ? h("div", { class: "sc-prog" }, prog) : null;
     return h("div", { class: "box sc" + (o.full ? " full" : ""), "data-kind": o.kind },
       h("div", { class: "sc-h" },
-        h("h4", {}, h("span", { class: "sc-label" }, o.label), o.level != null ? pill(o.level, true) : null, (o.full || o.simple) && o.when ? h("span", { class: "sc-when in" }, o.when) : null),
-        o.back ? h("button", { type: "button", class: "backnow", onclick: o.back, "aria-label": "Back to now" }, "Back to now") : null),
+        h("h4", {}, h("span", { class: "sc-label" }, o.label), o.level != null ? pill(o.level, true) : null, (o.full || o.simple) && o.when ? h("span", { class: "sc-when in" }, o.when) : null)),
       !o.full && !o.simple && o.when ? h("div", { class: "sc-when" }, o.when) : null,
       delay,
       list,
@@ -1771,15 +1695,12 @@
       o.simple ? null : o.facts);
   }
 
-  let sheetPick = null; // slot index selected in the sheet timeline (kept until Back to now / second tap)
   let sheetDay = 0; // 0 rolling window, 1 tomorrow
   function renderSheet(keepScroll) {
     const a = state.data && state.data.airports.find((x) => x.iata === state.openIata);
     const sheet = $("sheet");
     if (!a) { closeSheet(); return; }
     const top = sheet.scrollTop;
-    const previousTl = sheet.querySelector(".bigwrap");
-    const pickedAt = keepScroll && sheetPick != null && previousTl ? previousTl._tl.slots[sheetPick]?.t : null;
     const v = view(a);
     const tz = dispTz(a);
     const fav = state.favs.includes(a.iata);
@@ -1827,7 +1748,7 @@
       const zulu = aviation() ? " · " + new Date(s.t).toISOString().slice(11, 13) + "00Z" : "";
       const when = (s.kind === "obs" ? (s.observed ? "Observed" : "Earlier forecast") : s.kind === "none" ? "No report" : s.kind === "na" ? "Forecast not available yet" : isNow ? "Now" : "Forecast") + zulu;
       const progs = past || s.kind === "na" ? [] : programsAt(v, s.key, isNow);
-      return stateCard({ a, kind: "hour", full: true, max: 3, label, level: s.level, when, back: backToNow, delay: !past && s.h ? s.h.delay : null,
+      return stateCard({ a, kind: "hour", full: true, max: 3, label, level: s.level, when, delay: !past && s.h ? s.h.delay : null,
         reasons: shortList(s.reasons, a), programs: progs, impact: s.level == null ? null : CATS.impact(s.reasons, progs),
         facts: c ? factsRow(c, a, s.key, past, true) : null, chips: s.level == null ? [] : cardSources(s.reasons, s.kind),
         empty: s.kind === "none" ? "No weather report for this hour" : s.kind === "na" ? "Forecast not available yet" : null });
@@ -1837,26 +1758,20 @@
     let tlEl = null;
     const setLayer = (i, live) => {
       boxWrap.classList.toggle("live", !!live);
-      for (const L of boxWrap.children) L.classList.toggle("on", i == null ? L.dataset.layer === "rest" : L.dataset.i === String(i));
+      for (const L of boxWrap.children) {
+        const on = i == null ? L.dataset.layer === "rest" : L.dataset.i === String(i);
+        L.classList.toggle("on", on);
+        L.setAttribute("aria-hidden", String(!on));
+      }
     };
     const buildLayers = (slots) => {
       boxWrap.replaceChildren(h("div", { class: "bx-layer on", "data-layer": "rest" }, restCards()),
         ...slots.map((s) => h("div", { class: "bx-layer", "data-i": String(s.i), "aria-hidden": "true" }, hourCard(s))));
     };
-    function backToNow() {
-      sheetPick = null;
-      setLayer(null, false);
-      if (tlEl) springBack(tlEl._tl);
-      if (tlEl) tlEl.focus({ preventScroll: true });
-    }
-    const onPick = (i) => {
-      sheetPick = i;
-      setLayer(i, false);
-      for (const L of boxWrap.children) L.setAttribute("aria-hidden", String(!L.classList.contains("on")));
-    };
+    const onRelease = () => setLayer(null, false);
     const onPreview = (i) => setLayer(i, true);
     const makeTl = () => {
-      tlEl = timeline(a, { big: true, dayOff: sheetDay, onPick, onPreview });
+      tlEl = timeline(a, { big: true, dayOff: sheetDay, onRelease, onPreview });
       buildLayers(tlEl._tl.slots);
       if (sheetDay) tlEl._tl.rest = -1;
       return tlEl;
@@ -1865,7 +1780,6 @@
     const dayBtn = h("button", { type: "button", class: "daybtn", "aria-pressed": String(sheetDay === 1),
       onclick: () => {
         sheetDay = sheetDay ? 0 : 1;
-        sheetPick = null;
         tlHolder.replaceChildren(makeTl());
         dayBtn.textContent = sheetDay ? "‹ Now" : "Tomorrow ›";
         dayBtn.setAttribute("aria-pressed", String(sheetDay === 1));
@@ -1942,12 +1856,7 @@
       checkedLine(),
     ].filter(Boolean));
     if (window.AWXTrips) window.AWXTrips.decorateSheet(sheet, a); // trips hook: "Your flight" row + plane markers
-    if (keepScroll) {
-      sheet.scrollTop = top;
-      const pick = pickedAt == null ? -1 : tlEl._tl.slots.findIndex((s) => s.t === pickedAt);
-      sheetPick = pick >= 0 ? pick : null;
-      if (sheetPick != null) { onPick(sheetPick); tlEl._tl.shown = sheetPick; }
-    } else sheetPick = null;
+    if (keepScroll) sheet.scrollTop = top;
     requestAnimationFrame(placeLenses);
     fillCrosswind(a);
   }

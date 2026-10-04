@@ -318,6 +318,9 @@ async function uiChecks(add, scenario) {
           now < T.day.start + 12 * HOUR || now >= T.day.start + 13 * HOUR;
       });
       add(wraps.length && !wrongWindow.length ? "pass" : "fail", "Rolling timelines: 12 past hours, 24 forecast hours, Now one-third across", `${wraps.length - wrongWindow.length} of ${wraps.length}`);
+      for (const el of wraps) el.dispatchEvent(new w.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+      add(wraps.every((el) => el.getAttribute("role") === "img" && !el.hasAttribute("tabindex") && el._tl.shown == null && !el.classList.contains("scrub")) ? "pass" : "fail",
+        "Main timelines are read-only", "No slider focus or keyboard scrubbing");
       const undim = wraps.filter((el) => {
         const segs = [...el.querySelectorAll(".tl .s")];
         const cur = segs.findIndex((s) => s.classList.contains("cur"));
@@ -339,7 +342,7 @@ async function uiChecks(add, scenario) {
       add(off.length && Math.max(...off) <= 1.5 ? "pass" : "fail", "The lens is centred on the current hour", `max offset ${Math.max(...off).toFixed(2)} px`);
       const tzText = wraps.filter((el) => /\b(ET|CT|MT|PT|AKT|HT)\b/.test(el.querySelector(".ticks").textContent));
       add(!tzText.length ? "pass" : "fail", "No ET/CT-style zone label in the timeline", tzText.length ? `${tzText.length} timelines` : "none");
-      // sheet: tapping an hour (keyboard) and Back to now leave the next section unchanged
+      // Held previews and their release leave the next section unchanged.
       const a = A.state.data.airports[0];
       A.openSheet(a.iata);
       await frameSleep(w, 450);
@@ -355,11 +358,12 @@ async function uiChecks(add, scenario) {
         if (rect() !== r0) shifts.push(rect());
       }
       const shown = doc.querySelector("#sheet .bx-layer.on").dataset.layer !== "rest";
-      const back = doc.querySelector("#sheet .bx-layer.on .backnow");
-      if (back) back.click();
+      bar.dispatchEvent(new w.KeyboardEvent("keyup", { key: "ArrowRight", bubbles: true }));
+      bar.dispatchEvent(new w.KeyboardEvent("keyup", { key: "ArrowLeft", bubbles: true }));
       await frameSleep(w, 30);
-      if (rect() !== r0) shifts.push("after Back to now " + rect());
-      add(shown && !shifts.length ? "pass" : "fail", "Picking hours and Back to now don't move the section below the card (0 px)", shifts.join("; ") || `${r0} unchanged`);
+      if (rect() !== r0) shifts.push("after release " + rect());
+      const restored = doc.querySelector("#sheet .bx-layer.on").dataset.layer === "rest" && bar._tl.shown == null;
+      add(shown && restored && !doc.querySelector("#sheet .backnow") && !shifts.length ? "pass" : "fail", "Held hour previews return on release without a Back to now button or layout shift", shifts.join("; ") || `${r0} unchanged`);
       // the three rest layouts: split (later, higher peak), single (now is the peak), clear
       const counts = { split: 0, single: 0, clear: 0 };
       const wrong = [];

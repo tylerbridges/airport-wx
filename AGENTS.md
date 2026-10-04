@@ -34,6 +34,7 @@ airport-wx is the Airports app: a static page showing major-weather and delay ri
 - Settings state belongs to `site/prefs.js` (`getPrefs/setPref/onPrefs/DEFAULTS`, localStorage `awx-settings`); never write that key elsewhere. Ground stops and full closures can't be hidden.
 - Category/level/impact rules for the page are in `site/cats.js` and must read back every poller reason (`tools/cats.test.mjs`); add a pattern there when `poller/risk.mjs` gets a new reason text.
 - Default timelines roll over 36 elapsed hours: 12 hours before the current hour plus 24 forecast hours, with Now at slot 12. Tomorrow remains a local calendar-day view. Past hours come from `observed` (poll.mjs `// build2b hook`), the rest from `hours`; unavailable hours stay grey. The sheet's card stack keeps one footprint (all states in one grid cell): don't add content that changes its height on hour taps.
+- Main-page timelines are read-only. Detail timelines preview only while a pointer or navigation key is held; release, cancellation, lost pointer capture, or blur restores the normal view. Never keep a tapped hour selected or add a Back to now button.
 - Traveler mode must show no aviation codes outside Pilot details (the check page scans every sheet).
 - New sheets use `site/sheet.js` `makeSheet` (drag / back / scroll lock); don't hand-roll swipe code.
 - Delay chances reach Traveler users only as words from `site/delay.js` `likelihood()`; never print a raw % outside Aviation mode and the accuracy page.
