@@ -88,6 +88,11 @@
     if ((m = /^FAA reports (.+?) affecting arrivals/.exec(s))) return r(phraseCat(m[1]), 1, "FAA", "high");
     if (/^Air traffic control staffing/.test(s)) return r("atc", 2, "FAA", "high");
     if (/^Runways? .*\b(glideslope|ILS)\b/.test(s)) return r("atc", 1, "FAA", "high");
+    // notams hook: NOTAM runway rules (README "Notices"): Moderate when most runways or the one lined up with the wind are closed
+    if (/^Runways? .*\bclosed\b.* — (\d+ of \d+ runways|the runway best lined up with the wind)$/.test(s)) return r("runways", 2, "FAA", "high");
+    if (/^(ILS|glideslope) out of service\b/.test(s)) return r("atc", 1, "FAA", "high");
+    if (/^VIP movement\b/.test(s)) return r("vip", 2, "FAA", "high");
+    if (/^Space launch nearby\b/.test(s)) return r("space", 1, "FAA", "high");
     if (/^Runways? .*\b(closed|construction|limited operations|out of service)\b/.test(s)) return r("runways", 1, "FAA", "high");
     if (/^Runway closed\b/.test(s)) return r("runways", 1, "FAA", "high");
     // advisories
@@ -198,6 +203,8 @@
       var vis = R.some(function (x) { return x.cat === "fog" && x.level >= 2 && /^(Chance of )?[Vv]isibility|Fog/.test(x.t); });
       return "Arrivals likely slowed (" + (vis ? "poor visibility" : "low clouds") + ")";
     }
+    if (any("vip", 2)) return "Brief ground holds possible (VIP movement)"; // notams hook
+    if (any("runways", 2)) return "Both directions may be slowed (fewer runways)"; // notams hook
     if (any("atc", 2)) return "Both directions may be slowed (air traffic control staffing)";
     if (any("faa", 2)) return "Delays reported (FAA)";
     return null;

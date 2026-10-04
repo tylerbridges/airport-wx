@@ -40,3 +40,6 @@ import "./closures.test.mjs";
 import "./hubs.test.mjs";
 // radar hook: radar card helpers and the copied engine
 import "../tools/radar.test.mjs";
+// notams hook: NOTAMs + TFRs (README "Notices")
+import "./notams.test.mjs";
+import "./tfr.test.mjs";

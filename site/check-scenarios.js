@@ -15,6 +15,9 @@
 //   {t:"hourLevel", iata, at: [from, to], op, v}   the highest hour level in from..to
 //   {t:"hourReason", iata, at: [from, to], re, every?}  some (every) hour in from..to has a matching reason
 //   {t:"cascade", iata, hub, re?}  {t:"noCascade", iata, hub?}  hub cascade notes (status.json cascade, poller/hubs.mjs)
+//   {t:"notice", iata, kind?, re?, level?}  one of the airport's notices (README "Notices") of that kind matches re;
+//        level = the highest level it set in the 24 hours (0 = information)            (notams hook)
+//   {t:"noticeSource", name: notam|tfr, ok}  (notams hook)
 // Page assertions:
 //   {t:"card", iata, re}   the airport's card on the All list
 //   {t:"sheet", iata, re}  the airport's sheet (text, including closed "Why?" parts)
@@ -26,7 +29,7 @@
 //   {t:"today", iata, re}  the airport sheet's "Today" card (brief hook)
 import { tripStatus } from "./trip-risk.js";
 
-const DATA = new Set(["words", "badge", "noFaa", "opsplan", "atcscc", "alert", "spc", "sigmet", "model", "movement", "airlineAlert", "tripConcern", "hourLevel", "hourReason", "cascade", "noCascade", "change"]); // brief hook: change
+const DATA = new Set(["words", "badge", "noFaa", "opsplan", "atcscc", "alert", "spc", "sigmet", "model", "movement", "airlineAlert", "tripConcern", "hourLevel", "hourReason", "cascade", "noCascade", "change", "notice", "noticeSource"]); // brief hook: change; notams hook: notice, noticeSource
 const PAGE = new Set(["card", "sheet", "national", "header", "banner", "noPercent", "brief", "today"]); // brief hook: brief, today
 export const isPageAssert = (x) => PAGE.has(x.t);
 
@@ -178,6 +181,20 @@ export async function dataAsserts(add, { sc, data, delta, shift }) {
         ok = texts.some((v) => re(x.re).test(v));
         label = `trip ${x.i || 0} concern /${x.re}/`;
         got = r ? `got ${short(texts)}` : "no such trip";
+        break;
+      }
+      case "notice": { // notams hook
+        const items = ((a && a.notices && a.notices.items) || []).filter((v) => !x.kind || v.kind === x.kind);
+        ok = items.some((v) => (!x.re || re(x.re).test(v.text)) && (x.level == null || (v.peak || 0) === x.level));
+        label = `${x.iata} notice ${x.kind || ""}${x.re ? ` /${x.re}/` : ""}${x.level != null ? ` at level ${x.level}` : ""}`;
+        got = `got ${short(((a && a.notices && a.notices.items) || []).map((v) => [v.kind, v.peak || 0, v.text]))}`;
+        break;
+      }
+      case "noticeSource": { // notams hook
+        const s = (data.noticeSources || {})[x.name];
+        ok = !!s && !!s.ok === x.ok;
+        label = `notice source ${x.name} ${x.ok ? "ok" : "unavailable"}`;
+        got = `got ${s ? (s.ok ? "ok" : "error: " + s.error) : "missing"}`;
         break;
       }
       case "change": { // brief hook
