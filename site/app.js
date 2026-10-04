@@ -880,7 +880,7 @@
     if (s.kind === "na") return when + " · Forecast not available yet";
     if (s.level === 0 && s.kind !== "obs" && AWXOutlook.health(a, outlookOpts(a, view(a))).quality) return when + " · Status unconfirmed";
     const top = plainList(s.reasons, a)[0];
-    return [s.kind === "now" ? "Now" : when, s.kind === "obs" ? (s.observed ? "Observed" : "Earlier forecast") : null, LEVELS[s.level].label, top].filter(Boolean).join(" · ");
+    return [s.kind === "now" ? "Now" : when, s.kind === "obs" ? (s.observed ? "Observed" : "Earlier forecast") : s.kind === "fc" ? "Forecast" : null, LEVELS[s.level].label, top].filter(Boolean).join(" · ");
   }
 
   /**
@@ -892,13 +892,11 @@
     const day = daySlots(a, opts.dayOff || 0);
     const { slots, tz } = day;
     const n = slots.length;
-    // an FAA program with no stated end: after its hold hours the forecast can't say it's over (hatched, not Clear)
+    // Future colors show the existing hourly forecast; an open FAA program is qualified in text.
     const sm = safeCall(() => summary(a)) || {};
-    const unsure = (s) => s.kind === "fc" && sm.uncertainFrom != null && s.key >= sm.uncertainFrom && s.level != null && s.level < sm.openLevel;
     const qualified = !!AWXOutlook.health(a, outlookOpts(a, view(a))).quality;
     const segs = slots.map((s) => h("span", {
-      class: "s " + (s.level == null || qualified && s.level === 0 && s.kind !== "obs" ? "nd" : lv(s.level)) + (s.kind === "obs" || s.kind === "none" ? " past" : "") + (s.i === day.cur ? " cur" : "") + (unsure(s) ? " unc" : ""),
-      style: unsure(s) ? `--u:var(--l${sm.openLevel})` : null,
+      class: "s " + (s.level == null || qualified && s.level === 0 && s.kind !== "obs" ? "nd" : lv(s.level)) + (s.kind === "obs" || s.kind === "none" ? " past" : "") + (s.i === day.cur ? " cur" : ""),
       "data-i": s.i, "data-l": s.level == null ? null : String(s.level), "data-t": String(s.key),
     }));
     const lensSeg = h("span", { class: "lens-seg" });
@@ -931,7 +929,7 @@
       "aria-valuemin": big ? "0" : null, "aria-valuemax": big ? String(n - 1) : null, "aria-valuenow": big ? String(Math.max(0, day.cur)) : null,
       "aria-valuetext": big ? (day.cur >= 0 ? slotText(slots[day.cur], a) : slotText(slots[0], a)) : null,
       "data-start": String(day.start), "data-tz": tz,
-    }, label, tl, ticks, naNote, big ? h("div", { class: "tl-cap" }, "Colours show weather and delay risk.") : null);
+    }, label, tl, ticks, naNote, big ? h("div", { class: "tl-cap" }, sm.open ? "Future hours are forecast estimates; FAA end time is unknown." : "Colours show weather and delay risk. Future hours are forecasts.") : null);
     const T = { wrap, tl, lens, lensSeg, label, segs, slots, day, a, rest: day.cur, big, opts };
     wrap._tl = T;
     if (big) wireBigScrub(T);
@@ -963,7 +961,7 @@
     lens.hidden = false;
     lens.style.left = cx + "px";
     lens.style.width = sw + (T.big ? 14 : 10) + "px";
-    lensSeg.className = "lens-seg " + (seg.classList.contains("nd") ? "nd" : lv(T.slots[i].level)) + (seg.classList.contains("past") ? " past" : "") + (seg.classList.contains("unc") ? " unc" : "");
+    lensSeg.className = "lens-seg " + (seg.classList.contains("nd") ? "nd" : lv(T.slots[i].level)) + (seg.classList.contains("past") ? " past" : "");
     lensSeg.style.cssText = seg.style.cssText.replace(/(^|;)\s*width[^;]*/g, "") + ";width:" + sw + "px";
     wrap.classList.toggle("scrub", !!scrub);
     label.hidden = false;
@@ -1955,9 +1953,9 @@
     const rows = covered ? [] : o.impacts.map((r) => h("div", { class: "outlook-row" }, h("b", {}, r.label), h("span", {}, r.value)));
     if (o.scheduledEnd && !covered) rows.push(h("div", { class: "outlook-row" }, h("b", {}, "Scheduled end"), h("span", {}, whenLabel(o.scheduledEnd, dispTz(a)) + " · may change")));
     if (o.extension) rows.push(h("div", { class: "outlook-row" }, h("b", {}, "FAA extension outlook"), h("span", {}, cap(o.extension))));
-    if (o.recovery) rows.push(h("div", { class: "outlook-row" }, h("b", {}, "Forecast improvement"), h("span", {}, "Conditions may improve after " + whenLabel(o.recovery, dispTz(a)))));
+    if (o.recovery) rows.push(h("div", { class: "outlook-row" }, h("b", {}, "Forecast improvement"), h("span", {}, "Lower disruption risk forecast after " + whenLabel(o.recovery, dispTz(a)))));
     if (!rows.length) return null;
-    return section("Travel impact", "plane", rows, null, { cls: "outlook-card", meta: o.basis });
+    return section("Travel impact", "plane", rows, null, { cls: "outlook-card", meta: covered && o.recovery && !o.extension ? "Forecast estimate" : o.basis });
   }
 
   let sheetDay = 0; // 0 rolling window, 1 tomorrow
