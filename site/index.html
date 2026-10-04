@@ -369,6 +369,18 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 .two .facts { font-size: 11.5px; gap: 0 8px; }
 .cchip.high { --c: var(--l0); } .cchip.medium { --c: var(--l2); } .cchip.low { --c: var(--muted); }
 .hidnote { margin: 18px 0 0; font-size: 12.5px; color: var(--muted); }
+/* phase3 hook: the routine delay line under the Now / Coming up card (site/delay.js routineOutlook) */
+.dl-routine { margin: 8px 2px 0; font-size: 14px; font-weight: 600; line-height: 1.3; }
+/* More details: one plain link row at the bottom of the sheet, and its full-height page */
+.md-row { width: 100%; margin-top: 14px; min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 14px; border-radius: 16px; background: var(--card-2); border: 1px solid var(--line); color: var(--text); font-size: 15px; font-weight: 600; text-align: left; }
+.md-row .chev { color: var(--muted); font-size: 20px; line-height: 1; }
+.md-row:focus-visible { outline: 2px solid var(--l1); outline-offset: 2px; }
+.md-wrap { z-index: 11; }
+.md-sheet.sheet { top: max(env(safe-area-inset-top), 10px); max-height: none; }
+.md-sub { margin-top: 12px; }
+.md-plan .md-sub:first-child { margin-top: 10px; }
+.md-src { margin: 2px 0 2px; font-size: 12px; line-height: 1.4; color: var(--muted); }
+.scard.md-why { padding-top: 12px; }
 
 /* Now / Peak / Hour cards: one structure; all states stacked in one grid cell so the footprint never changes */
 .boxwrap { display: grid; }
@@ -769,14 +781,14 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="cats.js?v=2"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=1"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=1"></script><!-- notams hook: the airport sheet's "Notices" card -->
-<script src="app.js?v=28" defer></script>
+<script src="app.js?v=29" defer></script>
 <script type="module" src="searched.js?v=5"></script><!-- build2a hook -->
-<script type="module" src="delay.js?v=7"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
+<script type="module" src="delay.js?v=8"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="trips.js?v=7"></script><!-- trips hook -->
 <script type="module" src="nav.js?v=8"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
 <script type="module" src="movement.js?v=2"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
 <script type="module" src="brief.js?v=2"></script><!-- brief hook: morning brief + airport "Today" card -->
-<script type="module" src="terminals.js?v=1"></script><!-- terminals hook: terminal map + lounges cards in the airport sheet -->
+<script type="module" src="terminals.js?v=2"></script><!-- terminals hook: terminal map + lounges cards in the airport sheet -->
 <script type="module" src="radar/card.js?v=1"></script><!-- radar hook: radar loop card in the airport sheet (engine loads on demand) -->
 </body>
 </html>

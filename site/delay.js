@@ -22,6 +22,10 @@ const STYLE = `
 .dl-srcline { margin-top: 10px; font-size: 12px; color: var(--muted); line-height: 1.4; }
 .dl-why { margin-top: 8px; }
 .dl-srcline a:focus-visible { outline: 2px solid var(--l1); outline-offset: 2px; border-radius: 4px; }
+.dl-why-h { font-size: 15px; font-weight: 700; line-height: 1.3; }
+.dl-whyc .dl-analog:first-of-type { margin-top: 6px; }
+.dl-acc { display: inline-flex; align-items: center; min-height: 44px; margin-top: 2px; font-size: 14px; font-weight: 600; color: var(--brand, var(--l1)); text-decoration: none; }
+.dl-acc:focus-visible { outline: 2px solid var(--l1); outline-offset: 2px; border-radius: 4px; }
 `;
 
 function injectStyle() {
@@ -245,6 +249,119 @@ function sourceLine() {
   return el("div", "dl-srcline", parts.join(" · ")); // the accuracy page is in the menu
 }
 
+const isAviation = () => !!(globalThis.AWXPrefs && globalThis.AWXPrefs.getPrefs().mode === "aviation");
+/** The window the sheet's "Delay outlook" card shows (null = the card is left out): every hour in Aviation mode, else notable ones. */
+function cardWindow(a, aviation = isAviation()) {
+  const include = (hr) => {
+    const L = likelihood(hr.delay, { iata: a.iata });
+    return aviation || L?.key !== "now" && notable(hr.delay, hr.level, L);
+  };
+  return a ? peakWindow(a, include) : null;
+}
+
+// ---------- routine outlook line (the sheet's one line when the Delay outlook card is left out) ----------
+
+const PARTS = [[0, "overnight"], [5, "morning"], [12, "afternoon"], [17, "evening"], [21, "night"]];
+const PART_PHRASE = { overnight: "overnight", morning: "this morning", afternoon: "this afternoon", evening: "this evening", night: "tonight" };
+const localHour = (ms, tz) => Number(fmt(tz, { hour: "numeric", hourCycle: "h23" }, "h23").format(ms)) % 24;
+const partOf = (ms, tz) => { const h = localHour(ms, tz); let p = PARTS[0][1]; for (const [from, name] of PARTS) if (h >= from) p = name; return p; };
+/**
+ * "today", "this evening", "this afternoon and evening", "tonight" for a window [start, end) in the airport's local
+ * day; whole = the window is every remaining hour of the day.
+ */
+export function dayPartPhrase(start, end, tz, whole = false) {
+  const parts = [];
+  for (let t = start; t < end; t += HOUR) { const p = partOf(t, tz); if (!parts.includes(p)) parts.push(p); }
+  if (!parts.length) return "today";
+  if (parts.length >= 3 || (whole && parts.length > 1 && parts[0] !== "evening")) return "today";
+  if (parts.length === 1) return PART_PHRASE[parts[0]];
+  if (parts[0] === "evening" && parts[1] === "night") return "tonight";
+  return PART_PHRASE[parts[0]] + " and " + (parts[1] === "night" ? "tonight" : parts[1]);
+}
+/**
+ * One short Traveler line for routine conditions over the rest of the airport's local day, in likelihood() words:
+ * the strongest band (highest word, then highest calibrated rate) and its time window, e.g. "Delays unlikely today",
+ * "Usual delays this evening", "Delays possible this afternoon · typically 15–30 min" (the size only from
+ * "possible" up). Null when there are no delay numbers left today or delays are happening now (FAA program).
+ * Returns {i (hour index), L, key, start, end, when, text}. Never a percentage.
+ */
+export function routineOutlook(a, now = refNow()) {
+  const hs = (a && a.hours) || [];
+  const tz = a && a.tz;
+  if (!tz) return null;
+  const today = dayKey(now, tz);
+  const idx = [];
+  hs.forEach((h, i) => { const t = Date.parse(h.t); if (t + HOUR > now && dayKey(t, tz) === today && h.delay && h.delay.p != null) idx.push(i); });
+  if (!idx.length) return null;
+  const Ls = idx.map((i) => likelihood(hs[i].delay, { iata: a.iata, aviation: false }));
+  if (Ls.some((L) => !L || L.key === "now")) return null;
+  let b = 0;
+  Ls.forEach((L, k) => { if (RANK[L.key] > RANK[Ls[b].key] || (RANK[L.key] === RANK[Ls[b].key] && L.rate > Ls[b].rate)) b = k; });
+  const key = Ls[b].key;
+  let s = b, e = b;
+  while (s > 0 && Ls[s - 1].key === key && idx[s - 1] === idx[s] - 1) s--;
+  while (e + 1 < idx.length && Ls[e + 1].key === key && idx[e + 1] === idx[e] + 1) e++;
+  const start = Math.max(Date.parse(hs[idx[s]].t), Math.floor(now / HOUR) * HOUR);
+  const end = Date.parse(hs[idx[e]].t) + HOUR;
+  const when = dayPartPhrase(start, end, tz, s === 0 && e === idx.length - 1);
+  const size = RANK[key] >= RANK.possible ? Ls[b].size : "";
+  return { i: idx[b], L: Ls[b], key, start, end, when, text: WORD[key] + " " + when + (size ? " · " + size : "") };
+}
+
+/**
+ * The hour behind the sheet's delay headline: the Delay outlook card's hour when the card shows, else the routine
+ * line's, else the current hour. {i, L, from: "card" | "routine" | "now", routine?} or null without delay numbers.
+ */
+export function outlookHour(a, now = refNow()) {
+  const w = cardWindow(a);
+  if (w) return { i: w.i, s: w.s, e: w.e, L: likelihood(a.hours[w.i].delay, { iata: a.iata }), from: "card" };
+  const r = routineOutlook(a, now);
+  if (r) return { i: r.i, L: r.L, from: "routine", routine: r };
+  const d = a && a.hours && a.hours[0] && a.hours[0].delay;
+  return d && d.p != null ? { i: 0, L: likelihood(d, { iata: a.iata }), from: "now" } : null;
+}
+
+/**
+ * More details → "Why this outlook": the similar-days comparison ("In 707 similar evening hours at ORD …, about 5
+ * in 10 had delays …"; left out when it contradicts the headline band, analogAgrees), how often outlooks like this
+ * were right, what the numbers are based on, and a link to the accuracy page. Counts as "about N in 10", never %.
+ * Always returns an element.
+ */
+export function whyBlock(a, now = refNow()) {
+  injectStyle();
+  const o = a ? outlookHour(a, now) : null;
+  const kids = [];
+  if (!o || !o.L) {
+    kids.push(el("div", "dl-analog", "No delay numbers for this airport right now."));
+  } else {
+    const d = a.hours[o.i].delay;
+    const L = o.L;
+    let head = L.word;
+    if (o.from === "routine") head = o.routine.text;
+    else if (o.from === "card" && L.key !== "now") {
+      const start = Date.parse(a.hours[o.s].t), end = Date.parse(a.hours[o.e].t) + HOUR;
+      head = L.word.replace(/^Delays/, "Airport disruption") + " " + (o.s === 0 && o.e === a.hours.length - 1 ? "in the next 24 hours" : rangeLabel(start, end, tzOf(a), o.s === 0));
+    }
+    kids.push(el("div", "dl-why-h", head));
+    const an = analogWords(d.analog);
+    if (an && analogAgrees(d.analog, L)) kids.push(el("div", "dl-analog", an));
+    const { bin } = calibrate(Number(d.p));
+    if (L.key !== "now" && bin && bin.rate != null && bin.n) {
+      kids.push(el("div", "dl-analog", RANK[L.key] >= RANK.possible
+        ? `For ${a.iata}, warnings like this were right ${inTen(bin.rate)} times.`
+        : `For ${a.iata}, hours given this outlook had delays ${inTen(bin.rate)} times.`));
+    }
+    if (d.pTypical != null && L.key !== "now") kids.push(el("div", "dl-analog", `On a typical day at this hour, delays happen ${inTen(d.pTypical)} times.`));
+  }
+  kids.push(sourceLine());
+  const link = document.createElement("a");
+  link.className = "dl-acc";
+  link.href = "accuracy.html";
+  link.textContent = "How accurate are the delay chances? ›";
+  kids.push(link);
+  return el("div", "dl-whyc", ...kids);
+}
+
 /**
  * Sheet card "Will it cause delays?" for hour i (null = the peak window): the words big, the size ("typically
  * 30–45 min") and timing. Quiet or active-delay Traveler views omit this duplicate card; Aviation mode also
@@ -252,12 +369,8 @@ function sourceLine() {
  */
 export function delayBlock(a, i) {
   injectStyle();
-  const aviation = window.AWXPrefs?.getPrefs().mode === "aviation";
-  const include = (hr) => {
-    const L = likelihood(hr.delay, { iata: a.iata });
-    return aviation || L?.key !== "now" && notable(hr.delay, hr.level, L);
-  };
-  const w = a && peakWindow(a, include);
+  const aviation = isAviation();
+  const w = cardWindow(a, aviation);
   if (!w) return document.createDocumentFragment();
   const idx = i == null ? w.i : i;
   const hr = a.hours[idx];
@@ -295,7 +408,7 @@ export function delayBlock(a, i) {
   return el("div", "dl-block", ...kids);
 }
 
-const api = { delayLine, delayBlock, likelihood, notable, calibrate, analogWords, analogAgrees, minutesRange, setReport };
+const api = { delayLine, delayBlock, likelihood, notable, calibrate, analogWords, analogAgrees, minutesRange, setReport, routineOutlook, outlookHour, whyBlock, dayPartPhrase };
 if (typeof window !== "undefined" && window.document) {
   window.AWXDelay = api;
   // the calibration table; until it arrives (or if it is missing) the raw score is used

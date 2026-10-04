@@ -7,7 +7,8 @@
 //     makeSheet): pan, pinch or wheel zoom (SVG viewBox, no library), gate labels once they're readable, gate
 //     search ("B12") that highlights and centres the gate, and the airport's official map link.
 //   - "Lounges": data/lounges.json (hand-curated), grouped by terminal, one access line each. Entries that are
-//     low confidence or not verified show "Check before you go". Hidden when the airport has none.
+//     low confidence or not verified show "Check before you go"; the card ends with a muted footnote "Checked Oct 2026
+//     — confirm with the airline before you go" (oldest verified date). Hidden when the airport has none.
 // Only airports listed in data/terminals/index.json are fetched (no 404s). Map data © OpenStreetMap contributors.
 //
 // TODO (trips hook, future): when a trip leg departs from an airport whose terminal data is known, the trip sheet
@@ -64,6 +65,14 @@ export function staleLounges(doc, now = Date.now(), maxDays = LOUNGE_MAX_AGE_DAY
     }
   }
   return out;
+}
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** The lounge card's footnote: "Checked Oct 2026 — confirm with the airline before you go" (the oldest verified date), or null when nothing is verified. */
+export function loungeFootnote(list) {
+  const dates = (list || []).map((l) => l && l.verified).filter((d) => DATE.test(String(d || ""))).sort();
+  if (!dates.length) return null;
+  const [y, m] = dates[0].split("-");
+  return `Checked ${MONTHS[+m - 1]} ${y} — confirm with the airline before you go`;
 }
 /** Says "check before you go" for this entry? */
 export const needsCheck = (l, now = Date.now()) => !l || l.confidence !== "high" || !l.verified || now - Date.parse(l.verified + "T00:00:00Z") > LOUNGE_MAX_AGE_DAYS * DAY;
@@ -237,11 +246,13 @@ function loungeCard(a, list) {
     h("div", { class: "subt" }, g.terminal),
     ...g.items.map((l) => h("div", { class: "ln" },
       h("div", { class: "ln-n" }, h("b", {}, l.name), l.area || l.side === "landside" ? h("span", { class: "muted" }, " · " + [l.area, l.side === "landside" ? "before security" : null].filter(Boolean).join(" · ")) : null),
-      h("div", { class: "ln-a" }, l.access, !allCheck && needsCheck(l, now) ? h("span", { class: "ln-chk" }, " · Check before you go") : null)))))], "Curated", "ln-sec");
+      h("div", { class: "ln-a" }, l.access, !allCheck && needsCheck(l, now) ? h("span", { class: "ln-chk" }, " · Check before you go") : null))))),
+    !allCheck && loungeFootnote(list) ? h("div", { class: "ln-foot" }, loungeFootnote(list)) : null], "Curated", "ln-sec");
 }
 
 function place(sheet, sec) {
-  const anchor = sheet.querySelector(":scope > .hidnote") || sheet.querySelector(":scope > .checked");
+  // above the "More details ›" row (app.js), else above the hidden-categories note / checked line
+  const anchor = sheet.querySelector(":scope > .md-row") || sheet.querySelector(":scope > .hidnote") || sheet.querySelector(":scope > .checked");
   if (anchor) anchor.before(sec); else sheet.append(sec);
 }
 
@@ -538,6 +549,7 @@ const STYLE = `
 .ln-a { font-size: 12.5px; line-height: 1.35; color: var(--muted); margin-top: 1px; }
 .ln-chk { color: var(--brand); font-weight: 600; white-space: nowrap; }
 .ln-all { padding: 10px 0 2px; font-size: 13px; font-weight: 600; color: var(--brand); }
+.ln-foot { margin-top: 6px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 12px; line-height: 1.4; color: var(--muted); }
 .tm-wrap { z-index: 13; }
 .tm-sheet.sheet { top: max(env(safe-area-inset-top), 10px); max-height: none; display: flex; flex-direction: column; overflow: hidden; padding-bottom: calc(env(safe-area-inset-bottom) + 12px); }
 .tm-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding: 2px 0 8px; touch-action: none; }

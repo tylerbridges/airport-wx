@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-04T03:44:46.696Z",
+ "generated": "2026-10-04T04:31:56.614Z",
  "groups": {
   "delays": "Delays & programs",
   "weather": "Weather",
@@ -1320,6 +1320,21 @@
      "iata": "LGA",
      "kind": "level",
      "re": "^Risk up to Severe \\(storms\\)$"
+    },
+    {
+     "t": "details",
+     "iata": "ORD",
+     "cards": [
+      "why",
+      "pilot",
+      "plan"
+     ],
+     "re": "Why this outlook.*Pilot details.*FAA plan & storm detail"
+    },
+    {
+     "t": "details",
+     "iata": "EWR",
+     "re": "Severe-storm outlook.*Enhanced risk of severe storms \\(level 3 of 5\\)"
     },
     {
      "t": "today",

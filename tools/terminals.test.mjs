@@ -6,7 +6,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as L from "./terminals-lib.mjs";
-import { loungeProblems, staleLounges, needsCheck, findGate, loungeGroups, extent, fitBox, gateSpacing, gateInfo, normGate } from "../site/terminals.js";
+import { loungeProblems, staleLounges, needsCheck, loungeFootnote, findGate, loungeGroups, extent, fitBox, gateSpacing, gateInfo, normGate } from "../site/terminals.js";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const json = (p) => JSON.parse(readFileSync(join(ROOT, p), "utf8"));
@@ -138,17 +138,31 @@ test("lounges: lounges.json is well-formed for all 32 airports", () => {
   assert.deepEqual(loungeProblems(doc, new Set(AIRPORTS.map((a) => a.iata))), []);
 });
 
-test("lounges: the draft list (awaiting verification) is well-formed", () => {
-  const doc = json("tools/lounges-draft.json");
+test("lounges: the verified list (checked 2026-10-04) is complete and readable", () => {
+  const doc = json("site/data/lounges.json");
   assert.deepEqual(loungeProblems(doc, new Set(AIRPORTS.map((a) => a.iata))), []);
-  const st = staleLounges(doc, Date.parse("2026-10-04T00:00:00Z"));
-  assert.ok(st.total > 0);
-  for (const ap of Object.values(doc.airports)) for (const l of ap.lounges) {
-    assert.ok(!/%/.test(l.access) && l.access.length <= 60, l.access);
-    if (l.confidence === "low" || !l.verified) assert.equal(needsCheck(l), true);
+  const now = Date.parse("2026-10-04T12:00:00Z");
+  const st = staleLounges(doc, now);
+  assert.equal(st.total, 162);
+  assert.equal(st.old.length, 0);
+  let low = 0;
+  for (const ap of Object.values(doc.airports)) {
+    for (const l of ap.lounges) {
+      assert.ok(!/%/.test(l.access) && l.access.length <= 60, l.access);
+      if (l.confidence === "low" || !l.verified) { low++; assert.equal(needsCheck(l, now), true); }
+      else assert.equal(needsCheck(l, now), false, l.name);
+    }
+    if (ap.lounges.length) assert.equal(loungeFootnote(ap.lounges), "Checked Oct 2026 — confirm with the airline before you go");
   }
+  assert.ok(low > 0 && low < st.total);
   const groups = loungeGroups(doc.airports.ORD.lounges);
-  assert.deepEqual(groups.map((g) => g.terminal), ["Terminal 1", "Terminal 2", "Terminal 3"]);
+  assert.ok(groups.length >= 3 && groups.every((g) => /^Terminal [123]\b/.test(g.terminal)), groups.map((g) => g.terminal).join(", "));
+});
+
+test("lounges: the card footnote uses the oldest verified month, and none without a verified date", () => {
+  assert.equal(loungeFootnote([{ verified: "2026-10-04" }, { verified: "2026-09-30" }, { verified: null }]), "Checked Sep 2026 — confirm with the airline before you go");
+  assert.equal(loungeFootnote([{ verified: null }]), null);
+  assert.equal(loungeFootnote([]), null);
 });
 
 test("lounges: the schema check catches bad entries and stale dates", () => {

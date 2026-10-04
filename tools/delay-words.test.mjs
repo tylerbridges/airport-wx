@@ -89,3 +89,34 @@ test("detail outlook: routine delay rates stay quiet; active or elevated risk st
     assert.equal(D.notable(d, 0, W(d.p, d)), true, override);
   }
 });
+
+test("routine line: the strongest band over the rest of the local day, in words, size only from 'possible'", () => {
+  D.setReport(REPORT);
+  const now = Date.parse("2026-07-16T19:30:00Z"); // 2:30 PM in Chicago; the local day ends at 05Z
+  const ap = (f) => ({ iata: "ORD", tz: "America/Chicago", hours: Array.from({ length: 24 }, (_, i) => {
+    const t = Date.parse("2026-07-16T19:00:00Z") + i * 3600e3;
+    return { t: new Date(t).toISOString(), level: 0, delay: { p: 0.05, minutes: 25, ...f(new Date(t).getUTCHours()) } };
+  }) });
+  assert.equal(D.routineOutlook(ap(() => ({})), now).text, "Delays unlikely today");
+  // 5–9 PM usual; a higher chance after local midnight doesn't count
+  const ev = D.routineOutlook(ap((h) => (h >= 22 || h <= 1 ? { p: 0.18, pTypical: 0.17 } : h === 6 ? { p: 0.6 } : {})), now);
+  assert.equal(ev.text, "Usual delays this evening");
+  assert.equal(ev.key, "usual");
+  const pm = D.routineOutlook(ap((h) => (h === 20 || h === 21 ? { p: 0.35 } : {})), now);
+  assert.equal(pm.text, "Delays possible this afternoon · typically 15–35 min");
+  assert.ok(!/%/.test(pm.text));
+  assert.equal(D.routineOutlook(ap((h) => (h === 19 ? { p: 1, override: "ground_stop" } : {})), now), null, "an FAA program in effect: no routine line");
+  assert.equal(D.routineOutlook({ iata: "ORD", tz: "America/Chicago", hours: [] }, now), null);
+  D.setReport(null);
+});
+
+test("routine line: day-part phrases", () => {
+  const tz = "America/Chicago";
+  const at = (hhZ, day = 16) => Date.parse(`2026-07-${day}T${String(hhZ).padStart(2, "0")}:00:00Z`);
+  assert.equal(D.dayPartPhrase(at(22), at(2, 17), tz), "this evening"); // 5–9 PM
+  assert.equal(D.dayPartPhrase(at(17), at(23), tz), "this afternoon and evening"); // 12–6 PM
+  assert.equal(D.dayPartPhrase(at(23), at(5, 17), tz, true), "tonight"); // 6 PM – midnight, the rest of the day
+  assert.equal(D.dayPartPhrase(at(15), at(5, 17), tz, true), "today"); // 10 AM – midnight
+  assert.equal(D.dayPartPhrase(at(3, 17), at(4, 17), tz), "tonight"); // 10–11 PM
+  assert.equal(D.dayPartPhrase(at(14), at(16), tz), "this morning");
+});

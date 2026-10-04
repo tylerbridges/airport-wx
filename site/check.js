@@ -6,7 +6,7 @@
 import { loadAirports, rank } from "./search.js";
 import { navChecks } from "./navcheck.js?v=3"; // nav hook
 import { tripChecks } from "./check-trips.js"; // trips hook
-import { dataAsserts, pageAsserts } from "./check-scenarios.js"; // scenarios hook
+import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText } from "./check-scenarios.js"; // scenarios hook; More details page helpers
 
 const P = new URLSearchParams(location.search);
 const MOCK = P.get("mock") === "1";
@@ -301,9 +301,12 @@ async function uiChecks(add, scenario) {
         const sh = doc.getElementById("sheet").cloneNode(true);
         sh.querySelectorAll(".pilot, details:not([open]) > :not(summary), .bx-layer:not(.on)").forEach((e) => e.remove());
         scan(sh.textContent, a.iata);
+        // the More details page: plain words outside its Pilot details card
+        if (await openDetailsPage(w, doc, a.iata)) scan(detailsPlainText(doc), a.iata + " More details");
+        else hits.push(`${a.iata}: More details didn't open`);
         A.closeSheet();
       }
-      add(hits.length ? "fail" : "pass", "Traveler mode shows no aviation codes outside Pilot details", hits.slice(0, 4).join("; ") || `home + ${A.state.data.airports.length} sheets`);
+      add(hits.length ? "fail" : "pass", "Traveler mode shows no aviation codes outside Pilot details (sheets and More details)", hits.slice(0, 4).join("; ") || `home + ${A.state.data.airports.length} sheets and their More details pages`);
     });
 
     // Aviation mode shows a flight category
@@ -425,20 +428,23 @@ async function uiChecks(add, scenario) {
       const A = w.AWXApp;
       const hits = [];
       const scan = (root, where) => {
-        for (const el of root.querySelectorAll(".dl-line, .dl-block, .sc-delay, #trips, .tflight")) if (/\d\s?%/.test(el.textContent)) hits.push(`${where}: "${el.textContent.trim().slice(0, 60)}"`);
+        for (const el of root.querySelectorAll(".dl-line, .dl-block, .dl-routine, .sc-delay, #trips, .tflight")) if (/\d\s?%/.test(el.textContent)) hits.push(`${where}: "${el.textContent.trim().slice(0, 60)}"`);
       };
       A.state.filter = "all";
       A.render();
       await frameSleep(w, 80);
       scan(doc, "home");
+      let routines = 0;
       for (const a of A.state.data.airports) {
         A.openSheet(a.iata);
         await frameSleep(w, 15);
         scan(doc.getElementById("sheet"), a.iata);
+        routines += doc.querySelectorAll("#sheet .dl-routine").length;
+        if (await openDetailsPage(w, doc, a.iata)) { const t = detailsPlainText(doc); const m = /\d\s?%/.exec(t); if (m) hits.push(`${a.iata} More details: "${t.slice(Math.max(0, m.index - 50), m.index + 5)}"`); }
         A.closeSheet();
       }
       const n = doc.querySelectorAll(".dl-line, .sc-delay").length;
-      add(hits.length ? "fail" : "pass", "Traveler: delay chances in words, no % (cards, sheets, trips)", hits.slice(0, 4).join("; ") || `${n} delay lines checked`);
+      add(hits.length ? "fail" : "pass", "Traveler: delay chances in words, no % (cards, sheets, routine lines, More details, trips)", hits.slice(0, 4).join("; ") || `${n} delay lines, ${routines} routine lines and every More details page checked`);
     });
 
     // our own name and identity: the title is "Airports"; no "Flighty" in visible UI text outside setup-instruction lists

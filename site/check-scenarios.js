@@ -27,10 +27,34 @@
 //   {t:"noPercent"}        Traveler mode: no "%" in delay-chance text (cards, every sheet, trips)
 //   {t:"brief", re, favs?} the morning brief, opened as the menu does (AWXBrief.open), with these starred airports (brief hook)
 //   {t:"today", iata, re}  the airport sheet's "Today" card (brief hook)
+//   {t:"details", iata, cards?: ["why","pilot","plan"], re?}  the sheet's "More details ›" row opens the full-height
+//        More details page with those cards (default all three); Traveler text outside Pilot details has no "%"
+//        and no aviation codes; re matches the page text
 import { tripStatus } from "./trip-risk.js";
+// the same pattern as check.js AVIATION_CODES (kept here so this module doesn't import check.js)
+const CODES = /\b(VFR|MVFR|IFR|LIFR|METAR|TAF|SIGMET|LAMP|TCF|CWA|TEMPO|PROB[34]0|BECMG|NOSIG|CLSD|(?:FEW|SCT|BKN|OVC)\d{3}|\d{4}Z|\d{3}°?\s?\d+G?\d*\s?kt|kt)\b/;
+/** Text of the open More details page outside Pilot details (what a Traveler reads as plain words). */
+export function detailsPlainText(doc) {
+  const sh = doc.getElementById("mdSheet");
+  if (!sh) return "";
+  const c = sh.cloneNode(true);
+  c.querySelectorAll(".pilot").forEach((e) => e.remove());
+  return c.textContent.replace(/\s+/g, " ");
+}
+/** Opens airport iata's sheet, then its "More details ›" row; returns the page element (or null). */
+export async function openDetailsPage(w, doc, iata) {
+  w.AWXApp.openSheet(iata);
+  await later(w, 60);
+  const row = doc.querySelector("#sheet .md-row");
+  if (!row) return null;
+  row.click();
+  await later(w, 60);
+  const wrap = doc.getElementById("mdWrap");
+  return wrap && !wrap.hidden ? doc.getElementById("mdSheet") : null;
+}
 
 const DATA = new Set(["words", "badge", "noFaa", "opsplan", "atcscc", "alert", "spc", "sigmet", "model", "movement", "airlineAlert", "tripConcern", "hourLevel", "hourReason", "cascade", "noCascade", "change", "notice", "noticeSource"]); // brief hook: change; notams hook: notice, noticeSource
-const PAGE = new Set(["card", "sheet", "national", "header", "banner", "noPercent", "brief", "today"]); // brief hook: brief, today
+const PAGE = new Set(["card", "sheet", "national", "header", "banner", "noPercent", "brief", "today", "details"]); // brief hook: brief, today; details: More details page
 export const isPageAssert = (x) => PAGE.has(x.t);
 
 async function getJson(url) {
@@ -322,11 +346,28 @@ export async function pageAsserts(add, w, doc, asserts) {
         got = c ? `Today says "${t.slice(0, 240)}"` : "no Today card";
         break;
       }
+      case "details": {
+        const want = x.cards || ["why", "pilot", "plan"];
+        const page = await openDetailsPage(w, doc, x.iata);
+        const have = page ? [...page.querySelectorAll(":scope > section[data-md]")].map((e) => e.dataset.md) : [];
+        const head = page ? (page.querySelector("#mdTitle") || {}).textContent : "";
+        const plain = page ? detailsPlainText(doc) : "";
+        const pct = /\d\s?%/.exec(plain);
+        const code = CODES.exec(plain);
+        const all = page ? page.textContent.replace(/\s+/g, " ") : "";
+        ok = !!page && want.every((k) => have.includes(k)) && head === x.iata && !pct && !code && (!x.re || re(x.re).test(all));
+        if (A.closeDetails) A.closeDetails();
+        closeSheet();
+        label = `${x.iata} "More details" opens with ${want.join(", ")}; no % or codes outside Pilot details${x.re ? ` /${x.re}/` : ""}`;
+        got = !page ? "no More details row, or the page didn't open" : `cards ${have.join(", ") || "none"}; title "${head}"` +
+          (pct ? `; "%" in "${plain.slice(Math.max(0, pct.index - 40), pct.index + 10)}"` : "") + (code ? `; code "${code[0]}" in "${plain.slice(Math.max(0, code.index - 40), code.index + 20)}"` : "");
+        break;
+      }
       case "noPercent": {
         await showAll();
         const hits = [];
         const scan = (root, where) => {
-          for (const el of root.querySelectorAll(".dl-line, .dl-block, .sc-delay, #trips, .tflight, #brief, .bf-today") /* brief hook */) {
+          for (const el of root.querySelectorAll(".dl-line, .dl-block, .dl-routine, .sc-delay, #trips, .tflight, #brief, .bf-today") /* brief hook */) {
             const t = el.textContent;
             if (/\d\s?%/.test(t)) hits.push(`${where}: "${t.trim().replace(/\s+/g, " ").slice(0, 70)}"`);
           }

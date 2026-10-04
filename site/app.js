@@ -588,6 +588,7 @@
     renderList();
     renderNotes();
     if (state.openIata) renderSheet(true);
+    if (md.iata) renderDetails(true);
     if (window.AWXExtra) window.AWXExtra.render(); // build2a hook: search + searched/starred non-major airports (site/searched.js)
     if (window.AWXTrips) window.AWXTrips.render(); // trips hook: "Your trips" (site/trips.js)
     if (window.AWXBrief) safeCall(() => window.AWXBrief.render()); // brief hook: morning brief (site/brief.js)
@@ -1324,6 +1325,7 @@
 
   function closeSheet() {
     if (!state.openIata) return;
+    closeDetails();
     if (window.AWXRadarCard) safeCall(() => window.AWXRadarCard.close()); // radar hook: stop the radar, free its workers
     state.openIata = null;
     const wrap = $("sheetWrap");
@@ -1541,7 +1543,7 @@
   }
 
   /** The FAA Command Center operations plan's items for this airport, as plain sentences. */
-  function planItems(v, a) {
+  function planItems(v, a, opts = {}) {
     const op = v.opsplan;
     if (!op || !(op.items || []).length) return [];
     const order = { program: 0, note: 1, staffing: 2, constraint: 3, sir: 4 };
@@ -1551,18 +1553,18 @@
     return [lead, ...items.map((x) => h("div", { class: "item" + (x.level ? "" : " info") },
       x.level ? h("span", { class: "badge " + lv(x.level) }, LEVELS[x.level].label) : null,
       h("div", { class: x.level ? "" : "muted", style: x.level ? "margin-top:4px" : "" },
-        retime(x.text, a) + (x.ifr ? " — can slow landings in low clouds or poor visibility" : "") + "." + (x.dup ? " Also in Delays & closures above." : "")),
+        retime(x.text, a) + (x.ifr ? " — can slow landings in low clouds or poor visibility" : "") + "." + (x.dup ? opts.dupNote || " Also in Delays & closures above." : "")),
       aviation() && x.level ? h("div", { class: "chips" }, confChip("FAA", CATS.reason(x.text).conf || "high")) : null,
-      rawToggle(x.raw)))];
+      opts.raw === false ? null : rawToggle(x.raw)))];
   }
 
-  function lampTable(a) {
+  function lampTable(a, all) {
     const tz = dispTz(a);
     const t0 = Date.parse(a.hours[0].t);
     const hrs = (a.lamp.hours || []).filter((x) => { const t = Date.parse(x.t); return t >= t0 && t < t0 + 24 * HOUR; });
     if (!hrs.length) return null;
     const notable = hrs.some((x) => (x.tstmProb || 0) >= 10 || (x.convProb || 0) >= 30 || (x.pPrecip || 0) >= 30 || (x.gust || 0) >= 20 || (lampCat(x) && lampCat(x) !== "VFR"));
-    if (!notable) return null;
+    if (!notable && !all) return null;
     const short = (ms) => tickLabel(ms, tz);
     const cell = (v, cls) => h("td", { class: cls || null }, v == null ? "" : String(v));
     const row = (label, f) => h("tr", {}, h("th", {}, label), hrs.map(f));
@@ -1602,9 +1604,9 @@
       any ? h("p", { class: "muted" }, `Checked FAA delays and NOAA weather${when ? " · " + when : ""}`) : null);
   }
 
-  /** Technical data is visible in Aviation mode, without expandable cards. */
-  function pilotDetails(a) {
-    if (!aviation()) return null;
+  /** Technical data is visible in Aviation mode, without expandable cards; the More details page shows it in both modes (opts.force, with the LAMP table even on quiet days). */
+  function pilotDetails(a, opts = {}) {
+    if (!aviation() && !opts.force) return null;
     const kids = [];
     const tz = dispTz(a);
     const zl = (ms) => clock(ms, tz) + " " + zoneAbbr(ms, tz);
@@ -1616,7 +1618,7 @@
         h("pre", { class: "raw", style: "margin-top:10px" }, a.metar.raw));
     }
     if (a.taf) kids.push(sub("TAF" + (a.taf.issued ? " · issued " + zl(Date.parse(a.taf.issued)) : "")), h("pre", { class: "raw" }, a.taf.raw));
-    const lt = a.lamp ? lampTable(a) : null;
+    const lt = a.lamp ? lampTable(a, opts.force) : null;
     if (lt) kids.push(sub("LAMP guidance · issued " + zl(Date.parse(a.lamp.issued))), ...lt);
     if (a.sigmets && a.sigmets.length) kids.push(sub("Convective SIGMETs"), ...a.sigmets.map((x) => h("pre", { class: "raw", style: "margin-top:6px" }, x.raw)));
     if (a.cwa && a.cwa.length) kids.push(sub("Center weather advisories"), ...a.cwa.map((x) => h("div", { class: "item" },
@@ -1879,6 +1881,9 @@
       ? h("p", { class: "hidnote" }, "Hidden by your settings: " + [...v.hiddenCats].map((k) => CATS.LABELS[k]).join(", ") + ". Ground stops and airport closures are always shown.")
       : null;
     const zoneLine = S.tz === "mine" ? "Times in " + zoneAbbr(refNow(), USER_TZ) : zoneAbbr(refNow(), a.tz);
+    // routine conditions (the Delay outlook card is left out): one short line under the Now / Coming up card
+    const dlShown = !!(dl && (dl.nodeType ? dl.childNodes.length || dl.nodeType === 1 : true));
+    const routine = routineLine(a, dlShown);
 
     sheet.replaceChildren(...[
       h("div", { class: "grab", "aria-hidden": "true" }),
@@ -1890,14 +1895,16 @@
       h("div", { class: "sh-where" }, h("b", { class: "sh-aname" }, a.name), h("span", { class: "muted" }, " · " + `${a.city}, ${a.state}` + (S.tz === "mine" ? " · " + zoneLine : ""))),
       // above the timeline: only the header, the Now / Peak (or single) card and the timeline itself
       boxWrap,
+      routine, // phase3 hook: "Delays unlikely today" / "Usual delays this evening" (site/delay.js routineOutlook)
       safeCall(() => cascadeLine(v, [...shortList(v.now.reasons, a).slice(0, 3), ...shortList(v.peak.reasons, a).slice(0, 3)], "sh-hub")), // hubs hook
       h("section", { class: "sec tlsec" },
         h("div", { class: "sec-h" }, icon(ICONS.clock), h("h3", {}, tlTitle), h("span", { class: "rule", "aria-hidden": "true" }), dayBtn),
         tlHolder),
-      dl && (dl.nodeType ? dl.childNodes.length || dl.nodeType === 1 : true) ? section("Delay outlook", "clock", [dl.nodeType ? dl : String(dl)], null, { cls: "dlcard" }) : null, // phase3 hook
+      dlShown ? section("Delay outlook", "clock", [dl.nodeType ? dl : String(dl)], null, { cls: "dlcard" }) : null, // phase3 hook
       travelOutlook(a),
       window.AWXRadarCard ? safeCall(() => window.AWXRadarCard.section(a, section)) : null, // radar hook: radar loop card (site/radar/card.js)
       ...secs,
+      h("button", { type: "button", class: "md-row", "aria-haspopup": "dialog", onclick: () => openDetails(a.iata) }, "More details", h("span", { class: "chev", "aria-hidden": "true" }, "›")),
       hiddenNote,
       checkedLine(),
     ].filter(Boolean));
@@ -1911,6 +1918,171 @@
 
   function safeCall(fn) {
     try { return fn(); } catch (e) { console.warn(e); return null; }
+  }
+
+  /**
+   * phase3 hook: the routine delay line. Shown only in routine conditions: the Delay outlook card is left out, the
+   * outlook isn't unknown (stale / missing data) or an active FAA restriction, and the rest of the local day has
+   * delay numbers. Words only (site/delay.js likelihood), no %.
+   */
+  function routineLine(a, dlShown) {
+    if (dlShown || !window.AWXDelay || typeof AWXDelay.routineOutlook !== "function") return null;
+    const o = safeCall(() => outlook(a));
+    if (!o || o.kind === "unknown" || o.kind === "active") return null;
+    const r = safeCall(() => AWXDelay.routineOutlook(a, refNow()));
+    return r ? h("p", { class: "dl-routine" }, r.text) : null;
+  }
+
+  // ---------- More details page (a full-height sheet over the airport sheet; site/sheet.js makeSheet) ----------
+
+  const md = { iata: null, wrap: null, ctl: noSheet, last: null };
+  function mdWrap() {
+    if (md.wrap) return md.wrap;
+    md.wrap = h("div", { class: "sheet-wrap md-wrap", id: "mdWrap", hidden: true },
+      h("div", { class: "backdrop", onclick: () => closeDetails() }),
+      h("div", { class: "sheet md-sheet", id: "mdSheet", role: "dialog", "aria-modal": "true", "aria-labelledby": "mdTitle" }));
+    document.body.append(md.wrap);
+    if (window.AWXSheet) md.ctl = AWXSheet.makeSheet(md.wrap.querySelector(".sheet"), { onClose: () => closeDetails(), header: ".grab, .sh-head", backdrop: md.wrap.querySelector(".backdrop"), noPull: ".lamp" });
+    return md.wrap;
+  }
+  function openDetails(iata) {
+    const w = mdWrap();
+    md.iata = iata;
+    md.last = document.activeElement;
+    renderDetails(false);
+    if (!md.iata) return;
+    w.hidden = false;
+    document.documentElement.classList.add("lock");
+    md.ctl.opened();
+    void w.offsetHeight;
+    w.classList.add("open");
+    const c = w.querySelector(".close");
+    if (c) c.focus({ preventScroll: true });
+  }
+  function closeDetails() {
+    if (!md.iata) return;
+    md.iata = null;
+    const w = md.wrap;
+    const sh = w.querySelector(".sheet");
+    w.classList.remove("open");
+    sh.style.transform = "";
+    sh.style.transition = "";
+    if (!state.openIata && !panel.kind) document.documentElement.classList.remove("lock");
+    md.ctl.closed();
+    const done = () => { if (!md.iata) w.hidden = true; };
+    if (reduced()) done(); else setTimeout(done, 300);
+    if (md.last && md.last.focus && md.last.isConnected) md.last.focus({ preventScroll: true });
+  }
+  const mdSrc = (text) => h("div", { class: "md-src" }, text);
+  const srcAge = (key) => {
+    const s = state.data && state.data.sources && state.data.sources[key];
+    return s && s.at ? " · updated " + ago(Math.max(0, refNow() - Date.parse(s.at))) : "";
+  };
+  const srcDown = (key) => { const s = state.data && state.data.sources && state.data.sources[key]; return !!s && !s.ok; };
+  // launch sites named in the ops plan's PLANNED LAUNCH/REENTRY section (lat, lon); "nearby" = within 300 km
+  const LAUNCH_SITES = [
+    [/CANAVERAL|KENNEDY|\bKSC\b|\bCCSFS\b/i, 28.49, -80.58], [/VANDENBERG/i, 34.74, -120.57], [/WALLOPS/i, 37.94, -75.47],
+    [/STARBASE|BOCA CHICA/i, 25.99, -97.16], [/KODIAK/i, 57.44, -152.34], [/SPACEPORT AMERICA/i, 32.99, -106.97], [/MOJAVE/i, 35.06, -118.15],
+  ];
+  const kmBetween = (la1, lo1, la2, lo2) => {
+    const r = Math.PI / 180, dl = (la2 - la1) * r, dn = (lo2 - lo1) * r;
+    const x = Math.sin(dl / 2) ** 2 + Math.cos(la1 * r) * Math.cos(la2 * r) * Math.sin(dn / 2) ** 2;
+    return 12742 * Math.asin(Math.min(1, Math.sqrt(x)));
+  };
+  /** Space launches/reentries in the national ops plan from a known site within 300 km of the airport, not yet over. */
+  function launchesNear(a) {
+    const out = [];
+    const ref = refNow();
+    for (const l of (state.data && state.data.opsplan && state.data.opsplan.launches) || []) {
+      const site = LAUNCH_SITES.find(([re]) => re.test(l.site || "") || re.test(l.name || ""));
+      if (!site || a.lat == null || kmBetween(a.lat, a.lon, site[1], site[2]) > 300) continue;
+      const p = l.primary || {}, b = l.backup || {};
+      const s = Date.parse(p.start), e = Date.parse(p.end), bs = Date.parse(b.start), be = Date.parse(b.end);
+      if (!Number.isFinite(s) || !Number.isFinite(e)) continue;
+      if (e < ref && !(Number.isFinite(be) && be > ref)) continue;
+      out.push({ l, s, e, bs, be });
+    }
+    return out;
+  }
+  const CWA_HAZ = { TS: "thunderstorms", CONV: "thunderstorms", CB: "thunderstorms", THUNDER: "thunderstorms", IFR: "low clouds or poor visibility", LIFR: "low clouds or poor visibility",
+    TURB: "turbulence", ICE: "icing", LLWS: "low-level wind shear", WS: "wind shear", PCPN: "precipitation", SN: "snow", VA: "volcanic ash", DU: "dust", FG: "fog" };
+  const cwaHazard = (x) => { const k = String(x || "").toUpperCase().replace(/[^A-Z].*$/, ""); return CWA_HAZ[k] || (k ? "weather hazard" : ""); };
+  const SPC_LEVEL = { MRGL: 1, SLGT: 2, ENH: 3, MDT: 4, HIGH: 5 };
+
+  /** "FAA plan & storm detail": the Command Center plan for this airport, nearby launches, SPC, TCF and CWA in plain words. */
+  function planStormCard(a, v) {
+    const tz = dispTz(a);
+    const kids = [];
+    const sub = (t) => h("div", { class: "subt md-sub" }, t);
+    // FAA Command Center operations plan: every item for this airport (programs, staffing, constraints, SIRs with end dates)
+    const items = planItems(v, a, { raw: false, dupNote: " Also in the FAA airport status." });
+    const launches = launchesNear(a);
+    kids.push(sub("FAA Command Center plan"));
+    if (items.length) kids.push(...items);
+    else kids.push(h("div", { class: "item muted" }, srcDown("atcscc") ? "The FAA Command Center plan couldn't be read right now." : `Nothing in today's FAA plan for ${codeOf(a)}.`));
+    for (const x of launches) {
+      const what = /REENTRY|RE-ENTRY/i.test(x.l.name || "") ? "Space reentry" : "Space launch";
+      const name = titleCase(String(x.l.name || "").replace(/\s*(REENTRY|RE-ENTRY)\s*/i, " ").trim());
+      kids.push(h("div", { class: "item" }, h("b", {}, what + " nearby"),
+        h("div", {}, `${name}${x.l.site ? " from " + titleCase(x.l.site) : ""}, ${whenLabel(x.s, tz)} – ${clock(x.e, tz)}` + (Number.isFinite(x.bs) ? ` (backup ${whenLabel(x.bs, tz)})` : "") + " — some flights may be rerouted.")));
+    }
+    kids.push(mdSrc("Source: FAA Command Center operations plan" + (v.opsplan && v.opsplan.plan && v.opsplan.plan.issued ? " · issued " + whenLabel(Date.parse(v.opsplan.plan.issued), tz) : srcAge("atcscc"))));
+    // Storm outlook (SPC), storm forecast for air traffic (TCF), center weather advisories (CWA)
+    const spcRow = v.spc ? (v.spc === "TSTM" ? "General thunderstorms possible in the area (no severe risk)"
+      : `${SPC_NAMES[v.spc] || cap(String(v.spc).toLowerCase())} risk of severe storms${SPC_LEVEL[v.spc] ? ` (level ${SPC_LEVEL[v.spc]} of 5)` : ""} in today's outlook`) : null;
+    const tcf = v.tcf || [];
+    const cwa = v.cwa || [];
+    kids.push(sub("Severe-storm outlook"));
+    kids.push(h("div", { class: "item" + (spcRow ? "" : " muted") }, spcRow || (srcDown("spc") ? "The storm outlook couldn't be read right now." : "No severe-storm risk in today's outlook.")));
+    kids.push(mdSrc("Source: NOAA Storm Prediction Center" + srcAge("spc")));
+    kids.push(sub("Storm forecast for air traffic"));
+    if (tcf.length) {
+      for (const x of tcf) kids.push(h("div", { class: "item" },
+        h("b", {}, "Thunderstorms, " + ({ high: "widespread", medium: "scattered", low: "isolated" }[x.coverage] || "some") + " coverage"),
+        x.valid ? h("span", { class: "muted" }, " · around " + whenLabel(Date.parse(x.valid), tz)) : null,
+        x.confidence ? h("div", { class: "muted small" }, "Forecaster confidence " + String(x.confidence).toLowerCase()) : null));
+    } else kids.push(h("div", { class: "item muted" }, srcDown("tcf") ? "The storm forecast couldn't be read right now." : `No thunderstorms forecast near ${codeOf(a)} for air traffic planning.`));
+    kids.push(mdSrc("Source: aviationweather.gov convective forecast" + srcAge("tcf")));
+    kids.push(sub("Weather advisories for pilots"));
+    if (cwa.length) {
+      for (const x of cwa) {
+        const hz = cwaHazard(x.hazard);
+        kids.push(h("div", { class: "item" }, h("b", {}, "Center weather advisory" + (hz ? ": " + hz : "")),
+          x.validTo ? h("span", { class: "muted" }, " · until " + whenLabel(Date.parse(x.validTo), tz)) : null));
+      }
+    } else kids.push(h("div", { class: "item muted" }, srcDown("cwa") ? "Center weather advisories couldn't be read right now." : `No center weather advisories over ${codeOf(a)}.`));
+    kids.push(mdSrc("Source: aviationweather.gov center weather advisories" + srcAge("cwa")));
+    return section("FAA plan & storm detail", "tower", kids, null, { cls: "md-plan" });
+  }
+
+  function renderDetails(keepScroll) {
+    const a = state.data && md.iata && state.data.airports.find((x) => x.iata === md.iata);
+    if (!a) { if (md.iata) closeDetails(); return; }
+    const sheet = mdWrap().querySelector(".sheet");
+    const top = sheet.scrollTop;
+    const v = view(a);
+    const code = codeOf(a);
+    const mark = (sec, key) => { if (sec) sec.dataset.md = key; return sec; };
+    const why = window.AWXDelay && typeof AWXDelay.whyBlock === "function" ? safeCall(() => AWXDelay.whyBlock(a, refNow())) : null;
+    const pd = pilotDetails(a, { force: true }) || section("Pilot details", "plane", [h("p", { class: "muted", style: "margin:0" }, "No reports for this airport right now.")], null, { cls: "pilot" });
+    const hiddenNote = v.hiddenCats && v.hiddenCats.size
+      ? h("p", { class: "hidnote" }, "Hidden by your settings: " + [...v.hiddenCats].map((k) => CATS.LABELS[k]).join(", ") + ".")
+      : null;
+    sheet.setAttribute("aria-label", code + " more details");
+    sheet.replaceChildren(...[
+      h("div", { class: "grab", "aria-hidden": "true" }),
+      h("div", { class: "sh-head" },
+        h("div", { class: "sh-code", id: "mdTitle" }, code),
+        h("div", { class: "right", style: "gap:6px" },
+          h("button", { type: "button", class: "close", "aria-label": "Close more details", onclick: () => closeDetails() }, closeSvg()))),
+      h("div", { class: "sh-where" }, h("b", { class: "sh-aname" }, a.name), h("span", { class: "muted" }, " · More details")),
+      mark(section("Why this outlook", "clock", [why || h("p", { class: "muted", style: "margin:0" }, "Delay numbers aren't available right now.")], null, { cls: "md-why" }), "why"),
+      mark(pd, "pilot"),
+      mark(safeCall(() => planStormCard(a, v)), "plan"),
+      hiddenNote,
+      checkedLine(),
+    ].filter(Boolean));
+    sheet.scrollTop = keepScroll ? top : 0;
   }
 
   // ---------- Current weather card ----------
@@ -2091,7 +2263,7 @@
 
   $("backdrop").addEventListener("click", closeSheet);
   $("panelBackdrop").addEventListener("click", () => closePanel());
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { if (panel.kind) closePanel(); else closeSheet(); } });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { if (md.iata) closeDetails(); else if (panel.kind) closePanel(); else closeSheet(); } });
   // Refresh = a full page reload, like the browser's: refetch index.html past the HTTP cache first so the reload
   // (and checkVersion) see any new version; the icon spins until the page goes. The 2-minute background refresh stays.
   $("refresh").addEventListener("click", () => {
@@ -2117,6 +2289,7 @@
   window.AWXApp = {
     state, openSheet, closeSheet, toggleFav, render, // build2a hook: used by site/searched.js
     // build2b: for site/searched.js, the settings UI and check.js
+    openDetails, closeDetails, // More details page (check.js)
     prefs: PREFS, codeOf, view, outlook, refNow, whenLabel, dispTz, zoneAbbr, clock, hourLabel, daySlots, openNational, closePanel, placeLenses,
     timeline: (a) => timeline(a, {}), // a status.json-shaped airport (searched.js builds one from a shard entry)
     version: APP_V,
