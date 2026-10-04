@@ -1324,6 +1324,7 @@
 
   function closeSheet() {
     if (!state.openIata) return;
+    if (window.AWXRadarCard) safeCall(() => window.AWXRadarCard.close()); // radar hook: stop the radar, free its workers
     state.openIata = null;
     const wrap = $("sheetWrap");
     const sheet = $("sheet");
@@ -1895,6 +1896,7 @@
         tlHolder),
       dl && (dl.nodeType ? dl.childNodes.length || dl.nodeType === 1 : true) ? section("Delay outlook", "clock", [dl.nodeType ? dl : String(dl)], null, { cls: "dlcard" }) : null, // phase3 hook
       travelOutlook(a),
+      window.AWXRadarCard ? safeCall(() => window.AWXRadarCard.section(a, section)) : null, // radar hook: radar loop card (site/radar/card.js)
       ...secs,
       hiddenNote,
       checkedLine(),

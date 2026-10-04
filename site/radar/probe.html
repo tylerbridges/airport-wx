@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<title>Radar probe · Airports</title>
+<!-- check.html's Radar row (radar hook): loads the newest MRMS scan for one place (default MSP) and decodes it.
+     check.js reads window.WXRadar._state() and ._probe(); opening it by hand shows the frame. -->
+<style>html,body{margin:0;background:#000;color:#fff;font:13px system-ui,sans-serif}#m{position:relative;width:100vw;height:62.5vw;max-height:100vh;overflow:hidden}.rstage,.rl{position:absolute}.rl{inset:0;width:100%;height:100%}.rbar{position:absolute;right:8px;bottom:8px}.rrange,.rplay{display:none}.rtime{color:#fff;background:none;border:0}</style>
+</head>
+<body>
+<div id="m"></div>
+<script src="wx-radar.js?v=1"></script>
+<script>
+(function () {
+  var p = new URLSearchParams(location.search), lat = +p.get("lat") || 44.8848, lon = +p.get("lon") || -93.2223;
+  WXRadar.show(document.getElementById("m"), { lat: lat, lon: lon }, { one: true, static: true, zoom: 8 });
+})();
+</script>
+</body>
+</html>

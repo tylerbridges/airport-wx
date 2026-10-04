@@ -29,10 +29,10 @@ let vmapP = null;
 /** site/map/vmap.js as a classic script (its tile worker runs the same file, found through document.currentScript). */
 function loadVmap() {
   if (!vmapP) vmapP = new Promise((res) => {
-    if (window.WXVMap) { res(window.WXVMap); return; }
+    if (window.AWXMapBase) { res(window.AWXMapBase); return; }
     const s = document.createElement("script");
-    s.src = "./map/vmap.js?v=1";
-    s.onload = () => res(window.WXVMap || null);
+    s.src = "./map/vmap.js?v=2";
+    s.onload = () => res(window.AWXMapBase || null);
     s.onerror = () => res(null);
     document.head.append(s);
   });

@@ -1,7 +1,7 @@
-// Copied from tylerbridges.github.io wx-vmap.js at commit b9d1dc1 (2026-10-03) for the Airports Map tab
-//   (site/map.js). Local changes ("map hook"): drawTop's o.roads === false skips roads; the API is window.AWXMapBase
-//   (not WXVMap) so it never replaces the radar card's own copy (site/radar/wx-vmap.js).
-//   Keep the rest identical so fixes can be copied across.
+// Copied from Tyler's weather site (github.com/tylerbridges/tylerbridges.github.io, wx-vmap.js at commit
+//   d4f012bd19231412be944e30a3ac8a2e9f8fa97b) unchanged: the radar card's base map (site/radar/card.js). Tiles from
+//   OpenFreeMap (© OpenMapTiles, data © OpenStreetMap contributors); the credit is shown under the map.
+//
 // Vector base map for the Radar tab: OpenStreetMap vector tiles (OpenMapTiles schema, served free by OpenFreeMap)
 //   decoded in the browser and drawn on canvas at the screen's native resolution, so coastlines, state and county
 //   lines, roads and place names stay sharp at every zoom. Dependency-free: a small protobuf reader decodes the
@@ -195,7 +195,7 @@
     var P = o.dark ? PAL.dark : PAL.light, z = o.z, d = o.dpr, places = [];
     eachTile(ctx, slots, function (L, s) {
       ctx.lineJoin = ctx.lineCap = "round";
-      if (L.transportation && !o.placesOnly && o.roads !== false) { // map hook: o.roads === false skips roads
+      if (L.transportation && !o.placesOnly) {
         var by = [[], [], [], []];
         L.transportation.f.forEach(function (f) { var r = roadRank(f.p["class"]); if (f.t === 2 && r >= 0 && z >= roadMinZ(r) && f.p.brunnel !== "tunnel") by[r].push(f); });
         for (var r = 3; r >= 0; r--) { if (!by[r].length) continue; ctx.strokeStyle = P.road[r]; ctx.lineWidth = roadWidth(r, z) * d / s; strokeAll(ctx, by[r]); }
@@ -270,5 +270,5 @@
   }
   // ask for tiles just off screen ahead of time ({ z, i, j, n } list, nearest first), so panning finds them loaded
   function prefetch(list) { if (state !== "ok") return; list.slice(0, 40).forEach(function (v) { if (v.z <= maxz) get(v.z, ((v.i % v.n) + v.n) % v.n, v.j, true); }); }
-  root.AWXMapBase = { prefetch: prefetch, init: init, ok: function () { return state === "ok"; }, failed: function () { return state === "fail"; }, tileZoom: tileZoom, drawBase: drawBase, drawTop: drawTop, _decode: decode };
+  root.WXVMap = { prefetch: prefetch, init: init, ok: function () { return state === "ok"; }, failed: function () { return state === "fail"; }, tileZoom: tileZoom, drawBase: drawBase, drawTop: drawTop, _decode: decode };
 })(this);

@@ -116,12 +116,13 @@ function eventText(e, a) {
   return e.sentence;
 }
 
-/** The airport's events since local midnight (display zone), newest first, hidden categories left out. */
+/** The airport's events since local midnight (display zone) — or the last 6 h when that reaches further back, so just after midnight
+ * the card still shows the evening — newest first, hidden categories left out. */
 export function todayEvents(a) {
   const A = app();
   const tz = A.dispTz(a);
   const now = nowMs();
-  const from = A.brief.localMidnight(now, tz);
+  const from = Math.min(A.brief.localMidnight(now, tz), now - 6 * 60 * MIN);
   return events().filter((e) => e.iata === a.iata && Date.parse(e.t) >= from && Date.parse(e.t) <= now + MIN && !catsHidden(eventCat(e)))
     .sort((x, y) => Date.parse(y.t) - Date.parse(x.t));
 }
