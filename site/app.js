@@ -2021,8 +2021,13 @@
 
     const boxWrap = h("div", { class: "boxwrap", "aria-live": "polite" });
     let tlEl = null;
+    let previewSlots = new Map();
     const setLayer = (i, live) => {
       boxWrap.classList.toggle("live", !!live);
+      if (i != null && !boxWrap.querySelector(`[data-i="${i}"]`)) {
+        const slot = previewSlots.get(i);
+        if (slot) boxWrap.append(h("div", { class: "bx-layer", "data-i": String(i), "aria-hidden": "true" }, hourCard(slot)));
+      }
       for (const L of boxWrap.children) {
         const on = i == null ? L.dataset.layer === "rest" : L.dataset.i === String(i);
         L.classList.toggle("on", on);
@@ -2031,8 +2036,9 @@
       }
     };
     const buildLayers = (slots) => {
+      previewSlots = new Map(slots.map(s => [s.i, s]));
       boxWrap.replaceChildren(h("div", { class: "bx-layer on", "data-layer": "rest" }, restCards()),
-        ...slots.map((s) => h("div", { class: "bx-layer", "data-i": String(s.i), "aria-hidden": "true" }, hourCard(s))));
+        ...(aviation() ? slots.map((s) => h("div", { class: "bx-layer", "data-i": String(s.i), "aria-hidden": "true" }, hourCard(s))) : []));
     };
     const onRelease = () => setLayer(null, false);
     const onPreview = (i) => setLayer(i, true);
