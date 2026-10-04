@@ -1,9 +1,25 @@
 {
   "title": "MCO closed for a hurricane",
+  "group": "weather",
+  "blurb": "MCO closed for a hurricane (full closure NOTAM).",
   "description": "Full airport closure NOTAM at MCO with a Hurricane Warning and hurricane-force gusts.",
   "assert": [
-    { "t": "level", "iata": "MCO", "of": "now", "op": "==", "v": 4 },
-    { "t": "faa", "iata": "MCO", "type": "closure" },
-    { "t": "reason", "iata": "MCO", "re": "Airport closed" }
+    {
+      "t": "level",
+      "iata": "MCO",
+      "of": "now",
+      "op": "==",
+      "v": 4
+    },
+    {
+      "t": "faa",
+      "iata": "MCO",
+      "type": "closure"
+    },
+    {
+      "t": "reason",
+      "iata": "MCO",
+      "re": "Airport closed"
+    }
   ]
 }

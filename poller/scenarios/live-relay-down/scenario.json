@@ -1,0 +1,35 @@
+{
+  "title": "Live relay down",
+  "group": "system",
+  "at": "2026-10-02T18:00:00Z",
+  "config": {
+    "liveUrl": "https://airport-wx-live.invalid"
+  },
+  "blurb": "The live relay doesn't answer: the page says it shows the last build.",
+  "description": "data/config.json names a live relay that can't be reached (a .invalid host). The page runs its normal live path (site/testmode.js LIVE_PATH) and must say \"Live data unavailable — showing data from N min ago\". DEN has a High Wind Warning so there is something to show.",
+  "assert": [
+    {
+      "t": "level",
+      "iata": "DEN",
+      "of": "now",
+      "op": "==",
+      "v": 3
+    },
+    {
+      "t": "alert",
+      "iata": "DEN",
+      "event": "High Wind Warning"
+    },
+    {
+      "t": "header",
+      "re": "^Live data unavailable — showing data from "
+    },
+    {
+      "t": "banner",
+      "re": "Test scenario: Live relay down"
+    },
+    {
+      "t": "noPercent"
+    }
+  ]
+}

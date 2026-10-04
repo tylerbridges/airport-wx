@@ -1,0 +1,72 @@
+{
+  "title": "All quiet on a holiday evening",
+  "group": "delays",
+  "at": "2025-11-30T23:30:00Z",
+  "blurb": "No weather or FAA programs on a busy evening: usual delays only.",
+  "description": "The Sunday evening after Thanksgiving: no weather and no FAA programs anywhere, traffic 10–15% above normal at the big hubs. Delay words follow the usual rate for a busy evening (\"Usual delays\" at MDW, BWI, CLT; EWR's usual evening delays still show).",
+  "assert": [
+    {
+      "t": "allLevels",
+      "max": 0
+    },
+    {
+      "t": "noFaa",
+      "iata": "ORD"
+    },
+    {
+      "t": "noFaa",
+      "iata": "EWR"
+    },
+    {
+      "t": "noFaa",
+      "iata": "ATL"
+    },
+    {
+      "t": "words",
+      "iata": "MDW",
+      "at": "peak",
+      "word": "Usual delays"
+    },
+    {
+      "t": "words",
+      "iata": "BWI",
+      "at": "peak",
+      "word": "Usual delays"
+    },
+    {
+      "t": "words",
+      "iata": "CLT",
+      "at": "peak",
+      "word": "Usual delays"
+    },
+    {
+      "t": "words",
+      "iata": "ORD",
+      "at": "now",
+      "word": "Usual delays"
+    },
+    {
+      "t": "words",
+      "iata": "PHL",
+      "at": "now",
+      "word": "Usual delays"
+    },
+    {
+      "t": "movement",
+      "iata": "ORD",
+      "line": null
+    },
+    {
+      "t": "card",
+      "iata": "MDW",
+      "re": "Usual delays"
+    },
+    {
+      "t": "noPercent"
+    },
+    {
+      "t": "rendered",
+      "text": "Test scenario: All quiet on a holiday evening"
+    }
+  ]
+}

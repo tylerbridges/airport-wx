@@ -1,0 +1,66 @@
+{
+  "title": "Recovering after an EWR ground stop",
+  "group": "delays",
+  "at": "2026-08-04T21:30:00Z",
+  "blurb": "Ground stop lifted 30 min ago; delays easing; traffic back to 85% of normal.",
+  "description": "Storms have moved off: the EWR ground stop was cancelled 30 minutes ago (ATCSCC GS CNX advisory), FAA delays of 16–30 minutes are decreasing, departures are back to 85% of normal and the evening reads \"Delays possible · lower than usual\".",
+  "assert": [
+    {
+      "t": "level",
+      "iata": "EWR",
+      "of": "now",
+      "op": "==",
+      "v": 2
+    },
+    {
+      "t": "faa",
+      "iata": "EWR",
+      "type": "delay",
+      "cause": "weather"
+    },
+    {
+      "t": "atcscc",
+      "iata": "EWR",
+      "type": "GS",
+      "cnx": true
+    },
+    {
+      "t": "noReason",
+      "iata": "EWR",
+      "re": "^Ground stop"
+    },
+    {
+      "t": "words",
+      "iata": "EWR",
+      "at": "now",
+      "sentence": "Delays happening now · FAA average about 25 min"
+    },
+    {
+      "t": "words",
+      "iata": "EWR",
+      "at": 1,
+      "sentence": "Delays possible · lower than usual"
+    },
+    {
+      "t": "movement",
+      "iata": "EWR",
+      "line": null
+    },
+    {
+      "t": "national",
+      "re": "^U\\.S\\.: 1 airport with delays"
+    },
+    {
+      "t": "card",
+      "iata": "EWR",
+      "re": "Delays happening now"
+    },
+    {
+      "t": "noPercent"
+    },
+    {
+      "t": "rendered",
+      "text": "Test scenario: Recovering after an EWR ground stop"
+    }
+  ]
+}

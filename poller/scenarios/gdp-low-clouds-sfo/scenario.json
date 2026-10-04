@@ -1,0 +1,96 @@
+{
+  "title": "SFO ground delay program (marine layer)",
+  "group": "delays",
+  "at": "2026-07-15T16:30:00Z",
+  "blurb": "Low clouds at SFO: arrivals held, average delay 1 h 10 m; LAX and SAN quiet.",
+  "description": "Morning marine layer at SFO (ceiling 600 ft, mist): an FAA ground delay program averaging 1 hour 10 minutes, listed in the ops plan too; arrivals are running at half the normal rate. LAX and SAN stay quiet.",
+  "assert": [
+    {
+      "t": "level",
+      "iata": "SFO",
+      "of": "now",
+      "op": "==",
+      "v": 3
+    },
+    {
+      "t": "faa",
+      "iata": "SFO",
+      "type": "ground_delay",
+      "cause": "weather"
+    },
+    {
+      "t": "badge",
+      "iata": "SFO",
+      "re": "^GDP avg 1h10m$"
+    },
+    {
+      "t": "words",
+      "iata": "SFO",
+      "at": "now",
+      "sentence": "Delays happening now · FAA average about 70 min"
+    },
+    {
+      "t": "opsplan",
+      "iata": "SFO",
+      "kind": "program",
+      "re": "Ground delay program"
+    },
+    {
+      "t": "movement",
+      "iata": "SFO",
+      "line": null,
+      "arrBelow": 0.6
+    },
+    {
+      "t": "level",
+      "iata": "LAX",
+      "of": "peak",
+      "op": "==",
+      "v": 0
+    },
+    {
+      "t": "level",
+      "iata": "SAN",
+      "of": "peak",
+      "op": "==",
+      "v": 0
+    },
+    {
+      "t": "noFaa",
+      "iata": "LAX"
+    },
+    {
+      "t": "noFaa",
+      "iata": "SAN"
+    },
+    {
+      "t": "words",
+      "iata": "LAX",
+      "at": "now",
+      "key": "unlikely"
+    },
+    {
+      "t": "words",
+      "iata": "SAN",
+      "at": "now",
+      "key": "unlikely"
+    },
+    {
+      "t": "card",
+      "iata": "SFO",
+      "re": "Delays happening now"
+    },
+    {
+      "t": "card",
+      "iata": "SFO",
+      "re": "1 hr 10 min|1h ?10m"
+    },
+    {
+      "t": "noPercent"
+    },
+    {
+      "t": "rendered",
+      "text": "Test scenario: SFO ground delay program"
+    }
+  ]
+}

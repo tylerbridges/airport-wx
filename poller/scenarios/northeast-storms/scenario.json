@@ -1,0 +1,163 @@
+{
+  "title": "Storms across the New York area",
+  "group": "weather",
+  "at": "2026-07-16T20:30:00Z",
+  "blurb": "Thunderstorm line: ground stops at EWR and LGA, a JFK delay program, BOS/PHL next.",
+  "description": "A line of severe thunderstorms over New York: FAA ground stops at EWR and LGA, a ground delay program at JFK (avg 1 h 45 m), the ops plan's \"ground stop possible\" for BOS and PHL, a convective SIGMET, an SPC Enhanced risk, Severe Thunderstorm Warnings, LAMP thunder 70%, TCF high coverage, and New York departures at 30% of normal.",
+  "assert": [
+    {
+      "t": "level",
+      "iata": "EWR",
+      "of": "now",
+      "op": "==",
+      "v": 4
+    },
+    {
+      "t": "level",
+      "iata": "LGA",
+      "of": "now",
+      "op": "==",
+      "v": 4
+    },
+    {
+      "t": "level",
+      "iata": "JFK",
+      "of": "peak",
+      "op": "==",
+      "v": 4
+    },
+    {
+      "t": "faa",
+      "iata": "EWR",
+      "type": "ground_stop",
+      "cause": "weather"
+    },
+    {
+      "t": "faa",
+      "iata": "LGA",
+      "type": "ground_stop",
+      "cause": "weather"
+    },
+    {
+      "t": "faa",
+      "iata": "JFK",
+      "type": "ground_delay",
+      "cause": "weather"
+    },
+    {
+      "t": "badge",
+      "iata": "EWR",
+      "re": "^GROUND STOP$"
+    },
+    {
+      "t": "badge",
+      "iata": "JFK",
+      "re": "^GDP avg 1h45m$"
+    },
+    {
+      "t": "opsplan",
+      "iata": "BOS",
+      "kind": "program",
+      "re": "possible ground stop"
+    },
+    {
+      "t": "opsplan",
+      "iata": "PHL",
+      "kind": "program",
+      "re": "possible ground stop"
+    },
+    {
+      "t": "sigmet",
+      "iata": "EWR"
+    },
+    {
+      "t": "sigmet",
+      "iata": "LGA"
+    },
+    {
+      "t": "sigmet",
+      "iata": "JFK"
+    },
+    {
+      "t": "spc",
+      "iata": "EWR",
+      "cat": "ENH"
+    },
+    {
+      "t": "spc",
+      "iata": "BOS",
+      "cat": "SLGT"
+    },
+    {
+      "t": "alert",
+      "iata": "EWR",
+      "event": "Severe Thunderstorm Warning"
+    },
+    {
+      "t": "reason",
+      "iata": "EWR",
+      "re": "^Heavy thunderstorms"
+    },
+    {
+      "t": "words",
+      "iata": "EWR",
+      "at": "now",
+      "word": "Delays happening now"
+    },
+    {
+      "t": "words",
+      "iata": "JFK",
+      "at": "now",
+      "sentence": "Delays happening now · FAA average about 105 min"
+    },
+    {
+      "t": "words",
+      "iata": "PHL",
+      "at": "now",
+      "word": "Delays very likely"
+    },
+    {
+      "t": "movement",
+      "iata": "EWR",
+      "line": "^Departures running 7\\d% below normal$"
+    },
+    {
+      "t": "movement",
+      "iata": "LGA",
+      "line": "^Departures running 6\\d% below normal$"
+    },
+    {
+      "t": "movement",
+      "iata": "JFK",
+      "line": "^Departures running 6\\d% below normal$"
+    },
+    {
+      "t": "level",
+      "iata": "ORD",
+      "of": "peak",
+      "op": "==",
+      "v": 0
+    },
+    {
+      "t": "national",
+      "re": "^U\\.S\\.: 2 ground stops, 1 delay program · storms in the Northeast"
+    },
+    {
+      "t": "card",
+      "iata": "EWR",
+      "re": "Ground stop|GROUND STOP"
+    },
+    {
+      "t": "card",
+      "iata": "EWR",
+      "re": "Departures running \\d+% below normal"
+    },
+    {
+      "t": "noPercent"
+    },
+    {
+      "t": "rendered",
+      "text": "Test scenario: Storms across the New York area"
+    }
+  ]
+}

@@ -1,13 +1,25 @@
 {
- "generated": "2026-10-03T23:51:04.814Z",
+ "generated": "2026-10-04T00:49:37.868Z",
+ "groups": {
+  "delays": "Delays & programs",
+  "weather": "Weather",
+  "nonweather": "Non-weather",
+  "trips": "Trips",
+  "system": "System health"
+ },
  "scenarios": [
   {
    "name": "airline-it-outage",
-   "title": "Airline IT outage at ATL",
-   "description": "Company-request ground stop at ATL during an airline IT outage; weather is fine.",
+   "title": "Delta IT outage: ground stops at its hubs",
+   "group": "nonweather",
+   "blurb": "Company-request ground stops at ATL, DTW, MSP and SLC; Delta flights barely moving.",
+   "description": "Weather is fine everywhere. A Delta IT outage: company-request ground stops at ATL, DTW, MSP and SLC (FAA NAS status and the ops plan narrative), Delta departures at 15% of normal at those hubs for two hours (airline alert) and overall departures far below normal there.",
    "file": "airline-it-outage.json",
    "wx": "airline-it-outage/wx/",
    "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
    "assert": [
     {
      "t": "level",
@@ -25,18 +37,85 @@
      "t": "faa",
      "iata": "ATL",
      "type": "ground_stop",
-     "cause": "airline",
-     "note": "needs FAA cause classification (cause.mjs, other branch)"
+     "cause": "airline"
+    },
+    {
+     "t": "faa",
+     "iata": "DTW",
+     "type": "ground_stop",
+     "cause": "airline"
+    },
+    {
+     "t": "faa",
+     "iata": "MSP",
+     "type": "ground_stop",
+     "cause": "airline"
+    },
+    {
+     "t": "faa",
+     "iata": "SLC",
+     "type": "ground_stop",
+     "cause": "airline"
+    },
+    {
+     "t": "reason",
+     "iata": "ATL",
+     "re": "^Ground stop — airline request \\(IT outage\\)"
+    },
+    {
+     "t": "noReason",
+     "iata": "ATL",
+     "re": "[Tt]hunder|[Ss]now|[Rr]ain|[Cc]loud|[Vv]isib|[Gg]ust|[Ww]ind|[Ff]og"
+    },
+    {
+     "t": "words",
+     "iata": "ATL",
+     "at": "now",
+     "word": "Delays happening now"
+    },
+    {
+     "t": "airlineAlert",
+     "re": "^Delta departures far below normal at ATL, DTW, MSP and SLC for the past 2 hours$"
+    },
+    {
+     "t": "movement",
+     "iata": "ATL",
+     "line": "^Departures running 6\\d% below normal$"
+    },
+    {
+     "t": "national",
+     "re": "^U\\.S\\.: 4 ground stops"
+    },
+    {
+     "t": "rendered",
+     "text": "Delta departures far below normal at ATL, DTW, MSP and SLC"
+    },
+    {
+     "t": "card",
+     "iata": "ATL",
+     "re": "Ground stop|GROUND STOP"
+    },
+    {
+     "t": "noPercent"
+    },
+    {
+     "t": "rendered",
+     "text": "Test scenario: Delta IT outage"
     }
    ]
   },
   {
    "name": "all-clear",
    "title": "All clear",
+   "group": "delays",
+   "blurb": "Quiet weather everywhere, no FAA programs, every source up.",
    "description": "Quiet weather everywhere, no FAA programs, every source up. Includes the global shards: EGLL (international, METAR + TAF), KFCM (small US, METAR only) and Y49 (no reports).",
    "file": "all-clear.json",
    "wx": "all-clear/wx/",
    "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
    "assert": [
     {
      "t": "allLevels",
@@ -71,12 +150,207 @@
    ]
   },
   {
+   "name": "all-quiet-holiday-peak",
+   "title": "All quiet on a holiday evening",
+   "group": "delays",
+   "blurb": "No weather or FAA programs on a busy evening: usual delays only.",
+   "description": "The Sunday evening after Thanksgiving: no weather and no FAA programs anywhere, traffic 10–15% above normal at the big hubs. Delay words follow the usual rate for a busy evening (\"Usual delays\" at MDW, BWI, CLT; EWR's usual evening delays still show).",
+   "file": "all-quiet-holiday-peak.json",
+   "wx": "all-quiet-holiday-peak/wx/",
+   "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
+   "assert": [
+    {
+     "t": "allLevels",
+     "max": 0
+    },
+    {
+     "t": "noFaa",
+     "iata": "ORD"
+    },
+    {
+     "t": "noFaa",
+     "iata": "EWR"
+    },
+    {
+     "t": "noFaa",
+     "iata": "ATL"
+    },
+    {
+     "t": "words",
+     "iata": "MDW",
+     "at": "peak",
+     "word": "Usual delays"
+    },
+    {
+     "t": "words",
+     "iata": "BWI",
+     "at": "peak",
+     "word": "Usual delays"
+    },
+    {
+     "t": "words",
+     "iata": "CLT",
+     "at": "peak",
+     "word": "Usual delays"
+    },
+    {
+     "t": "words",
+     "iata": "ORD",
+     "at": "now",
+     "word": "Usual delays"
+    },
+    {
+     "t": "words",
+     "iata": "PHL",
+     "at": "now",
+     "word": "Usual delays"
+    },
+    {
+     "t": "movement",
+     "iata": "ORD",
+     "line": null
+    },
+    {
+     "t": "card",
+     "iata": "MDW",
+     "re": "Usual delays"
+    },
+    {
+     "t": "noPercent"
+    },
+    {
+     "t": "rendered",
+     "text": "Test scenario: All quiet on a holiday evening"
+    }
+   ]
+  },
+  {
+   "name": "atc-staffing",
+   "title": "ATC staffing: New York and Philadelphia",
+   "group": "nonweather",
+   "blurb": "Clear skies; staffing triggers at N90 and PHL and an EWR staffing ground stop.",
+   "description": "Clear weather everywhere. The FAA ops plan lists staffing triggers for New York TRACON (N90: JFK, LGA, EWR) and PHL, and EWR is in a ground stop for staffing. Proves non-weather disruptions show on their own.",
+   "file": "atc-staffing.json",
+   "wx": "atc-staffing/wx/",
+   "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
+   "assert": [
+    {
+     "t": "level",
+     "iata": "EWR",
+     "of": "now",
+     "op": "==",
+     "v": 4
+    },
+    {
+     "t": "faa",
+     "iata": "EWR",
+     "type": "ground_stop",
+     "cause": "staffing"
+    },
+    {
+     "t": "reason",
+     "iata": "EWR",
+     "re": "^Ground stop — air traffic control staffing"
+    },
+    {
+     "t": "opsplan",
+     "iata": "JFK",
+     "kind": "staffing",
+     "re": "staffing shortage"
+    },
+    {
+     "t": "opsplan",
+     "iata": "LGA",
+     "kind": "staffing",
+     "re": "staffing shortage"
+    },
+    {
+     "t": "opsplan",
+     "iata": "PHL",
+     "kind": "staffing",
+     "re": "staffing shortage"
+    },
+    {
+     "t": "level",
+     "iata": "JFK",
+     "of": "now",
+     "op": "==",
+     "v": 2
+    },
+    {
+     "t": "level",
+     "iata": "PHL",
+     "of": "now",
+     "op": "==",
+     "v": 2
+    },
+    {
+     "t": "noReason",
+     "iata": "EWR",
+     "re": "[Tt]hunder|[Ss]now|[Rr]ain|[Cc]loud|[Vv]isib|[Gg]ust|[Ww]ind|[Ff]og"
+    },
+    {
+     "t": "noReason",
+     "iata": "JFK",
+     "re": "[Tt]hunder|[Ss]now|[Rr]ain|[Cc]loud|[Vv]isib|[Gg]ust|[Ww]ind|[Ff]og"
+    },
+    {
+     "t": "noReason",
+     "iata": "PHL",
+     "re": "[Tt]hunder|[Ss]now|[Rr]ain|[Cc]loud|[Vv]isib|[Gg]ust|[Ww]ind|[Ff]og"
+    },
+    {
+     "t": "words",
+     "iata": "EWR",
+     "at": "now",
+     "word": "Delays happening now"
+    },
+    {
+     "t": "movement",
+     "iata": "EWR",
+     "line": "^Departures running \\d+% below normal$"
+    },
+    {
+     "t": "national",
+     "re": "^U\\.S\\.: 1 ground stop"
+    },
+    {
+     "t": "card",
+     "iata": "EWR",
+     "re": "Ground stop|GROUND STOP"
+    },
+    {
+     "t": "card",
+     "iata": "PHL",
+     "re": "[Ss]taffing"
+    },
+    {
+     "t": "noPercent"
+    },
+    {
+     "t": "rendered",
+     "text": "Test scenario: ATC staffing"
+    }
+   ]
+  },
+  {
    "name": "atc-staffing-ground-stop",
    "title": "ATC staffing ground stop at EWR",
+   "group": "nonweather",
+   "blurb": "Clear weather; EWR ground stop for ATC staffing.",
    "description": "Clear weather everywhere; the FAA stops traffic to EWR for air traffic control staffing.",
    "file": "atc-staffing-ground-stop.json",
    "wx": "atc-staffing-ground-stop/wx/",
    "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
    "assert": [
     {
      "t": "level",
@@ -109,10 +383,15 @@
   {
    "name": "full-closure",
    "title": "MCO closed for a hurricane",
+   "group": "weather",
+   "blurb": "MCO closed for a hurricane (full closure NOTAM).",
    "description": "Full airport closure NOTAM at MCO with a Hurricane Warning and hurricane-force gusts.",
    "file": "full-closure.json",
    "wx": "full-closure/wx/",
    "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
    "assert": [
     {
      "t": "level",
@@ -134,12 +413,220 @@
    ]
   },
   {
+   "name": "gdp-low-clouds-sfo",
+   "title": "SFO ground delay program (marine layer)",
+   "group": "delays",
+   "blurb": "Low clouds at SFO: arrivals held, average delay 1 h 10 m; LAX and SAN quiet.",
+   "description": "Morning marine layer at SFO (ceiling 600 ft, mist): an FAA ground delay program averaging 1 hour 10 minutes, listed in the ops plan too; arrivals are running at half the normal rate. LAX and SAN stay quiet.",
+   "file": "gdp-low-clouds-sfo.json",
+   "wx": "gdp-low-clouds-sfo/wx/",
+   "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
+   "assert": [
+    {
+     "t": "level",
+     "iata": "SFO",
+     "of": "now",
+     "op": "==",
+     "v": 3
+    },
+    {
+     "t": "faa",
+     "iata": "SFO",
+     "type": "ground_delay",
+     "cause": "weather"
+    },
+    {
+     "t": "badge",
+     "iata": "SFO",
+     "re": "^GDP avg 1h10m$"
+    },
+    {
+     "t": "words",
+     "iata": "SFO",
+     "at": "now",
+     "sentence": "Delays happening now · FAA average about 70 min"
+    },
+    {
+     "t": "opsplan",
+     "iata": "SFO",
+     "kind": "program",
+     "re": "Ground delay program"
+    },
+    {
+     "t": "movement",
+     "iata": "SFO",
+     "line": null,
+     "arrBelow": 0.6
+    },
+    {
+     "t": "level",
+     "iata": "LAX",
+     "of": "peak",
+     "op": "==",
+     "v": 0
+    },
+    {
+     "t": "level",
+     "iata": "SAN",
+     "of": "peak",
+     "op": "==",
+     "v": 0
+    },
+    {
+     "t": "noFaa",
+     "iata": "LAX"
+    },
+    {
+     "t": "noFaa",
+     "iata": "SAN"
+    },
+    {
+     "t": "words",
+     "iata": "LAX",
+     "at": "now",
+     "key": "unlikely"
+    },
+    {
+     "t": "words",
+     "iata": "SAN",
+     "at": "now",
+     "key": "unlikely"
+    },
+    {
+     "t": "card",
+     "iata": "SFO",
+     "re": "Delays happening now"
+    },
+    {
+     "t": "card",
+     "iata": "SFO",
+     "re": "1 hr 10 min|1h ?10m"
+    },
+    {
+     "t": "noPercent"
+    },
+    {
+     "t": "rendered",
+     "text": "Test scenario: SFO ground delay program"
+    }
+   ]
+  },
+  {
+   "name": "hurricane-closure",
+   "title": "Hurricane: MIA and FLL closed",
+   "group": "weather",
+   "blurb": "Hurricane Warning, MIA and FLL closed; a flight out of MIA is a Disruption.",
+   "description": "A hurricane over South Florida: full closure NOTAMs at MIA and FLL, Hurricane Warnings, gusts to 68 kt, no traffic at either airport; Tropical Storm Warnings and a possible ground stop at MCO and TPA. A calendar trip MIA→ATL leaving in 25 minutes shows Disruption.",
+   "file": "hurricane-closure.json",
+   "wx": "hurricane-closure/wx/",
+   "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
+   "assert": [
+    {
+     "t": "level",
+     "iata": "MIA",
+     "of": "now",
+     "op": "==",
+     "v": 4
+    },
+    {
+     "t": "level",
+     "iata": "FLL",
+     "of": "now",
+     "op": "==",
+     "v": 4
+    },
+    {
+     "t": "faa",
+     "iata": "MIA",
+     "type": "closure"
+    },
+    {
+     "t": "faa",
+     "iata": "FLL",
+     "type": "closure"
+    },
+    {
+     "t": "badge",
+     "iata": "MIA",
+     "re": "^CLOSED$"
+    },
+    {
+     "t": "reason",
+     "iata": "MIA",
+     "re": "^Airport closed"
+    },
+    {
+     "t": "alert",
+     "iata": "MIA",
+     "event": "Hurricane Warning"
+    },
+    {
+     "t": "alert",
+     "iata": "MCO",
+     "event": "Tropical Storm Warning"
+    },
+    {
+     "t": "opsplan",
+     "iata": "MCO",
+     "kind": "program",
+     "re": "possible ground stop or delay program"
+    },
+    {
+     "t": "movement",
+     "iata": "MIA",
+     "line": "^Departures running 100% below normal$"
+    },
+    {
+     "t": "trips",
+     "count": 1,
+     "configured": true
+    },
+    {
+     "t": "trip",
+     "i": 0,
+     "status": "Disruption",
+     "re": "^MIA is closed — your .+ departure may be delayed or cancelled\\.$"
+    },
+    {
+     "t": "national",
+     "re": "^U\\.S\\.: 2 airports closed"
+    },
+    {
+     "t": "card",
+     "iata": "MIA",
+     "re": "Closed|CLOSED"
+    },
+    {
+     "t": "rendered",
+     "text": "MIA is closed"
+    },
+    {
+     "t": "noPercent"
+    },
+    {
+     "t": "rendered",
+     "text": "Test scenario: Hurricane: MIA and FLL closed"
+    }
+   ]
+  },
+  {
    "name": "lax-ga-only-closure",
    "title": "LAX closed to transient GA only",
+   "group": "delays",
+   "blurb": "LAX closed to private flights only: airlines unaffected.",
    "description": "The real May 2026 NOTAM closing LAX to non-scheduled transient general aviation. Airline flights are unaffected, so LAX must not show Severe.",
    "file": "lax-ga-only-closure.json",
    "wx": "lax-ga-only-closure/wx/",
    "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
    "assert": [
     {
      "t": "level",
@@ -166,12 +653,428 @@
    ]
   },
   {
+   "name": "live-relay-down",
+   "title": "Live relay down",
+   "group": "system",
+   "blurb": "The live relay doesn't answer: the page says it shows the last build.",
+   "description": "data/config.json names a live relay that can't be reached (a .invalid host). The page runs its normal live path (site/testmode.js LIVE_PATH) and must say \"Live data unavailable — showing data from N min ago\". DEN has a High Wind Warning so there is something to show.",
+   "file": "live-relay-down.json",
+   "wx": "live-relay-down/wx/",
+   "lagMin": 0,
+   "live": true,
+   "model": null,
+   "delayOverride": false,
+   "assert": [
+    {
+     "t": "level",
+     "iata": "DEN",
+     "of": "now",
+     "op": "==",
+     "v": 3
+    },
+    {
+     "t": "alert",
+     "iata": "DEN",
+     "event": "High Wind Warning"
+    },
+    {
+     "t": "header",
+     "re": "^Live data unavailable — showing data from "
+    },
+    {
+     "t": "banner",
+     "re": "Test scenario: Live relay down"
+    },
+    {
+     "t": "noPercent"
+    }
+   ]
+  },
+  {
+   "name": "minor-delays",
+   "title": "Minor delays at MSP (rain, low clouds)",
+   "group": "delays",
+   "blurb": "Light rain and low clouds; FAA departure delays of 16–30 min.",
+   "description": "Light rain and MVFR clouds at MSP with an FAA general departure delay of 16–30 minutes (increasing). The FAA delay makes this hour \"Delays happening now\"; the next hours, still rainy, read \"Delays possible\". The ops plan lists MSP low ceilings.",
+   "file": "minor-delays.json",
+   "wx": "minor-delays/wx/",
+   "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
+   "assert": [
+    {
+     "t": "level",
+     "iata": "MSP",
+     "of": "now",
+     "op": "==",
+     "v": 2
+    },
+    {
+     "t": "faa",
+     "iata": "MSP",
+     "type": "delay",
+     "cause": "weather"
+    },
+    {
+     "t": "badge",
+     "iata": "MSP",
+     "re": "^DELAYS$"
+    },
+    {
+     "t": "reason",
+     "iata": "MSP",
+     "re": "^Rain"
+    },
+    {
+     "t": "reason",
+     "iata": "MSP",
+     "re": "^Ceiling 1,200 ft"
+    },
+    {
+     "t": "opsplan",
+     "iata": "MSP",
+     "kind": "constraint",
+     "re": "low clouds"
+    },
+    {
+     "t": "words",
+     "iata": "MSP",
+     "at": "now",
+     "sentence": "Delays happening now · FAA average about 25 min"
+    },
+    {
+     "t": "words",
+     "iata": "MSP",
+     "at": [
+      1,
+      6
+     ],
+     "word": "Delays possible"
+    },
+    {
+     "t": "movement",
+     "iata": "MSP",
+     "line": null
+    },
+    {
+     "t": "level",
+     "iata": "ORD",
+     "of": "peak",
+     "op": "==",
+     "v": 0
+    },
+    {
+     "t": "card",
+     "iata": "MSP",
+     "re": "Delays happening now"
+    },
+    {
+     "t": "noPercent"
+    },
+    {
+     "t": "rendered",
+     "text": "Test scenario: Minor delays at MSP"
+    }
+   ]
+  },
+  {
+   "name": "model-fallback",
+   "title": "Delay model missing (fallback)",
+   "group": "system",
+   "blurb": "No trained model file: delay chances come from the risk-level table, and the page says so.",
+   "description": "site/data/model/model.json is missing for this build, so delay chances come from fallback.json (each risk level's historical delay rate). status.json says delayModel.basis \"fallback\" and the sheet's source line says the numbers are based on how often each risk level led to delays. BOS has rain, low clouds and gusts.",
+   "file": "model-fallback.json",
+   "wx": "model-fallback/wx/",
+   "lagMin": 0,
+   "live": false,
+   "model": "fallback",
+   "delayOverride": false,
+   "assert": [
+    {
+     "t": "model",
+     "basis": "fallback"
+    },
+    {
+     "t": "level",
+     "iata": "BOS",
+     "of": "now",
+     "op": "==",
+     "v": 2
+    },
+    {
+     "t": "words",
+     "iata": "BOS",
+     "at": "now",
+     "word": "Delays possible"
+    },
+    {
+     "t": "sheet",
+     "iata": "BOS",
+     "re": "Based on how often each risk level led to delays"
+    },
+    {
+     "t": "noPercent"
+    },
+    {
+     "t": "rendered",
+     "text": "Test scenario: Delay model missing"
+    }
+   ]
+  },
+  {
+   "name": "northeast-storms",
+   "title": "Storms across the New York area",
+   "group": "weather",
+   "blurb": "Thunderstorm line: ground stops at EWR and LGA, a JFK delay program, BOS/PHL next.",
+   "description": "A line of severe thunderstorms over New York: FAA ground stops at EWR and LGA, a ground delay program at JFK (avg 1 h 45 m), the ops plan's \"ground stop possible\" for BOS and PHL, a convective SIGMET, an SPC Enhanced risk, Severe Thunderstorm Warnings, LAMP thunder 70%, TCF high coverage, and New York departures at 30% of normal.",
+   "file": "northeast-storms.json",
+   "wx": "northeast-storms/wx/",
+   "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
+   "assert": [
+    {
+     "t": "level",
+     "iata": "EWR",
+     "of": "now",
+     "op": "==",
+     "v": 4
+    },
+    {
+     "t": "level",
+     "iata": "LGA",
+     "of": "now",
+     "op": "==",
+     "v": 4
+    },
+    {
+     "t": "level",
+     "iata": "JFK",
+     "of": "peak",
+     "op": "==",
+     "v": 4
+    },
+    {
+     "t": "faa",
+     "iata": "EWR",
+     "type": "ground_stop",
+     "cause": "weather"
+    },
+    {
+     "t": "faa",
+     "iata": "LGA",
+     "type": "ground_stop",
+     "cause": "weather"
+    },
+    {
+     "t": "faa",
+     "iata": "JFK",
+     "type": "ground_delay",
+     "cause": "weather"
+    },
+    {
+     "t": "badge",
+     "iata": "EWR",
+     "re": "^GROUND STOP$"
+    },
+    {
+     "t": "badge",
+     "iata": "JFK",
+     "re": "^GDP avg 1h45m$"
+    },
+    {
+     "t": "opsplan",
+     "iata": "BOS",
+     "kind": "program",
+     "re": "possible ground stop"
+    },
+    {
+     "t": "opsplan",
+     "iata": "PHL",
+     "kind": "program",
+     "re": "possible ground stop"
+    },
+    {
+     "t": "sigmet",
+     "iata": "EWR"
+    },
+    {
+     "t": "sigmet",
+     "iata": "LGA"
+    },
+    {
+     "t": "sigmet",
+     "iata": "JFK"
+    },
+    {
+     "t": "spc",
+     "iata": "EWR",
+     "cat": "ENH"
+    },
+    {
+     "t": "spc",
+     "iata": "BOS",
+     "cat": "SLGT"
+    },
+    {
+     "t": "alert",
+     "iata": "EWR",
+     "event": "Severe Thunderstorm Warning"
+    },
+    {
+     "t": "reason",
+     "iata": "EWR",
+     "re": "^Heavy thunderstorms"
+    },
+    {
+     "t": "words",
+     "iata": "EWR",
+     "at": "now",
+     "word": "Delays happening now"
+    },
+    {
+     "t": "words",
+     "iata": "JFK",
+     "at": "now",
+     "sentence": "Delays happening now · FAA average about 105 min"
+    },
+    {
+     "t": "words",
+     "iata": "PHL",
+     "at": "now",
+     "word": "Delays very likely"
+    },
+    {
+     "t": "movement",
+     "iata": "EWR",
+     "line": "^Departures running 7\\d% below normal$"
+    },
+    {
+     "t": "movement",
+     "iata": "LGA",
+     "line": "^Departures running 6\\d% below normal$"
+    },
+    {
+     "t": "movement",
+     "iata": "JFK",
+     "line": "^Departures running 6\\d% below normal$"
+    },
+    {
+     "t": "level",
+     "iata": "ORD",
+     "of": "peak",
+     "op": "==",
+     "v": 0
+    },
+    {
+     "t": "national",
+     "re": "^U\\.S\\.: 2 ground stops, 1 delay program · storms in the Northeast"
+    },
+    {
+     "t": "card",
+     "iata": "EWR",
+     "re": "Ground stop|GROUND STOP"
+    },
+    {
+     "t": "card",
+     "iata": "EWR",
+     "re": "Departures running \\d+% below normal"
+    },
+    {
+     "t": "noPercent"
+    },
+    {
+     "t": "rendered",
+     "text": "Test scenario: Storms across the New York area"
+    }
+   ]
+  },
+  {
+   "name": "recovering",
+   "title": "Recovering after an EWR ground stop",
+   "group": "delays",
+   "blurb": "Ground stop lifted 30 min ago; delays easing; traffic back to 85% of normal.",
+   "description": "Storms have moved off: the EWR ground stop was cancelled 30 minutes ago (ATCSCC GS CNX advisory), FAA delays of 16–30 minutes are decreasing, departures are back to 85% of normal and the evening reads \"Delays possible · lower than usual\".",
+   "file": "recovering.json",
+   "wx": "recovering/wx/",
+   "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
+   "assert": [
+    {
+     "t": "level",
+     "iata": "EWR",
+     "of": "now",
+     "op": "==",
+     "v": 2
+    },
+    {
+     "t": "faa",
+     "iata": "EWR",
+     "type": "delay",
+     "cause": "weather"
+    },
+    {
+     "t": "atcscc",
+     "iata": "EWR",
+     "type": "GS",
+     "cnx": true
+    },
+    {
+     "t": "noReason",
+     "iata": "EWR",
+     "re": "^Ground stop"
+    },
+    {
+     "t": "words",
+     "iata": "EWR",
+     "at": "now",
+     "sentence": "Delays happening now · FAA average about 25 min"
+    },
+    {
+     "t": "words",
+     "iata": "EWR",
+     "at": 1,
+     "sentence": "Delays possible · lower than usual"
+    },
+    {
+     "t": "movement",
+     "iata": "EWR",
+     "line": null
+    },
+    {
+     "t": "national",
+     "re": "^U\\.S\\.: 1 airport with delays"
+    },
+    {
+     "t": "card",
+     "iata": "EWR",
+     "re": "Delays happening now"
+    },
+    {
+     "t": "noPercent"
+    },
+    {
+     "t": "rendered",
+     "text": "Test scenario: Recovering after an EWR ground stop"
+    }
+   ]
+  },
+  {
    "name": "source-outage",
    "title": "FAA status feed down",
+   "group": "system",
+   "blurb": "The FAA status feed fails; the page says so.",
    "description": "The FAA NAS status request fails; everything else works. The page must say FAA status is unavailable.",
    "file": "source-outage.json",
    "wx": "source-outage/wx/",
    "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
    "assert": [
     {
      "t": "source",
@@ -197,10 +1100,15 @@
   {
    "name": "stale-data",
    "title": "Stale data (poller stopped 50 min ago)",
+   "group": "system",
+   "blurb": "The last update was 50 minutes ago; the page flags it.",
    "description": "The last successful poll was 50 minutes ago. The page must flag it as stale.",
    "file": "stale-data.json",
    "wx": "stale-data/wx/",
    "lagMin": 50,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
    "assert": [
     {
      "t": "check",
@@ -221,10 +1129,15 @@
   {
    "name": "thunderstorm-ground-stop",
    "title": "Thunderstorm ground stop at ORD",
+   "group": "weather",
+   "blurb": "Severe storms over Chicago: ORD ground stop, SIGMET, warnings.",
    "description": "Severe thunderstorms over Chicago: FAA ground stop at ORD, convective SIGMET, Severe Thunderstorm Warning, SPC Enhanced risk.",
    "file": "thunderstorm-ground-stop.json",
    "wx": "thunderstorm-ground-stop/wx/",
    "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
    "assert": [
     {
      "t": "level",
@@ -268,10 +1181,15 @@
   {
    "name": "trip-all-clear",
    "title": "Trip: all clear (MSP→ATL)",
+   "group": "trips",
+   "blurb": "MSP→ATL in three hours with nothing going on: On track.",
    "description": "A calendar trip MSP→ATL in three hours with quiet weather and no FAA programs: the trip is On track. The all-day \"Trip to Atlanta\" event is ignored.",
    "file": "trip-all-clear.json",
    "wx": "trip-all-clear/wx/",
    "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
    "assert": [
     {
      "t": "allLevels",
@@ -297,10 +1215,15 @@
   {
    "name": "trip-gdp-destination",
    "title": "Trip: ground delay program at the destination (MSP→ORD)",
+   "group": "trips",
+   "blurb": "MSP→ORD while ORD has a ground delay program.",
    "description": "A calendar trip MSP→ORD departing in 90 minutes while ORD has a ground delay program: flights to ORD are held at MSP, so the trip shows Delays likely.",
    "file": "trip-gdp-destination.json",
    "wx": "trip-gdp-destination/wx/",
    "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
    "assert": [
     {
      "t": "faa",
@@ -329,12 +1252,86 @@
    ]
   },
   {
+   "name": "trip-misconnect",
+   "title": "Trip: misconnect risk (MSP→ORD→SFO)",
+   "group": "trips",
+   "blurb": "A 45-minute ORD connection with delay programs at ORD and SFO.",
+   "description": "A calendar trip MSP→ORD→SFO with a 45-minute connection at ORD while ORD has a ground delay program (storms) and SFO a flow program for low clouds (ground delay program until 2 PM PT in the ops plan): flights to both are held, so the trip shows Delays likely with a missed-connection warning.",
+   "file": "trip-misconnect.json",
+   "wx": "trip-misconnect/wx/",
+   "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
+   "assert": [
+    {
+     "t": "faa",
+     "iata": "ORD",
+     "type": "ground_delay",
+     "cause": "weather"
+    },
+    {
+     "t": "faa",
+     "iata": "SFO",
+     "type": "ground_delay",
+     "cause": "weather"
+    },
+    {
+     "t": "trips",
+     "count": 1,
+     "configured": true
+    },
+    {
+     "t": "trip",
+     "i": 0,
+     "status": "Delays likely",
+     "re": "^ORD ground delay program: flights to ORD are held — your .+ MSP→ORD departure may wait ~1 hr 5 min\\.$"
+    },
+    {
+     "t": "tripConcern",
+     "i": 0,
+     "re": "^Tight connection at ORD: 45 min to make your .+ flight to SFO, and ORD has a ground delay program in effect"
+    },
+    {
+     "t": "tripConcern",
+     "i": 0,
+     "re": "^SFO ground delay program: flights to SFO are held — your .+ ORD→SFO departure may wait ~58 min\\.$"
+    },
+    {
+     "t": "words",
+     "iata": "ORD",
+     "at": "now",
+     "word": "Delays happening now"
+    },
+    {
+     "t": "national",
+     "re": "^U\\.S\\.: 2 delay programs"
+    },
+    {
+     "t": "rendered",
+     "text": "ORD ground delay program"
+    },
+    {
+     "t": "noPercent"
+    },
+    {
+     "t": "rendered",
+     "text": "Test scenario: Trip: misconnect risk"
+    }
+   ]
+  },
+  {
    "name": "trip-tight-connection",
    "title": "Trip: tight connection at ORD (MSP→ORD→BZN)",
+   "group": "trips",
+   "blurb": "MSP→ORD→BZN with a 45-minute connection and storms at ORD.",
    "description": "A calendar trip MSP→ORD→BZN with a 45-minute connection at ORD while ORD has a chance of thunderstorms (Moderate). BZN is not a major airport: it joins the full pipeline because it is on the trip.",
    "file": "trip-tight-connection.json",
    "wx": "trip-tight-connection/wx/",
    "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
    "assert": [
     {
      "t": "level",
@@ -365,12 +1362,128 @@
    ]
   },
   {
+   "name": "winter-deicing",
+   "title": "Snow and freezing drizzle in Chicago",
+   "group": "weather",
+   "blurb": "ORD/MDW snow, freezing drizzle and de-icing; ORD delay program; MDW delays very likely.",
+   "description": "Snow and freezing drizzle at ORD and MDW with de-icing (the ops plan's C90 SNOW/DEICING constraint), a Winter Storm Warning, an FAA ground delay program at ORD (avg 1 h 25 m) and departures at 60% of normal. The delay model reads MDW as \"Delays very likely\".",
+   "file": "winter-deicing.json",
+   "wx": "winter-deicing/wx/",
+   "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
+   "assert": [
+    {
+     "t": "level",
+     "iata": "ORD",
+     "of": "now",
+     "op": "==",
+     "v": 3
+    },
+    {
+     "t": "level",
+     "iata": "MDW",
+     "of": "now",
+     "op": "==",
+     "v": 3
+    },
+    {
+     "t": "faa",
+     "iata": "ORD",
+     "type": "ground_delay",
+     "cause": "weather"
+    },
+    {
+     "t": "badge",
+     "iata": "ORD",
+     "re": "^GDP avg 1h25m$"
+    },
+    {
+     "t": "reason",
+     "iata": "ORD",
+     "re": "^Freezing drizzle"
+    },
+    {
+     "t": "reason",
+     "iata": "MDW",
+     "re": "^Freezing drizzle"
+    },
+    {
+     "t": "reason",
+     "iata": "MDW",
+     "re": "^Snow"
+    },
+    {
+     "t": "alert",
+     "iata": "ORD",
+     "event": "Winter Storm Warning"
+    },
+    {
+     "t": "opsplan",
+     "iata": "MDW",
+     "kind": "constraint",
+     "re": "winter weather"
+    },
+    {
+     "t": "opsplan",
+     "iata": "ORD",
+     "kind": "program",
+     "re": "^Ground delay program until .+ \\(winter weather\\)$"
+    },
+    {
+     "t": "words",
+     "iata": "ORD",
+     "at": "now",
+     "sentence": "Delays happening now · FAA average about 85 min"
+    },
+    {
+     "t": "words",
+     "iata": "MDW",
+     "at": "now",
+     "word": "Delays very likely"
+    },
+    {
+     "t": "words",
+     "iata": "MDW",
+     "at": "peak",
+     "word": "Delays very likely"
+    },
+    {
+     "t": "movement",
+     "iata": "MDW",
+     "line": "^Departures running \\d+% below normal$"
+    },
+    {
+     "t": "national",
+     "re": "^U\\.S\\.: 1 delay program"
+    },
+    {
+     "t": "card",
+     "iata": "MDW",
+     "re": "Delays very likely"
+    },
+    {
+     "t": "noPercent"
+    },
+    {
+     "t": "rendered",
+     "text": "Test scenario: Snow and freezing drizzle in Chicago"
+    }
+   ]
+  },
+  {
    "name": "winter-storm-gdp",
    "title": "Winter storm ground delay at DEN",
+   "group": "weather",
+   "blurb": "Heavy snow at DEN with a ground delay program.",
    "description": "Heavy snow and blowing snow at DEN with a ground delay program and a Winter Storm Warning.",
    "file": "winter-storm-gdp.json",
    "wx": "winter-storm-gdp/wx/",
    "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
    "assert": [
     {
      "t": "level",

@@ -1,0 +1,82 @@
+{
+  "title": "Minor delays at MSP (rain, low clouds)",
+  "group": "delays",
+  "at": "2026-05-14T21:30:00Z",
+  "blurb": "Light rain and low clouds; FAA departure delays of 16–30 min.",
+  "description": "Light rain and MVFR clouds at MSP with an FAA general departure delay of 16–30 minutes (increasing). The FAA delay makes this hour \"Delays happening now\"; the next hours, still rainy, read \"Delays possible\". The ops plan lists MSP low ceilings.",
+  "assert": [
+    {
+      "t": "level",
+      "iata": "MSP",
+      "of": "now",
+      "op": "==",
+      "v": 2
+    },
+    {
+      "t": "faa",
+      "iata": "MSP",
+      "type": "delay",
+      "cause": "weather"
+    },
+    {
+      "t": "badge",
+      "iata": "MSP",
+      "re": "^DELAYS$"
+    },
+    {
+      "t": "reason",
+      "iata": "MSP",
+      "re": "^Rain"
+    },
+    {
+      "t": "reason",
+      "iata": "MSP",
+      "re": "^Ceiling 1,200 ft"
+    },
+    {
+      "t": "opsplan",
+      "iata": "MSP",
+      "kind": "constraint",
+      "re": "low clouds"
+    },
+    {
+      "t": "words",
+      "iata": "MSP",
+      "at": "now",
+      "sentence": "Delays happening now · FAA average about 25 min"
+    },
+    {
+      "t": "words",
+      "iata": "MSP",
+      "at": [
+        1,
+        6
+      ],
+      "word": "Delays possible"
+    },
+    {
+      "t": "movement",
+      "iata": "MSP",
+      "line": null
+    },
+    {
+      "t": "level",
+      "iata": "ORD",
+      "of": "peak",
+      "op": "==",
+      "v": 0
+    },
+    {
+      "t": "card",
+      "iata": "MSP",
+      "re": "Delays happening now"
+    },
+    {
+      "t": "noPercent"
+    },
+    {
+      "t": "rendered",
+      "text": "Test scenario: Minor delays at MSP"
+    }
+  ]
+}

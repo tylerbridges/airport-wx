@@ -1,0 +1,95 @@
+{
+  "title": "Hurricane: MIA and FLL closed",
+  "group": "weather",
+  "at": "2026-09-10T18:30:00Z",
+  "blurb": "Hurricane Warning, MIA and FLL closed; a flight out of MIA is a Disruption.",
+  "description": "A hurricane over South Florida: full closure NOTAMs at MIA and FLL, Hurricane Warnings, gusts to 68 kt, no traffic at either airport; Tropical Storm Warnings and a possible ground stop at MCO and TPA. A calendar trip MIA→ATL leaving in 25 minutes shows Disruption.",
+  "assert": [
+    {
+      "t": "level",
+      "iata": "MIA",
+      "of": "now",
+      "op": "==",
+      "v": 4
+    },
+    {
+      "t": "level",
+      "iata": "FLL",
+      "of": "now",
+      "op": "==",
+      "v": 4
+    },
+    {
+      "t": "faa",
+      "iata": "MIA",
+      "type": "closure"
+    },
+    {
+      "t": "faa",
+      "iata": "FLL",
+      "type": "closure"
+    },
+    {
+      "t": "badge",
+      "iata": "MIA",
+      "re": "^CLOSED$"
+    },
+    {
+      "t": "reason",
+      "iata": "MIA",
+      "re": "^Airport closed"
+    },
+    {
+      "t": "alert",
+      "iata": "MIA",
+      "event": "Hurricane Warning"
+    },
+    {
+      "t": "alert",
+      "iata": "MCO",
+      "event": "Tropical Storm Warning"
+    },
+    {
+      "t": "opsplan",
+      "iata": "MCO",
+      "kind": "program",
+      "re": "possible ground stop or delay program"
+    },
+    {
+      "t": "movement",
+      "iata": "MIA",
+      "line": "^Departures running 100% below normal$"
+    },
+    {
+      "t": "trips",
+      "count": 1,
+      "configured": true
+    },
+    {
+      "t": "trip",
+      "i": 0,
+      "status": "Disruption",
+      "re": "^MIA is closed — your .+ departure may be delayed or cancelled\\.$"
+    },
+    {
+      "t": "national",
+      "re": "^U\\.S\\.: 2 airports closed"
+    },
+    {
+      "t": "card",
+      "iata": "MIA",
+      "re": "Closed|CLOSED"
+    },
+    {
+      "t": "rendered",
+      "text": "MIA is closed"
+    },
+    {
+      "t": "noPercent"
+    },
+    {
+      "t": "rendered",
+      "text": "Test scenario: Hurricane: MIA and FLL closed"
+    }
+  ]
+}

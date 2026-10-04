@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<AIRPORT_STATUS_INFORMATION>
+  <Update_Time>{{iso+0}}</Update_Time>
+  <Dtd_File>http://www.fly.faa.gov/AirportStatus.dtd</Dtd_File>
+  <Delay_type>
+    <Name>Ground Stop Programs</Name>
+    <Ground_Stop_List>
+      <Program>
+        <ARPT>EWR</ARPT>
+        <Reason>WEATHER / THUNDERSTORMS</Reason>
+        <End_Time>{{clock+75 America/New_York}}</End_Time>
+      </Program>
+      <Program>
+        <ARPT>LGA</ARPT>
+        <Reason>WEATHER / THUNDERSTORMS</Reason>
+        <End_Time>{{clock+90 America/New_York}}</End_Time>
+      </Program>
+    </Ground_Stop_List>
+  </Delay_type>
+  <Delay_type>
+    <Name>Ground Delay Programs</Name>
+    <Ground_Delay_List>
+      <Ground_Delay>
+        <ARPT>JFK</ARPT>
+        <Reason>WEATHER / THUNDERSTORMS</Reason>
+        <Avg>1 hour and 45 minutes</Avg>
+        <Max>3 hours and 12 minutes</Max>
+      </Ground_Delay>
+    </Ground_Delay_List>
+  </Delay_type>
+</AIRPORT_STATUS_INFORMATION>

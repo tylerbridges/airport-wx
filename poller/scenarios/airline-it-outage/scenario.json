@@ -1,9 +1,90 @@
 {
-  "title": "Airline IT outage at ATL",
-  "description": "Company-request ground stop at ATL during an airline IT outage; weather is fine.",
+  "title": "Delta IT outage: ground stops at its hubs",
+  "group": "nonweather",
+  "at": "2026-07-17T13:30:00Z",
+  "blurb": "Company-request ground stops at ATL, DTW, MSP and SLC; Delta flights barely moving.",
+  "description": "Weather is fine everywhere. A Delta IT outage: company-request ground stops at ATL, DTW, MSP and SLC (FAA NAS status and the ops plan narrative), Delta departures at 15% of normal at those hubs for two hours (airline alert) and overall departures far below normal there.",
   "assert": [
-    { "t": "level", "iata": "ATL", "of": "now", "op": "==", "v": 4 },
-    { "t": "faa", "iata": "ATL", "type": "ground_stop" },
-    { "t": "faa", "iata": "ATL", "type": "ground_stop", "cause": "airline", "note": "needs FAA cause classification (cause.mjs, other branch)" }
+    {
+      "t": "level",
+      "iata": "ATL",
+      "of": "now",
+      "op": "==",
+      "v": 4
+    },
+    {
+      "t": "faa",
+      "iata": "ATL",
+      "type": "ground_stop"
+    },
+    {
+      "t": "faa",
+      "iata": "ATL",
+      "type": "ground_stop",
+      "cause": "airline"
+    },
+    {
+      "t": "faa",
+      "iata": "DTW",
+      "type": "ground_stop",
+      "cause": "airline"
+    },
+    {
+      "t": "faa",
+      "iata": "MSP",
+      "type": "ground_stop",
+      "cause": "airline"
+    },
+    {
+      "t": "faa",
+      "iata": "SLC",
+      "type": "ground_stop",
+      "cause": "airline"
+    },
+    {
+      "t": "reason",
+      "iata": "ATL",
+      "re": "^Ground stop — airline request \\(IT outage\\)"
+    },
+    {
+      "t": "noReason",
+      "iata": "ATL",
+      "re": "[Tt]hunder|[Ss]now|[Rr]ain|[Cc]loud|[Vv]isib|[Gg]ust|[Ww]ind|[Ff]og"
+    },
+    {
+      "t": "words",
+      "iata": "ATL",
+      "at": "now",
+      "word": "Delays happening now"
+    },
+    {
+      "t": "airlineAlert",
+      "re": "^Delta departures far below normal at ATL, DTW, MSP and SLC for the past 2 hours$"
+    },
+    {
+      "t": "movement",
+      "iata": "ATL",
+      "line": "^Departures running 6\\d% below normal$"
+    },
+    {
+      "t": "national",
+      "re": "^U\\.S\\.: 4 ground stops"
+    },
+    {
+      "t": "rendered",
+      "text": "Delta departures far below normal at ATL, DTW, MSP and SLC"
+    },
+    {
+      "t": "card",
+      "iata": "ATL",
+      "re": "Ground stop|GROUND STOP"
+    },
+    {
+      "t": "noPercent"
+    },
+    {
+      "t": "rendered",
+      "text": "Test scenario: Delta IT outage"
+    }
   ]
 }

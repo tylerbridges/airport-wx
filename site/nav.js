@@ -146,7 +146,8 @@ function menuItems() {
     h("div", { class: "awx-msep", role: "separator" }),
     acc,
     row("pulse", "Data & checks", { fn: () => openSettings("data") }),
-  ];
+    window.AWXTest && window.AWXTest.openPicker ? row("target", "Test scenarios", { fn: () => window.AWXTest.openPicker() }) : null, // scenarios hook: the scenario list in site/testmode.js
+  ].filter(Boolean);
 }
 function buildMenu() {
   // full-screen catcher: an outside tap closes the menu without also tapping the card under it

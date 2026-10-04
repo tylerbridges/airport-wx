@@ -1,0 +1,39 @@
+{
+  "title": "Delay model missing (fallback)",
+  "group": "system",
+  "at": "2026-10-02T15:00:00Z",
+  "model": "fallback",
+  "blurb": "No trained model file: delay chances come from the risk-level table, and the page says so.",
+  "description": "site/data/model/model.json is missing for this build, so delay chances come from fallback.json (each risk level's historical delay rate). status.json says delayModel.basis \"fallback\" and the sheet's source line says the numbers are based on how often each risk level led to delays. BOS has rain, low clouds and gusts.",
+  "assert": [
+    {
+      "t": "model",
+      "basis": "fallback"
+    },
+    {
+      "t": "level",
+      "iata": "BOS",
+      "of": "now",
+      "op": "==",
+      "v": 2
+    },
+    {
+      "t": "words",
+      "iata": "BOS",
+      "at": "now",
+      "word": "Delays possible"
+    },
+    {
+      "t": "sheet",
+      "iata": "BOS",
+      "re": "Based on how often each risk level led to delays"
+    },
+    {
+      "t": "noPercent"
+    },
+    {
+      "t": "rendered",
+      "text": "Test scenario: Delay model missing"
+    }
+  ]
+}

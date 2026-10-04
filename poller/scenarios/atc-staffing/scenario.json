@@ -1,0 +1,106 @@
+{
+  "title": "ATC staffing: New York and Philadelphia",
+  "group": "nonweather",
+  "at": "2026-10-02T22:30:00Z",
+  "blurb": "Clear skies; staffing triggers at N90 and PHL and an EWR staffing ground stop.",
+  "description": "Clear weather everywhere. The FAA ops plan lists staffing triggers for New York TRACON (N90: JFK, LGA, EWR) and PHL, and EWR is in a ground stop for staffing. Proves non-weather disruptions show on their own.",
+  "assert": [
+    {
+      "t": "level",
+      "iata": "EWR",
+      "of": "now",
+      "op": "==",
+      "v": 4
+    },
+    {
+      "t": "faa",
+      "iata": "EWR",
+      "type": "ground_stop",
+      "cause": "staffing"
+    },
+    {
+      "t": "reason",
+      "iata": "EWR",
+      "re": "^Ground stop — air traffic control staffing"
+    },
+    {
+      "t": "opsplan",
+      "iata": "JFK",
+      "kind": "staffing",
+      "re": "staffing shortage"
+    },
+    {
+      "t": "opsplan",
+      "iata": "LGA",
+      "kind": "staffing",
+      "re": "staffing shortage"
+    },
+    {
+      "t": "opsplan",
+      "iata": "PHL",
+      "kind": "staffing",
+      "re": "staffing shortage"
+    },
+    {
+      "t": "level",
+      "iata": "JFK",
+      "of": "now",
+      "op": "==",
+      "v": 2
+    },
+    {
+      "t": "level",
+      "iata": "PHL",
+      "of": "now",
+      "op": "==",
+      "v": 2
+    },
+    {
+      "t": "noReason",
+      "iata": "EWR",
+      "re": "[Tt]hunder|[Ss]now|[Rr]ain|[Cc]loud|[Vv]isib|[Gg]ust|[Ww]ind|[Ff]og"
+    },
+    {
+      "t": "noReason",
+      "iata": "JFK",
+      "re": "[Tt]hunder|[Ss]now|[Rr]ain|[Cc]loud|[Vv]isib|[Gg]ust|[Ww]ind|[Ff]og"
+    },
+    {
+      "t": "noReason",
+      "iata": "PHL",
+      "re": "[Tt]hunder|[Ss]now|[Rr]ain|[Cc]loud|[Vv]isib|[Gg]ust|[Ww]ind|[Ff]og"
+    },
+    {
+      "t": "words",
+      "iata": "EWR",
+      "at": "now",
+      "word": "Delays happening now"
+    },
+    {
+      "t": "movement",
+      "iata": "EWR",
+      "line": "^Departures running \\d+% below normal$"
+    },
+    {
+      "t": "national",
+      "re": "^U\\.S\\.: 1 ground stop"
+    },
+    {
+      "t": "card",
+      "iata": "EWR",
+      "re": "Ground stop|GROUND STOP"
+    },
+    {
+      "t": "card",
+      "iata": "PHL",
+      "re": "[Ss]taffing"
+    },
+    {
+      "t": "noPercent"
+    },
+    {
+      "t": "rendered",
+      "text": "Test scenario: ATC staffing"
+    }
+  ]
+}

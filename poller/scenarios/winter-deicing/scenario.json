@@ -1,0 +1,105 @@
+{
+  "title": "Snow and freezing drizzle in Chicago",
+  "group": "weather",
+  "at": "2026-01-15T23:30:00Z",
+  "blurb": "ORD/MDW snow, freezing drizzle and de-icing; ORD delay program; MDW delays very likely.",
+  "description": "Snow and freezing drizzle at ORD and MDW with de-icing (the ops plan's C90 SNOW/DEICING constraint), a Winter Storm Warning, an FAA ground delay program at ORD (avg 1 h 25 m) and departures at 60% of normal. The delay model reads MDW as \"Delays very likely\".",
+  "assert": [
+    {
+      "t": "level",
+      "iata": "ORD",
+      "of": "now",
+      "op": "==",
+      "v": 3
+    },
+    {
+      "t": "level",
+      "iata": "MDW",
+      "of": "now",
+      "op": "==",
+      "v": 3
+    },
+    {
+      "t": "faa",
+      "iata": "ORD",
+      "type": "ground_delay",
+      "cause": "weather"
+    },
+    {
+      "t": "badge",
+      "iata": "ORD",
+      "re": "^GDP avg 1h25m$"
+    },
+    {
+      "t": "reason",
+      "iata": "ORD",
+      "re": "^Freezing drizzle"
+    },
+    {
+      "t": "reason",
+      "iata": "MDW",
+      "re": "^Freezing drizzle"
+    },
+    {
+      "t": "reason",
+      "iata": "MDW",
+      "re": "^Snow"
+    },
+    {
+      "t": "alert",
+      "iata": "ORD",
+      "event": "Winter Storm Warning"
+    },
+    {
+      "t": "opsplan",
+      "iata": "MDW",
+      "kind": "constraint",
+      "re": "winter weather"
+    },
+    {
+      "t": "opsplan",
+      "iata": "ORD",
+      "kind": "program",
+      "re": "^Ground delay program until .+ \\(winter weather\\)$"
+    },
+    {
+      "t": "words",
+      "iata": "ORD",
+      "at": "now",
+      "sentence": "Delays happening now · FAA average about 85 min"
+    },
+    {
+      "t": "words",
+      "iata": "MDW",
+      "at": "now",
+      "word": "Delays very likely"
+    },
+    {
+      "t": "words",
+      "iata": "MDW",
+      "at": "peak",
+      "word": "Delays very likely"
+    },
+    {
+      "t": "movement",
+      "iata": "MDW",
+      "line": "^Departures running \\d+% below normal$"
+    },
+    {
+      "t": "national",
+      "re": "^U\\.S\\.: 1 delay program"
+    },
+    {
+      "t": "card",
+      "iata": "MDW",
+      "re": "Delays very likely"
+    },
+    {
+      "t": "noPercent"
+    },
+    {
+      "t": "rendered",
+      "text": "Test scenario: Snow and freezing drizzle in Chicago"
+    }
+  ]
+}

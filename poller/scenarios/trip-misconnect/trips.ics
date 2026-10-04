@@ -1,0 +1,19 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//airport-wx scenario//EN
+X-WR-CALNAME:Flights
+BEGIN:VEVENT
+UID:scn-mis-1@example.invalid
+DTSTART;TZID=America/Chicago:{{ics+90 America/Chicago}}
+DTEND;TZID=America/Chicago:{{ics+165 America/Chicago}}
+SUMMARY:✈ UA 2214 · MSP → ORD
+LOCATION:Minneapolis–St Paul (MSP)
+END:VEVENT
+BEGIN:VEVENT
+UID:scn-mis-2@example.invalid
+DTSTART;TZID=America/Chicago:{{ics+210 America/Chicago}}
+DTEND;TZID=America/Los_Angeles:{{ics+480 America/Los_Angeles}}
+SUMMARY:✈ UA 1180 · ORD → SFO
+LOCATION:Chicago O'Hare (ORD)
+END:VEVENT
+END:VCALENDAR

@@ -6,6 +6,7 @@
 import { loadAirports, rank } from "./search.js";
 import { navChecks } from "./navcheck.js"; // nav hook
 import { tripChecks } from "./check-trips.js"; // trips hook
+import { dataAsserts, pageAsserts } from "./check-scenarios.js"; // scenarios hook
 
 const P = new URLSearchParams(location.search);
 const MOCK = P.get("mock") === "1";
@@ -174,8 +175,8 @@ async function checkData(data, ctx) {
 // ---------- render test ----------
 
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
-/** Loads url in a hidden 390px iframe, waits for cards, returns {ok, errors, doc-based checks}. */
-async function renderPage(url, expect = []) {
+/** Loads url in a hidden 390px iframe, waits for cards, returns {ok, errors, doc-based checks}; then(win, doc) runs before the frame goes. */
+async function renderPage(url, expect = [], then = null) {
   const holder = document.getElementById("frames");
   const f = document.createElement("iframe");
   f.src = url;
@@ -199,6 +200,11 @@ async function renderPage(url, expect = []) {
     return { x, ok: false };
   });
   const cards = doc ? doc.querySelectorAll("#list .card").length : 0;
+  if (then && ready) { // scenarios hook: page assertions, and any errors they cause
+    const n = ((f.contentWindow && f.contentWindow.__awxErrors) || []).length;
+    try { await then(f.contentWindow, doc); } catch (e) { errors.push("check: " + (e && e.message || e)); }
+    errors.push(...((f.contentWindow && f.contentWindow.__awxErrors) || []).slice(n).map((e) => `${e.kind}: ${e.msg}`));
+  }
   f.remove();
   return { ready, errors, results, cards };
 }
@@ -367,10 +373,11 @@ async function runMock() {
       if (!r) continue;
       add(r.ok ? "pass" : "fail", `Expect: ${r.label}`, [r.ok ? "" : r.got, x.note && !r.ok ? `(${x.note})` : ""].filter(Boolean).join(" "));
     }
+    await dataAsserts(add, { sc, data, delta, shift }); // scenarios hook: delay words, badges, ops plan, movement, model…
     await tripChecks(add, { url: `./data/scenarios/${sc.name}/trips.json`, data, shift: (d) => shift(d, delta), asserts: sc.assert, mock: true }); // trips hook
     if (RENDER) {
       const expect = (sc.assert || []).filter((x) => x.t === "rendered");
-      const r = await renderPage(`./index.html?test=${sc.name}`, expect);
+      const r = await renderPage(`./index.html?test=${sc.name}`, expect, (w, doc) => pageAsserts(add, w, doc, sc.assert)); // scenarios hook
       add(r.ready && !r.errors.length ? "pass" : "fail", `Render ?test=${sc.name} at 390 px`, !r.ready ? "cards never appeared" : r.errors.length ? r.errors.join(" | ") : `${r.cards} cards, no errors`);
       for (const { x, ok } of r.results) add(ok ? "pass" : "fail", `Expect on page: ${x.selector ? `element ${x.selector}` : `text "${x.text}"`}`, ok ? "" : "not found");
     }
