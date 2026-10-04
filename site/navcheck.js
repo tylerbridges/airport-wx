@@ -18,7 +18,8 @@ function load(f, url) {
 }
 const ready = (f) => until(() => {
   const w = f.contentWindow, d = f.contentDocument;
-  return w && w.AWXNav && d.querySelector("#list .card, #list .empty") && !/Loading airports/.test(d.getElementById("list").textContent) ? w : null;
+  // readyState "complete": a hash change before the load event is a replacement, so Back would leave the page (build2b)
+  return w && w.AWXNav && d.readyState === "complete" && d.querySelector("#list .card, #list .empty") && !/Loading airports/.test(d.getElementById("list").textContent) ? w : null;
 });
 
 /** add(status, label, detail) from check.js's group(). url: the index.html to test. */

@@ -500,6 +500,7 @@ async function runLive() {
   searchChecks(group("Search"), list, error);
   await liveRelay(group("Live relay")); // live relay
   await tripChecks(group("Trips"), { url: "./data/trips.json", data: st.ok ? st.data : null }); // trips hook
+  try { await (await import("./movement.js")).checkRow(group("Movement feed")); } catch (e) { group("Movement feed")("warn", "Movement feed", "check failed: " + (e.message || e)); } // movement hook
 
   const up = group("Uptime");
   const u = await getJson("./data/uptime.json");
@@ -519,8 +520,8 @@ async function runLive() {
       const r = await renderPage(url);
       rr(r.ready && !r.errors.length ? "pass" : "fail", `Render ${label}`, !r.ready ? "cards never appeared" : r.errors.length ? r.errors.join(" | ") : `${r.cards} cards, no errors`);
     }
-    await uiChecks(group("App: settings, modes, timeline (390 px, hidden frame)"), null); // build2b
     await navChecks(group("Navigation (390 px, hidden frame)"), "./index.html"); // nav hook
+    await uiChecks(group("App: settings, modes, timeline (390 px, hidden frame)"), null); // build2b
   }
 }
 

@@ -31,6 +31,19 @@ jobs:
           node-version: 20
       - name: Unit tests
         run: node --test poller/
+      # movement hook: the last ADS-B snapshot + baseline (movement/state.json, baseline.json on the history
+      # branch) for poller/movement.mjs. Missing files just mean a fresh start; never fails the job.
+      - name: Movement state from history
+        continue-on-error: true
+        timeout-minutes: 2
+        run: |
+          mkdir -p .cache/movement
+          if git fetch -q --depth=1 origin history; then
+            for f in state baseline; do
+              git show "FETCH_HEAD:movement/$f.json" > ".cache/movement/$f.json" 2>/dev/null || rm -f ".cache/movement/$f.json"
+            done
+          fi
+          ls -l .cache/movement
       # Exits 0 unless every source failed, so a partial outage still deploys.
       # Also writes raw response samples to .cache/raw for the history step.
       - name: Poll sources and compute risk
@@ -93,6 +106,12 @@ jobs:
         continue-on-error: true
         timeout-minutes: 3
         run: node poller/record.mjs history/
+      # movement hook: state, baseline and this run's log line -> history/movement/ (poller/movement.mjs record)
+      - name: Record movement
+        if: ${{ !cancelled() && steps.history_prep.outcome == 'success' }}
+        continue-on-error: true
+        timeout-minutes: 2
+        run: node poller/movement.mjs record history/
       # Pushes whatever was recorded, even if one part of the record step failed.
       - name: Push history
         if: ${{ !cancelled() && steps.history_prep.outcome == 'success' }}

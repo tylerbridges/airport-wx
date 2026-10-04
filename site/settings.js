@@ -6,6 +6,7 @@
 // trips from site/trips.js when present) and "data" (build time, live relay, sources, checks).
 import { h, icon, prefs, reducedMotion, trapFocus, app, appVersion } from "./navui.js";
 import { loadAirports, airportsLoaded } from "./search.js";
+import { SOURCES as MV_SOURCES } from "./movement.js"; // movement hook: aircraft-position feeds in Data & checks
 
 const GH = "https://github.com/tylerbridges/airport-wx";
 const SECRETS_URL = GH + "/settings/secrets/actions";
@@ -403,6 +404,11 @@ function buildData(body) {
     const stat = !keys.length ? ["History", ""] : !have.length ? ["—", ""] : down === have.length ? ["Unavailable", "awx-bad"] : down || part ? ["Partly unavailable", "awx-warn"] : ["OK", "awx-good"];
     return h("div", { class: "awx-row" }, h("span", { class: "awx-rt" }, name, h("small", {}, what)), h("span", { class: "awx-rv " + stat[1] }, stat[0]));
   });
+  // movement hook: the ADS-B feeds behind "Traffic right now" (site/movement.js SOURCES)
+  for (const m of MV_SOURCES || []) {
+    srcRows.push(h("div", { class: "awx-row" }, h("span", { class: "awx-rt" }, m.name, h("small", {}, m.what)),
+      h("span", { class: "awx-rv" }, m.role === "primary" ? "Traffic" : m.role === "fallback" ? "Traffic backup" : "Traffic")));
+  }
   body.replaceChildren(
     group("Data", [valueRow("Last data build", buildText), relay],
       "The build runs every few minutes; the live relay adds fresher weather and FAA data on top when it's set up."),

@@ -1078,6 +1078,7 @@
       h("div", { class: "aname" }, a.name),
       h("div", { class: "where" }, `${a.city}, ${a.state}`),
       h("div", { class: "reason" }, reason),
+      window.AWXMovement ? safeCall(() => AWXMovement.line(a)) : null, // movement hook: "Departures running 38% below normal" (site/movement.js)
       window.AWXDelay ? safeCall(() => AWXDelay.delayLine(a)) : null, // phase3 hook: chance of a real delay (site/delay.js)
       later ? h("div", { class: "sub" }, "Now: " + LEVELS[v.now.level].label) : null,
       cardPrograms(v).length ? h("div", { class: "badges" }, faaBadges(v)) : null,
@@ -1309,13 +1310,17 @@
   function renderNational() {
     const box = $("national");
     const s = nationalSummary();
-    if (!s || !s.line) { box.replaceChildren(); box.hidden = true; return; }
-    box.hidden = false;
-    const lvl = s.closed.length || s.stops.length ? 4 : s.gdps.length ? 3 : 2;
-    box.replaceChildren(h("button", { type: "button", class: "natline", onclick: openNational, "aria-haspopup": "dialog" },
-      h("span", { class: "dot " + lv(lvl), "aria-hidden": "true" }),
-      h("span", { class: "nat-t" }, h("b", {}, "U.S.: "), s.line),
-      h("span", { class: "chev", "aria-hidden": "true" }, "›")));
+    const strip = h("div", { class: "natbox", id: "natstrip" }); // movement.js puts airline alerts in #natstrip
+    if (s && s.line) {
+      const lvl = s.closed.length || s.stops.length ? 4 : s.gdps.length ? 3 : 2;
+      strip.append(h("button", { type: "button", class: "natline", onclick: openNational, "aria-haspopup": "dialog" },
+        h("span", { class: "dot " + lv(lvl), "aria-hidden": "true" }),
+        h("span", { class: "nat-t" }, h("b", {}, "U.S.: "), s.line),
+        h("span", { class: "chev", "aria-hidden": "true" }, "›")));
+    }
+    box.replaceChildren(strip);
+    if (window.AWXMovement && state.data) safeCall(() => AWXMovement.alerts()); // movement hook: airline alerts
+    box.hidden = !strip.children.length;
   }
 
   // ---------- bottom sheet ----------
@@ -1857,9 +1862,13 @@
     add(storms.length, () => section("Storms", "bolt", storms, null, { meta: [v.sigmets && v.sigmets.length && "NWS", v.spc && "SPC", v.tcf && v.tcf.length && "NWS"].filter(Boolean).filter((x, i, arr) => arr.indexOf(x) === i).join(" · "),
       raw: null }));
     if (storms.length) secs[secs.length - 1].querySelector(".scard").append(srcLine(v.sigmets && v.sigmets.length ? "sigmet" : v.spc ? "spc" : "tcf", (v.sigmets || []).map((x) => x.raw)));
-    // Traffic right now: site/movement.js (movement agent) when present
+    // movement hook: "Traffic right now" (site/movement.js), its card body inside a build2b section card
     const mv = window.AWXMovement && typeof AWXMovement.card === "function" ? safeCall(() => AWXMovement.card(a)) : null;
-    if (mv) secs.push(mv.nodeType ? mv : section("Traffic right now", "plane", [String(mv)], null));
+    if (mv) {
+      const box = mv.nodeType ? mv.querySelector(".mv-card") : null;
+      if (box) box.classList.remove("card");
+      secs.push(section("Traffic right now", "plane", [box || (mv.nodeType ? mv : String(mv))], null, { meta: "ADS-B" }));
+    }
     const pd = pilotDetails(a);
     if (pd) secs.push(pd);
     if (secs.length) secs[0].id = "fullReport";

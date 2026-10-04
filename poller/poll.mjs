@@ -16,6 +16,7 @@ import { runGlobal } from "./global.mjs"; // build2a hook: global METAR/TAF shar
 import { observedHours } from "./risk.mjs"; // build2b hook: observed past hours for the timeline
 import { modelInfo } from "./delay.mjs"; // phase3 hook: delay model
 import { prepareTrips } from "./trips-poll.mjs"; // trips hook: flight calendar -> trips.json + trip airports
+import { startMovement } from "./movement.mjs"; // movement hook: ADS-B departure/arrival rates -> site/data/movement.json
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -297,7 +298,7 @@ export async function run({ fixtures = false, out = join(ROOT, "site/data/status
   }
   await trips.finish({ out, rawDir }); // trips hook: site/data/trips.json (airports and times only) + redacted format sample
   const okCount = names.filter((n) => status.sources[n].ok).length;
-  return { status, okCount, total: names.length, out, raw };
+  return { status, okCount, total: names.length, out, raw, metars: res.metar.data /* movement hook: field elevations */ };
 }
 
 async function main() {
@@ -305,11 +306,13 @@ async function main() {
   const oi = args.indexOf("--out");
   const ri = args.indexOf("--raw");
   const rawArg = ri >= 0 ? args[ri + 1] : null;
-  const { status, okCount, total, out } = await run({
+  const movement = oi >= 0 ? null : startMovement({ fixtures: args.includes("--fixtures") }); // movement hook: collects alongside the sources (skipped with --out, e.g. scenario builds); never throws
+  const { status, okCount, total, out, metars } = await run({
     fixtures: args.includes("--fixtures"),
     out: oi >= 0 ? resolve(args[oi + 1]) : undefined,
     rawDir: rawArg === "none" ? null : rawArg ? resolve(rawArg) : DEFAULT_RAW_DIR,
   });
+  if (movement) await movement.finish({ metars }); // movement hook
   await runGlobal({ fixtures: args.includes("--fixtures"), rawDir: rawArg === "none" ? null : rawArg ? resolve(rawArg) : DEFAULT_RAW_DIR }); // build2a hook: writes site/data/wx/ (never throws)
   for (const [n, s] of Object.entries(status.sources)) console.log(`${s.ok ? "ok  " : "FAIL"} ${n}${s.error ? ": " + s.error : ""}`);
   const top = status.airports.filter((a) => a.peak.level >= 3).length;

@@ -9,6 +9,7 @@ Product goal: a traveler should feel confident they know about any disruption at
 
 ## Queued
 - Map tab (a "Coming soon" placeholder in the tab bar today): disruption risk across your airports and trips on a map.
+- Movement (ADS-B traffic, logging since 2026-10): after 4+ weeks of logging, add the departure-rate index as a live feature in the delay model.
 - NOTAMs and FAA flight restrictions (TFRs), hub cascade warnings, 3-day range, delay-cause chips.
 - Morning brief, per-airport change log, "what it means for me".
 - Radar loop in the airport sheet; TSA wait / terminal / lounge info research.

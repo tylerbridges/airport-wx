@@ -28,3 +28,5 @@ import "../tools/train.test.mjs";
 // trips
 import "./trips.test.mjs";
 import "./trip-risk.test.mjs";
+// movement: ADS-B traffic rates
+import "./movement.test.mjs";

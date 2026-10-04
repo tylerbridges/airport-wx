@@ -285,6 +285,10 @@ table.lt { border-collapse: collapse; font-size: 12px; }
 /* sheet headers are drag handles at any scroll position (site/sheet.js) */
 .grab, .sh-head, .pn-head, .awx-ph, .awx-srch-head { touch-action: none; }
 .grab { padding: 4px 0; margin-top: -4px; box-sizing: content-box; }
+/* movement hook: "Traffic right now" inside the build2b section card */
+.sheet .scard > .mv-card { background: none; border-radius: 0; padding: 10px 0 0; }
+.natbox { display: grid; gap: 6px; }
+.natbox .mv-alert { background: var(--card); border-radius: 16px; padding: 10px 14px; font-size: 14px; border-left: 4px solid var(--l2); }
 .nanote { margin-top: 4px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
 
 /* home: national strip, reorder */
@@ -690,10 +694,11 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <div class="sr" id="announce" aria-live="polite"></div>
 <script src="cats.js?v=1"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=1"></script><!-- build2b: shared sheet drag / back / scroll lock -->
-<script src="app.js?v=11" defer></script>
+<script src="app.js?v=12" defer></script>
 <script type="module" src="searched.js?v=5"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=1"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="trips.js?v=2"></script><!-- trips hook -->
 <script type="module" src="nav.js?v=3"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
+<script type="module" src="movement.js?v=1"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
 </body>
 </html>
