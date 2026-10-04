@@ -61,6 +61,37 @@
     {
       "t": "rendered",
       "text": "Test scenario: Recovering after an EWR ground stop"
+    },
+    {
+      "t": "change",
+      "iata": "EWR",
+      "kind": "program_end",
+      "re": "^Ground stop lifted$"
+    },
+    {
+      "t": "change",
+      "iata": "EWR",
+      "kind": "level",
+      "re": "^Risk down to Moderate$"
+    },
+    {
+      "t": "change",
+      "iata": "EWR",
+      "kind": "movement",
+      "re": "^Departures back to normal$"
+    },
+    {
+      "t": "today",
+      "iata": "EWR",
+      "re": "Ground stop lifted.*Ground stop started \\(storms\\).*\\+1 earlier$"
+    },
+    {
+      "t": "brief",
+      "favs": [
+        "EWR",
+        "ORD"
+      ],
+      "re": "1 airport needs attention EWR: Delays happening now — ground stop lifted \\d"
     }
   ]
 }

@@ -581,6 +581,7 @@ async function runLive() {
   searchChecks(group("Search"), list, error);
   await liveRelay(group("Live relay")); // live relay
   await tripChecks(group("Trips"), { url: "./data/trips.json", data: st.ok ? st.data : null }); // trips hook
+  try { await (await import("./brief.js")).checkRow(group("Change log"), { data: st.ok ? st.data : null }); } catch (e) { group("Change log")("warn", "Change log", "check failed: " + (e.message || e)); } // brief hook
   try { await (await import("./movement.js")).checkRow(group("Movement feed")); } catch (e) { group("Movement feed")("warn", "Movement feed", "check failed: " + (e.message || e)); } // movement hook
 
   const up = group("Uptime");
@@ -643,6 +644,7 @@ async function runMock() {
     }
     await dataAsserts(add, { sc, data, delta, shift }); // scenarios hook: delay words, badges, ops plan, movement, model…
     await tripChecks(add, { url: `./data/scenarios/${sc.name}/trips.json`, data, shift: (d) => shift(d, delta), asserts: sc.assert, mock: true }); // trips hook
+    try { await (await import("./brief.js")).checkRow(add, { url: `./data/scenarios/${sc.name}/changes.json`, shift: (d) => shift(d, delta), mock: true, data }); } catch (e) { add("fail", "Change log", "check failed: " + (e.message || e)); } // brief hook
     if (RENDER) {
       const expect = (sc.assert || []).filter((x) => x.t === "rendered");
       const r = await renderPage(`./index.html?test=${sc.name}`, expect, (w, doc) => pageAsserts(add, w, doc, sc.assert)); // scenarios hook

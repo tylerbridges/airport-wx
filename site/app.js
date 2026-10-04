@@ -590,6 +590,7 @@
     if (state.openIata) renderSheet(true);
     if (window.AWXExtra) window.AWXExtra.render(); // build2a hook: search + searched/starred non-major airports (site/searched.js)
     if (window.AWXTrips) window.AWXTrips.render(); // trips hook: "Your trips" (site/trips.js)
+    if (window.AWXBrief) safeCall(() => window.AWXBrief.render()); // brief hook: morning brief (site/brief.js)
     if (panel.kind === "national") renderNationalPanel();
   }
 
@@ -1853,6 +1854,7 @@
       checkedLine(),
     ].filter(Boolean));
     if (window.AWXTrips) window.AWXTrips.decorateSheet(sheet, a); // trips hook: "Your flight" row + plane markers
+    if (window.AWXBrief) safeCall(() => window.AWXBrief.decorateSheet(sheet, a)); // brief hook: "Today" card (site/brief.js)
     if (keepScroll) sheet.scrollTop = top;
     requestAnimationFrame(placeLenses);
     fillCrosswind(a);
@@ -2070,6 +2072,7 @@
     timeline: (a) => timeline(a, {}), // a status.json-shaped airport (searched.js builds one from a shard entry)
     version: APP_V,
   };
+  window.AWXApp.brief = { shortList, nationalSummary, programsAt, programLine, localMidnight, dayKey, refNow, whenLabel, LEVELS, icon, ICONS }; // brief hook: helpers for site/brief.js
   window.AWXApp.setFavs = (list) => { state.favs = list.filter((x) => typeof x === "string"); saveFavs(); render(); }; // nav hook: Settings → Your airports (site/settings.js)
   if (!testMode()) liveConfig(); // live relay: read data/config.json on load
   render();
