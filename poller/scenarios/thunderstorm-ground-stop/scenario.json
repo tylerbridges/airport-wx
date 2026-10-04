@@ -4,42 +4,11 @@
   "blurb": "Severe storms over Chicago: ORD ground stop, SIGMET, warnings.",
   "description": "Severe thunderstorms over Chicago: FAA ground stop at ORD, convective SIGMET, Severe Thunderstorm Warning, SPC Enhanced risk.",
   "assert": [
-    {
-      "t": "level",
-      "iata": "ORD",
-      "of": "now",
-      "op": "==",
-      "v": 4
-    },
-    {
-      "t": "faa",
-      "iata": "ORD",
-      "type": "ground_stop"
-    },
-    {
-      "t": "faa",
-      "iata": "ORD",
-      "type": "ground_stop",
-      "cause": "weather",
-      "note": "needs FAA cause classification (cause.mjs, other branch)"
-    },
-    {
-      "t": "level",
-      "iata": "MDW",
-      "of": "now",
-      "op": ">=",
-      "v": 3
-    },
-    {
-      "t": "level",
-      "iata": "ATL",
-      "of": "peak",
-      "op": "==",
-      "v": 0
-    },
-    {
-      "t": "rendered",
-      "text": "Test scenario"
-    }
+    { "t": "level", "iata": "ORD", "of": "now", "op": "==", "v": 4 },
+    { "t": "faa", "iata": "ORD", "type": "ground_stop" },
+    { "t": "faa", "iata": "ORD", "type": "ground_stop", "cause": "weather", "note": "needs FAA cause classification (cause.mjs, other branch)" },
+    { "t": "level", "iata": "MDW", "of": "now", "op": ">=", "v": 3 },
+    { "t": "level", "iata": "ATL", "of": "peak", "op": "==", "v": 0 },
+    { "t": "rendered", "text": "Test scenario" }
   ]
 }

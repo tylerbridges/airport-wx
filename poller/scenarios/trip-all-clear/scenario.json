@@ -4,24 +4,9 @@
   "blurb": "MSP→ATL in three hours with nothing going on: On track.",
   "description": "A calendar trip MSP→ATL in three hours with quiet weather and no FAA programs: the trip is On track. The all-day \"Trip to Atlanta\" event is ignored.",
   "assert": [
-    {
-      "t": "allLevels",
-      "max": 0
-    },
-    {
-      "t": "trips",
-      "count": 1,
-      "configured": true
-    },
-    {
-      "t": "trip",
-      "i": 0,
-      "status": "On track",
-      "re": "^No weather or FAA issues expected around your flight times\\.$"
-    },
-    {
-      "t": "rendered",
-      "text": "On track"
-    }
+    { "t": "allLevels", "max": 0 },
+    { "t": "trips", "count": 1, "configured": true },
+    { "t": "trip", "i": 0, "status": "On track", "re": "^No weather or FAA issues expected around your flight times\\.$" },
+    { "t": "rendered", "text": "On track" }
   ]
 }
