@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-04T01:02:25.866Z",
+ "generated": "2026-10-04T03:30:49.239Z",
  "groups": {
   "delays": "Delays & programs",
   "weather": "Weather",
@@ -465,15 +465,23 @@
      "t": "level",
      "iata": "LAX",
      "of": "peak",
-     "op": "==",
-     "v": 0
+     "op": "<=",
+     "v": 1,
+     "note": "at most a Low hub cascade note from SFO (poller/hubs.mjs)"
+    },
+    {
+     "t": "cascade",
+     "iata": "LAX",
+     "hub": "SFO",
+     "re": "^SFO ground delay program may delay some flights to and from San Francisco$"
     },
     {
      "t": "level",
      "iata": "SAN",
      "of": "peak",
-     "op": "==",
-     "v": 0
+     "op": "<=",
+     "v": 1,
+     "note": "at most a Low hub cascade note from SFO (poller/hubs.mjs)"
     },
     {
      "t": "noFaa",
@@ -515,11 +523,169 @@
    ]
   },
   {
+   "name": "hub-cascade",
+   "title": "Hub cascade: DFW ground stop",
+   "group": "delays",
+   "blurb": "DFW ground stop; AUS, IAH and MSP get knock-on notes.",
+   "description": "A two-hour ground stop at DFW (thunderstorms). Airports with heavy DFW service get a hub cascade note for the 1–4 hours after it: Austin (low clouds, Low) goes up one step to Moderate; Houston and Minneapolis (quiet) go to Low. Nothing becomes \"Delays happening now\" there, and Seattle (no DFW in its top routes) gets nothing. A calendar trip MSP→DFW leaving after the ground stop ends shows the specific knock-on concern.",
+   "file": "hub-cascade.json",
+   "wx": "hub-cascade/wx/",
+   "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
+   "assert": [
+    {
+     "t": "faa",
+     "iata": "DFW",
+     "type": "ground_stop"
+    },
+    {
+     "t": "level",
+     "iata": "DFW",
+     "of": "now",
+     "op": "==",
+     "v": 4
+    },
+    {
+     "t": "noCascade",
+     "iata": "DFW"
+    },
+    {
+     "t": "cascade",
+     "iata": "AUS",
+     "hub": "DFW",
+     "re": "^DFW ground stop may delay flights to and from Dallas–Fort Worth$"
+    },
+    {
+     "t": "cascade",
+     "iata": "IAH",
+     "hub": "DFW"
+    },
+    {
+     "t": "cascade",
+     "iata": "MSP",
+     "hub": "DFW"
+    },
+    {
+     "t": "noCascade",
+     "iata": "SEA"
+    },
+    {
+     "t": "hourLevel",
+     "iata": "AUS",
+     "at": [
+      0,
+      0
+     ],
+     "op": "==",
+     "v": 0
+    },
+    {
+     "t": "hourLevel",
+     "iata": "AUS",
+     "at": [
+      1,
+      6
+     ],
+     "op": "==",
+     "v": 2
+    },
+    {
+     "t": "hourReason",
+     "iata": "AUS",
+     "at": [
+      1,
+      6
+     ],
+     "re": "^DFW ground stop may delay flights to and from Dallas–Fort Worth$",
+     "every": true
+    },
+    {
+     "t": "hourReason",
+     "iata": "MSP",
+     "at": [
+      1,
+      6
+     ],
+     "re": "^DFW ground stop may delay some flights to and from Dallas–Fort Worth$",
+     "every": true
+    },
+    {
+     "t": "level",
+     "iata": "AUS",
+     "of": "peak",
+     "op": "==",
+     "v": 2
+    },
+    {
+     "t": "level",
+     "iata": "IAH",
+     "of": "peak",
+     "op": "==",
+     "v": 1
+    },
+    {
+     "t": "level",
+     "iata": "MSP",
+     "of": "peak",
+     "op": "==",
+     "v": 1
+    },
+    {
+     "t": "words",
+     "iata": "AUS",
+     "at": [
+      0,
+      23
+     ],
+     "notKey": "now"
+    },
+    {
+     "t": "words",
+     "iata": "MSP",
+     "at": [
+      0,
+      23
+     ],
+     "notKey": "now"
+    },
+    {
+     "t": "trips",
+     "count": 1,
+     "configured": true
+    },
+    {
+     "t": "trip",
+     "i": 0,
+     "status": "Possible delays",
+     "re": "^Your MSP→DFW leg: DFW ground stop — knock-on delays possible around your .+ departure\\.$"
+    },
+    {
+     "t": "card",
+     "iata": "AUS",
+     "re": "DFW ground stop may delay flights to and from Dallas–Fort Worth"
+    },
+    {
+     "t": "sheet",
+     "iata": "IAH",
+     "re": "DFW ground stop may delay some flights to and from Dallas–Fort Worth"
+    },
+    {
+     "t": "noPercent"
+    },
+    {
+     "t": "rendered",
+     "text": "Test scenario: Hub cascade: DFW ground stop"
+    }
+   ]
+  },
+  {
    "name": "hurricane-closure",
    "title": "Hurricane: MIA and FLL closed",
    "group": "weather",
-   "blurb": "Hurricane Warning, MIA and FLL closed; a flight out of MIA is a Disruption.",
-   "description": "A hurricane over South Florida: full closure NOTAMs at MIA and FLL, Hurricane Warnings, gusts to 68 kt, no traffic at either airport; Tropical Storm Warnings and a possible ground stop at MCO and TPA. A calendar trip MIA→ATL leaving in 25 minutes shows Disruption.",
+   "blurb": "Hurricane Warning, MIA and FLL closed until 11 PM; flights out of and into MIA are a Disruption.",
+   "description": "A hurricane over South Florida: full closure NOTAMs at MIA and FLL, Hurricane Warnings, gusts to 68 kt, no traffic at either airport; Tropical Storm Warnings and a possible ground stop at MCO and TPA. A calendar trip MIA→ATL leaving in 25 minutes and a DCA→MIA flight landing at 5:15 PM (before MIA reopens at 11 PM) both show Disruption; MIA and FLL read 'Delays happening now' for every hour until they reopen.",
    "file": "hurricane-closure.json",
    "wx": "hurricane-closure/wx/",
    "lagMin": 0,
@@ -583,15 +749,70 @@
      "line": "^Departures running 100% below normal$"
     },
     {
+     "t": "trip",
+     "i": 0,
+     "status": "Disruption",
+     "re": "^MIA is closed until .+ — your .+ departure is likely delayed or cancelled\\.$"
+    },
+    {
      "t": "trips",
-     "count": 1,
+     "count": 2,
      "configured": true
     },
     {
      "t": "trip",
-     "i": 0,
+     "i": 1,
      "status": "Disruption",
-     "re": "^MIA is closed — your .+ departure may be delayed or cancelled\\.$"
+     "re": "^MIA is closed until .+ — your .+ arrival is likely cancelled or diverted\\.$"
+    },
+    {
+     "t": "hourReason",
+     "iata": "MIA",
+     "at": [
+      0,
+      8
+     ],
+     "re": "^Airport closed until ",
+     "every": true
+    },
+    {
+     "t": "hourLevel",
+     "iata": "MIA",
+     "at": [
+      0,
+      8
+     ],
+     "op": "==",
+     "v": 4
+    },
+    {
+     "t": "words",
+     "iata": "MIA",
+     "at": [
+      0,
+      8
+     ],
+     "key": "now",
+     "every": true
+    },
+    {
+     "t": "words",
+     "iata": "MIA",
+     "at": [
+      0,
+      8
+     ],
+     "notKey": "very"
+    },
+    {
+     "t": "words",
+     "iata": "FLL",
+     "at": [
+      0,
+      8
+     ],
+     "word": "Delays happening now",
+     "every": true
     },
     {
      "t": "national",
@@ -965,8 +1186,14 @@
      "t": "level",
      "iata": "ORD",
      "of": "peak",
-     "op": "==",
-     "v": 0
+     "op": "<=",
+     "v": 1,
+     "note": "at most a Low hub cascade note from LGA (poller/hubs.mjs)"
+    },
+    {
+     "t": "cascade",
+     "iata": "ORD",
+     "hub": "LGA"
     },
     {
      "t": "national",
@@ -1169,8 +1396,20 @@
      "t": "level",
      "iata": "ATL",
      "of": "peak",
-     "op": "==",
-     "v": 0
+     "op": "<=",
+     "v": 1,
+     "note": "at most a Low hub cascade note from ORD (poller/hubs.mjs)"
+    },
+    {
+     "t": "cascade",
+     "iata": "ATL",
+     "hub": "ORD",
+     "re": "^ORD ground stop may delay some flights to and from Chicago$"
+    },
+    {
+     "t": "noCascade",
+     "iata": "MDW",
+     "hub": "ORD"
     },
     {
      "t": "rendered",

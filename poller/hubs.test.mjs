@@ -46,8 +46,12 @@ test("hub trouble: closure > ground stop > delay program > delays likely (p >= 0
   assert.equal(hubTrouble({ reasons: ["Ground stop until 7 PM CT", "Airport closed until 9 PM CT"] }), "closure");
   assert.equal(hubTrouble({ reasons: ["Ground stop — weather (thunderstorms), until 7 PM CT"] }), "ground stop");
   assert.equal(hubTrouble({ reasons: ["Ground delay program — weather (wind), avg 45m"] }), "ground delay program");
-  assert.equal(hubTrouble({ reasons: ["Thunderstorms"], delay: { p: 0.45 } }), "delays");
-  assert.equal(hubTrouble({ reasons: ["Thunderstorms"], delay: { p: 0.44 } }), null);
+  assert.equal(hubTrouble({ level: 3, reasons: ["Thunderstorms"], delay: { p: 0.45 } }), "delays");
+  assert.equal(hubTrouble({ level: 3, reasons: ["Thunderstorms"], delay: { p: 0.44 } }), null);
+  // a routine busy-hour rate on a quiet hour doesn't cascade; well above the usual rate, or an FAA override, does
+  assert.equal(hubTrouble({ level: 0, reasons: [], delay: { p: 0.5, pTypical: 0.45 } }), null);
+  assert.equal(hubTrouble({ level: 0, reasons: [], delay: { p: 0.6, pTypical: 0.3 } }), "delays");
+  assert.equal(hubTrouble({ level: 0, reasons: [], delay: { p: 1, override: "delay" } }), "delays");
   assert.equal(hubTrouble({ reasons: ["Delays — weather, departures 16–30m"] }), null); // general delays alone: only through p
 });
 

@@ -2,8 +2,10 @@
 // imports it, so the live relay runs it too).
 //
 // When a carrier hub has a ground stop, a ground delay program, a full closure, or its delay chance is
-// "Delays likely" or worse (hours[].delay.p >= 0.45, the "likely" cut-off of site/delay.js likelihood();
-// FAA overrides are p = 1) in some hour, every airport with heavy service to that hub (TOP_ROUTES) gets a
+// "Delays likely" or worse in some hour — hours[].delay.p >= 0.45 (the "likely" cut-off of site/delay.js
+// likelihood(); FAA overrides are p = 1) and, as site/delay.js notable(), not a routine rate: an FAA
+// override, a risk level of Low or more, or 1.25x the hour's usual rate — every airport with heavy
+// service to that hub (TOP_ROUTES) gets a
 // cascade note in the 1–4 hours after it: "ORD ground stop may delay flights to and from Chicago".
 // Airports in the same TRACON as the hub (e.g. JFK/LGA/EWR) get no note from it: they share the
 // weather and the airspace, and have no flights between them.
@@ -100,9 +102,14 @@ export function hubTrouble(hr) {
   if (rs.some((r) => /^Airport closed\b/.test(r))) return "closure";
   if (rs.some((r) => /^Ground stop\b/.test(r))) return "ground stop";
   if (rs.some((r) => /^Ground delay program\b/.test(r))) return "ground delay program";
-  const p = hr && hr.delay && hr.delay.p;
-  if (p != null && Number(p) >= LIKELY_P) return "delays";
-  return null;
+  const d = hr && hr.delay;
+  const p = d && d.p != null ? Number(d.p) : null;
+  if (p == null || !(p >= LIKELY_P)) return null;
+  const typ = d.pTypical != null ? Number(d.pTypical) : null;
+  // the hour's own risk: a level of Low or more from reasons other than cascade notes (a build's hours, read by
+  // the live relay, already carry their notes) and the informational general-thunderstorm outlook
+  const own = (hr.level | 0) >= 1 && rs.some((r) => !CASCADE_RE.test(r) && !/^General thunderstorms possible/.test(r));
+  return d.override || own || (typ > 0 && p >= 1.25 * typ) ? "delays" : null; // routine busy-hour rates don't cascade
 }
 
 /**
@@ -162,7 +169,7 @@ export function cascades(airports) {
 /**
  * Applies cascade notes to one airport's internal risk rows (risk.mjs buildHours: {t, items, level}) in
  * place, and returns the status.json summary [{hub, kind, from, to, text}] (runs of consecutive hours per
- * hub; text = the Moderate wording, for the card/sheet line).
+ * hub; text = the run's strongest note as written in its hours, for the card/sheet line).
  */
 export function applyCascade(hours, notes) {
   const runs = [];
@@ -176,8 +183,8 @@ export function applyCascade(hours, notes) {
     const last = runs.find((u) => u.hub === x.hub && u.end === x.i - 1);
     if (last) {
       last.end = x.i;
-      if (KINDS.indexOf(x.kind) < KINDS.indexOf(last.kind)) last.kind = x.kind;
-    } else runs.push({ hub: x.hub, city: x.city, kind: x.kind, start: x.i, end: x.i });
+      if (KINDS.indexOf(x.kind) < KINDS.indexOf(last.kind) || (x.kind === last.kind && r.level > last.level)) Object.assign(last, { kind: x.kind, level: r.level, text: r.text });
+    } else runs.push({ hub: x.hub, kind: x.kind, level: r.level, text: r.text, start: x.i, end: x.i });
   }
   for (const h of hours) h.items.sort((a, b) => b.level - a.level);
   const HOUR = 3600e3;
@@ -187,6 +194,6 @@ export function applyCascade(hours, notes) {
       hub: u.hub, kind: u.kind,
       from: new Date(+new Date(hours[u.start].t)).toISOString(),
       to: new Date(+new Date(hours[u.end].t) + HOUR).toISOString(),
-      text: cascadeReason(u.hub, u.city, u.kind, 1).text,
+      text: u.text,
     }));
 }

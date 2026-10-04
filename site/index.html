@@ -169,6 +169,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 800; letter-spa
 .star[aria-pressed="true"] svg { fill: currentColor; }
 .reason { margin-top: 12px; font-size: 16px; font-weight: 600; line-height: 1.3; }
 .sub { margin-top: 2px; font-size: 13px; color: var(--muted); }
+.sh-hub { margin: 8px 2px 0; font-size: 13.5px; line-height: 1.35; color: var(--muted); } /* hubs hook: hub cascade line under the sheet's status card */
 .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .badge {
   padding: 3px 8px; border-radius: 7px; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
@@ -707,11 +708,11 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
   <div class="sheet" id="panel" role="dialog" aria-modal="true" aria-labelledby="panelTitle"></div>
 </div>
 <div class="sr" id="announce" aria-live="polite"></div>
-<script src="cats.js?v=1"></script><!-- build2b: disruption categories -->
+<script src="cats.js?v=2"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=1"></script><!-- build2b: shared sheet drag / back / scroll lock -->
-<script src="app.js?v=21" defer></script>
+<script src="app.js?v=22" defer></script>
 <script type="module" src="searched.js?v=5"></script><!-- build2a hook -->
-<script type="module" src="delay.js?v=5"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
+<script type="module" src="delay.js?v=6"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="trips.js?v=6"></script><!-- trips hook -->
 <script type="module" src="nav.js?v=5"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
 <script type="module" src="movement.js?v=2"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
