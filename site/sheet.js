@@ -147,8 +147,11 @@
     el.addEventListener("pointercancel", hpEnd);
     el.addEventListener("click", function (e) { if (Date.now() < swallow) { e.preventDefault(); e.stopPropagation(); } }, true);
 
-    // content: touch pull while the scroller is at the top
+    // content: touch pull from anywhere on the sheet. At the top of the scroller (or within a few px of it) a downward drag
+    // closes the sheet; when the sheet is scrolled down, the same drag first scrolls it back to the top and, if the finger
+    // keeps going, carries on into the close drag (as iOS sheets do), so it works however far down you start.
     var tp = null;
+    var TOP = 6; // px of scroll still counted as "at the top"
     el.addEventListener("touchstart", function (e) {
       tp = null;
       if (!entry.open || e.touches.length !== 1) return;
@@ -156,17 +159,18 @@
       if (opts.header && t.closest && t.closest(opts.header)) return; // the pointer handler has it
       if (opts.noPull && t.closest && t.closest(opts.noPull)) return;
       var sc = (opts.scroller && opts.scroller(t)) || el;
-      if (sc.scrollTop > 0) return;
-      tp = { y: e.touches[0].clientY, x: e.touches[0].clientX, sc: sc, on: false };
+      tp = { y: e.touches[0].clientY, x: e.touches[0].clientX, sc: sc, on: false, top: sc.scrollTop <= TOP, from: null };
     }, { passive: true });
     el.addEventListener("touchmove", function (e) {
       if (!tp) return;
       var y = e.touches[0].clientY, dy = y - tp.y, dx = e.touches[0].clientX - tp.x;
       if (!tp.on) {
         if (Math.abs(dy) < 6 && Math.abs(dx) < 6) return;
-        if (dy <= 0 || Math.abs(dx) > dy || tp.sc.scrollTop > 0) { tp = null; return; } // scrolls normally
-        tp.on = true;
-        begin(tp.y);
+        if (Math.abs(dx) > Math.abs(dy) * 1.2) { tp = null; return; } // sideways: leave it alone
+        if (dy <= 0) { if (tp.top) { tp = null; return; } tp.y = y; return; }       // up: scrolls normally; re-anchor
+        if (tp.sc.scrollTop > TOP) { tp.y = y; return; }                           // still scrolling back to the top
+        // at the top and moving down: start the close drag from here
+        tp.on = true; tp.y = y; begin(y);
       }
       if (e.cancelable) e.preventDefault();
       moveTo(y);

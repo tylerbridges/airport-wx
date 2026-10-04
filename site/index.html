@@ -604,8 +604,10 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 .awx-round svg { width: 22px; height: 22px; }
 .awx-round:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* tab bar */
-.awx-nav-on .wrap { height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; padding-bottom: calc(max(env(safe-area-inset-bottom), 12px) + 100px); }
-.awx-panel { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; scrollbar-width: none; animation: awx-tab-in .16s ease-out; }
+.awx-nav-on .wrap { height: 100vh; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; padding-bottom: 0; }
+/* The panel runs to the bottom of the screen so cards scroll in behind the glass bar instead of being cut off flat above it;
+   the scroll padding keeps the last card clear of the bar once you reach the end. */
+.awx-panel { padding-bottom: calc(max(env(safe-area-inset-bottom), 12px) + 100px); scroll-padding-bottom: calc(max(env(safe-area-inset-bottom), 12px) + 100px); flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; scrollbar-width: none; animation: awx-tab-in .16s ease-out; }
 .awx-panel::-webkit-scrollbar { display: none; }
 html.lock .awx-panel { overflow-y: hidden; }
 @keyframes awx-tab-in { from { opacity: .45; } to { opacity: 1; } }
@@ -617,7 +619,7 @@ html.lock .awx-panel { overflow-y: hidden; }
 }
 .awx-nav::before {
   content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: calc(100% + 24px); pointer-events: none;
-  background: linear-gradient(to top, color-mix(in srgb, var(--bg) 80%, transparent), transparent);
+  background: linear-gradient(to top, color-mix(in srgb, var(--bg) 42%, transparent), transparent);
 }
 .awx-nav.hide { transform: translateY(calc(100% + 30px)); opacity: 0; }
 .awx-navin { position: relative; max-width: 560px; margin: 0 auto; display: flex; gap: 10px; align-items: center; pointer-events: auto; }
@@ -786,9 +788,9 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <div class="sr" id="announce" aria-live="polite"></div>
 <script src="outlook.js?v=2"></script>
 <script src="cats.js?v=2"></script><!-- build2b: disruption categories -->
-<script src="sheet.js?v=1"></script><!-- build2b: shared sheet drag / back / scroll lock -->
+<script src="sheet.js?v=2"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=1"></script><!-- notams hook: the airport sheet's "Notices" card -->
-<script src="app.js?v=31" defer></script>
+<script src="app.js?v=33" defer></script>
 <script type="module" src="searched.js?v=5"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=8"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="trips.js?v=8"></script><!-- trips hook -->
