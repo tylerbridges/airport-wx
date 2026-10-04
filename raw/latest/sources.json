@@ -1,45 +1,45 @@
 {
- "generated": "2026-10-04T03:00:37.675Z",
+ "generated": "2026-10-04T04:00:54.767Z",
  "sources": {
   "metar": {
    "ok": true,
-   "at": "2026-10-04T03:00:40.965Z",
+   "at": "2026-10-04T04:00:55.062Z",
    "error": null,
    "url": "https://aviationweather.gov/api/data/metar?ids=KATL,KDFW,KDEN,KORD,KLAX,KJFK,KLAS,KMCO,KMIA,KCLT,KSEA,KPHX,KEWR,KSFO,KIAH,KBOS,KFLL,KMSP,KLGA,KDTW,KPHL,KSLC,KDCA,KSAN,KBWI,KTPA,KAUS,KIAD,KBNA,KMDW,PHNL,PANC&format=json",
-   "bytes": 16986,
+   "bytes": 15814,
    "http": 200,
    "files": [
     "metar.json"
    ],
-   "fileAt": "2026-10-04T03:00:37.675Z"
+   "fileAt": "2026-10-04T04:00:54.767Z"
   },
   "taf": {
    "ok": true,
-   "at": "2026-10-04T03:00:38.052Z",
+   "at": "2026-10-04T04:00:57.292Z",
    "error": null,
    "url": "https://aviationweather.gov/api/data/taf?ids=KATL,KDFW,KDEN,KORD,KLAX,KJFK,KLAS,KMCO,KMIA,KCLT,KSEA,KPHX,KEWR,KSFO,KIAH,KBOS,KFLL,KMSP,KLGA,KDTW,KPHL,KSLC,KDCA,KSAN,KBWI,KTPA,KAUS,KIAD,KBNA,KMDW,PHNL,PANC&format=json",
-   "bytes": 70093,
+   "bytes": 68910,
    "http": 200,
    "files": [
     "taf.json"
    ],
-   "fileAt": "2026-10-04T03:00:37.675Z"
+   "fileAt": "2026-10-04T04:00:54.767Z"
   },
   "sigmet": {
    "ok": true,
-   "at": "2026-10-04T03:00:37.855Z",
+   "at": "2026-10-04T04:00:54.896Z",
    "error": null,
    "url": "https://aviationweather.gov/api/data/airsigmet?format=json",
-   "bytes": 8242,
+   "bytes": 8243,
    "http": 200,
    "files": [
     "airsigmet.json"
    ],
-   "fileAt": "2026-10-04T03:00:37.675Z"
+   "fileAt": "2026-10-04T04:00:54.767Z"
   },
   "faa": {
    "ok": true,
-   "at": "2026-10-04T03:00:37.825Z",
+   "at": "2026-10-04T04:00:54.935Z",
    "error": null,
    "url": "https://nasstatus.faa.gov/api/airport-status-information",
    "bytes": 1022,
@@ -47,11 +47,11 @@
    "files": [
     "faa.xml"
    ],
-   "fileAt": "2026-10-04T03:00:37.675Z"
+   "fileAt": "2026-10-04T04:00:54.767Z"
   },
   "nws": {
    "ok": true,
-   "at": "2026-10-04T03:00:40.991Z",
+   "at": "2026-10-04T04:00:56.737Z",
    "error": null,
    "bytes": 7703,
    "http": 200,
@@ -62,11 +62,11 @@
    "requests": 32,
    "failed": 0,
    "sample": "first response with alerts",
-   "fileAt": "2026-10-04T03:00:37.675Z"
+   "fileAt": "2026-10-04T04:00:54.767Z"
   },
   "spc": {
    "ok": true,
-   "at": "2026-10-04T03:00:37.916Z",
+   "at": "2026-10-04T04:00:55.044Z",
    "error": null,
    "url": "https://www.spc.noaa.gov/products/outlook/day1otlk_cat.nolyr.geojson",
    "bytes": 3269,
@@ -74,32 +74,32 @@
    "files": [
     "spc.geojson"
    ],
-   "fileAt": "2026-10-04T03:00:37.675Z"
+   "fileAt": "2026-10-04T04:00:54.767Z"
   },
   "lamp": {
    "ok": true,
-   "at": "2026-10-04T03:00:38.048Z",
+   "at": "2026-10-04T04:00:55.162Z",
    "error": null,
-   "bytes": 4584048,
+   "bytes": 4581834,
    "http": 200,
-   "url": "https://nomads.ncep.noaa.gov/pub/data/nccf/com/lmp/prod/lmp.20261004/lmp.t0230z.lavtxt.ascii",
+   "url": "https://nomads.ncep.noaa.gov/pub/data/nccf/com/lmp/prod/lmp.20261004/lmp.t0330z.lavtxt.ascii",
    "files": [
     "lamp.txt",
     "lamp-airports.txt"
    ],
    "tries": [
     {
-     "url": "https://nomads.ncep.noaa.gov/pub/data/nccf/com/lmp/prod/lmp.20261004/lmp.t0230z.lavtxt.ascii",
+     "url": "https://nomads.ncep.noaa.gov/pub/data/nccf/com/lmp/prod/lmp.20261004/lmp.t0330z.lavtxt.ascii",
      "http": 200,
      "blocks": 2313
     }
    ],
    "stations": 32,
-   "fileAt": "2026-10-04T03:00:37.675Z"
+   "fileAt": "2026-10-04T04:00:54.767Z"
   },
   "atcscc": {
    "ok": true,
-   "at": "2026-10-04T03:00:38.897Z",
+   "at": "2026-10-04T04:00:56.297Z",
    "error": null,
    "url": "https://www.fly.faa.gov/adv/advADB.jsp",
    "bytes": 10372,
@@ -112,11 +112,11 @@
    "failed": 0,
    "parsed": 1,
    "opsplan": null,
-   "fileAt": "2026-10-04T03:00:37.675Z"
+   "fileAt": "2026-10-04T04:00:54.767Z"
   },
   "tcf": {
    "ok": true,
-   "at": "2026-10-04T03:00:41.011Z",
+   "at": "2026-10-04T04:00:55.212Z",
    "error": null,
    "url": "https://aviationweather.gov/api/data/tcf?format=geojson",
    "bytes": 3703,
@@ -124,23 +124,59 @@
    "files": [
     "tcf.json"
    ],
-   "fileAt": "2026-10-04T03:00:37.675Z"
+   "fileAt": "2026-10-04T04:00:54.767Z"
   },
   "cwa": {
    "ok": true,
-   "at": "2026-10-04T03:00:37.965Z",
+   "at": "2026-10-04T04:00:55.192Z",
    "error": null,
    "url": "https://aviationweather.gov/api/data/cwa?format=json",
-   "bytes": 0,
-   "http": 204,
+   "bytes": 634,
+   "http": 200,
    "files": [
     "cwa.json"
    ],
-   "fileAt": "2026-10-04T03:00:37.675Z"
+   "fileAt": "2026-10-04T04:00:54.767Z"
+  },
+  "notam": {
+   "at": "2026-10-04T04:00:55.732Z",
+   "ok": false,
+   "error": "HTTP 403 from notams.aim.faa.gov",
+   "configured": false,
+   "via": "search",
+   "http": 403,
+   "errorBody": "<HTML><HEAD>\n<TITLE>Access Denied</TITLE>\n</HEAD><BODY>\n<H1>Access Denied</H1>\n \nYou don't have permission to access \"http&#58;&#47;&#47;notams&#46;aim&#46;faa&#46;gov&#47;notamSearch&#47;search\" on this server.<P>\nReference&#32;&#35;18&#46;686c3817&#46;1791086455&#46;9f19e87f\n<P>https&#58;&#47;&#47",
+   "due": 32,
+   "api": 0,
+   "apiFailed": 0,
+   "search": 32,
+   "searchFailed": 32,
+   "errors": {
+    "search": "HTTP 403 from notams.aim.faa.gov"
+   },
+   "files": [],
+   "fileAt": null
+  },
+  "tfr": {
+   "at": "2026-10-04T04:00:55.732Z",
+   "ok": true,
+   "error": null,
+   "listed": 84,
+   "tfrs": 59,
+   "url": "https://tfr.faa.gov/tfrapi/exportTfrList",
+   "bytes": 18037,
+   "http": 200,
+   "files": [
+    "tfr-list.json"
+   ],
+   "details": 60,
+   "failed": 0,
+   "parsed": 59,
+   "fileAt": "2026-10-04T04:00:54.767Z"
   },
   "trips": {
    "ok": true,
-   "at": "2026-10-04T03:00:37.675Z",
+   "at": "2026-10-04T04:00:54.767Z",
    "error": null,
    "configured": false,
    "trips": 0,
@@ -148,31 +184,31 @@
    "files": [],
    "fileAt": null
   },
-  "globalTafs": {
-   "ok": true,
-   "at": "2026-10-04T03:01:12.314Z",
-   "error": null,
-   "http": 200,
-   "bytes": 301121,
-   "ms": 125,
-   "url": "https://aviationweather.gov/data/cache/tafs.cache.xml.gz",
-   "files": [
-    "global-tafs.xml"
-   ],
-   "fileAt": "2026-10-04T03:00:37.675Z"
-  },
   "globalMetars": {
    "ok": true,
-   "at": "2026-10-04T03:01:12.466Z",
+   "at": "2026-10-04T04:01:29.521Z",
    "error": null,
    "http": 200,
-   "bytes": 245777,
-   "ms": 278,
+   "bytes": 241121,
+   "ms": 379,
    "url": "https://aviationweather.gov/data/cache/metars.cache.csv.gz",
    "files": [
     "global-metars.csv"
    ],
-   "fileAt": "2026-10-04T03:00:37.675Z"
+   "fileAt": "2026-10-04T04:00:54.767Z"
+  },
+  "globalTafs": {
+   "ok": true,
+   "at": "2026-10-04T04:01:29.566Z",
+   "error": null,
+   "http": 200,
+   "bytes": 302427,
+   "ms": 423,
+   "url": "https://aviationweather.gov/data/cache/tafs.cache.xml.gz",
+   "files": [
+    "global-tafs.xml"
+   ],
+   "fileAt": "2026-10-04T04:00:54.767Z"
   }
  }
 }
