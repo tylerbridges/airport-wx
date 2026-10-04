@@ -289,6 +289,7 @@ function renderFoot() {
 
 // ---------- airport sheet: "Your flight" + plane markers ----------
 
+// terminals hook: TODO (future) when a leg departs from an airport with terminal data, show its gate's concourse and the nearest lounge (AWXTerminals.gateInfo in site/terminals.js). Nothing yet.
 function decorateSheet(sheet, a) {
   if (!sheet || !a) return;
   sheet.querySelectorAll(".tflight, .tplane").forEach((x) => x.remove());

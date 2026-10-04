@@ -43,3 +43,5 @@ import "../tools/radar.test.mjs";
 // notams hook: NOTAMs + TFRs (README "Notices")
 import "./notams.test.mjs";
 import "./tfr.test.mjs";
+// terminals hook: terminal maps (Overpass parsing, simplification) and the curated lounge data
+import "../tools/terminals.test.mjs";
