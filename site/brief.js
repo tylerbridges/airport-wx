@@ -152,14 +152,15 @@ function causeOf(reasons, level, a) {
     if (c && CAT_WORD[c.cat] && c.cat !== "faa") return CAT_WORD[c.cat];
     // a program's or plan's cause: "Delays — weather (thunderstorms), …", "FAA plans a possible ground stop … (storms)"
     const m = /—\s*[^,(]*\(([^)]+)\)/.exec(String(r)) || /\(([^)]+)\)\s*$/.exec(String(r));
-    if (m && !fallback && !/^(conditions|LAMP|TCF|ATCSCC)$/.test(m[1])) fallback = m[1].toLowerCase().replace(/\bthunderstorms?\b/g, "storms");
+    if (m && !fallback && !/^(conditions|LAMP|TCF|ATCSCC)$/.test(m[1])) fallback = m[1].toLowerCase().replace(/\bthunderstorms?\b/g, "storms").replace(/\b(it|atc|ils|vip|tfr|gps|faa|nas)\b/g, (x) => x.toUpperCase()); // "IT outage"
   }
   if (fallback) return fallback;
   const first = app().brief.shortList(reasons, a)[0];
   return first ? lowerFirst(first) : null;
 }
 
-/** One airport for the brief: {a, level, attention, text}. */
+/** One airport for the brief: {a, level, attention, text}. Levels and windows are the page's display levels
+ * (AWXApp hourLevel: weather/FAA raised by the delay chance), so the brief, the card and the timeline agree. */
 function airportItem(a) {
   const A = app(), B = A.brief;
   const v = A.view(a);
@@ -169,11 +170,12 @@ function airportItem(a) {
   const hrs = v.hours.filter((x) => Date.parse(x.t) + HOUR > now && Date.parse(x.t) < end);
   const code = A.codeOf(a);
   if (!hrs.length) return { a, level: 0, attention: false, text: code + ": forecast not available" };
+  const lvl = hrs.map((x, k) => (B.hourLevel ? B.hourLevel(a, x, k === 0) : x.level) || 0);
   let i = 0;
-  hrs.forEach((x, k) => { if (x.level > hrs[i].level) i = k; });
+  lvl.forEach((l, k) => { if (l > lvl[i]) i = k; });
   let j = i;
-  while (j + 1 < hrs.length && hrs[j + 1].level === hrs[i].level) j++;
-  const worst = hrs[i].level;
+  while (j + 1 < hrs.length && lvl[j + 1] === lvl[i]) j++;
+  const worst = lvl[i];
   const t0 = Date.parse(v.hours[0].t);
   const progs = B.programsAt(v, t0, true).filter((f) => f.type !== "delay");
   const D = window.AWXDelay;
@@ -181,22 +183,25 @@ function airportItem(a) {
   const L = D && D.likelihood && d && d.p != null ? D.likelihood(d, { iata: a.iata }) : null;
   const notable = !!(L && D.notable && D.notable(d, worst, L));
   const attention = worst >= 2 || progs.length > 0 || (notable && RANK[L.key] >= RANK.likely);
+  const zt = B.zoneTag ? B.zoneTag(a) : "";
   // a program or closure that ended in the last few hours
   const ended = todayEvents(a).find((e) => (e.kind === "program_end" || e.kind === "closure_end") && now - Date.parse(e.t) <= RECENT_END_MS);
-  const endedText = ended ? lowerFirst(ended.sentence) + " " + A.clock(Date.parse(ended.t), tz) : null;
+  const endedText = ended ? lowerFirst(ended.sentence) + " " + A.clock(Date.parse(ended.t), tz) + zt : null;
   let text;
   if (progs.length) {
     const order = { closure: 0, ground_stop: 1, ground_delay: 2 };
     const f = progs.sort((x, y) => (order[x.type] ?? 9) - (order[y.type] ?? 9))[0];
     const cause = f.type === "closure" ? null : causeOf(v.now.reasons, v.now.level, a);
-    text = `${code}: ${B.programLine(f, a).replace(/, avg .*$/, "")}${cause ? " — " + cause : ""}`;
+    const line = B.programLine(f, a).replace(/, avg .*$/, "");
+    text = `${code}: ${line}${/\d (AM|PM)$|\d:\d\d$/.test(line) ? zt : ""}${cause ? " — " + cause : ""}`;
   } else {
     const start = Math.max(Date.parse(hrs[i].t), now);
     const stop = Date.parse(hrs[j].t) + HOUR;
     // "Delays happening now" (FAA delays in effect) needs no period: the level's run isn't the delays' end
-    const when = notable && L.key === "now" ? "" : Date.parse(hrs[i].t) <= now ? "until " + B.whenLabel(stop, tz) : rangeText(start, stop, tz);
+    const when = notable && L.key === "now" ? "" : (B.rangeText ? B.rangeText(start, stop, tz) : rangeText(start, stop, tz)) + zt;
     const what = notable ? L.word : `${B.LEVELS[worst].label} risk`;
-    const why = endedText || causeOf(hrs[i].reasons, worst, a);
+    const reasons = B.hourReasons ? B.hourReasons(a, hrs[i], worst) : hrs[i].reasons;
+    const why = endedText || (causeOf(reasons, worst, a) || "").replace(/^(busy [a-z ]+) — .*$/, "$1") || null; // "busy evening", not "… — delays likely" twice
     text = `${code}: ${what}${when ? " " + when : ""}${why ? " — " + why : ""}`;
   }
   return { a, level: Math.max(worst, progs.some((f) => f.type === "ground_stop" || f.type === "closure") ? 4 : progs.length ? 3 : 0), attention, text, ended: endedText };
@@ -223,7 +228,8 @@ function tripItems() {
     const route = `${legs[0].from}→${legs[legs.length - 1].to}`;
     const level = { ok: 0, possible: 2, likely: 3, disruption: 4 }[t.status] ?? 0;
     const tail = t.short && t.status !== "ok" && t.status !== "early" ? " — " + t.short : "";
-    out.push({ id: t.id, level, codes: legs.flatMap((l) => [l.from, l.to]), text: `${route} ${A.clock(dep, tz)}: ${t.label}${tail}` });
+    const zt = B.zoneTag ? B.zoneTag(by.get(leg.from) || { tz: "UTC" }, dep) : "";
+    out.push({ id: t.id, level, codes: legs.flatMap((l) => [l.from, l.to]), text: `${route} ${A.clock(dep, tz)}${zt}: ${t.label}${tail}` });
   }
   return out;
 }

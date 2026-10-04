@@ -6,7 +6,7 @@
 import { loadAirports, rank } from "./search.js";
 import { navChecks } from "./navcheck.js?v=3"; // nav hook
 import { tripChecks } from "./check-trips.js"; // trips hook
-import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText } from "./check-scenarios.js"; // scenarios hook; More details page helpers
+import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js"; // scenarios hook; More details page helpers
 
 const P = new URLSearchParams(location.search);
 const MOCK = P.get("mock") === "1";
@@ -416,8 +416,8 @@ async function uiChecks(add, scenario) {
       for (const x of A.state.data.airports) {
         A.openSheet(x.iata);
         await frameSleep(w, 10);
-        const v = A.view(x);
-        const want = w.AWXCats.restLayout(v.now.level, v.peak.level, v.peak.level > v.now.level && v.peak.at !== v.hours[0].t);
+        const sm = A.summary(x); // the display levels (weather/FAA raised by the delay chance), as the sheet and card show
+        const want = w.AWXCats.restLayout(sm.nowLevel, sm.level, sm.later);
         const rest = doc.querySelector('#sheet .bx-layer[data-layer="rest"]');
         const got = rest.querySelector(".two") ? "split" : rest.querySelector(".sc").dataset.layout === "clear" ? "clear" : "single";
         counts[got]++;
@@ -654,7 +654,7 @@ async function runLive() {
     const idx = await getJson("./data/scenarios/index.json");
     const pages = [["index.html", "./index.html"], ...((idx.ok && idx.data.scenarios) || []).map((s) => [`?test=${s.name}`, `./index.html?test=${s.name}`])];
     for (const [label, url] of pages) {
-      const r = await renderPage(url);
+      const r = await renderPage(url, [], label === "index.html" ? (w, doc) => consistencyChecks(rr, w, doc, " (live data)") : null);
       rr(r.ready && !r.errors.length ? "pass" : "fail", `Render ${label}`, !r.ready ? "cards never appeared" : r.errors.length ? r.errors.join(" | ") : `${r.cards} cards, no errors`);
     }
     await navChecks(group("Navigation (390 px, hidden frame)"), "./index.html"); // nav hook
@@ -705,7 +705,7 @@ async function runMock() {
     try { await (await import("./brief.js")).checkRow(add, { url: `./data/scenarios/${sc.name}/changes.json`, shift: (d) => shift(d, delta), mock: true, data }); } catch (e) { add("fail", "Change log", "check failed: " + (e.message || e)); } // brief hook
     if (RENDER) {
       const expect = (sc.assert || []).filter((x) => x.t === "rendered");
-      const r = await renderPage(`./index.html?test=${sc.name}`, expect, (w, doc) => pageAsserts(add, w, doc, sc.assert)); // scenarios hook
+      const r = await renderPage(`./index.html?test=${sc.name}`, expect, async (w, doc) => { await pageAsserts(add, w, doc, sc.assert); await consistencyChecks(add, w, doc); }); // scenarios hook; one level, words = colours, no null/% everywhere
       add(r.ready && !r.errors.length ? "pass" : "fail", `Render ?test=${sc.name} at 390 px`, !r.ready ? "cards never appeared" : r.errors.length ? r.errors.join(" | ") : `${r.cards} cards, no errors`);
       for (const { x, ok } of r.results) add(ok ? "pass" : "fail", `Expect on page: ${x.selector ? `element ${x.selector}` : `text "${x.text}"`}`, ok ? "" : "not found");
     }

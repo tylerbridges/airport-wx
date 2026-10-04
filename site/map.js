@@ -199,17 +199,30 @@ export function mountMap(container) {
     legendBox.replaceChildren(...items);
   }
 
-  /** "Now" / "Tonight 9 PM" / "Tomorrow 6 AM" / "Today 3 PM" in the device's zone. */
+  /**
+   * The slider's zone follows Settings → Times (map hook): "My time zone" = the device's; "Airport time" = the first
+   * starred airport's (one clock for a national map), named with its code.
+   */
+  function sliderZone() {
+    const A = app();
+    const mine = safe(() => window.AWXPrefs.getPrefs().timeRef === "mine", false);
+    if (mine) return { tz: USER_TZ, whose: "your time" };
+    const favs = safe(() => A.state.favs, []) || [];
+    const list = safe(() => A.state.data.airports, []) || [];
+    const home = favs.map((c) => list.find((a) => a.iata === c)).find((a) => a && a.tz);
+    return home ? { tz: home.tz, whose: (safe(() => A.codeOf(home), home.iata) || home.iata) + " time" } : { tz: USER_TZ, whose: "your time" };
+  }
+  /** "Now" / "Tonight 9 PM" / "Tomorrow 6 AM" / "Today 3 PM" in the slider's zone (sliderZone). */
   function whenWords() {
-    const A = app(), now = A.refNow(), tz = USER_TZ;
+    const A = app(), now = A.refNow(), Z = sliderZone(), tz = Z.tz;
     const zone = safe(() => A.zoneAbbr(at, tz), "") || "";
-    const sub = (offset < 0 ? "Observed" : offset === 0 ? "Current conditions" : "Forecast") + " · your time" + (zone ? " (" + zone + ")" : "");
+    const sub = (offset < 0 ? "Observed" : offset === 0 ? "Current conditions" : "Forecast") + " · " + Z.whose + (zone ? " (" + zone + ")" : "");
     if (offset === 0) return { main: "Now", sub };
     const t = Math.floor(at / HOUR) * HOUR;
     const label = safe(() => A.hourLabel(t, tz), "") || new Date(t).toLocaleTimeString([], { hour: "numeric" });
     const key = (ms) => safe(() => A.brief.dayKey(ms, tz)) || new Date(ms).toLocaleDateString("en-CA", { timeZone: tz });
     const dd = key(t) === key(now) ? 0 : key(t) === key(now + 24 * HOUR) ? 1 : key(t) === key(now - 24 * HOUR) ? -1 : 9;
-    const hr = Number(new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", hourCycle: "h23" }).format(t)) % 24;
+    const hr = Number(new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", hourCycle: "h23" }).format(t)) % 24; // map hook: zone from sliderZone()
     const wd = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "long" }).format(t);
     let word;
     if (offset < 0) word = dd === 0 ? "Today" : dd === -1 ? "Yesterday" : wd;

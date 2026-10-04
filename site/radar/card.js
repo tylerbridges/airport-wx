@@ -156,7 +156,8 @@ function updateLegends() {
 function makeNote() { const el = h("p", { class: "awr-note", hidden: true }); S.notes.push(el); paintNotes(); return el; }
 function paintNotes() {
   const test = window.AWXTest && window.AWXTest.name ? "Live radar — not part of this test scenario." : "";
-  const t = [S.note, test].filter(Boolean).join(" ");
+  // a failed radar says only "Radar couldn't load right now": the engine's backup/stale note is left out then
+  const t = [S.info && S.info.failed ? "" : S.note, test].filter(Boolean).join(" ");
   for (const el of S.notes) { if (el.textContent !== t) el.textContent = t; el.hidden = !t; }
 }
 function metaText() {
@@ -181,7 +182,7 @@ function engineOpts(kind) {
   return {
     static: kind === "card", zoom: S.zoom, recenter: kind === "card", fmtTime,
     overlay: drawOverlay,
-    onTime: (i) => { S.info = i; paintMeta(); },
+    onTime: (i) => { const was = !!(S.info && S.info.failed); S.info = i; paintMeta(); if (was !== !!i.failed) paintNotes(); },
     onNote: (t) => { S.note = t || ""; paintNotes(); },
     onLegend: (l) => { S.snow = !!l.snow; updateLegends(); },
   };
@@ -221,7 +222,7 @@ function start() {
     S.zoom = zoomFor(S.box.clientWidth, +a.lat);
     setRm();
     R.show(S.host, loc(a), engineOpts("card"));
-  }, () => { if (S.a === a) { S.info = { failed: true }; paintMeta(); showMsg(FAIL); } });
+  }, () => { if (S.a === a) { S.info = { failed: true }; paintMeta(); paintNotes(); showMsg(FAIL); } });
 }
 
 /** The "Radar" section for airport a, built with app.js's section() helper (null when a has no U.S. radar). */

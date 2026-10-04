@@ -6,7 +6,7 @@
     "liveUrl": "https://airport-wx-live.invalid"
   },
   "blurb": "The live relay doesn't answer: the page says it shows the last build.",
-  "description": "data/config.json names a live relay that can't be reached (a .invalid host). The page runs its normal live path (site/testmode.js LIVE_PATH) and must say \"Live data unavailable — showing data from N min ago\". DEN has a High Wind Warning so there is something to show.",
+  "description": "data/config.json names a live relay that can't be reached (a .invalid host). The page runs its normal live path (site/testmode.js LIVE_PATH) and must say \"Live updates unavailable — showing the latest build\". DEN has a High Wind Warning so there is something to show.",
   "assert": [
     {
       "t": "level",
@@ -22,7 +22,7 @@
     },
     {
       "t": "header",
-      "re": "^Live data unavailable — showing data from "
+      "re": "^Live updates unavailable — showing the latest build"
     },
     {
       "t": "banner",

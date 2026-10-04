@@ -26,7 +26,7 @@
       const type = x.type === "GS" ? "ground_stop" : "ground_delay";
       const existing = out.find((f) => f.type === type);
       if (existing) { existing.extension = x.extension || null; continue; }
-      out.push({ type, end: x.end, start: x.start, extension: x.extension, detail: "", source: "atcscc" });
+      out.push({ type, end: x.end, start: x.start, extension: x.extension, detail: "", source: "atcscc", cause: x.cause || null });
     }
     return out.sort((x, y) => ({ closure: 0, ground_stop: 1, ground_delay: 2, delay: 3 }[x.type] ?? 4) - ({ closure: 0, ground_stop: 1, ground_delay: 2, delay: 3 }[y.type] ?? 4));
   }
@@ -49,11 +49,22 @@
     }
     return rows.filter((r, i) => !rows.slice(0, i).some((p) => p.label === r.label && p.value === r.value));
   }
+  // One display level per hour (README "Display level"): the hour's weather/FAA level raised by its delay words —
+  // "Delays happening now" to the FAA program's level, "very likely" to at least High, "likely" to at least Moderate,
+  // "possible" to at least Minor; usual delays, a small chance or unlikely raise nothing. Every coloured or labelled
+  // hour (timelines, hour cards, headlines, the map, the brief, trips) uses it, so words and colours agree.
+  const PROG_LEVEL = { closure: 4, ground_stop: 4, ground_delay: 3, delay: 2 };
+  const RAISE = { possible: 1, likely: 2, very: 3 };
+  function delayRaise(h, L) {
+    if (!L) return 0;
+    if (L.key === "now") return PROG_LEVEL[h?.delay?.override] || 2;
+    return RAISE[L.key] || 0;
+  }
   function score(h, opts) {
     const L = h?.delay && opts.words ? opts.words(h.delay) : null;
-    const meaningful = L && L.key !== "now" && (opts.notable ? opts.notable(h.delay, h.level, L) : h.level >= 2);
-    const level = Math.max(h?.level || 0, meaningful ? ({ possible: 2, likely: 3, very: 4 }[L.key] || 0) : 0);
-    return { L, meaningful, level };
+    const raise = delayRaise(h, L);
+    const level = Math.max(h?.level || 0, raise);
+    return { L, meaningful: raise > 0, level, raise, raised: raise > (h?.level || 0) };
   }
   function windowFor(a, opts, after) {
     const hs = a.hours || [];
@@ -102,9 +113,10 @@
     if (kind === "normal" && opts.noticesDown) headline += " · notices unavailable"; // airport NOTAMs/TFRs couldn't be read: never an unqualified "normal"
     const window = h ? windowFor(a, opts, at) : null;
     const end = first && ms(first.end);
-    // Recovery is a forecast, never a promise tied to an FAA program's scheduled end.
+    // Recovery is a forecast, never a promise tied to an FAA program's scheduled end, and only for weather: a program
+    // for volume, staffing, equipment or an airline's IT outage doesn't end because the weather improves.
     let recovery = null;
-    if (h && s.level >= 2) {
+    if (h && s.level >= 2 && programs.every((f) => f.cause === "weather")) {
       const i = a.hours.indexOf(h);
       const lower = a.hours.find((x, j) => j > i && score(x, opts).level < s.level && !restrictions(a, ms(x.t), now).length && (j + 1 >= a.hours.length || score(a.hours[j + 1], opts).level < s.level));
       if (lower) recovery = ms(lower.t);
@@ -119,9 +131,48 @@
       definition: "Risk of weather or air traffic control disruption across this airport during an hour.",
     };
   }
+  /** The level of hour h as the sheet and map show it: its own level, raised by notable delay chances and FAA restrictions in force at `at`. */
+  function levelAt(a, h, opts, at, now) {
+    const p = restrictions(a, at, now)[0];
+    return Math.max(score(h, opts).level, p ? PROG_LEVEL[p.type] || 2 : 0);
+  }
+  /**
+   * One level for an airport, shared by the home card, the sheet's headline, the brief, the map's Now and trips: the
+   * highest airport-hour level (evaluate's, at each remaining hour) and when it applies.
+   * {level, nowLevel, later (the peak is later and higher than now), start, end (the run at `level`), peakAt (ISO
+   * hour), peakHour, words (delay words when they set the level), nowEnd, next (level after the current run), current
+   * (evaluate() now), levels [{t, level}], open (an FAA program in force with no stated end: the poller holds it 3–5
+   * hours, which is not an end), uncertainFrom (ms: after the open program's hold hours the timeline is uncertain), openLevel}.
+   */
+  function summary(a, opts = {}) {
+    const now = opts.now ?? Date.now();
+    const current = evaluate(a, { ...opts, at: now });
+    const hs = (a.hours || []).filter((h) => ms(h.t) + HOUR > now);
+    const levels = hs.map((h, i) => ({ t: h.t, level: i === 0 && ms(h.t) <= now && current.level != null ? current.level : levelAt(a, h, opts, Math.max(ms(h.t), now), now) }));
+    const L = (i) => levels[i].level;
+    const nowLevel = levels.length ? L(0) : current.level || 0;
+    const open = (current.programs || []).find((f) => f.source === "faa" && !Number.isFinite(ms(f.end)) && !f.perm && PROG_LEVEL[f.type]) || null;
+    const out = { level: nowLevel, nowLevel, later: false, start: now, end: null, peakAt: null, peakHour: null, words: null, nowEnd: null, next: null,
+      current, levels, byT: new Map(levels.map((x) => [x.t, x.level])), nowHour: hs[0] || null, open, openLevel: open ? PROG_LEVEL[open.type] : null, uncertainFrom: null };
+    if (!levels.length) return out;
+    let p = 0;
+    levels.forEach((x, i) => { if (x.level > L(p)) p = i; });
+    let q = p;
+    while (q + 1 < levels.length && L(q + 1) === L(p)) q++;
+    let r = 0;
+    while (r + 1 < levels.length && L(r + 1) === L(0)) r++;
+    const sc = score(hs[p], opts);
+    Object.assign(out, { level: L(p), later: p > 0 && L(p) > L(0), start: p === 0 ? now : ms(hs[p].t), end: ms(hs[q].t) + HOUR, peakAt: hs[p].t, peakHour: hs[p],
+      words: sc.meaningful && sc.level >= L(p) ? sc.L : null, nowEnd: ms(hs[r].t) + HOUR, next: r + 1 < levels.length ? L(r + 1) : null });
+    if (open) {
+      const k = levels.findIndex((x, i) => i > 0 && x.level < out.openLevel);
+      if (k > 0) out.uncertainFrom = ms(hs[k].t);
+    }
+    return out;
+  }
   function overlaps(window, at, until) {
     const start = ms(at), end = Number.isFinite(ms(until)) ? ms(until) : start + 1;
     return !!window && start < window.end && end > window.start;
   }
-  return { evaluate, restrictions, directionRows, windowFor, overlaps };
+  return { evaluate, summary, levelAt, score, restrictions, directionRows, windowFor, overlaps, PROG_LEVEL, RAISE };
 });

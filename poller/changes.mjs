@@ -81,8 +81,10 @@ export function causeWord(label) {
   const m = /\(([^)]+)\)\s*$/.exec(s);
   const w = (m ? m[1] : s).trim().toLowerCase();
   if (["", "weather", "other", "unknown", "conditions"].includes(w)) return null;
-  return w.replace(/\bthunderstorms?\b/g, "storms").replace(/\bthunder\b/g, "storms");
+  return w.replace(/\bthunderstorms?\b/g, "storms").replace(/\bthunder\b/g, "storms").replace(ACRONYM_RE, (x) => x.toUpperCase());
 }
+/** Acronyms keep their capitals in lower-cased causes: "IT outage", "ATC zero", "ILS". */
+export const ACRONYM_RE = /\b(it|atc|ils|vip|tfr|gps|faa|nas|tracon|artcc|rwy|twy)\b/g;
 
 /** Cause of the current level from its reasons: a weather category word, else a program's cause in brackets. */
 export function causeOfReasons(reasons, level) {

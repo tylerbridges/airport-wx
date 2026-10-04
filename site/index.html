@@ -253,6 +253,11 @@ table.lt { border-collapse: collapse; font-size: 12px; }
 .tl .s.past.l0 { opacity: .24; }
 .tl .s.past.nd { opacity: .7; }
 .tl .s.tick { animation: segtick .18s ease-out; }
+/* FAA program with no stated end: hours after its hold are uncertain, hatched in the program's colour (not Clear) */
+.tl .s.unc, .lens-seg.unc { background: repeating-linear-gradient(135deg, var(--u, var(--muted)) 0 2px, transparent 2px 5px), var(--nd); opacity: .85; }
+.tl-cap { margin-top: 2px; font-size: 11.5px; line-height: 1.3; color: var(--muted); }
+.stale-tag { font-size: 11px; font-weight: 600; color: var(--muted); white-space: nowrap; }
+.stale-line { margin: 2px 0 8px; font-size: 13px; color: var(--muted); }
 @keyframes segtick { 50% { transform: scaleY(1.35); } }
 .ticks { position: relative; height: 30px; margin-top: 6px; font-size: 11px; font-weight: 600; color: var(--muted); }
 .tick-day { display: block; font-size: 9px; line-height: 12px; font-weight: 500; }

@@ -92,6 +92,7 @@ const aviation = () => window.AWXPrefs?.getPrefs().mode === "aviation";
 /** Plain words for the departures index (null when traffic is about normal). */
 export function words(index) {
   if (index == null || !Number.isFinite(index)) return null;
+  if (index <= 0) return "No departures"; // a closed airport (index 0) has none, not "almost"
   if (index < 0.3) return "Departures almost stopped";
   if (index < 0.6) return "Departures far below normal";
   if (index < 0.8) return "Departures below normal";

@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-04T16:01:32.454Z",
+ "generated": "2026-10-04T16:17:34.713Z",
  "groups": {
   "delays": "Delays & programs",
   "weather": "Weather",
@@ -511,7 +511,7 @@
     {
      "t": "card",
      "iata": "SFO",
-     "re": "1 hr 10 min|1h ?10m"
+     "re": "1 hr 10 min|1 HR 10 MIN|1h ?10m"
     },
     {
      "t": "noPercent"
@@ -746,7 +746,7 @@
     {
      "t": "movement",
      "iata": "MIA",
-     "line": "^Departures almost stopped"
+     "line": "^No departures"
     },
     {
      "t": "trip",
@@ -953,7 +953,7 @@
    "title": "Live relay down",
    "group": "system",
    "blurb": "The live relay doesn't answer: the page says it shows the last build.",
-   "description": "data/config.json names a live relay that can't be reached (a .invalid host). The page runs its normal live path (site/testmode.js LIVE_PATH) and must say \"Live data unavailable — showing data from N min ago\". DEN has a High Wind Warning so there is something to show.",
+   "description": "data/config.json names a live relay that can't be reached (a .invalid host). The page runs its normal live path (site/testmode.js LIVE_PATH) and must say \"Live updates unavailable — showing the latest build\". DEN has a High Wind Warning so there is something to show.",
    "file": "live-relay-down.json",
    "wx": "live-relay-down/wx/",
    "lagMin": 0,
@@ -975,7 +975,7 @@
     },
     {
      "t": "header",
-     "re": "^Live data unavailable — showing data from "
+     "re": "^Live updates unavailable — showing the latest build"
     },
     {
      "t": "banner",
@@ -1063,7 +1063,8 @@
     {
      "t": "card",
      "iata": "MSP",
-     "re": "Delays happening now"
+     "re": "FAA gives no end time",
+     "note": "an FAA delay with no stated end: the card says so instead of a made-up end time"
     },
     {
      "t": "noPercent"
@@ -1414,7 +1415,7 @@
     {
      "t": "card",
      "iata": "EWR",
-     "re": "Delays happening now"
+     "re": "Delays happening now|FAA gives no end time"
     },
     {
      "t": "noPercent"
@@ -1452,7 +1453,7 @@
       "EWR",
       "ORD"
      ],
-     "re": "1 airport needs attention EWR: Delays happening now — ground stop lifted \\d"
+     "re": "\\d airports? needs? attention EWR: Delays happening now — ground stop lifted \\d"
     }
    ]
   },
@@ -2062,7 +2063,7 @@
     {
      "t": "card",
      "iata": "MDW",
-     "re": "Delays very likely"
+     "re": "(Delays|Airport disruption) very likely"
     },
     {
      "t": "noPercent"

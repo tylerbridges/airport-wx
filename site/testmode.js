@@ -53,6 +53,73 @@
     }
     return v;
   }
+  // Reason texts carry the airport's local clock times as written at build time ("until 11 AM ET", "forecast 4–7 PM",
+  // "Sun 2:05 AM"); shiftClocks() moves them by the same delta as the ISO times so the words match the shifted data.
+  // Dates written as "Nov 4" stay as they are.
+  var CLOCK = /\b(?:(Mon|Tue|Wed|Thu|Fri|Sat|Sun) )?(\d{1,2})(?::(\d\d))?(?:–(\d{1,2})(?::(\d\d))?)? (AM|PM)\b/g;
+  var WDS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  var SKIP = { raw: 1, rawText: 1, title: 1, id: 1, iata: 1, icao: 1, name: 1, city: 1, state: 1, tz: 1, t: 1 };
+  var dtfs = {};
+  function parts(ms, tz) {
+    var k = tz;
+    if (!dtfs[k]) dtfs[k] = new Intl.DateTimeFormat("en-US", { timeZone: tz, year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", hourCycle: "h23", weekday: "short" });
+    var o = {};
+    dtfs[k].formatToParts(ms).forEach(function (x) { o[x.type] = x.value; });
+    return { y: +o.year, mo: +o.month, d: +o.day, h: +o.hour % 24, mi: +o.minute, wd: o.weekday };
+  }
+  function wall(y, mo, d, h, mi, tz) { // the instant of a wall-clock time in tz
+    var g = Date.UTC(y, mo - 1, d, h, mi);
+    for (var i = 0; i < 2; i++) { var p = parts(g, tz); g += (Date.UTC(y, mo - 1, d, h, mi) - Date.UTC(p.y, p.mo - 1, p.d, p.h, p.mi)); }
+    return g;
+  }
+  function clockText(ms, tz, withWd) {
+    var p = parts(ms, tz);
+    var h12 = p.h % 12 || 12;
+    return (withWd ? p.wd + " " : "") + h12 + (p.mi ? ":" + (p.mi < 10 ? "0" : "") + p.mi : "") + " " + (p.h < 12 ? "AM" : "PM");
+  }
+  function shiftClocks(text, tz, ref, d) {
+    if (typeof text !== "string" || !/\d (AM|PM)\b/.test(text)) return text;
+    var base = parts(ref, tz);
+    var resolve = function (h12, mi, ap, wd) {
+      var hr = (Number(h12) % 12) + (ap === "PM" ? 12 : 0);
+      for (var k = -1; k <= 7; k++) {
+        var t = wall(base.y, base.mo, base.d + k, hr, Number(mi || 0), tz);
+        if (wd ? parts(t, tz).wd === wd && t >= ref - 24 * 3600e3 : t >= ref - 3 * 3600e3) return t;
+      }
+      return wall(base.y, base.mo, base.d, hr, Number(mi || 0), tz);
+    };
+    return text.replace(CLOCK, function (all, wd, h1, m1, h2, m2, ap) {
+      var round = function (t) { return Math.floor((t + d) / 60e3) * 60e3; }; // as the page shows shifted ISO times (to the minute)
+      if (!h2) return clockText(round(resolve(h1, m1, ap, wd)), tz, !!wd);
+      var end = round(resolve(h2, m2, ap, wd));
+      var startRaw = resolve(h1, m1, ap, wd);
+      if (startRaw > end - d) startRaw -= 24 * 3600e3;
+      var a = clockText(round(startRaw), tz, !!wd), b = clockText(end, tz, false);
+      var ha = a.slice(-2), hb = b.slice(-2);
+      return ha === hb ? a.slice(0, -3) + "–" + b : a + " – " + b;
+    });
+  }
+  function shiftAirportText(v, tz, ref, d, key) {
+    if (typeof v === "string") return SKIP[key] ? v : shiftClocks(v, tz, ref, d);
+    if (Array.isArray(v)) return v.map(function (x) { return shiftAirportText(x, tz, ref, d, key); });
+    if (v && typeof v === "object") {
+      var o = {};
+      for (var k in v) if (Object.prototype.hasOwnProperty.call(v, k)) o[k] = SKIP[k] ? v[k] : shiftAirportText(v[k], tz, ref, d, k);
+      return o;
+    }
+    return v;
+  }
+  /** Every airport's texts with their clock times moved by d (ref: when they were written). */
+  function shiftTexts(data, d, ref) {
+    if (!d || !data || !Array.isArray(data.airports) || !Number.isFinite(ref)) return data;
+    var out = {};
+    for (var k in data) if (Object.prototype.hasOwnProperty.call(data, k)) out[k] = data[k];
+    out.airports = data.airports.map(function (a) {
+      if (!a || !a.tz) return a;
+      try { return shiftAirportText(a, a.tz, ref, d, null); } catch (e) { return a; }
+    });
+    return out;
+  }
   function deltaOf(data, now) {
     var sc = data && data.scenario;
     return sc && sc.builtAt ? (now || Date.now()) - Date.parse(sc.builtAt) - (sc.lagMin || 0) * 60e3 : 0;
@@ -73,9 +140,10 @@
         this.delta = deltaOf(data, opts && opts.now);
         if (scen) { this.info = sc; scenarioLoaded(); }
       }
-      return this.delta ? shift(data, this.delta) : data;
+      return this.delta ? shiftTexts(shift(data, this.delta), this.delta, sc && Date.parse(sc.builtAt)) : data;
     },
     shift: shift,
+    shiftClocks: shiftClocks, // tools/ and check: clock times in reason texts follow the shift
     openPicker: function () { openPicker(); },
     exitUrl: "./",
   });
@@ -161,7 +229,7 @@
       }
       if (live) {
         if (/\/data\/status\.json$/.test(p)) {
-          return scenarioStatus().then(function (st) { T.info = st.scenario || null; scenarioLoaded(); return reply(shift(st, deltaOf(st))); });
+          return scenarioStatus().then(function (st) { T.info = st.scenario || null; scenarioLoaded(); var dd = deltaOf(st); return reply(shiftTexts(shift(st, dd), dd, st.scenario && Date.parse(st.scenario.builtAt))); });
         }
         var mm = /\/data\/(trips\.json|movement\.json|changes\.json|wx\/[A-Za-z0-9_.-]+\.json)$/.exec(p); // brief hook: changes.json
         if (mm) return shifted(mm[1]);

@@ -139,6 +139,7 @@ test("changes: wording helpers", () => {
   assert.equal(C.causeWord("weather (thunderstorms)"), "storms");
   assert.equal(C.causeWord("weather (low ceilings)"), "low ceilings");
   assert.equal(C.causeWord("air traffic control staffing"), "air traffic control staffing");
+  assert.equal(C.causeWord("airline request (IT outage)"), "IT outage"); // acronyms keep their capitals
   assert.equal(C.causeWord("weather"), null);
   assert.equal(C.causeWord(""), null);
   assert.equal(C.levelSentence(1, 3, "storms"), "Risk up to High (storms)");

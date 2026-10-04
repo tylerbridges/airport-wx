@@ -593,6 +593,7 @@
   // ---------- rendering ----------
 
   function render() {
+    sumCache = new WeakMap(); // levels follow the latest data, settings and delay calibration (site/delay.js loads its report late)
     renderHeader();
     renderSeg();
     renderBanner();
@@ -608,6 +609,18 @@
     document.dispatchEvent(new CustomEvent("awx:render"));
   }
 
+  // stale data (README "Stale data"): over 20 min since the data shown was fetched (the live relay's time, else the build's)
+  const STALE_TAG_MS = 20 * 60e3;
+  function dataAge() {
+    const d = state.data;
+    if (!d || state.sample) return null;
+    const t = Date.parse(d.live || d.generated);
+    return Number.isFinite(t) ? Math.max(0, Date.now() - t) : null;
+  }
+  const isStale = () => (dataAge() || 0) > STALE_TAG_MS;
+  /** Small muted "May be outdated" next to a card's status while the data is stale. */
+  const staleTag = () => (isStale() ? h("span", { class: "stale-tag" }, "May be outdated") : null);
+
   function renderHeader() {
     const el = $("updated");
     const d = state.data;
@@ -617,7 +630,7 @@
     el.classList.remove("livefail"); // live relay
     if (d.live) { const s = Math.max(0, Date.now() - Date.parse(d.live)); el.textContent = "Live · " + (s < 60e3 ? Math.round(s / 1e3) + " s ago" : ago(s)); return; }
     const age = Date.now() - Date.parse(d.generated);
-    el.textContent = (live.failed ? "Live data unavailable — showing data from " : "Updated ") + ago(age);
+    el.textContent = live.failed ? "Live updates unavailable — showing the latest build" + (age > STALE_TAG_MS ? " (" + ago(age) + ")" : "") : "Updated " + ago(age);
     if (live.failed) el.classList.add("livefail");
     if (age > STALE_MS) el.classList.add("stale");
   }
@@ -631,8 +644,8 @@
       const by = new Map(all.map((a) => [a.iata, a]));
       return state.favs.map((c) => by.get(c)).filter(Boolean);
     }
-    const sorted = all.slice().sort((x, y) => view(y).peak.level - view(x).peak.level || view(y).now.level - view(x).now.level || x.iata.localeCompare(y.iata));
-    if (state.filter === "risk") return sorted.filter((a) => view(a).peak.level >= 2);
+    const sorted = all.slice().sort((x, y) => levelOf(y) - levelOf(x) || summary(y).nowLevel - summary(x).nowLevel || x.iata.localeCompare(y.iata));
+    if (state.filter === "risk") return sorted.filter((a) => levelOf(a) >= 2);
     return sorted;
   }
 
@@ -641,7 +654,7 @@
     const counts = {
       mine: all.filter((a) => state.favs.includes(a.iata)).length,
       all: all.length,
-      risk: all.filter((a) => view(a).peak.level >= 2).length,
+      risk: all.filter((a) => levelOf(a) >= 2).length,
     };
     const tabs = [["mine", "My airports"], ["all", "All"], ["risk", "At risk"]];
     const seg = $("seg");
@@ -812,7 +825,9 @@
         s = x && x.level != null ? { kind: "obs", level: x.level, reasons: x.reasons, h: x, observed: !!o } : { kind: "none", level: null, reasons: [], h: null };
       } else {
         const f = fcAt(dt);
-        s = f && f.level != null ? { kind: j === nowSlot ? "now" : "fc", level: f.level, reasons: f.reasons, h: f } : { kind: "na", level: null, reasons: [], h: null };
+        // forecast hours: the display level (weather/FAA raised by the delay chance) and, when that raised it, why
+        const L = f && f.level != null ? hourLevel(a, f, j === nowSlot) : null;
+        s = f && f.level != null ? { kind: j === nowSlot ? "now" : "fc", level: L, reasons: hourReasons(a, f, L), h: f } : { kind: "na", level: null, reasons: [], h: null };
       }
       s.t = t;
       s.key = s.h ? Date.parse(s.h.t) : dt;
@@ -857,24 +872,34 @@
     const day = daySlots(a, opts.dayOff || 0);
     const { slots, tz } = day;
     const n = slots.length;
+    // an FAA program with no stated end: after its hold hours the forecast can't say it's over (hatched, not Clear)
+    const sm = safeCall(() => summary(a)) || {};
+    const unsure = (s) => s.kind === "fc" && sm.uncertainFrom != null && s.key >= sm.uncertainFrom && s.level != null && s.level < sm.openLevel;
     const segs = slots.map((s) => h("span", {
-      class: "s " + (s.level == null ? "nd" : lv(s.level)) + (s.kind === "obs" || s.kind === "none" ? " past" : "") + (s.i === day.cur ? " cur" : ""),
-      "data-i": s.i,
+      class: "s " + (s.level == null ? "nd" : lv(s.level)) + (s.kind === "obs" || s.kind === "none" ? " past" : "") + (s.i === day.cur ? " cur" : "") + (unsure(s) ? " unc" : ""),
+      style: unsure(s) ? `--u:var(--l${sm.openLevel})` : null,
+      "data-i": s.i, "data-l": s.level == null ? null : String(s.level), "data-t": String(s.key),
     }));
     const lensSeg = h("span", { class: "lens-seg" });
     const lens = h("span", { class: "lens", "aria-hidden": "true" }, lensSeg);
     const tl = h("div", { class: "tl" + (big ? " big" : ""), style: `grid-template-columns:repeat(${n},minmax(0,1fr))` }, segs, lens);
     const ticks = h("div", { class: "ticks", "aria-hidden": "true" });
+    // ticks every 6 hours, none within 5 slots of the end label (no "6a" over "10a"); a day word only when it changes
+    let lastDay = null;
     slots.forEach((s, i) => {
       const parts = fmt(tz, { hour: "numeric" }, "H24n").formatToParts(s.t);
       const hour = Number(parts.find((x) => x.type === "hour").value);
       const lh = S.clock === "24" ? hour % 24 : hour % 12 + (parts.some((x) => x.type === "dayPeriod" && /PM/i.test(x.value)) ? 12 : 0);
       if (lh === 0) tl.append(h("span", { class: "midnight-mark", style: `left:${(i / n) * 100}%`, "aria-hidden": "true" }));
-      if (lh % 6 === 0 && i <= n - 3) ticks.append(h("span", { style: `left:${(i / n) * 100}%`, class: i < 2 ? "first" : "" }, tickLabel(s.t, tz),
-        lh === 0 ? h("small", { class: "tick-day" }, timelineDay(s.t, tz)) : null));
+      if (lh % 6 === 0 && i <= n - 5) {
+        const dw = lh === 0 ? timelineDay(s.t, tz) : null;
+        const showDay = dw && dw !== lastDay;
+        if (dw) lastDay = dw;
+        ticks.append(h("span", { style: `left:${(i / n) * 100}%`, class: i < 2 ? "first" : "" }, tickLabel(s.t, tz), showDay ? h("small", { class: "tick-day" }, dw) : null));
+      }
     });
-    ticks.append(h("span", { class: "last", style: "left:100%" }, tickLabel(day.end, tz),
-      h("small", { class: "tick-day" }, timelineDay(day.end, tz))));
+    const endDay = timelineDay(day.end, tz);
+    ticks.append(h("span", { class: "last", style: "left:100%" }, tickLabel(day.end, tz), endDay !== lastDay ? h("small", { class: "tick-day" }, endDay) : null));
     const label = h("div", { class: "lenslabel", "aria-hidden": "true" });
     const na = slots.findIndex((x, i) => x.kind === "na" && slots.slice(i).every((y) => y.kind === "na"));
     const naNote = na >= 0 ? h("div", { class: "nanote" }, "Forecast not available yet from " + timelineDay(slots[na].t, tz) + " " + hourLabel(slots[na].t, tz)) : null;
@@ -885,7 +910,7 @@
       "aria-valuemin": big ? "0" : null, "aria-valuemax": big ? String(n - 1) : null, "aria-valuenow": big ? String(Math.max(0, day.cur)) : null,
       "aria-valuetext": big ? (day.cur >= 0 ? slotText(slots[day.cur], a) : slotText(slots[0], a)) : null,
       "data-start": String(day.start), "data-tz": tz,
-    }, label, tl, ticks, naNote);
+    }, label, tl, ticks, naNote, big ? h("div", { class: "tl-cap" }, "Colours show weather and delay risk.") : null);
     const T = { wrap, tl, lens, lensSeg, label, segs, slots, day, a, rest: day.cur, big, opts };
     wrap._tl = T;
     if (big) wireBigScrub(T);
@@ -893,7 +918,7 @@
   }
 
   function timelineLabel(a) {
-    return `Past 12 hours and next 24 hours at ${codeOf(a)}: peak ${LEVELS[view(a).peak.level].label}`;
+    return `Past 12 hours and next 24 hours at ${codeOf(a)}: peak ${LEVELS[levelOf(a)].label}`;
   }
 
   /** Puts the lens (and its label) over slot i; i < 0 hides it. scrub: the grown magnifier. */
@@ -917,8 +942,8 @@
     lens.hidden = false;
     lens.style.left = cx + "px";
     lens.style.width = sw + (T.big ? 14 : 10) + "px";
-    lensSeg.style.width = sw + "px";
-    lensSeg.className = "lens-seg " + (T.slots[i].level == null ? "nd" : lv(T.slots[i].level)) + (seg.classList.contains("past") ? " past" : "");
+    lensSeg.className = "lens-seg " + (T.slots[i].level == null ? "nd" : lv(T.slots[i].level)) + (seg.classList.contains("past") ? " past" : "") + (seg.classList.contains("unc") ? " unc" : "");
+    lensSeg.style.cssText = seg.style.cssText.replace(/(^|;)\s*width[^;]*/g, "") + ";width:" + sw + "px";
     wrap.classList.toggle("scrub", !!scrub);
     label.hidden = false;
     label.textContent = scrub || i !== T.rest || T.slots[i].kind === "na" ? slotText(T.slots[i], T.a) : nowWords(T.a);
@@ -1034,16 +1059,66 @@
     return h("div", { class: cls }, c.text + " " + when);
   }
 
+  const PROG_RE = /^(Ground stop|Ground delay program|Delay program|Delays\b|Airport closed)/;
+  /** The cause in a program reason: "Ground stop — airline request (IT outage), until 11 AM ET" -> "Airline request (IT outage)". */
+  function programCause(reasons) {
+    for (const r of reasons || []) {
+      const m = PROG_RE.test(r) && /—\s*([^,]+?)(?:,|$)/.exec(String(r));
+      if (m && !/^conditions$/i.test(m[1].trim())) return cap(m[1].trim());
+    }
+    return null;
+  }
+  /** hubs hook: the cascade note shows on a card only when the airport's own outlook is at least possible delays, or the note set its level. */
+  function cascadeOnCard(v, sm) {
+    if (sm.level >= 2) return true;
+    if (sm.level < 1 || !(v.cascade || []).length) return false;
+    const isNote = (r) => (v.cascade || []).some((c) => String(r || "").indexOf(c.hub + " ") === 0);
+    const now = refNow();
+    return !v.hours.some((x) => Date.parse(x.t) + HOUR > now && (x.reasons || []).some((r) => !isNote(r) && (CATS.reason(r).level || 0) >= sm.level));
+  }
+  /**
+   * The card's one time line for its level (the sheet's words and window): "Airport disruption likely 5–10 PM",
+   * "Delays happening now until 6 PM", "High — FAA gives no end time"; routine days keep site/delay.js's line.
+   * progs: the badges shown (their program isn't named again).
+   */
+  function cardWhen(a, v, sm, progs) {
+    const tz = dispTz(a);
+    const cur = sm.current || {};
+    const prog = progs.length ? (cur.programs || [])[0] : null;
+    const cls = (l) => "dl-line " + (l >= 3 ? "dl-hi" : l >= 2 ? "dl-mid" : "dl-lo");
+    const zt = zoneTag(a);
+    const progWhen = !prog ? null : sm.open ? NO_END : cur.scheduledEnd ? (prog.type === "closure" ? "reopens " : "until ") + whenLabel(cur.scheduledEnd, tz) + zt : null;
+    if (sm.later) {
+      const head = levelWords(sm.level, sm.words);
+      return [h("div", { class: cls(sm.level) }, head + " " + rangeText(sm.start, sm.end, tz) + zt, sm.words && sm.words.cue ? h("span", { class: "dl-usual" }, " · " + sm.words.cue) : null),
+        h("div", { class: "sub" }, "Now: " + LEVELS[sm.nowLevel].label + (progWhen ? " — " + progWhen : ""))];
+    }
+    if (prog) {
+      if (sm.open) return [h("div", { class: cls(sm.level) }, LEVELS[sm.level].label + " — " + NO_END)];
+      return [h("div", { class: cls(sm.level) }, (prog.type === "closure" ? "Airport closed" : "Delays happening now") + (progWhen ? (prog.type === "closure" ? " · " : " ") + progWhen : ""))];
+    }
+    if (sm.level >= 2) {
+      const head = levelWords(sm.level, sm.words);
+      return [h("div", { class: cls(sm.level) }, head + " " + rangeText(sm.start, sm.end, tz) + zt, sm.words && sm.words.cue ? h("span", { class: "dl-usual" }, " · " + sm.words.cue) : null)];
+    }
+    return [window.AWXDelay ? safeCall(() => AWXDelay.delayLine(a)) : null]; // phase3 hook: routine delay words (site/delay.js)
+  }
+
   function card(a, idx, count) {
     const v = view(a);
+    const sm = summary(a);
     const fav = state.favs.includes(a.iata);
-    const later = laterPeak(v);
-    const reason = plainList(later ? v.peak.reasons : v.now.reasons, a)[0] || (v.peak.level ? "Minor weather conditions" : "No significant weather");
+    const later = sm.later;
+    const progs = cardPrograms(v);
+    // a program shows once: its badge and one sentence (cardWhen); reasons that only repeat it are left out
+    const rsn = (rs) => shortList((rs || []).filter((r) => !(progs.length && PROG_RE.test(r))), a);
+    const reason = rsn(later && sm.peakHour ? hourReasons(a, sm.peakHour, sm.level) : ((n) => hourReasons(a, n.x, sm.nowLevel, n.reasons))(nowHourOf(a, v, sm)))[0] || (progs.length ? programCause(v.now.reasons) : null)
+      || (sm.level ? (sm.words ? "Busier than usual" : "Minor weather conditions") : "No significant weather");
     const mine = state.filter === "mine";
     const code = codeOf(a);
     const el = h("div", {
-      class: "card", role: "button", tabindex: "0", "data-iata": a.iata,
-      "aria-label": `${code}, ${a.city}. ${LEVELS[v.peak.level].label} risk. ${reason}`,
+      class: "card", role: "button", tabindex: "0", "data-iata": a.iata, "data-level": String(sm.level),
+      "aria-label": `${code}, ${a.city}. ${LEVELS[sm.level].label} risk. ${reason}`,
       onclick: () => openSheet(a.iata),
       onkeydown: (e) => {
         if ((e.key === "Enter" || e.key === " ") && e.target === el) { e.preventDefault(); openSheet(a.iata); }
@@ -1053,7 +1128,8 @@
       h("div", { class: "top" },
         h("div", { class: "code" }, code),
         h("div", { class: "right" },
-          pill(v.peak.level),
+          staleTag(),
+          pill(sm.level),
           h("button", {
             type: "button", class: "star", "aria-pressed": String(fav), "aria-label": (fav ? "Remove " : "Add ") + code + (fav ? " from" : " to") + " my airports",
             onclick: (e) => { e.stopPropagation(); toggleFav(a.iata); },
@@ -1063,10 +1139,9 @@
       h("div", { class: "where" }, `${a.city}, ${a.state}`),
       h("div", { class: "reason" }, reason),
       window.AWXMovement ? safeCall(() => AWXMovement.line(a)) : null, // movement hook: "Departures far below normal" (site/movement.js)
-      window.AWXDelay ? safeCall(() => AWXDelay.delayLine(a)) : null, // phase3 hook: chance of a real delay (site/delay.js)
-      safeCall(() => cascadeLine(v, [reason], "sub hubline")), // hubs hook: "ORD ground stop may delay flights to and from Chicago later today"
-      later ? h("div", { class: "sub" }, "Now: " + LEVELS[v.now.level].label) : null,
-      cardPrograms(v).length ? h("div", { class: "badges" }, faaBadges(v)) : null,
+      safeCall(() => cardWhen(a, v, sm, progs)), // the level's window (the sheet's words); phase3 hook inside for routine days
+      cascadeOnCard(v, sm) ? safeCall(() => cascadeLine(v, [reason], "sub hubline")) : null, // hubs hook: "ORD ground stop may delay flights to and from Chicago later today"
+      progs.length ? h("div", { class: "badges" }, faaBadges(v)) : null,
       timeline(a, {}),
       mine && count > 1 ? h("div", { class: "sr-move" },
         idx > 0 ? h("button", { type: "button", class: "sr", onclick: (e) => { e.stopPropagation(); moveMine(a.iata, -1, true); }, onkeydown: (e) => e.stopPropagation() }, `Move ${code} up`) : null,
@@ -1437,7 +1512,7 @@
   /** Short plain cause for a NAS status reason: "RWY:Construction" -> "runway construction", "wind" -> "wind". */
   function plainCause(f) {
     const r = String(f.reason || "");
-    const detail = (r.split(/[/:]/).pop() || "").trim().toLowerCase();
+    const detail = (r.split(/[/:]/).pop() || "").trim().toLowerCase().replace(/\b(it|atc|ils|vip|tfr|gps|faa|nas)\b/g, (x) => x.toUpperCase()); // "IT outage"
     if (f.cause === "runway" && detail && !/runway/.test(detail)) return "runway " + detail.replace(/^rwy\s*/, "");
     const lab = f.causeLabel || "";
     const m = /\(([^)]+)\)$/.exec(lab);
@@ -1731,12 +1806,111 @@
       o.simple ? null : o.facts);
   }
 
+  const outlookOpts = (a, v) => ({ now: refNow(), generated: state.data?.generated, sources: state.data?.sources, sample: state.sample, noticesDown: noticesDown(),
+    hidden: v.hiddenCats?.size, plain: (r) => plainReason(shortRaw(r), a),
+    words: (d) => window.AWXDelay?.likelihood(d, { iata: a.iata, aviation: aviation() }), notable: window.AWXDelay?.notable });
   function outlook(a, at = refNow()) {
     const v = a.hours?.length ? view(a) : a;
-    return AWXOutlook.evaluate(v, { now: refNow(), at, generated: state.data?.generated, sources: state.data?.sources, sample: state.sample, noticesDown: noticesDown(),
-      hidden: v.hiddenCats?.size, plain: (r) => plainReason(shortRaw(r), a),
-      words: (d) => window.AWXDelay?.likelihood(d, { iata: a.iata, aviation: aviation() }), notable: window.AWXDelay?.notable });
+    return AWXOutlook.evaluate(v, { ...outlookOpts(a, v), at });
   }
+  /**
+   * The airport's one level (site/outlook.js summary): the home card's pill and text, the sheet's headline, the
+   * national panel, the lists' sorting and At risk, the brief and trips all read it, so they never disagree.
+   * Cached per view and minute.
+   */
+  let sumCache = new WeakMap();
+  function summary(a) {
+    const v = a.hours?.length ? view(a) : a;
+    const k = Math.floor(refNow() / 60e3) + "|" + S.mode + "|" + (state.data && state.data.generated);
+    const c = sumCache.get(v);
+    if (c && c.k === k) return c.s;
+    const sm = AWXOutlook.summary(v, outlookOpts(a, v));
+    sumCache.set(v, { k, s: sm });
+    return sm;
+  }
+  const levelOf = (a) => summary(a).level || 0;
+  /**
+   * The display level of one forecast hour x (an entry of the airport's hours): weather/FAA level raised by its delay
+   * words and FAA restrictions (outlook.js levelAt), the same number the headline, map and brief use.
+   */
+  function hourLevel(a, x, isNow) {
+    if (!x) return null;
+    const sm = summary(a);
+    const hit = sm.byT && sm.byT.get(x.t);
+    if (hit != null) return hit;
+    const v = a.hours?.length ? view(a) : a;
+    const now = refNow();
+    return AWXOutlook.levelAt(v, x, outlookOpts(a, v), isNow ? now : Math.max(Date.parse(x.t), now), now);
+  }
+  /** The hour holding now and its reasons (the poller's `now` while its first hour is still current). */
+  function nowHourOf(a, v, sm) {
+    const x = sm.nowHour || v.hours[0];
+    return { x, reasons: x === v.hours[0] ? v.now.reasons : x.reasons };
+  }
+  /** Local hour 0–23 of ms in tz. */
+  function localHour(ms, tz) {
+    const parts = fmt(tz, { hour: "numeric" }, "H24n").formatToParts(ms);
+    const hour = Number(parts.find((x) => x.type === "hour").value);
+    return S.clock === "24" ? hour % 24 : hour % 12 + (parts.some((x) => x.type === "dayPeriod" && /PM/i.test(x.value)) ? 12 : 0);
+  }
+  const PART_WORD = (hr) => (hr >= 5 && hr < 12 ? "Busy morning" : hr >= 12 && hr < 17 ? "Busy afternoon" : hr >= 17 && hr < 21 ? "Busy evening" : hr >= 21 ? "Busy night" : "Busy late night");
+  const RAISE_WORD = { possible: "delays possible", likely: "delays likely", very: "delays very likely" };
+  const NOW_WORD = { ground_stop: "FAA ground stop in effect", ground_delay: "FAA delay program in effect", delay: "FAA-reported delays in effect", closure: "Airport closed" };
+  /**
+   * An hour's reasons with its cause said when the delay chance, not the weather, sets its colour (or nothing else
+   * explains it): "Busy evening — delays likely", "Delays at ORD may spread here", "FAA ground stop in effect".
+   * A coloured hour never reads "No significant weather".
+   */
+  function hourReasons(a, x, level, reasons) {
+    const rs = reasons || (x && x.reasons) || [];
+    if (!x || !level) return rs;
+    const v = a.hours?.length ? view(a) : a;
+    const sc = AWXOutlook.score(x, outlookOpts(a, v));
+    const plain = plainList(rs, a);
+    if (plain.length && !sc.raised) return rs;
+    const now = refNow();
+    const prog = AWXOutlook.restrictions(v, Math.max(Date.parse(x.t), now), now)[0];
+    let why = null;
+    if (sc.L && sc.L.key === "now") why = NOW_WORD[x.delay && x.delay.override] || "FAA-reported delays in effect";
+    else if (prog && !plain.length) why = NOW_WORD[prog.type] || "FAA-reported delays in effect";
+    else {
+      const hub = (v.cascade || []).find((c) => rs.some((r) => String(r || "").indexOf(c.hub + " ") === 0));
+      if (hub) why = "Delays at " + hub.hub + " may spread here";
+      else if (sc.L && RAISE_WORD[sc.L.key]) {
+        why = PART_WORD(localHour(Date.parse(x.t), a.tz || "UTC")) + " — " + RAISE_WORD[sc.L.key];
+      } else if (!plain.length) why = "Minor weather conditions";
+    }
+    return why ? [why, ...rs.filter((r) => r !== why)] : rs;
+  }
+  /** Words for a level window, the same as the sheet's headline: "Airport disruption likely", "Delays happening now". */
+  function levelWords(level, words) {
+    if (words) return words.key === "now" ? words.word : words.word.replace(/^Delays/, "Airport disruption");
+    return level >= 3 ? "Airport disruption likely" : level >= 2 ? "Airport disruption possible" : level >= 1 ? "Minor disruption possible" : "";
+  }
+  /** " EDT" when the airport's display zone isn't the device's, else "" (card and brief times). */
+  function zoneTag(a, ms = refNow()) {
+    const tz = dispTz(a);
+    const z = zoneAbbr(ms, tz);
+    return z && z !== zoneAbbr(ms, USER_TZ) ? " " + z : "";
+  }
+  /**
+   * One range helper for the card, the sheet and the brief: "4–7 PM", "tomorrow 2–5 AM", "11 PM – 1 AM tomorrow",
+   * and "through 9 PM" when the window has already started.
+   */
+  function rangeText(start, end, tz) {
+    if (start <= refNow()) return "through " + whenLabel(end, tz);
+    const sa = clock(start, tz), sb = clock(end, tz);
+    const w = whenLabel(start, tz);
+    const prefix = w.endsWith(sa) ? w.slice(0, w.length - sa.length) : "";
+    const half = (x) => x.split(" ").pop();
+    const endDay = dayKey(end - 1, tz); // a window ending at midnight stays on its day ("7 PM – 12 AM")
+    if (dayKey(start, tz) === endDay && S.clock !== "24" && / [AP]M$/.test(sa) && half(sa) === half(sb)) return prefix + sa.slice(0, sa.lastIndexOf(" ")) + "–" + sb;
+    if (dayKey(start, tz) === endDay) return prefix + sa + " – " + sb;
+    const wb = whenLabel(end, tz); // "tomorrow 1 AM", "Mon 1 AM"
+    return prefix + sa + " – " + (/^\d/.test(wb) ? wb : sb + " " + wb.slice(0, wb.indexOf(" ")));
+  }
+  /** "FAA gives no end time" when an FAA program in force has none (its 3–5 hour hold in the hour levels isn't an end). */
+  const NO_END = "FAA gives no end time";
   function travelOutlook(a) {
     const o = outlook(a);
     const rows = o.impacts.map((r) => h("div", { class: "outlook-row" }, h("b", {}, r.label), h("span", {}, r.value)));
@@ -1759,9 +1933,9 @@
     const code = codeOf(a);
     const t0 = Date.parse(v.hours[0].t);
     const nowCond = Object.assign({}, v.hours[0], a.metar ? metarCond(a.metar) : {}, { fltCat: (a.metar && a.metar.fltCat) || v.hours[0].fltCat });
-    const later = laterPeak(v);
-    const layout = CATS.restLayout(v.now.level, v.peak.level, later);
-    const endMs = levelEnd(v);
+    const sm = summary(a); // the card's level and window: the headline here always matches it
+    const later = sm.later;
+    const layout = CATS.restLayout(sm.nowLevel, sm.level, later);
     const lastMs = Date.parse(v.hours[v.hours.length - 1].t) + HOUR;
     const nowPrograms = programsAt(v, t0, true);
     const sources = state.data.sources || {};
@@ -1769,35 +1943,27 @@
     const stale = refNow() - Date.parse(state.data.generated) > STALE_MS;
     const normalNote = stale ? "Status may be outdated" : incomplete ? "No disruptions reported · some data unavailable"
       : v.hiddenCats && v.hiddenCats.size ? "No issues in your selected categories" : noticesDown() ? "Operating normally · notices unavailable" : null;
+    // the current run: "through 3 PM, then Clear" — or, for an FAA program with no stated end, "— FAA gives no end time"
+    const nowWhen = () => (sm.open ? "— " + NO_END : "through " + whenLabel(sm.nowEnd || lastMs, tz) + (sm.next != null ? ", then " + LEVELS[sm.next].label : ""));
 
-    // rest state: Now | Peak, or one full-width "Now · Peak" / clear card
+    // rest state: Now | Coming up, or one full-width "Now" / clear card
     const restCards = () => {
       if (layout === "split") {
-        const pk = v.hours.find((x) => x.t === v.peak.at) || v.hours[0];
+        const pk = sm.peakHour || v.hours[0];
         const pt = Date.parse(pk.t);
+        const nowO = outlook(a);
         return h("div", { class: "two" },
-          stateCard({ a, kind: "now", simple: true, label: "Now", outlook: outlook(a), level: v.now.level, when: "through " + whenLabel(endMs, tz), delay: v.hours[0].delay,
-            normalNote, reasons: shortList(v.now.reasons, a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true), chips: cardSources(v.now.reasons, "now") }),
-          stateCard({ a, kind: "peak", simple: true, label: "Coming up", outlook: outlook(a, pt), level: v.peak.level, when: peakRange(v), delay: pk.delay,
-            reasons: shortList(pk.reasons, a), programs: programsAt(v, pt, false), impact: CATS.impact(pk.reasons, programsAt(v, pt, false)), facts: factsRow(pk, a, pt, false, true), chips: cardSources(pk.reasons, "fc") }));
+          stateCard({ a, kind: "now", simple: true, label: "Now", outlook: nowO, level: sm.nowLevel, when: nowO.kind === "unknown" ? nowO.quality || "Forecast unavailable" : sm.open ? NO_END : "through " + whenLabel(sm.nowEnd, tz), delay: v.hours[0].delay,
+            normalNote, reasons: shortList(((n) => hourReasons(a, n.x, sm.nowLevel, n.reasons))(nowHourOf(a, v, sm)), a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true), chips: cardSources(v.now.reasons, "now") }),
+          stateCard({ a, kind: "peak", simple: true, label: "Coming up", outlook: outlook(a, pt), level: sm.level, when: rangeText(sm.start, sm.end, tz), delay: pk.delay,
+            reasons: shortList(hourReasons(a, pk, sm.level), a), programs: programsAt(v, pt, false), impact: CATS.impact(pk.reasons, programsAt(v, pt, false)), facts: factsRow(pk, a, pt, false, true), chips: cardSources(pk.reasons, "fc") }));
       }
       const currentOutlook = outlook(a);
-      let when;
-      if (layout === "clear") when = "Clear through " + whenLabel(lastMs, tz);
-      else {
-        const nxt = v.hours.find((x) => Date.parse(x.t) >= endMs);
-        when = "through " + whenLabel(endMs, tz);
-        if (nxt) {
-          let j = v.hours.indexOf(nxt);
-          while (j + 1 < v.hours.length && v.hours[j + 1].level === nxt.level) j++;
-          const e2 = Date.parse(v.hours[j].t) + HOUR;
-          when += ", then " + LEVELS[nxt.level].label;
-        }
-      }
+      let when = layout === "clear" ? "Clear through " + whenLabel(lastMs, tz) : nowWhen();
       if (currentOutlook.kind === "unknown") when = currentOutlook.quality || "Forecast unavailable";
       else if (layout === "clear" && currentOutlook.kind !== "normal") when = "This hour";
-      return stateCard({ a, layout, kind: "nowpeak", full: true, simple: true, label: "Now", outlook: currentOutlook, level: v.now.level, when, delay: v.hours[0].delay,
-        normalNote, reasons: shortList(v.now.reasons, a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true),
+      return stateCard({ a, layout, kind: "nowpeak", full: true, simple: true, label: "Now", outlook: currentOutlook, level: sm.nowLevel, when, delay: v.hours[0].delay,
+        normalNote, reasons: shortList(((n) => hourReasons(a, n.x, sm.nowLevel, n.reasons))(nowHourOf(a, v, sm)), a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true),
         chips: cardSources(v.now.reasons, "now"), empty: null });
     };
     const hourCard = (s) => {
@@ -1808,7 +1974,8 @@
       const zulu = aviation() ? " · " + new Date(s.t).toISOString().slice(11, 13) + "00Z" : "";
       const when = (s.kind === "obs" ? (s.observed ? "Observed" : "Earlier forecast") : s.kind === "none" ? "No report" : s.kind === "na" ? "Forecast not available yet" : isNow ? "Now" : "Forecast") + zulu;
       const progs = past || s.kind === "na" ? [] : programsAt(v, s.key, isNow);
-      return stateCard({ a, kind: "hour", past, normalNote: isNow ? normalNote : null, isNow, full: true, max: 3, label, level: s.level, when, delay: !past && s.h ? s.h.delay : null,
+      const unsure = !past && !isNow && sm.uncertainFrom != null && s.key >= sm.uncertainFrom && s.level != null && s.level < sm.openLevel;
+      return stateCard({ a, kind: "hour", past, normalNote: isNow ? normalNote : unsure ? NO_END + " — the program may still be in place" : null, isNow, full: true, max: 3, label, level: s.level, when, delay: !past && s.h ? s.h.delay : null,
         reasons: shortList(s.reasons, a), programs: progs, impact: s.level == null ? null : CATS.impact(s.reasons, progs),
         facts: c ? factsRow(c, a, s.key, past, true) : null, chips: s.level == null ? [] : cardSources(s.reasons, s.kind),
         empty: s.kind === "none" ? "No weather report for this hour" : s.kind === "na" ? "Forecast not available yet" : null });
@@ -1909,10 +2076,12 @@
           h("button", { type: "button", class: "star", "aria-pressed": String(fav), "aria-label": (fav ? "Remove " : "Add ") + code + (fav ? " from" : " to") + " my airports", onclick: () => toggleFav(a.iata) }, starSvg()),
           h("button", { type: "button", class: "close", "aria-label": "Close", onclick: closeSheet }, closeSvg()))),
       h("div", { class: "sh-where" }, h("b", { class: "sh-aname" }, a.name), h("span", { class: "muted" }, " · " + `${a.city}, ${a.state}` + (S.tz === "mine" ? " · " + zoneLine : ""))),
+      // stale data: the first line says so (README "Stale data")
+      isStale() ? h("p", { class: "stale-line" }, "Last updated " + ago(dataAge()) + " — may be outdated") : null,
       // above the timeline: only the header, the Now / Peak (or single) card and the timeline itself
       boxWrap,
       routine, // phase3 hook: "Delays unlikely today" / "Usual delays this evening" (site/delay.js routineOutlook)
-      safeCall(() => cascadeLine(v, [...shortList(v.now.reasons, a).slice(0, 3), ...shortList(v.peak.reasons, a).slice(0, 3)], "sh-hub")), // hubs hook
+      safeCall(() => cascadeLine(v, [...shortList(v.now.reasons, a).slice(0, 3), ...shortList((sm.peakHour || v.peak).reasons, a).slice(0, 3)], "sh-hub")), // hubs hook
       h("section", { class: "sec tlsec" },
         h("div", { class: "sec-h" }, icon(ICONS.clock), h("h3", {}, tlTitle), h("span", { class: "rule", "aria-hidden": "true" }), dayBtn),
         tlHolder),
@@ -2262,7 +2431,7 @@
     const p = $("panel");
     if (!s) { p.replaceChildren(panelHead("Across the U.S.")); return; }
     const row = (a, what) => h("button", { type: "button", class: "nrow", onclick: () => { closePanel(true); openSheet(a.iata); } },
-      h("span", { class: "ncode" }, codeOf(a)), h("span", { class: "ntext" }, h("span", {}, a.city + ", " + a.state), h("span", { class: "muted" }, what)), pill(view(a).peak.level, true));
+      h("span", { class: "ncode" }, codeOf(a)), h("span", { class: "ntext" }, h("span", {}, a.city + ", " + a.state), h("span", { class: "muted" }, what)), pill(levelOf(a), true));
     const grp = (title, list, what) => (list.length ? h("div", { class: "ngrp" }, h("h3", {}, title), h("div", { class: "glist" }, list.map((a) => row(a, what(a))))) : null);
     const progText = (a, t) => { const f = (view(a).faa || []).find((x) => x.type === t); return f ? programLine(f, a) : t === "ground_stop" ? "Ground stop" : "Delay program"; };
     p.replaceChildren(...[panelHead("Across the U.S."),
@@ -2307,11 +2476,11 @@
     state, openSheet, closeSheet, toggleFav, render, // build2a hook: used by site/searched.js
     // build2b: for site/searched.js, the settings UI and check.js
     openDetails, closeDetails, // More details page (check.js)
-    prefs: PREFS, codeOf, view, outlook, refNow, whenLabel, dispTz, zoneAbbr, clock, hourLabel, daySlots, openNational, closePanel, placeLenses,
+    prefs: PREFS, codeOf, view, outlook, summary, hourLevel, slotText, refNow, whenLabel, dispTz, zoneAbbr, clock, hourLabel, daySlots, openNational, closePanel, placeLenses,
     timeline: (a) => timeline(a, {}), // a status.json-shaped airport (searched.js builds one from a shard entry)
     version: APP_V,
   };
-  window.AWXApp.brief = { shortList, nationalSummary, programsAt, programLine, localMidnight, dayKey, refNow, whenLabel, LEVELS, icon, ICONS }; // brief hook: helpers for site/brief.js
+  window.AWXApp.brief = { shortList, nationalSummary, programsAt, programLine, localMidnight, dayKey, refNow, whenLabel, LEVELS, icon, ICONS, rangeText, zoneTag, hourLevel, hourReasons }; // brief hook: helpers for site/brief.js
   window.AWXApp.setFavs = (list) => { state.favs = list.filter((x) => typeof x === "string"); saveFavs(); render(); }; // nav hook: Settings → Your airports (site/settings.js)
   if (!testMode()) liveConfig(); // live relay: read data/config.json on load
   render();

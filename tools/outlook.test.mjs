@@ -45,10 +45,62 @@ test("outlook: later risk and sustained forecast improvement, with exact trip ov
   assert.equal(O.overlaps(o.window, a.hours[3].t), true); assert.equal(O.overlaps(o.window, a.hours[5].t), false);
   assert.equal(O.evaluate(a, options({ at: now + 2 * H })).recovery, Date.parse(a.hours[5].t));
 });
-test("outlook: probability describes an airport hour and only unusual routine risk raises severity", () => {
+test("outlook: probability describes an airport hour; delay words raise its display level", () => {
   const a = base(); a.hours[0].delay = { p: 0.5 };
   const words = () => ({ key: "likely", word: "Delays likely", rate: 0.5, cue: "higher than usual" });
-  const o = O.evaluate(a, options({ words, notable: () => true }));
-  assert.equal(o.headline, "Airport disruption likely"); assert.equal(o.level, 3); assert.match(o.definition, /airport during an hour/);
-  assert.equal(O.evaluate(a, options({ words, notable: () => false })).kind, "normal");
+  const o = O.evaluate(a, options({ words }));
+  assert.equal(o.headline, "Airport disruption likely"); assert.equal(o.level, 2); assert.match(o.definition, /airport during an hour/);
+  assert.equal(O.evaluate(a, options({ words: () => ({ key: "usual", word: "Usual delays", rate: 0.2 }) })).kind, "normal");
+});
+
+// ---------- one level everywhere (display level, summary) ----------
+const W = { unlikely: 0, small: 0, usual: 0, possible: 1, likely: 2, very: 3 };
+const wordsFor = (d) => d && d.k ? { key: d.k, word: { now: "Delays happening now", possible: "Delays possible", likely: "Delays likely", very: "Delays very likely" }[d.k] || "Usual delays", rate: 0.5, cue: "" } : null;
+test("display level: delay words raise an hour (possible ≥ Minor, likely ≥ Moderate, very likely ≥ High, now = the program's level); routine words don't", () => {
+  for (const [k, want] of Object.entries(W)) {
+    const h = { t: new Date(now).toISOString(), level: 0, reasons: [], delay: { p: 0.5, k } };
+    assert.equal(O.score(h, { words: wordsFor }).level, want, k);
+    assert.equal(O.score({ ...h, level: 3 }, { words: wordsFor }).level, Math.max(3, want), k + " never lowers");
+  }
+  for (const [ov, want] of [["ground_stop", 4], ["closure", 4], ["ground_delay", 3], ["delay", 2]]) {
+    assert.equal(O.score({ t: "", level: 0, delay: { p: 1, k: "now", override: ov } }, { words: wordsFor }).level, want, ov);
+  }
+});
+test("summary: one level and window for the card, the sheet headline and the map", () => {
+  const a = base();
+  a.hours[1].level = 1; a.hours[1].reasons = ["Rain"];
+  for (const i of [4, 5]) a.hours[i].delay = { p: 0.6, k: "likely" }; // clear skies, delays likely: Moderate 4–6
+  a.hours[7].level = 2; a.hours[7].reasons = ["Low clouds"];
+  const sm = O.summary(a, options({ words: wordsFor }));
+  assert.equal(sm.level, 2); assert.equal(sm.nowLevel, 0); assert.equal(sm.later, true);
+  assert.equal(sm.start, Date.parse(a.hours[4].t)); assert.equal(sm.end, Date.parse(a.hours[6].t)); // the first run at the top level
+  assert.equal(sm.words.key, "likely");
+  // the sheet's "Coming up" card (evaluate at the window) and the map's hour show the same level
+  assert.equal(O.evaluate(a, options({ words: wordsFor, at: sm.start })).level, sm.level);
+  // every hour named by the window is at the level; the per-hour display levels are the timeline's colours
+  for (const x of sm.levels) if (Date.parse(x.t) >= sm.start && Date.parse(x.t) < sm.end) assert.equal(x.level, 2);
+  assert.equal(sm.byT.get(a.hours[1].t), 1);
+});
+test("summary: an FAA program with no stated end is open (no made-up end time) and later hours are uncertain", () => {
+  const a = base();
+  a.faa = [{ type: "ground_delay", end: null, cause: "weather" }];
+  for (let i = 0; i < 3; i++) { a.hours[i].level = 3; a.hours[i].reasons = ["Ground delay program — weather (low ceilings)"]; } // the poller's 3-hour hold
+  const sm = O.summary(a, options());
+  assert.equal(sm.level, 3); assert.ok(sm.open); assert.equal(sm.open.type, "ground_delay"); assert.equal(sm.openLevel, 3);
+  assert.equal(sm.uncertainFrom, Date.parse(a.hours[3].t));
+  a.faa[0].end = new Date(now + 2 * H).toISOString();
+  assert.equal(O.summary(a, options()).open, null);
+});
+test("outlook: no forecast improvement for a program whose cause isn't weather", () => {
+  const a = base();
+  for (let i = 0; i < 3; i++) { a.hours[i].level = 3; a.hours[i].reasons = ["Ground delay program"]; }
+  a.faa = [{ type: "ground_delay", end: new Date(now + 2 * H).toISOString(), cause: "weather" }];
+  assert.equal(O.evaluate(a, options()).recovery, Date.parse(a.hours[3].t));
+  for (const cause of ["volume", "staffing", "equipment", "airline", "other"]) {
+    a.faa[0].cause = cause;
+    assert.equal(O.evaluate(a, options()).recovery, null, cause);
+  }
+});
+test("outlook: a quiet airport whose notices couldn't be read says so", () => {
+  assert.equal(O.evaluate(base(), options({ noticesDown: true })).headline, "Operating normally · notices unavailable");
 });

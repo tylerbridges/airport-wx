@@ -22,7 +22,7 @@
 //   {t:"card", iata, re}   the airport's card on the All list
 //   {t:"sheet", iata, re}  the airport's sheet (text, including closed "Why?" parts)
 //   {t:"national", re}     the national strip (#natstrip)
-//   {t:"header", re}       the "Updated …" / "Live data unavailable …" line
+//   {t:"header", re}       the "Updated …" / "Live updates unavailable …" line
 //   {t:"banner", re}       the banner area
 //   {t:"noPercent"}        Traveler mode: no "%" in delay-chance text (cards, every sheet, trips)
 //   {t:"brief", re, favs?} the morning brief, opened as the menu does (AWXBrief.open), with these starred airports (brief hook)
@@ -389,4 +389,89 @@ export async function pageAsserts(add, w, doc, asserts) {
     }
     add(ok ? "pass" : "fail", `Expect on page: ${label}`, ok ? "" : [got, x.note ? `(${x.note})` : ""].filter(Boolean).join(" "));
   }
+}
+
+/**
+ * Every view, every airport (run for each scenario and for live data, in a Traveler-mode 390 px frame):
+ *   - one level: the card's pill equals the sheet headline's (the highest pill on the sheet's rest cards);
+ *   - words and colours agree: the hours the card's headline names (site/outlook.js summary window) are all coloured
+ *     at that level or higher on the card's timeline, and every forecast hour coloured above Clear says why (its
+ *     lens label has a reason or delay word);
+ *   - no visible text node reads "null", "undefined" or "NaN" (home, every sheet, the national panel, three More
+ *     details pages);
+ *   - Traveler text on cards and sheets (outside Pilot details and raw text) has no "%".
+ * add(status, label, detail).
+ */
+export async function consistencyChecks(add, w, doc, where = "") {
+  const A = w && w.AWXApp;
+  if (!A || !A.state || !A.state.data) { add("fail", `Consistency checks${where}`, "the app didn't load"); return; }
+  const P = w.AWXPrefs;
+  if (P && P.setPref && P.getPrefs) for (const [k, v] of Object.entries({ mode: "traveler", timeRef: "airport", clock: 12, codes: "iata" })) if (String(P.getPrefs()[k]) !== String(v)) P.setPref(k, v);
+  const LV = { Clear: 0, Minor: 1, Moderate: 2, High: 3, Severe: 4 };
+  const BAD = /(^|[^A-Za-z])(null|undefined|NaN)([^A-Za-z]|$)/;
+  const nulls = [], pct = [], levels = [], windows = [], unexplained = [];
+  const scanText = (root, label) => {
+    if (!root) return;
+    const tw = doc.createTreeWalker(root, w.NodeFilter.SHOW_TEXT);
+    let n;
+    while ((n = tw.nextNode())) {
+      const el = n.parentElement;
+      if (!el || el.closest("script, style, .raw, pre")) continue;
+      if (BAD.test(n.nodeValue)) nulls.push(`${label}: "${n.nodeValue.trim().slice(0, 50)}"`);
+      if (/\d\s?%/.test(n.nodeValue) && !el.closest(".pilot, .lamp")) pct.push(`${label}: "${n.nodeValue.trim().slice(0, 50)}"`);
+    }
+  };
+  A.state.filter = "all";
+  A.render();
+  await later(w, 80);
+  scanText(doc.getElementById("list"), "home");
+  scanText(doc.getElementById("national"), "national strip");
+  const now = A.refNow();
+  const H = 3600e3;
+  let compared = 0, noPill = 0;
+  for (const card of doc.querySelectorAll("#list .card[data-iata]")) {
+    const iata = card.dataset.iata;
+    const a = A.state.data.airports.find((x) => x.iata === iata);
+    if (!a) continue;
+    const pillEl = card.querySelector(".top .pill");
+    const cardLv = pillEl ? LV[pillEl.textContent.trim()] : null;
+    // words and colours: the headline's hours on the card's timeline
+    const sm = A.summary(a);
+    const tl = card.querySelector(".tl-wrap");
+    const T = tl && tl._tl;
+    if (T && sm.level >= 1 && Number.isFinite(sm.end)) {
+      const inWin = T.slots.filter((s) => (s.kind === "now" || s.kind === "fc") && s.key + H > sm.start && s.key < sm.end);
+      const low = inWin.filter((s) => !(s.level >= sm.level));
+      if (low.length) windows.push(`${iata}: headline ${sm.level} ${new Date(sm.start).toISOString().slice(11, 16)}–${new Date(sm.end).toISOString().slice(11, 16)}Z, hours at ${low.map((s) => s.level).join("/")}`);
+    }
+    if (T && A.slotText) for (const s of T.slots) {
+      if ((s.kind === "now" || s.kind === "fc") && s.level > 0 && A.slotText(s, a).split(" · ").length < 3) unexplained.push(`${iata} ${new Date(s.key).toISOString().slice(11, 16)}Z level ${s.level}`);
+    }
+    // one level: card pill vs the sheet headline
+    A.openSheet(iata);
+    await later(w, 10);
+    const sh = doc.getElementById("sheet");
+    const pills = [...sh.querySelectorAll('.bx-layer[data-layer="rest"] .pill')].map((p) => LV[p.textContent.trim()]).filter((x) => x != null);
+    if (pills.length) {
+      compared++;
+      const top = Math.max(...pills);
+      if (top !== cardLv) levels.push(`${iata}: card ${cardLv}, sheet ${top}`);
+    } else noPill++;
+    const c = sh.cloneNode(true);
+    c.querySelectorAll(".bx-layer:not(.on)").forEach((e) => e.remove());
+    scanText(c, iata);
+  }
+  A.closeSheet();
+  if (A.openNational) { A.openNational(); await later(w, 40); scanText(doc.getElementById("panel"), "national panel"); if (A.closePanel) A.closePanel(); }
+  for (const a of A.state.data.airports.filter((x) => !x.trip).slice(0, 3)) {
+    if (await openDetailsPage(w, doc, a.iata)) scanText(doc.getElementById("mdSheet"), a.iata + " More details");
+    if (A.closeDetails) A.closeDetails();
+    A.closeSheet();
+  }
+  void now;
+  add(levels.length ? "fail" : "pass", `One level${where}: card pill = sheet headline`, levels.slice(0, 4).join("; ") || `${compared} airports compared${noPill ? `, ${noPill} sheets show no level (data unknown)` : ""}`);
+  add(windows.length ? "fail" : "pass", `Words and colours agree${where}: the headline's hours are coloured at its level`, windows.slice(0, 4).join("; ") || "every headline window");
+  add(unexplained.length ? "fail" : "pass", `Every coloured hour says why${where}`, unexplained.slice(0, 4).join("; ") || "no unexplained hours");
+  add(nulls.length ? "fail" : "pass", `No "null" / "undefined" / "NaN" in visible text${where}`, nulls.slice(0, 4).join("; ") || "home, sheets, national panel, More details");
+  add(pct.length ? "fail" : "pass", `Traveler: no "%" on cards and sheets${where}`, pct.slice(0, 4).join("; ") || "cards and every sheet");
 }

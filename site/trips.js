@@ -169,7 +169,11 @@ function pieces(code, a, b) {
   while (t < b) {
     const next = Math.min(b, (Math.floor(t / HOUR) + 1) * HOUR);
     const hr = ap && ap.hours ? ap.hours.find((x) => { const s = Date.parse(x.t); return t >= s && t < s + HOUR; }) : null;
-    out.push({ ms: next - t, level: hr ? hr.level : null });
+    // build2b hook: the page's display level (weather/FAA raised by the delay chance), as on the airport timelines
+    const A = window.AWXApp;
+    let level = hr ? hr.level : null;
+    if (hr && A && A.hourLevel) { try { level = A.hourLevel(ap, hr); } catch { /* keep the hour's own level */ } }
+    out.push({ ms: next - t, level });
     t = next;
   }
   return out;
@@ -302,8 +306,8 @@ function decorateSheet(sheet, a) {
     const r = resultOf(trip);
     for (const line of flightLine(trip, r, a.iata, a.tz, now)) {
       if (line.at < now - HOUR && (line.role !== "conn" || line.until < now)) continue;
-      const localOutlook = app()?.outlook?.(a);
-      const overlaps = window.AWXOutlook?.overlaps(localOutlook?.window, line.at, line.until);
+      const sm = app()?.summary?.(a); // the card's level window (site/outlook.js summary)
+      const overlaps = !!sm && sm.level >= 2 && window.AWXOutlook?.overlaps({ start: sm.start, end: sm.end }, line.at, line.until);
       const inRange = a.hours?.some((hr) => Date.parse(hr.t) <= line.at && line.at < Date.parse(hr.t) + HOUR);
       const context = overlaps ? (line.role === "dep" ? "Your departure overlaps the highest-risk window here." : line.role === "arr" ? "Your arrival overlaps the highest-risk window here." : "Your connection overlaps the highest-risk window here.")
         : !inRange ? "Airport forecast not available for your travel time yet." : null;
