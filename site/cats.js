@@ -76,6 +76,8 @@
       return { cat: inner.cat, level: inner.level == null ? null : Math.max(0, inner.level - 1), src: "TAF", conf: "low" };
     }
     var r = function (cat, level, src, conf) { return { cat: cat, level: level, src: src, conf: conf }; };
+    // hubs hook: hub cascade note (poller/hubs.mjs): "ORD ground stop may delay (some) flights to and from Chicago"
+    if ((m = /^[A-Z]{3} (closure|ground stop|ground delay program|delays) may (?:disrupt|delay|spread to) (some )?flights to and from /.exec(s))) return r("faa", m[2] ? 1 : 2, "FAA", "medium");
     // FAA programs (NAS status, ATCSCC advisories, ops plan)
     if (/^Ground stop\b/.test(s)) return r("always", 4, "FAA", "high");
     if (/^Airport closed\b/.test(s)) return r("always", 4, "FAA", "high");

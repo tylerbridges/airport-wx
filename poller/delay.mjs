@@ -7,7 +7,7 @@
 //     -> [{p, pTypical, minutes, analog: {n, k, median, text} | null, basis: "model"|"fallback", lead, override?}]
 //
 // README "Delay model" documents the target, the features, validation and the safety gate.
-import { tafHourParts, tafHour, levelOf, assessConditions, parseVisib, ceilingOf, parseWx, toMs, faaSpan, flightCategory } from "./risk.mjs";
+import { tafHourParts, tafHour, levelOf, assessConditions, parseVisib, ceilingOf, parseWx, toMs, faaSpan, closureSpan, flightCategory } from "./risk.mjs";
 
 /** Feature spec version: model.json files built for another spec are ignored (fallback is used). */
 export const SPEC = 1;
@@ -357,9 +357,12 @@ export function delayRange(detail) {
 }
 
 /**
- * FAA overrides per hour. Active ground stop / GDP (NAS status, active ATCSCC advisory, or an active
+ * FAA overrides per hour. A full airport closure -> p = 1 ("closure") over its whole window (risk.mjs
+ * closureSpan: start through reopening or NOTAM end; hour 0 only with no known end); it wins over any
+ * program in the same hour. Active ground stop / GDP (NAS status, active ATCSCC advisory, or an active
  * ops-plan program) -> p = 1 over its hours (until its end; 3 h / 5 h with no end, as the risk rules);
- * minutes = the FAA's stated average delay when given. A general FAA delay of 15+ min -> p = 1 in hour 0.
+ * minutes = the FAA's stated average delay when given. A general FAA delay of 15+ min -> p = 1 in hour 0,
+ * and through its end when the FAA gives one.
  * An ops-plan "possible" GS/GDP raises p to at least the program's historical rate (fallback.programs,
  * from our history log), else 0.5, until its time.
  */
@@ -367,9 +370,17 @@ export function overrides({ hours, now, faa = [], atcscc = [], opsplan = null, p
   const out = hours.map(() => null);
   const set = (i, o) => {
     const cur = out[i];
+    if (cur && cur.override === "closure") return; // a closed airport stays "closure"
     if (!cur || o.p > cur.p || (o.p === cur.p && cur.minutes == null && o.minutes != null)) out[i] = o;
   };
   const t0s = hours.map((h) => +new Date(h.t));
+  for (const f of faa || []) {
+    const span = closureSpan(f, now);
+    if (!span) continue;
+    t0s.forEach((t, i) => {
+      if ((i === 0 && span.from <= +now) || (t + HOUR > span.from && span.to != null && t < span.to)) out[i] = { p: 1, override: "closure", minutes: null };
+    });
+  }
   for (const f of faa || []) {
     if (f.type === "ground_stop" || f.type === "ground_delay") {
       const end = faaSpan(f, now);
@@ -377,7 +388,8 @@ export function overrides({ hours, now, faa = [], atcscc = [], opsplan = null, p
       t0s.forEach((t, i) => { if (i === 0 || t < end) set(i, { p: 1, override: f.type, minutes: avg }); });
     } else if (f.type === "delay") {
       const r = delayRange(f.detail);
-      if (r && r.min >= 15) set(0, { p: 1, override: "delay", minutes: r.mid });
+      const end = toMs(f.end);
+      if (r && r.min >= 15) t0s.forEach((t, i) => { if (i === 0 || (end != null && t < end)) set(i, { p: 1, override: "delay", minutes: r.mid }); });
     }
   }
   for (const a of atcscc || []) {

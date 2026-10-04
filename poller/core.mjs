@@ -11,6 +11,7 @@ import { classifyCause, causePhrase } from "./cause.mjs";
 import { plainMetar, travelerImpact } from "./plain.mjs";
 import { opsPlanFor } from "./opsplan.mjs";
 import { scoreHours, HUBS } from "./delay.mjs"; // phase3 hook: delay model (README "Delay model")
+import { cascades, applyCascade } from "./hubs.mjs"; // hubs hook: hub cascade warnings (README "Hub cascade")
 
 const HOUR = 3600e3;
 const ADV_KEYS = ["id", "type", "airport", "issued", "cause", "causeText", "title", "active", "cnx", "start", "end"];
@@ -20,12 +21,15 @@ const ADV_KEYS = ["id", "type", "airport", "issued", "cause", "causeText", "titl
  * replace the ones computed here: {faa, alerts, sigmets, spc, tcf, cwa, opsplan} (already in output shape).
  * delay (phase3, optional): {model, fallback, analogs: {IATA: table}, icaoOf: {IATA: ICAO}, hubTaf(iata)}
  * adds hours[].delay (poller/delay.mjs scoreHours); hub TAFs come from `tafs`, else delay.hubTaf.
+ * hubsFrom (hubs hook, optional): status.json airports (e.g. the last build) used as hub-cascade sources
+ * for hubs not in `airports` (the live relay assembles only the requested airports).
  */
-export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc, nws, lamp = null, atcscc = null, tcf = null, cwa = null, plan = null, over = null, delay = null }) {
+export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc, nws, lamp = null, atcscc = null, tcf = null, cwa = null, plan = null, over = null, delay = null, hubsFrom = null }) {
   const metarBy = latestBy(metars, "icaoId", "obsTime");
   const tafBy = latestBy(tafs, "icaoId", "issueTime");
   const validTaf = (x) => (x && !(toMs(x.validTimeTo) != null && toMs(x.validTimeTo) < +now) ? x : null);
   const out = [];
+  const rows = new Map(); // hubs hook: internal risk rows per airport, for the cascade pass
   const known = new Set(airports.map((a) => a.iata));
   for (const a of airports) {
     const o = (over && over(a)) || {}; // live relay
@@ -40,7 +44,7 @@ export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc,
       const cause = classifyCause(f.reason);
       // closures' reasons are NOTAM text: the page shows their plain-English summary instead
       const o = { type: f.type, reason: f.reason, detail: f.detail, badge: f.badge, cause, causeLabel: f.type === "closure" ? "" : causePhrase(cause, f.reason) };
-      if (f.type === "closure") Object.assign(o, { scope: f.scope, active: f.active, plain: f.plain, runways: f.runways });
+      if (f.type === "closure") Object.assign(o, { scope: f.scope, active: f.active, plain: f.plain, runways: f.runways, start: f.start ?? null, end: f.end ?? null, ...(f.perm ? { perm: true } : {}) });
       else Object.assign(o, { end: f.end ?? null, trend: f.trend ?? null });
       return o;
     });
@@ -83,6 +87,7 @@ export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc,
     }) : null;
     const hoursOut = hoursOutput(hours);
     if (dl) hoursOut.forEach((h, i) => { if (dl[i]) h.delay = dl[i]; });
+    rows.set(a.iata, hours); // hubs hook
 
     out.push({
       iata: a.iata, icao: a.icao, name: a.name, city: a.city, state: a.state, tz: a.tz, lat: a.lat, lon: a.lon,
@@ -112,6 +117,29 @@ export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc,
       cwa: cwaHere,
       opsplan: opOut,
     });
+  }
+  // hubs hook: hub cascade notes (poller/hubs.mjs) — reasons and levels of the affected hours, now/peak again
+  const mine = new Set(out.map((e) => e.iata));
+  const from = new Map((hubsFrom || []).filter((b) => b && Array.isArray(b.hours) && b.hours.length).map((b) => [b.iata, b]));
+  // without delay scoring here (relay without model files) a hub's delay numbers come from hubsFrom, as the relay shows them
+  const withDelay = (e) => {
+    const b = from.get(e.iata);
+    if (!b || e.hours.every((h) => h.delay)) return e;
+    const bd = new Map(b.hours.map((h) => [h.t, h.delay]));
+    return { ...e, hours: e.hours.map((h) => (h.delay || !bd.get(h.t) ? h : { ...h, delay: bd.get(h.t) })) };
+  };
+  const notes = cascades([...out.map(withDelay), ...[...from.values()].filter((b) => !mine.has(b.iata))]);
+  for (const e of out) {
+    const n = notes.get(e.iata);
+    const hours = rows.get(e.iata);
+    if (!n || !hours) continue;
+    e.cascade = applyCascade(hours, n);
+    const { now: nowS, peak } = summarize(hours, e.tz);
+    e.now = nowS;
+    e.peak = peak;
+    const delays = e.hours.map((h) => h.delay);
+    e.hours = hoursOutput(hours);
+    e.hours.forEach((h, i) => { if (delays[i]) h.delay = delays[i]; });
   }
   out.sort(compareAirports);
   return out;

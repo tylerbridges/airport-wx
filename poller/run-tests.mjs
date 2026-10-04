@@ -31,3 +31,6 @@ import "./trips.test.mjs";
 import "./trip-risk.test.mjs";
 // movement: ADS-B traffic rates
 import "./movement.test.mjs";
+// closures and hub cascades
+import "./closures.test.mjs";
+import "./hubs.test.mjs";

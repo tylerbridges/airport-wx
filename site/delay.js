@@ -71,7 +71,7 @@ function rangeLabel(start, end, tz, fromNow) {
   const suffix = !pre && dayPrefix(end, tz) === "tomorrow " ? " tomorrow" : " " + dayPrefix(end, tz).trim();
   return pre + a + " – " + b + suffix;
 }
-const NOW_KINDS = { ground_stop: "FAA ground stop", ground_delay: "FAA ground delay program", delay: "FAA-reported delays" };
+const NOW_KINDS = { ground_stop: "FAA ground stop", ground_delay: "FAA ground delay program", delay: "FAA-reported delays", closure: "Airport closed" }; // closures hook
 
 // ---------- likelihood words (build2b) ----------
 
@@ -122,11 +122,11 @@ export function minutesRange(m) {
   return `typically ${lo}–${hi} min`;
 }
 
-const FAA_NOW = { ground_stop: true, ground_delay: true, delay: true };
+const FAA_NOW = { ground_stop: true, ground_delay: true, delay: true, closure: true }; // closures hook: a closed airport is "happening now", never "very likely"
 /**
  * Plain, conservative words for one hour's delay numbers ({p, pTypical, minutes, minutesFrom, override}):
  * {key, word, sentence, cue, rate, size}. opts: {iata, report, aviation}. Rules (README "Delay words"):
- * FAA ground stop / delay program / reported delays in effect -> "Delays happening now" (+ the FAA average);
+ * FAA ground stop / delay program / reported delays / full airport closure in effect -> "Delays happening now" (+ the FAA average);
  * else the calibrated observed rate: < 12% unlikely; 12–25% "Usual delays" within ±25% of the typical rate, else
  * "Small chance"; 25–45% possible; 45–70% likely; >= 70% very likely only when that bin's observed rate was >= 70%
  * over >= 200 test hours. A bin with < 200 test hours steps down one word; airports where the model's skill vs
@@ -277,7 +277,7 @@ export function delayBlock(a, i) {
   const kids = [el("div", "dl-main", el("span", "dl-big " + cls, L.word), when ? el("span", "dl-what", when) : null)];
   const sub = [L.cue, L.size].filter(Boolean).join(" · ");
   if (sub) kids.push(el("div", "dl-usual-b", sub));
-  if (L.key === "now" && NOW_KINDS[d.override]) kids.push(el("div", "dl-faa", NOW_KINDS[d.override] + " in effect"));
+  if (L.key === "now" && NOW_KINDS[d.override]) kids.push(el("div", "dl-faa", d.override === "closure" ? "Airport closed" : NOW_KINDS[d.override] + " in effect"));
   if (/^possible_/.test(d.override || "")) {
     kids.push(el("div", "dl-faa", "The FAA plans a possible " + (d.override === "possible_ground_stop" ? "ground stop" : "ground delay program")));
   }
