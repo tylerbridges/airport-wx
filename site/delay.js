@@ -274,8 +274,8 @@ export function delayBlock(a, i) {
     when = w.s === 0 && w.e === a.hours.length - 1 ? "in the next 24 hours" : rangeLabel(start, end, tzOf(a), w.s === 0);
   } else when = idx === 0 ? "this hour" : "at " + dayPrefix(t0, tzOf(a)) + clock(t0, tzOf(a));
   const cls = L.key === "now" || RANK[L.key] >= 3 ? "dl-hi" : RANK[L.key] === 2 ? "dl-mid" : "dl-lo";
-  const kids = [el("div", "dl-main", el("span", "dl-big " + cls, L.word), when ? el("span", "dl-what", when) : null)];
-  const sub = [L.cue, L.size].filter(Boolean).join(" · ");
+  const kids = [el("div", "dl-main", el("span", "dl-big " + cls, L.key === "now" ? L.word : L.word.replace(/^Delays/, "Airport disruption")), when ? el("span", "dl-what", when) : null)];
+  const sub = [L.cue, L.size ? "When disrupted: " + L.size : ""].filter(Boolean).join(" · ");
   if (sub) kids.push(el("div", "dl-usual-b", sub));
   if (L.key === "now" && NOW_KINDS[d.override]) kids.push(el("div", "dl-faa", d.override === "closure" ? "Airport closed" : NOW_KINDS[d.override] + " in effect"));
   if (/^possible_/.test(d.override || "")) {
@@ -290,7 +290,8 @@ export function delayBlock(a, i) {
   if (L.key !== "now" && bin && bin.rate != null && bin.n) why.push(el("div", "dl-analog", `For ${a.iata}, warnings like this were right ${inTen(bin.rate)} times.`));
   if (d.pTypical != null && L.key !== "now") why.push(el("div", "dl-analog", `On a typical day at this hour, delays happen ${inTen(d.pTypical)} times.`));
   why.push(sourceLine());
-  kids.push(aviation ? el("div", "dl-why", ...why) : sourceLine());
+  kids.push(aviation ? el("div", "dl-why", ...why) : el("div", "dl-srcline", "Airport-wide weather and air traffic control risk · forecast estimate"));
+  if (!aviation && window.AWXApp?.state.data?.delayModel?.basis !== "model") kids.push(sourceLine());
   return el("div", "dl-block", ...kids);
 }
 

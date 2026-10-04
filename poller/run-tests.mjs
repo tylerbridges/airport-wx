@@ -21,6 +21,7 @@ import "../tools/uptime-parse.test.mjs";
 import "../tools/cats.test.mjs";
 import "../tools/prefs.test.mjs";
 import "../tools/delay-words.test.mjs";
+import "../tools/outlook.test.mjs";
 // live relay
 import "../worker/worker.test.mjs";
 // phase3: delay model
