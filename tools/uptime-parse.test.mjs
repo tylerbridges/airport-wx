@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parsePage, freshness, evaluate, findIssue, lastActivity, decide, resultText, ISSUE_TITLE } from "./uptime-parse.mjs";
+import { parsePage, freshness, evaluate, findIssue, lastActivity, decide, resultText, classifyAttempt, verdictOf, ISSUE_TITLE } from "./uptime-parse.mjs";
 
 const FX = join(dirname(fileURLToPath(import.meta.url)), "fixtures/uptime");
 const dom = (n) => readFileSync(join(FX, n), "utf8");
@@ -56,4 +56,61 @@ test("issue bookkeeping: one issue, comments at most every 6 h, close on recover
   assert.equal(decide({ ok: false, issueNumber: "7", lastMs: last, now: NOW + 2 * 3600e3 }).action, "comment");
   assert.equal(decide({ ok: true, issueNumber: "7", lastMs: last, now: NOW }).action, "close");
   assert.equal(decide({ ok: true, issueNumber: "", lastMs: 0, now: NOW }).action, "none");
+});
+
+// Playwright attempts: {text} is the #result text, null when it never appeared.
+const PASS = { text: "CHECK PASS (live)\nPASS [Live data] Freshness" };
+const FAIL = { text: "CHECK FAIL 2\nFAIL [Live data] something" };
+const RUNNING = { text: "CHECK RUNNING" };
+const TIMEOUT = { text: null, error: "Timeout 120000ms exceeded" };
+const issueFor = (v, lastMs = 0) => decide({ verdict: v.verdict, issueNumber: "", lastMs, now: NOW }).action === "open";
+
+test("attempt classification: running and timeouts are inconclusive, not failures", () => {
+  assert.equal(classifyAttempt(PASS.text).state, "pass");
+  assert.equal(classifyAttempt(FAIL.text).state, "fail");
+  assert.equal(classifyAttempt(RUNNING.text).state, "inconclusive");
+  assert.match(classifyAttempt(RUNNING.text).head, /still running/);
+  assert.equal(classifyAttempt(null, "Timeout").state, "inconclusive");
+  assert.equal(classifyAttempt("").state, "inconclusive");
+});
+
+test("retry rule: PASS on the first attempt", () => {
+  const v = verdictOf([PASS], status(5), NOW);
+  assert.deepEqual([v.verdict, v.ok, issueFor(v)], ["pass", true, false]);
+  assert.match(v.head, /^CHECK PASS/);
+});
+
+test("retry rule: FAIL then PASS opens no issue", () => {
+  const v = verdictOf([FAIL, PASS], status(5), NOW);
+  assert.deepEqual([v.verdict, v.ok, issueFor(v)], ["pass", true, false]);
+  // and it closes an open issue as recovered
+  assert.equal(decide({ verdict: v.verdict, issueNumber: "7", lastMs: 0, now: NOW }).action, "close");
+});
+
+test("retry rule: FAIL, FAIL opens an issue", () => {
+  const v = verdictOf([FAIL, FAIL], status(5), NOW);
+  assert.deepEqual([v.verdict, v.ok, issueFor(v)], ["fail", false, true]);
+  assert.match(v.head, /attempt 1: CHECK FAIL 2; attempt 2: CHECK FAIL 2/);
+  assert.match(v.report, /^CHECK FAIL/);
+  assert.equal(decide({ verdict: v.verdict, issueNumber: "7", lastMs: NOW - 1 * 3600e3, now: NOW }).action, "none"); // 6 h comment throttle
+  assert.equal(decide({ verdict: v.verdict, issueNumber: "7", lastMs: NOW - 7 * 3600e3, now: NOW }).action, "comment");
+});
+
+test("retry rule: RUNNING, RUNNING with fresh data opens no issue and leaves an open one alone", () => {
+  for (const pair of [[RUNNING, RUNNING], [TIMEOUT, RUNNING], [FAIL, RUNNING]]) {
+    const v = verdictOf(pair, status(8), NOW);
+    assert.deepEqual([v.verdict, v.ok, issueFor(v)], ["inconclusive", false, false]);
+    assert.equal(decide({ verdict: v.verdict, issueNumber: "7", lastMs: 0, now: NOW }).action, "none");
+  }
+});
+
+test("retry rule: RUNNING, RUNNING with stale data opens an issue", () => {
+  const v = verdictOf([RUNNING, RUNNING], status(35), NOW);
+  assert.deepEqual([v.verdict, v.ok, issueFor(v)], ["fail", false, true]);
+  assert.match(v.head, /FRESHNESS FAIL: status.json generated 35 min ago/);
+  assert.equal(verdictOf([TIMEOUT, TIMEOUT], "", NOW).verdict, "fail"); // status.json unreadable counts as stale
+});
+
+test("a PASS with stale status.json is still a failure", () => {
+  assert.equal(verdictOf([PASS], status(35), NOW).verdict, "fail");
 });

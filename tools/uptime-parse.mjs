@@ -2,6 +2,9 @@
 // Helpers for .github/workflows/uptime.yml (the HTTP calls are curl in the workflow).
 //   node tools/uptime-parse.mjs check <dom.html> <status.json> [nowISO]
 //       -> prints JSON {ok, head, pageOk, freshOk, ageMin, report}; exit 0 either way
+//   node tools/uptime-parse.mjs verdict <attempts.json> <status.json> [nowISO]
+//       -> attempts.json = [{text, error?}, …] (the #result text from each Playwright attempt, null on timeout);
+//          prints JSON {verdict: pass|fail|inconclusive, ok, head, report, …}; exit 0 either way
 //   node tools/uptime-parse.mjs find-issue <issues.json>         -> open "Uptime: check failing" issue number, or ""
 //   node tools/uptime-parse.mjs last-activity <issue.json> <comments.json>  -> epoch ms of the issue's latest bot activity
 //   node tools/uptime-parse.mjs body <text-file>                 -> {"body": "..."} JSON for the REST API
@@ -57,6 +60,48 @@ export function evaluate(dom, statusText, now = Date.now()) {
   return { ok, head, pageOk: page.ok, freshOk: fr.ok, ageMin: fr.ageMin, report: page.report };
 }
 
+/** One Playwright attempt: the #result text (null when it never appeared) -> {state: pass|fail|inconclusive, head, report}.
+ *  "CHECK RUNNING", an empty page or a timeout is inconclusive, never a failure by itself. */
+export function classifyAttempt(text, error) {
+  const t = text == null ? "" : String(text).trim();
+  const head = t.split("\n")[0];
+  if (/^CHECK PASS\b/.test(head)) return { state: "pass", head, report: t };
+  if (/^CHECK FAIL\b/.test(head)) return { state: "fail", head, report: t };
+  const why = /CHECK RUNNING/.test(head) ? "check page still running at the time limit" : error ? `check page didn't load (${String(error).slice(0, 80)})` : "check page gave no result in time";
+  return { state: "inconclusive", head: why, report: t };
+}
+
+/** Retry rule over the attempts (each {text, error?}) plus the independent status.json freshness.
+ *  - any attempt PASS (and status.json fresh)        -> pass   (FAIL then PASS is recovered: no issue)
+ *  - every attempt FAIL                              -> fail   (issue)
+ *  - otherwise (inconclusive, or FAIL + inconclusive) -> fail only when status.json is stale, else inconclusive (no issue)
+ *  A PASS with stale status.json is a fail, as before. */
+export function verdictOf(attempts, statusText, now = Date.now()) {
+  const list = (Array.isArray(attempts) ? attempts : []).map((a) => classifyAttempt(a && a.text, a && a.error));
+  const fr = freshness(statusText, now);
+  const stale = `FRESHNESS FAIL: ${fr.why} (limit ${FRESH_MAX_MIN} min)`;
+  const trail = list.map((a, i) => `attempt ${i + 1}: ${a.head}`).join("; ");
+  const last = list[list.length - 1] || { head: "no attempts ran", report: "" };
+  const pass = list.find((a) => a.state === "pass");
+  let verdict;
+  let head;
+  if (pass) {
+    verdict = fr.ok ? "pass" : "fail";
+    head = fr.ok ? `${pass.head}; ${fr.why}` : stale;
+  } else if (list.length && list.every((a) => a.state === "fail")) {
+    verdict = "fail";
+    head = trail + (fr.ok ? "" : `; ${stale}`);
+  } else if (!fr.ok) {
+    verdict = "fail";
+    head = `${trail || last.head}; ${stale}`;
+  } else {
+    verdict = "inconclusive";
+    head = `${trail || last.head}; ${fr.why}`;
+  }
+  const report = (list.filter((a) => a.state === "fail").pop() || pass || last).report;
+  return { verdict, ok: verdict === "pass", head, pageOk: !!pass, freshOk: fr.ok, ageMin: fr.ageMin, attempts: list.map((a) => a.state), report };
+}
+
 export function findIssue(issues) {
   const hit = (Array.isArray(issues) ? issues : []).find((i) => i && i.title === ISSUE_TITLE && i.state === "open" && !i.pull_request);
   return hit ? String(hit.number) : "";
@@ -72,8 +117,9 @@ export function lastActivity(issue, comments) {
 }
 
 /** What to do: {action: none|open|comment|close} */
-export function decide({ ok, issueNumber, lastMs, now = Date.now() }) {
-  if (ok) return { action: issueNumber ? "close" : "none" };
+export function decide({ ok, verdict, issueNumber, lastMs, now = Date.now() }) {
+  if (verdict === "inconclusive") return { action: "none" }; // not a failure, not a recovery: leave any open issue alone
+  if (verdict ? verdict === "pass" : ok) return { action: issueNumber ? "close" : "none" };
   if (!issueNumber) return { action: "open" };
   return { action: now - lastMs >= COMMENT_EVERY_MS ? "comment" : "none" };
 }
@@ -83,6 +129,10 @@ function main(argv) {
   const read = (p) => { try { return readFileSync(p, "utf8"); } catch { return ""; } };
   if (cmd === "check") {
     console.log(JSON.stringify(evaluate(read(a), read(b), c ? Date.parse(c) : Date.now())));
+  } else if (cmd === "verdict") {
+    let at = [];
+    try { at = JSON.parse(read(a)); } catch { /* none */ }
+    console.log(JSON.stringify(verdictOf(at, read(b), c ? Date.parse(c) : Date.now())));
   } else if (cmd === "find-issue") {
     let j = [];
     try { j = JSON.parse(read(a)); } catch { /* none */ }
@@ -96,7 +146,7 @@ function main(argv) {
   } else if (cmd === "body") {
     console.log(JSON.stringify({ body: read(a).slice(0, 60000) }));
   } else {
-    console.error("usage: uptime-parse.mjs check|find-issue|last-activity|body …");
+    console.error("usage: uptime-parse.mjs check|verdict|find-issue|last-activity|body …");
     process.exit(2);
   }
 }

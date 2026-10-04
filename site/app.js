@@ -1050,7 +1050,7 @@
       h("div", { class: "aname" }, a.name),
       h("div", { class: "where" }, `${a.city}, ${a.state}`),
       h("div", { class: "reason" }, reason),
-      window.AWXMovement ? safeCall(() => AWXMovement.line(a)) : null, // movement hook: "Departures running 38% below normal" (site/movement.js)
+      window.AWXMovement ? safeCall(() => AWXMovement.line(a)) : null, // movement hook: "Departures far below normal" (site/movement.js)
       window.AWXDelay ? safeCall(() => AWXDelay.delayLine(a)) : null, // phase3 hook: chance of a real delay (site/delay.js)
       safeCall(() => cascadeLine(v, [reason], "sub hubline")), // hubs hook: "ORD ground stop may delay flights to and from Chicago later today"
       later ? h("div", { class: "sub" }, "Now: " + LEVELS[v.now.level].label) : null,

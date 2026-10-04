@@ -428,7 +428,7 @@ async function uiChecks(add, scenario) {
       const A = w.AWXApp;
       const hits = [];
       const scan = (root, where) => {
-        for (const el of root.querySelectorAll(".dl-line, .dl-block, .dl-routine, .sc-delay, #trips, .tflight")) if (/\d\s?%/.test(el.textContent)) hits.push(`${where}: "${el.textContent.trim().slice(0, 60)}"`);
+        for (const el of root.querySelectorAll(".dl-line, .dl-block, .dl-routine, .sc-delay, #trips, .tflight, .mv-line, .mv-sum")) if (/\d\s?%/.test(el.textContent)) hits.push(`${where}: "${el.textContent.trim().slice(0, 60)}"`);
       };
       A.state.filter = "all";
       A.render();

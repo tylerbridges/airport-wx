@@ -367,7 +367,7 @@ export async function pageAsserts(add, w, doc, asserts) {
         await showAll();
         const hits = [];
         const scan = (root, where) => {
-          for (const el of root.querySelectorAll(".dl-line, .dl-block, .dl-routine, .sc-delay, #trips, .tflight, #brief, .bf-today") /* brief hook */) {
+          for (const el of root.querySelectorAll(".dl-line, .dl-block, .dl-routine, .sc-delay, #trips, .tflight, .mv-line, .mv-sum, #brief, .bf-today") /* brief hook */) {
             const t = el.textContent;
             if (/\d\s?%/.test(t)) hits.push(`${where}: "${t.trim().replace(/\s+/g, " ").slice(0, 70)}"`);
           }

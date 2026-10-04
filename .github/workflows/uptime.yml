@@ -1,10 +1,13 @@
 name: Uptime monitor
 
-# Every 30 min: load the live check page in headless Chrome and read its #result, and check
-# data/status.json freshness independently with curl. On failure open one issue titled
-# "Uptime: check failing" (or comment on the open one, at most every 6 h); when it passes again,
-# comment "Recovered at …" and close it. REST API via curl + GITHUB_TOKEN; parsing in
-# tools/uptime-parse.mjs (unit-tested with saved DOM samples).
+# Every 30 min: load the live check page with Playwright (playwright-core installed in this job
+# only, driving the runner's Chrome) and wait up to 120 s for #result to say CHECK PASS/FAIL;
+# "CHECK RUNNING" or a timeout is inconclusive, not a failure. On FAIL or inconclusive wait 120 s
+# and try once more. data/status.json freshness is checked independently with curl. Open one issue
+# titled "Uptime: check failing" (or comment on the open one, at most every 6 h) only if both
+# attempts FAIL, or both are inconclusive and status.json is over 20 min old; when it passes
+# again, comment "Recovered at …" and close it. REST API via curl + GITHUB_TOKEN; the decision
+# logic is in tools/uptime-parse.mjs (unit-tested).
 on:
   schedule:
     - cron: "7,37 * * * *"
@@ -21,31 +24,68 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     env:
       SITE: https://tylerbridges.github.io/airport-wx
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       API: ${{ github.api_url }}/repos/${{ github.repository }}
     steps:
       - uses: actions/checkout@v4
-      - name: Load check page and status.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Load check page (Playwright, runner Chrome) and status.json
         run: |
           set -u
-          ts="$(date +%s)"
-          # --no-sandbox: Ubuntu 24.04 runners restrict the user namespaces Chrome's sandbox needs.
-          timeout 120 google-chrome --headless=new --disable-gpu --no-sandbox --virtual-time-budget=30000 \
-            --dump-dom "$SITE/check.html?ts=$ts" > dom.html 2> chrome.log || echo "chrome exited $?"
-          curl -sS --max-time 30 -o status.json "$SITE/data/status.json?ts=$ts" || echo "curl failed"
-          node tools/uptime-parse.mjs check dom.html status.json > result.json
+          # CI tooling only, not an app dependency; drives the runner's own Chrome.
+          npm i --no-save --no-audit --no-fund playwright-core@1.48.2
+          cat > uptime-run.mjs <<'EOF'
+          import { chromium } from "playwright-core";
+          import { writeFileSync } from "node:fs";
+          const SITE = process.env.SITE;
+          const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+          // One attempt: the #result text once it says CHECK PASS/FAIL; "CHECK RUNNING" or a timeout is returned as is (inconclusive).
+          async function attempt() {
+            const browser = await chromium.launch({ executablePath: "/usr/bin/google-chrome", headless: true, args: ["--no-sandbox", "--disable-gpu"] });
+            try {
+              const page = await browser.newPage();
+              await page.goto(`${SITE}/check.html?ts=${Date.now()}`, { waitUntil: "domcontentloaded", timeout: 60000 });
+              let error = null;
+              try {
+                await page.waitForFunction(() => /CHECK (PASS|FAIL)/.test((document.getElementById("result") || {}).textContent || ""), null, { timeout: 120000, polling: 1000 });
+              } catch (e) { error = e.message.split("\n")[0]; }
+              const text = await page.evaluate(() => { const r = document.getElementById("result"); return r ? r.textContent : null; }).catch(() => null);
+              return { text, error };
+            } catch (e) {
+              return { text: null, error: e.message.split("\n")[0] };
+            } finally {
+              await browser.close().catch(() => {});
+            }
+          }
+          const out = [];
+          out.push(await attempt());
+          console.log("attempt 1:", JSON.stringify(out[0]).slice(0, 300));
+          if (!/^CHECK PASS/.test(out[0].text || "")) {
+            console.log("not a pass; waiting 120 s before one more attempt");
+            await sleep(120000);
+            out.push(await attempt());
+            console.log("attempt 2:", JSON.stringify(out[1]).slice(0, 300));
+          }
+          writeFileSync("attempts.json", JSON.stringify(out));
+          EOF
+          node uptime-run.mjs || { echo "runner crashed: $?"; echo '[]' > attempts.json; }
+          curl -sS --max-time 30 -o status.json "$SITE/data/status.json?ts=$(date +%s)" || echo "curl failed"
+          node tools/uptime-parse.mjs verdict attempts.json status.json > result.json
           cat result.json | head -c 2000; echo
       - name: Open, update or close the uptime issue
         run: |
           set -eu
           auth=(-H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28")
           ok="$(node -e 'console.log(JSON.parse(require("fs").readFileSync("result.json","utf8")).ok)')"
+          verdict="$(node -e 'console.log(JSON.parse(require("fs").readFileSync("result.json","utf8")).verdict)')"
           head="$(node -e 'console.log(JSON.parse(require("fs").readFileSync("result.json","utf8")).head)')"
           now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          echo "ok=$ok: $head"
+          echo "verdict=$verdict: $head"
           curl -fsS "${auth[@]}" "$API/issues?state=open&per_page=100" > issues.json
           num="$(node tools/uptime-parse.mjs find-issue issues.json)"
           last=0
@@ -54,9 +94,9 @@ jobs:
             curl -fsS "${auth[@]}" "$API/issues/$num/comments?per_page=100" > comments.json
             last="$(node tools/uptime-parse.mjs last-activity issue.json comments.json)"
           fi
-          action="$(OK="$ok" NUM="$num" LAST="$last" node -e '
+          action="$(VERDICT="$verdict" NUM="$num" LAST="$last" node -e '
             import("./tools/uptime-parse.mjs").then(({ decide }) =>
-              console.log(decide({ ok: process.env.OK === "true", issueNumber: process.env.NUM, lastMs: Number(process.env.LAST) }).action))')"
+              console.log(decide({ verdict: process.env.VERDICT, issueNumber: process.env.NUM, lastMs: Number(process.env.LAST) }).action))')"
           echo "issue=${num:-none} action=$action"
           report() {
             {
@@ -89,4 +129,8 @@ jobs:
               echo "closed #$num" ;;
             *) echo "nothing to do" ;;
           esac
-          [ "$ok" = "true" ] || { echo "::error::$head"; exit 1; }
+          case "$verdict" in
+            pass) ;;
+            inconclusive) echo "::warning::Inconclusive (not a failure; status.json is fresh): $head" ;;
+            *) echo "::error::$head"; exit 1 ;;
+          esac

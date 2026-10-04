@@ -1,7 +1,8 @@
 // Movement: "Traffic right now" from data/movement.json (written by poller/movement.mjs from
 // community ADS-B feeds; README "Movement"). Nothing is computed here.
 //   line(airport)   card line under the reason, only when it means something:
-//                   departures index < 0.7 or > 1.3, coverage >= 0.6, a baseline, data under 20 min old
+//                   departures index < 0.8 or >= 1.3, coverage >= 0.6, a baseline, data under 20 min old;
+//                   plain words by band (see words()); exact numbers only in Aviation mode
 //   card(airport)   sheet card "Traffic right now" (.sec header + .card)
 //   alerts()        airline alert banner for the top of the list; appended to #natstrip instead when
 //                   that element exists (then returns null)
@@ -86,15 +87,27 @@ function entry(a) {
 }
 const ageOf = (e) => Date.now() - Date.parse(e.asOf);
 const fresh = (e) => e && e.asOf && ageOf(e) < FRESH_MS;
-const meaningful = (e) => fresh(e) && e.index != null && e.baseline && e.baseline.depHr && e.coverage >= 0.6 && (e.index < 0.7 || e.index > 1.3);
-const pctOff = (index) => Math.round(Math.abs(1 - index) * 100);
+const aviation = () => window.AWXPrefs?.getPrefs().mode === "aviation";
 
-/** "Departures running 38% below normal" (null unless it means something). */
+/** Plain words for the departures index (null when traffic is about normal). */
+export function words(index) {
+  if (index == null || !Number.isFinite(index)) return null;
+  if (index < 0.3) return "Departures almost stopped";
+  if (index < 0.6) return "Departures far below normal";
+  if (index < 0.8) return "Departures below normal";
+  if (index >= 1.6) return "Much busier than normal";
+  if (index >= 1.3) return "Busier than normal";
+  return null;
+}
+const meaningful = (e) => fresh(e) && e.index != null && e.baseline && e.baseline.depHr && e.coverage >= 0.6 && words(e.index) != null;
+/** The words, with the exact rates added in Aviation mode ("… (38 vs 61 per hour)"). */
+const phrase = (e) => words(e.index) + (aviation() && e.depHr != null && e.baseline && e.baseline.depHr ? ` (${e.depHr} vs ${e.baseline.depHr} per hour)` : "");
+
+/** "Departures far below normal" (null unless it means something). */
 export function line(a) {
   const e = entry(a);
   if (!meaningful(e)) return null;
-  const low = e.index < 1;
-  return el("div", "mv-line " + (low ? "mv-lo" : "mv-hi"), `Departures running ${pctOff(e.index)}% ${low ? "below" : "above"} normal`);
+  return el("div", "mv-line " + (e.index < 1 ? "mv-lo" : "mv-hi"), phrase(e));
 }
 
 function bar(label, value, normal) {
@@ -140,8 +153,9 @@ export function card(a) {
   const b = e.baseline || {};
   const old = !fresh(e);
   const tone = meaningful(e) ? (e.index < 1 ? " mv-lo" : " mv-hi") : "";
-  const sum = meaningful(e) ? `Departures running ${pctOff(e.index)}% ${e.index < 1 ? "below" : "above"} normal` : e.sentence;
-  if (window.AWXPrefs?.getPrefs().mode !== "aviation") {
+  // Traveler text never carries a % or raw rates: poller sentences like "Departures 38/hr vs 61 normal (↓38%)" are Aviation-only.
+  const sum = meaningful(e) ? phrase(e) : (aviation() || !/\d\s?%|\/hr/.test(e.sentence || "") ? e.sentence : null);
+  if (!aviation()) {
     if (!old && !meaningful(e)) return null;
     const box = el("div", "mv-card",
       sum ? el("div", "mv-sum" + tone, sum) : null,
