@@ -410,6 +410,26 @@ async function uiChecks(add, scenario) {
       add(hits.length ? "fail" : "pass", "Traveler: delay chances in words, no % (cards, sheets, trips)", hits.slice(0, 4).join("; ") || `${n} delay lines checked`);
     });
 
+    // our own name and identity: the title is "Airports"; no "Flighty" in visible UI text outside setup-instruction lists
+    await withPage(url, async (w, doc) => {
+      const A = w.AWXApp;
+      const hits = [];
+      const scan = (where) => {
+        const c = doc.body.cloneNode(true);
+        c.querySelectorAll("ol, script, style, code").forEach((e) => e.remove()); // numbered setup steps may name it
+        if (/\bFlighty\b/.test(c.innerText || c.textContent)) hits.push(where); // case-sensitive: "Your flight" + "Your 9 PM…" would match /flighty/i
+      };
+      scan("home");
+      for (const a of A.state.data.airports.slice(0, 8)) { A.openSheet(a.iata); await frameSleep(w, 15); scan(a.iata); A.closeSheet(); }
+      if (w.AWXNav) {
+        for (const pg of [null, "trips", "data", "airports"]) { w.AWXNav.openSettings(pg || undefined); await frameSleep(w, 120); scan("Settings " + (pg || "root")); doc.querySelector(".awx-done") && doc.querySelector(".awx-done").click(); await frameSleep(w, 360); }
+        w.location.hash = "#trips"; await frameSleep(w, 200); scan("Trips tab"); w.location.hash = "";
+      }
+      const title = doc.title;
+      add(title === "Airports" && !hits.length ? "pass" : "fail", "App identity: title \"Airports\", no \"Flighty\" in visible UI text",
+        `title "${title}"` + (hits.length ? `; "Flighty" visible in ${hits.join(", ")}` : "; clean outside setup steps"));
+    });
+
     // switching the Times setting changes the labels
     await withPage(url, async (w, doc) => {
       const A = w.AWXApp;

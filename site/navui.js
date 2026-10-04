@@ -19,6 +19,12 @@ export function h(tag, props, ...kids) {
 
 // 24×24 stroke icons. Each entry: list of path data (or ["c", cx, cy, r] circles, ["r", x, y, w, h, rx] rects).
 const ICONS = {
+  // build2b: our own tab glyphs, wide 28×18 (rounded 2 px strokes); "f" paths fill amber when the tab is selected,
+  // "k" paths are knock-out details drawn over the fill
+  terminal: { vb: "0 0 28 18", p: [["f", "M4.5 8h13.5a2.5 2.5 0 0 1 2.5 2.5v5H2v-5A2.5 2.5 0 0 1 4.5 8z"], ["f", "M21 15.5v-9h3v9z"], ["f", "M19.8 6.5V4.2a1.7 1.7 0 0 1 1.7-1.7h2a1.7 1.7 0 0 1 1.7 1.7v2.3z"], ["k", "M6 11.8h10"], ["", "M1 15.5h26"]] },
+  ticket: { vb: "0 0 28 18", p: [["f", "M5 2.5h12a2 2 0 0 0 4 0h2a3 3 0 0 1 3 3v7a3 3 0 0 1-3 3h-2a2 2 0 0 0-4 0H5a3 3 0 0 1-3-3v-7a3 3 0 0 1 3-3z"], ["k", "M19 6.6v.9M19 10.5v.9"], ["k", "M6 7.2h7M6 10.8h4.5"]] },
+  foldmap: { vb: "0 0 28 18", p: [["f", "M2 4.6 9.5 2.5l9 2.1 7.5-2.1v11l-7.5 2.1-9-2.1L2 15.6z"], ["k", "M9.5 2.5v11M18.5 4.6v11"]] },
+  wlens: { vb: "0 0 28 18", p: [["", ["c", 11, 8.2, 5.6]], ["", "M15.6 11.6l7.2 3.9"]] },
   tower: ["M6.5 6.5h11l-2 4.5h-7z", "M10 11v9.5M14 11v9.5", "M7 20.5h10", "M12 6.5V3.5", "M9.5 3.5h5"],
   case: [["r", 3.5, 7.5, 17, 12, 2.5], "M9 7.5V5.6c0-.6.5-1.1 1.1-1.1h3.8c.6 0 1.1.5 1.1 1.1v1.9", "M8 7.5v12M16 7.5v12"],
   map: ["M3.5 6.5 9 4.5l6 2 5.5-2v13l-5.5 2-6-2-5.5 2z", "M9 4.5v13M15 6.5v13"],
@@ -52,7 +58,21 @@ export function icon(name, cls) {
   svg.setAttribute("stroke-linecap", "round");
   svg.setAttribute("stroke-linejoin", "round");
   if (cls) svg.setAttribute("class", cls);
-  for (const p of ICONS[name] || []) {
+  const def = ICONS[name];
+  if (def && def.vb) { // wide glyph with fill / knock-out layers (build2b)
+    svg.setAttribute("viewBox", def.vb);
+    svg.setAttribute("stroke-width", "2");
+    svg.setAttribute("class", ((cls || "") + " wide").trim());
+    for (const [layer, d] of def.p) {
+      let e;
+      if (Array.isArray(d)) { e = document.createElementNS(ns, "circle"); e.setAttribute("cx", d[1]); e.setAttribute("cy", d[2]); e.setAttribute("r", d[3]); }
+      else { e = document.createElementNS(ns, "path"); e.setAttribute("d", d); }
+      if (layer) e.setAttribute("class", layer);
+      svg.append(e);
+    }
+    return svg;
+  }
+  for (const p of def || []) {
     let e;
     if (typeof p === "string") { e = document.createElementNS(ns, "path"); e.setAttribute("d", p); }
     else if (p[0] === "c") { e = document.createElementNS(ns, "circle"); e.setAttribute("cx", p[1]); e.setAttribute("cy", p[2]); e.setAttribute("r", p[3]); }

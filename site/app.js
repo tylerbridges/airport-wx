@@ -1920,7 +1920,7 @@
     try { return fn(); } catch (e) { console.warn(e); return null; }
   }
 
-  /** Flighty-style status summary at the top of the sheet. */
+  /** Status summary at the top of the sheet (one line; rows behind the chevron). */
   function summaryCard(a, v, nowPrograms, onMore) {
     const tz = dispTz(a);
     const closed = nowPrograms.find((f) => f.type === "closure");

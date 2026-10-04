@@ -6,7 +6,7 @@ A user should feel confident they're aware of any potential disruption, weather 
 
 ## Workflow
 
-airport-wx: a static page showing major-weather and delay risk at major US airports. A GitHub Actions job polls the sources every 10 minutes, computes risk, and deploys `site/` to GitHub Pages.
+airport-wx is the Airports app: a static page showing major-weather and delay risk at major US airports. A GitHub Actions job polls the sources every 10 minutes, computes risk, and deploys `site/` to GitHub Pages.
 
 - Work directly on `main` unless asked otherwise. Start with `git status`; when clean, `git pull --ff-only origin main`. Never discard pre-existing changes.
 - Commit task-scoped files with a descriptive message and push with `git push origin main`. Never force-push.

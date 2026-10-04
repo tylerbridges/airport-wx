@@ -623,14 +623,14 @@ function settingsView() {
   const man = S.manual.map((t) => ({ ...t, source: "manual" })).sort((a, b) => Date.parse(a.legs[0].dep) - Date.parse(b.legs[0].dep));
   return [
     head(h("h2", { id: "tripTitle", class: "th2" }, "Trips")),
-    sec("Flighty calendar",
+    sec("Flight calendar",
       h("div", { class: "box" },
         h("div", { class: "tcal" + (st.ok ? " ok" : st.warn ? " warn" : "") }, st.text),
         g && S.cal.configured ? h("div", { class: "muted small" }, "Checked " + ago(Math.max(0, nowMs() - g))) : null),
       h("details", { class: "thelp", open: !st.ok || null },
         h("summary", {}, "How to connect your flight calendar"),
         h("ol", {},
-          h("li", {}, "In Flighty, turn on calendar sync to a dedicated calendar."),
+          h("li", {}, "If you use Flighty, turn on its calendar sync to a dedicated calendar."),
           h("li", {}, "In the Calendar app, share that calendar as a public calendar."),
           h("li", {}, "Copy the link."),
           h("li", {}, "Add it as the FLIGHTY_ICS_URL secret on GitHub (repository Settings → Secrets and variables → Actions).")),

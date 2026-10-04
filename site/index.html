@@ -6,7 +6,7 @@
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
-<title>Airport Status</title>
+<title>Airports</title>
 <!-- build2a hook: home-screen install, icons, error capture + ?test= scenarios -->
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
@@ -37,6 +37,7 @@
   --l4: #c04dff;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Inter, "Segoe UI", Roboto, system-ui, sans-serif;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --brand: #ffb020; /* runway centreline amber (app icon); light mode: #a15f00 for text (5:1 on white) */
   --nd: rgba(255, 255, 255, .14);
   --glass: rgba(255, 255, 255, .12);
   --glass-solid: rgba(60, 60, 64, .82);
@@ -61,6 +62,7 @@
   --l3: #d63a14;
   --l4: #9a2fd1;
   --nd: rgba(0, 0, 0, .12);
+  --brand: #a15f00;
   --glass: rgba(255, 255, 255, .32);
   --glass-solid: rgba(255, 255, 255, .78);
   --rim: rgba(255, 255, 255, .95);
@@ -85,6 +87,7 @@
     --l3: #d63a14;
     --l4: #9a2fd1;
     --nd: rgba(0, 0, 0, .12);
+  --brand: #a15f00;
     --glass: rgba(255, 255, 255, .32);
     --glass-solid: rgba(255, 255, 255, .78);
     --rim: rgba(255, 255, 255, .95);
@@ -107,7 +110,7 @@ body {
   overflow-x: hidden;
 }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
-button:focus-visible, .card:focus-visible { outline: 2px solid var(--l1); outline-offset: 2px; }
+button:focus-visible, .card:focus-visible { outline: 2px solid var(--brand, #ffb020); outline-offset: 2px; }
 
 .wrap {
   max-width: 560px;
@@ -295,6 +298,14 @@ table.lt { border-collapse: collapse; font-size: 12px; }
 /* phase3 hook: the delay card inside a build2b section card */
 .scard.dlcard { padding-top: 12px; }
 .scard > .dl-block { background: none; border-radius: 0; padding: 0; margin: 0; }
+/* brand: runway mark beside the title; tab icons (wide 28×18 glyphs, filled amber when selected) */
+.brandrow { display: flex; align-items: center; gap: 10px; }
+.brandmark { width: 28px; height: 28px; border-radius: 7px; flex: none; }
+.awx-tabbar [role="tab"] svg.wide, .awx-searchbtn svg.wide { width: 31px; height: 20px; }
+.awx-tabbar [role="tab"] svg .f { fill: none; }
+.awx-tabbar [role="tab"][aria-selected="true"] svg .f { fill: var(--brand-fill, var(--brand)); stroke: var(--brand-fill, var(--brand)); }
+.awx-tabbar [role="tab"][aria-selected="true"] svg .k { stroke: var(--glass-solid, #fff); }
+.awx-nav .awx-searchbtn, body .awx-searchbtn.glass { color: var(--brand); }
 .nanote { margin-top: 4px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
 
 /* home: national strip, reorder */
@@ -325,7 +336,7 @@ table.lt { border-collapse: collapse; font-size: 12px; }
 .sum-k { font-size: 12px; font-weight: 700; color: var(--muted); }
 .sum-v { overflow-wrap: anywhere; }
 .sum-delay { margin-top: 2px; font-weight: 600; }
-.sum-more { width: 100%; display: flex; justify-content: space-between; align-items: center; min-height: 44px; border-top: 1px solid var(--line); font-size: 14px; font-weight: 600; color: var(--l1); }
+.sum-more { width: 100%; display: flex; justify-content: space-between; align-items: center; min-height: 44px; border-top: 1px solid var(--line); font-size: 14px; font-weight: 600; color: var(--brand); }
 /* detail sections as cards (weather-site pattern): header row + one rounded card */
 .sec { margin-top: 14px; }
 .tlsec { margin-top: 18px; }
@@ -422,13 +433,13 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 .sc .reasons li.more { display: none; }
 .sc.expanded .reasons li.more { display: list-item; }
 .sc .none { margin-top: 6px; font-size: 14px; color: var(--muted); }
-.morebtn { align-self: flex-start; margin-top: 2px; font-size: 12.5px; font-weight: 600; color: var(--l1); padding: 2px 0; }
+.morebtn { align-self: flex-start; margin-top: 2px; font-size: 12.5px; font-weight: 600; color: var(--brand); padding: 2px 0; }
 .sc-prog { margin-top: 6px; font-size: 13px; font-weight: 600; }
 .sc-imp { margin-top: 4px; font-size: 13px; }
 .facts { display: flex; flex-wrap: wrap; gap: 2px 10px; margin-top: 6px; font-size: 12px; line-height: 1.35; color: var(--muted); }
 .facts .fc { font-size: 11px; padding: 0 6px; }
 .sc .chips { margin-top: auto; padding-top: 6px; }
-.backnow { position: absolute; top: 2px; right: 2px; min-height: 44px; padding: 0 10px; display: flex; align-items: center; border-radius: 999px; font-size: 12.5px; font-weight: 700; color: var(--l1); background: none; }
+.backnow { position: absolute; top: 2px; right: 2px; min-height: 44px; padding: 0 10px; display: flex; align-items: center; border-radius: 999px; font-size: 12.5px; font-weight: 700; color: var(--brand); background: none; }
 .backnow::before { content: ""; position: absolute; inset: 9px 0; border-radius: 999px; background: var(--card); z-index: -1; }
 .sc.full[data-kind="hour"] h4 { padding-right: 96px; }
 
@@ -487,7 +498,7 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 .nrow .ncode { font-size: 22px; font-weight: 800; letter-spacing: -.02em; min-width: 56px; }
 .nrow .ntext { flex: 1; min-width: 0; display: grid; font-size: 14px; overflow-wrap: anywhere; }
 .nrow.static { font-size: 14px; }
-.srow.link { color: var(--l1); font-weight: 600; }
+.srow.link { color: var(--brand); font-weight: 600; }
 @media (prefers-reduced-motion: reduce) {
   .sheet, .backdrop, .card { transition: none; }
   .lens, .lens-seg, .tl-wrap.spring .lens, .tl-wrap.spring .lenslabel, .bx-layer, .bx-layer.on, .tl .s, .switch, .switch::after { transition: none !important; animation: none !important; }
@@ -501,17 +512,17 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 :root {
   --glass-bg: rgba(44, 44, 48, .56); --glass-strong: rgba(40, 40, 44, .84); --glass-solid: rgba(38, 38, 42, .97); --glass-rim: rgba(255, 255, 255, .16); --glass-hi: rgba(255, 255, 255, .2);
   --glass-shadow: 0 10px 30px rgba(0, 0, 0, .5), 0 2px 8px rgba(0, 0, 0, .3);
-  --capsule: rgba(255, 255, 255, .13); --tab-off: rgba(235, 235, 245, .75); --accent: #409cff; --accent-btn: #0062cc;
+  --capsule: rgba(255, 255, 255, .13); --tab-off: rgba(235, 235, 245, .75); --brand: #ffb020; --brand-fill: #ffb020; --brand-ink: #1a1200; --accent: var(--brand); --accent-btn: var(--brand);
   --set-bg: #000; --set-card: #1c1c1e; --sseg-bg: rgba(118, 118, 128, .24); --sseg-sel: #636366;
-  --switch-off: rgba(120, 120, 128, .36); --switch-on: #30d158;
+  --switch-off: rgba(120, 120, 128, .36); --switch-on: var(--brand-fill);
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
     --glass-bg: rgba(255, 255, 255, .66); --glass-strong: rgba(255, 255, 255, .88); --glass-solid: rgba(250, 250, 252, .97); --glass-rim: rgba(255, 255, 255, .95); --glass-hi: rgba(255, 255, 255, 1);
     --glass-shadow: 0 10px 30px rgba(0, 0, 0, .14), 0 1px 4px rgba(0, 0, 0, .08), 0 0 0 .5px rgba(0, 0, 0, .08);
-    --capsule: rgba(0, 0, 0, .07); --tab-off: rgba(60, 60, 67, .85); --accent: #0064d1; --accent-btn: #0062cc;
+    --capsule: rgba(0, 0, 0, .07); --tab-off: rgba(60, 60, 67, .85); --brand: #a15f00; --brand-fill: #c77700; --brand-ink: #fff; --accent: var(--brand); --accent-btn: #a15f00;
     --set-bg: #f2f2f7; --set-card: #fff; --sseg-bg: rgba(118, 118, 128, .12); --sseg-sel: #fff;
-    --switch-off: rgba(120, 120, 128, .2); --switch-on: #34c759;
+    --switch-off: rgba(120, 120, 128, .2); --switch-on: var(--brand-fill);
   }
 }
 :root[data-theme="light"] {
@@ -520,9 +531,9 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
   --crit: #d70015; --l0: #1f9d43; --l1: #0f8da0; --l2: #b86e00; --l3: #d63a14; --l4: #9a2fd1;
   --glass-bg: rgba(255, 255, 255, .66); --glass-strong: rgba(255, 255, 255, .88); --glass-solid: rgba(250, 250, 252, .97); --glass-rim: rgba(255, 255, 255, .95); --glass-hi: rgba(255, 255, 255, 1);
   --glass-shadow: 0 10px 30px rgba(0, 0, 0, .14), 0 1px 4px rgba(0, 0, 0, .08), 0 0 0 .5px rgba(0, 0, 0, .08);
-  --capsule: rgba(0, 0, 0, .07); --tab-off: rgba(60, 60, 67, .85); --accent: #0064d1; --accent-btn: #0062cc;
+  --capsule: rgba(0, 0, 0, .07); --tab-off: rgba(60, 60, 67, .85); --brand: #a15f00; --brand-fill: #c77700; --brand-ink: #fff; --accent: var(--brand); --accent-btn: #a15f00;
   --set-bg: #f2f2f7; --set-card: #fff; --sseg-bg: rgba(118, 118, 128, .12); --sseg-sel: #fff;
-  --switch-off: rgba(120, 120, 128, .2); --switch-on: #34c759;
+  --switch-off: rgba(120, 120, 128, .2); --switch-on: var(--brand-fill);
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
@@ -530,9 +541,9 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
   --crit: #ff453a; --l0: #30d158; --l1: #2ec4d6; --l2: #ffb020; --l3: #ff5a36; --l4: #c04dff;
   --glass-bg: rgba(44, 44, 48, .56); --glass-strong: rgba(40, 40, 44, .84); --glass-solid: rgba(38, 38, 42, .97); --glass-rim: rgba(255, 255, 255, .16); --glass-hi: rgba(255, 255, 255, .2);
   --glass-shadow: 0 10px 30px rgba(0, 0, 0, .5), 0 2px 8px rgba(0, 0, 0, .3);
-  --capsule: rgba(255, 255, 255, .13); --tab-off: rgba(235, 235, 245, .75); --accent: #409cff; --accent-btn: #0062cc;
+  --capsule: rgba(255, 255, 255, .13); --tab-off: rgba(235, 235, 245, .75); --brand: #ffb020; --brand-fill: #ffb020; --brand-ink: #1a1200; --accent: var(--brand); --accent-btn: var(--brand);
   --set-bg: #000; --set-card: #1c1c1e; --sseg-bg: rgba(118, 118, 128, .24); --sseg-sel: #636366;
-  --switch-off: rgba(120, 120, 128, .36); --switch-on: #30d158;
+  --switch-off: rgba(120, 120, 128, .36); --switch-on: var(--brand-fill);
 }
 .awx-nav-on [hidden] { display: none !important; }
 .awx-nav-on #search, .awx-nav-on .xfoot { display: none; } /* search moves to the round button; checks to Data & checks */
@@ -583,7 +594,7 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 .awx-empty h2 { margin: 0 0 6px; font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
 .awx-empty p { margin: 0 auto 20px; max-width: 330px; color: var(--muted); font-size: 15px; }
 .awx-btn { display: block; width: 100%; max-width: 330px; margin: 10px auto 0; min-height: 50px; border-radius: 25px; font-size: 16px; font-weight: 700; background: var(--card); color: var(--text); }
-.awx-btn.primary { background: var(--accent-btn); color: #fff; }
+.awx-btn.primary { background: var(--accent-btn); color: var(--brand-ink); }
 .awx-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* menu popover */
 .awx-catch { position: fixed; inset: 0; z-index: 20; }
@@ -698,7 +709,7 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <div class="wrap">
   <header>
     <div>
-      <h1>Airport Status</h1>
+      <div class="brandrow"><img class="brandmark" src="icons/favicon.svg" alt="" width="28" height="28"><h1>Airports</h1></div>
       <div class="updated" id="updated" aria-live="polite">Loading…</div>
     </div>
     <button class="refresh" id="refresh" type="button" aria-label="Refresh">
@@ -729,11 +740,11 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <div class="sr" id="announce" aria-live="polite"></div>
 <script src="cats.js?v=1"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=1"></script><!-- build2b: shared sheet drag / back / scroll lock -->
-<script src="app.js?v=13" defer></script>
+<script src="app.js?v=14" defer></script>
 <script type="module" src="searched.js?v=5"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=2"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
-<script type="module" src="trips.js?v=3"></script><!-- trips hook -->
-<script type="module" src="nav.js?v=3"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
+<script type="module" src="trips.js?v=4"></script><!-- trips hook -->
+<script type="module" src="nav.js?v=4"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
 <script type="module" src="movement.js?v=1"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
 </body>
 </html>

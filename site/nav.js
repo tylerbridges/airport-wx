@@ -10,9 +10,9 @@ import { h, icon, prefs, reducedMotion, trapFocus, app } from "./navui.js";
 import { initSettings, openSettings, settingsOpen } from "./settings.js";
 
 const TABS = [
-  { id: "airports", label: "Airports", title: "Airports", icon: "tower" },
-  { id: "trips", label: "Trips", title: "Trips", icon: "case" },
-  { id: "map", label: "Map", title: "Map", icon: "map" },
+  { id: "airports", label: "Airports", title: "Airports", icon: "terminal" },
+  { id: "trips", label: "Trips", title: "Trips", icon: "ticket" },
+  { id: "map", label: "Map", title: "Map", icon: "foldmap" },
 ];
 const $ = (id) => document.getElementById(id);
 export const tabFromHash = (hash) => { const k = String(hash || "").replace(/^#/, ""); return TABS.some((t) => t.id === k) ? k : "airports"; };
@@ -68,7 +68,7 @@ function buildBar() {
     go(TABS[j].id);
     $("tab-" + TABS[j].id).focus();
   });
-  const sb = h("button", { type: "button", class: "awx-searchbtn glass", id: "navSearchBtn", "aria-label": "Search airports", onclick: () => openSearch() }, icon("lens"));
+  const sb = h("button", { type: "button", class: "awx-searchbtn glass", id: "navSearchBtn", "aria-label": "Search airports", onclick: () => openSearch() }, icon("wlens"));
   nav = h("nav", { class: "awx-nav", "aria-label": "Main" }, h("div", { class: "awx-navin" }, bar, sb));
   document.body.append(nav);
 }

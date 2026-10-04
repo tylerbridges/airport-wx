@@ -169,7 +169,7 @@ function buildRoot(body) {
     group("Times", [checkList("Times", [["airport", "Each airport's local time"], ["mine", "My time zone"]], p.timeRef, set("timeRef"))],
       "Forecast hours, delays and timelines use this time zone."),
     group(null, [navRow("pulse", "Data & checks", null, () => push("data"), { "data-page": "data" })]),
-    group("About", [valueRow("Version", appVersion())],
+    group("About", [valueRow("App", "Airports"), valueRow("Version", appVersion())],
       "Your airports and settings stay on this device. Trips publish only airports and flight times, never names or booking details."),
   );
 }
@@ -354,7 +354,7 @@ function tripLabel(t, i) {
 function buildTrips(body, page, opts) {
   const status = valueRow("Status", "Checking…", { "data-id": "calstatus" });
   const steps = h("ol", { class: "awx-steps" },
-    h("li", {}, "In Flighty, turn on calendar sync to a dedicated calendar (only flights go in it)."), // trips hook: the user's wording
+    h("li", {}, "If you use Flighty, turn on its calendar sync to a dedicated calendar (only flights go in it)."), // trips hook: the user's wording
     h("li", {}, "In Calendar, share that calendar as a public calendar."),
     h("li", {}, "Copy the calendar's public link."),
     h("li", {}, "On GitHub, add the link as a repository secret named ", h("code", {}, "FLIGHTY_ICS_URL"), ". The next update reads it."));
