@@ -168,8 +168,10 @@ export function cascades(airports) {
 
 /**
  * Applies cascade notes to one airport's internal risk rows (risk.mjs buildHours: {t, items, level}) in
- * place, and returns the status.json summary [{hub, kind, from, to, text}] (runs of consecutive hours per
- * hub; text = the run's strongest note as written in its hours, for the card/sheet line).
+ * place, and returns the status.json summary [{hub, kind, from, to, text}]: runs of consecutive hours per
+ * hub that raised at least one hour's level (a note that changed nothing stays in the hour's reasons only),
+ * strongest kind first, then earliest; text = the run's strongest note as written in its hours, for the
+ * card/sheet line.
  */
 export function applyCascade(hours, notes) {
   const runs = [];
@@ -180,16 +182,19 @@ export function applyCascade(hours, notes) {
     const r = cascadeReason(x.hub, x.city, x.kind, base[x.i]);
     if (!h.items.some((it) => it.text === r.text)) h.items.push({ level: r.level, text: r.text, fixed: true });
     h.level = Math.max(h.level, r.level);
+    const raised = r.level > base[x.i];
     const last = runs.find((u) => u.hub === x.hub && u.end === x.i - 1);
     if (last) {
       last.end = x.i;
+      last.raised = last.raised || raised;
       if (KINDS.indexOf(x.kind) < KINDS.indexOf(last.kind) || (x.kind === last.kind && r.level > last.level)) Object.assign(last, { kind: x.kind, level: r.level, text: r.text });
-    } else runs.push({ hub: x.hub, kind: x.kind, level: r.level, text: r.text, start: x.i, end: x.i });
+    } else runs.push({ hub: x.hub, kind: x.kind, level: r.level, text: r.text, start: x.i, end: x.i, raised });
   }
   for (const h of hours) h.items.sort((a, b) => b.level - a.level);
   const HOUR = 3600e3;
   return runs
-    .sort((a, b) => a.start - b.start || KINDS.indexOf(a.kind) - KINDS.indexOf(b.kind))
+    .filter((u) => u.raised)
+    .sort((a, b) => KINDS.indexOf(a.kind) - KINDS.indexOf(b.kind) || a.start - b.start)
     .map((u) => ({
       hub: u.hub, kind: u.kind,
       from: new Date(+new Date(hours[u.start].t)).toISOString(),

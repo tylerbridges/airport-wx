@@ -133,7 +133,8 @@ export function assemble({ airports, now, metars, tafs, sigmets, faaParsed, spc,
     const n = notes.get(e.iata);
     const hours = rows.get(e.iata);
     if (!n || !hours) continue;
-    e.cascade = applyCascade(hours, n);
+    const summary = applyCascade(hours, n);
+    if (summary.length) e.cascade = summary;
     const { now: nowS, peak } = summarize(hours, e.tz);
     e.now = nowS;
     e.peak = peak;

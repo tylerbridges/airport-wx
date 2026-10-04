@@ -84,7 +84,7 @@ The sheet shows one box ("Minor · through 3 AM") while the level holds; a separ
 - **Who hears about it** (`TOP_ROUTES`): each airport's top 5 hub connections. No BTS route-volume file ships with the app (nothing under `site/data/model/` or the history branch), so this is a static table compiled by hand from BTS T-100 rankings and airline schedules — approximate; review yearly. Airports in the hub's TRACON (`TRACONS`: N90 JFK/LGA/EWR, C90 ORD/MDW, PCT DCA/IAD/BWI, SCT LAX/SAN, MIA MIA/FLL, D10, I90) never get notes from it: the New York airports get none from each other.
 - **When:** the 1st to 4th hour after each hour of trouble (a two-hour ground stop now -> notes in hours 1–5).
 - **Effect:** one reason per hub and hour, raising the hour's level by at most one step and never above Moderate: ground stop / delay program / closure turn Low into Moderate ("ORD ground stop may delay flights to and from Chicago") and None into Low ("… may delay some flights …"); hub delays are Low ("DFW delays may spread to some flights to and from Dallas–Fort Worth") and never raise past Low. The delay chance is untouched, so a note never makes an hour "Delays happening now". Category "FAA delay programs" (hidden with it in Settings).
-- **Shown:** `airports[].cascade` summarises the runs; the card and the sheet show one short line for the first one ("ORD ground stop may delay flights to and from Chicago later today"), only when the reasons on screen don't already say it (`// hubs hook` in `site/app.js`). Trips: see "Trips". The live relay assembles only the requested airports and takes other hubs from the last build (`assemble({hubsFrom})`).
+- **Shown:** `airports[].cascade` summarises the runs that raised a level (strongest kind first, then earliest; a note that changed nothing stays in the hour's reasons only); the card and the sheet show one short line for the first one ("ORD ground stop may delay flights to and from Chicago later today"), only when the reasons on screen don't already say it (`// hubs hook` in `site/app.js`). Trips: see "Trips". The live relay assembles only the requested airports and takes other hubs from the last build (`assemble({hubsFrom})`).
 
 ## status.json
 
@@ -105,7 +105,7 @@ The sheet shows one box ("Minor · through 3 AM") while the level holds; a separ
     faa: [{type: ground_stop|ground_delay|delay|closure, reason, detail, badge, cause, causeLabel,
            (programs:) end (ISO, or null = until further notice), trend: increasing|steady|decreasing|null,
            (closures:) scope: full|runway|limited, active, plain, runways[], start, end (ISO or null: NOTAM times, else the Reopen time as end), perm? (true)}],
-    cascade?: [{hub, kind: closure|"ground stop"|"ground delay program"|delays, from, to (ISO hour bounds), text}] (hub cascade notes, README "Hub cascade"; absent when none),
+    cascade?: [{hub, kind: closure|"ground stop"|"ground delay program"|delays, from, to (ISO hour bounds), text}] (hub cascade notes that raised a level, README "Hub cascade"; absent when none),
     atcscc: [{id, type: GS|GDP|AFP|other, airport, issued, cause, causeText, causeLabel, title, active, cnx, start, end}],
     alerts: [{event, severity, headline, onset, ends}], spc: "ENH"|null, sigmets: [{hazard, raw, validTo}],
     lamp: {issued, hours: [{t, gust, tstmProb, convProb, probHrs, cig, vis, typ, pFrz, pPrecip}]} | null,

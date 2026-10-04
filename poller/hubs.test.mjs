@@ -106,6 +106,11 @@ test("applyCascade: Low -> Moderate, None -> Low, Moderate+ unchanged; summary r
   assert.equal(hours[2].items[0].text, "DFW ground stop may delay some flights to and from Dallas–Fort Worth");
   assert.ok(hours[4].items.some((x) => x.text.startsWith("DFW ground stop") && x.level === 2), "kept as a reason below a High hour");
   assert.deepEqual(summary, [{ hub: "DFW", kind: "ground stop", from: new Date(T0 + H).toISOString(), to: new Date(T0 + 6 * H).toISOString(), text: "DFW ground stop may delay flights to and from Dallas–Fort Worth" }]);
+  // a run that raised nothing stays in the hours' reasons but not in the summary (no card/sheet line)
+  const h3 = rows([3, 2, 3]);
+  assert.deepEqual(applyCascade(h3, [0, 1, 2].map((i) => ({ i, hub: "ORD", kind: "ground stop", city: "Chicago" }))), []);
+  assert.deepEqual(h3.map((h) => h.level), [3, 2, 3]);
+  assert.ok(h3.every((h) => h.items.some((x) => x.text === "ORD ground stop may delay flights to and from Chicago")));
   // hub delays likely: Low, never past it
   const h2 = rows([0, 1, 2]);
   applyCascade(h2, [0, 1, 2].map((i) => ({ i, hub: "ORD", kind: "delays", city: "Chicago" })));
