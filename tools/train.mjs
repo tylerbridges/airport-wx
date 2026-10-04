@@ -278,7 +278,8 @@ export async function train(opts) {
       if (!pf.hubs) delete f.hc;
       return calibrate(prevModel.cal, modelRaw(prevModel, encode(f, BUCKETS[bi].key, pf), pc[q]));
     });
-    current.overlap = prevModel.train?.to && prevModel.train.to >= split.test[0] ? `the deployed model was trained through ${prevModel.train.to}, inside the test period (its scores there are in-sample, which favours it)` : null;
+    current.overlap = fx ? "fixture run: the committed real model scored on synthetic hours"
+      : prevModel.train?.to && prevModel.train.to >= split.test[0] ? `the deployed model was trained through ${prevModel.train.to}, inside the test period (its scores there are in-sample, which favours it)` : null;
   }
   current.trained = prevModel?.trained || null;
   current.period = prevModel ? { train: prevModel.train || null, test: prevModel.test || null } : null;
