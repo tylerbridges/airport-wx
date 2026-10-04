@@ -7,6 +7,7 @@ import {
   BUCKETS, DEF, HUBS, PX, encode, tafSummary, condSummary, hubPack, cascadeOf, localParts, analogKeys, ANALOG_MIN, logit, sigmoid, calibrate, seasonOf,
   programState, lampCat, hourOfWeek,
 } from "../poller/delay.mjs";
+import { TOP_ROUTES } from "../poller/hubs.mjs";
 
 export const HOUR = 3600e3;
 const MAX_LEAD_H = 30;
@@ -184,20 +185,13 @@ export function tafFor(tafs, H, b) {
 }
 
 /**
- * Top connecting hubs per airport for the hub-cascade features (feature family "hubs"; the first one is
- * HUBS' hub). Stored in model.json (`hubs`) so the live scorer asks for the same hubs.
- * TODO: unify with the shared hub table (poller/hubs.mjs) once it lands on main.
+ * Top connecting hubs per airport for the hub-cascade features (feature family "hubs"): the first
+ * CASCADE_HUBS of the shared table poller/hubs.mjs TOP_ROUTES (busiest hub connections, same-TRACON hubs
+ * left out). Stored in model.json (`hubs`, only hubs that are training airports) so the live scorer asks
+ * for the same hubs.
  */
-export const TOP_HUBS = {
-  ATL: ["ORD", "DFW", "EWR"], DFW: ["ORD", "ATL", "DEN"], DEN: ["ORD", "DFW", "LAX"], ORD: ["EWR", "LGA", "ATL"],
-  LAX: ["SFO", "DEN", "ORD"], JFK: ["ATL", "ORD", "LAX"], LAS: ["DEN", "LAX", "PHX"], MCO: ["ATL", "EWR", "CLT"],
-  MIA: ["ATL", "JFK", "ORD"], CLT: ["EWR", "ATL", "PHL"], SEA: ["SFO", "LAX", "DEN"], PHX: ["DEN", "DFW", "LAX"],
-  EWR: ["ORD", "ATL", "DEN"], SFO: ["LAX", "DEN", "ORD"], IAH: ["DFW", "ORD", "EWR"], BOS: ["EWR", "LGA", "DCA"],
-  FLL: ["ATL", "EWR", "JFK"], MSP: ["ORD", "DEN", "ATL"], LGA: ["ORD", "ATL", "DCA"], DTW: ["ORD", "ATL", "LGA"],
-  PHL: ["EWR", "CLT", "ORD"], SLC: ["DEN", "LAX", "SFO"], DCA: ["EWR", "LGA", "ATL"], SAN: ["LAX", "SFO", "DEN"],
-  BWI: ["EWR", "ATL", "ORD"], TPA: ["ATL", "EWR", "CLT"], AUS: ["DFW", "DEN", "ATL"], IAD: ["EWR", "ORD", "DEN"],
-  BNA: ["ATL", "ORD", "DFW"], MDW: ["ORD", "DEN", "LAS"], HNL: ["LAX", "SFO", "SEA"], ANC: ["SEA", "DEN", "ORD"],
-};
+export const CASCADE_HUBS = 3;
+export const TOP_HUBS = Object.fromEntries(Object.entries(TOP_ROUTES).map(([ap, list]) => [ap, list.slice(0, CASCADE_HUBS)]));
 
 /** Hub TAF state per verifying hour and bucket: Map H -> [4 x packed (hubBits | level << 8) | null]. */
 export function hubBitsMap(tafs, hoursList) {

@@ -15,6 +15,7 @@ import {
 import { aggregateBts, chunks } from "./train-data.mjs";
 import { parseCsv, parseCsvLine, tafsFromIemCsv } from "./backtest-lib.mjs";
 import { tafSummary, calibrate, dayType, encode, hubPack, cascadeOf, hourOfWeek, FEATS, modelOk } from "../poller/delay.mjs";
+import { TOP_ROUTES } from "../poller/hubs.mjs";
 import { fixtureWorld } from "./train-fixtures.mjs";
 import { train, renderMarkdown, currentModelCheck, parseFeatures } from "./train.mjs";
 
@@ -246,7 +247,8 @@ test("hub cascade: packed hub TAF states -> counts and highest level; records ca
   const n = encode({ ap: "MSP", lh: 15, dw: 2, mo: 7, w: null, o: null, h: null, hc: cascadeOf([ts, ts]) }, "3-6", { hubs: true });
   assert.ok(["hc:ts", "hc:ts|3-6", "hc:ts2", "hc:l3", "hc:l3|3-6"].every((k) => n.includes(k)));
   assert.ok(encode({ ap: "MSP", lh: 15, dw: 2, mo: 7, w: null, o: null, h: null, hc: null }, "0-3", { hubs: true }).includes("hc:none"));
-  assert.ok(TOP_HUBS.MSP[0] === "ORD" && TOP_HUBS.SFO.length === 3, "first top hub is HUBS' hub");
+  assert.deepEqual(TOP_HUBS.MSP, TOP_ROUTES.MSP.slice(0, 3), "the shared table (poller/hubs.mjs), top 3");
+  assert.ok(Object.values(TOP_HUBS).every((l) => l.length <= 3));
   // airportRecords: cascadeMaps -> hc per bucket; HUBS bits stay the low 6 bits
   const H = Date.UTC(2025, 6, 10, 20);
   const truth = new Map([[H, { y: 1, md: 30, dm: 40, cx: 0, n: 20 }]]);
