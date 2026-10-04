@@ -52,3 +52,5 @@ airport-wx is the Airports app: a static page showing major-weather and delay ri
 4. Load `index.html` (and `?test=thunderstorm-ground-stop`) at 390 px in light and dark mode with no console errors.
 5. After pushing: run the "Uptime monitor" workflow (or open `https://tylerbridges.github.io/airport-wx/check.html`) and require `CHECK PASS`.
 - Never use Flighty's name, logo or branding; the look is "inspired by" only.
+
+- Airport-hour outlook is shared through `site/outlook.js`; Map and details must agree. Keep scheduled FAA end, published extension outlook and forecast improvement distinct. Missing/stale coverage stays unknown, never green. `site/map.js` uses bundled public-domain Natural Earth geometry; keep the accessible airport list, 44 px pin targets, and privacy-safe trip routes.

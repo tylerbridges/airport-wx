@@ -6,6 +6,7 @@
 // so app.js and searched.js keep working) and talks to them through window.AWXApp / AWXExtra.
 // Tab state lives in the URL hash (#airports, #trips, #map), so Back works.
 import { mountSearch } from "./search.js";
+import { mountMap } from "./map.js?v=1";
 import { h, icon, prefs, reducedMotion, trapFocus, app } from "./navui.js";
 import { initSettings, openSettings, settingsOpen } from "./settings.js";
 
@@ -117,13 +118,10 @@ function renderTrips() {
     h("button", { type: "button", class: "awx-btn", onclick: () => openSettings("trips", { focus: "connect" }) }, "Connect your flight calendar")));
 }
 
+let mapApi;
 function renderMap() {
-  const box = $("navMap");
-  if (box.firstChild) return;
-  box.append(h("div", { class: "awx-empty" },
-    h("div", { class: "awx-empty-ico" }, icon("map")),
-    h("h2", {}, "Coming soon"),
-    h("p", {}, "A map of disruption risk across your airports is on the roadmap.")));
+  if (!mapApi) mapApi = mountMap($("navMap"));
+  mapApi.render();
 }
 
 // ---------- menu popover ----------

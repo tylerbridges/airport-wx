@@ -21,6 +21,7 @@ import "../tools/uptime-parse.test.mjs";
 import "../tools/cats.test.mjs";
 import "../tools/prefs.test.mjs";
 import "../tools/delay-words.test.mjs";
+import "../tools/outlook.test.mjs";
 // live relay
 import "../worker/worker.test.mjs";
 // phase3: delay model
@@ -33,3 +34,4 @@ import "./trip-risk.test.mjs";
 import "./movement.test.mjs";
 // brief hook: per-airport change log
 import "./changes.test.mjs";
+import "../tools/brief.test.mjs";

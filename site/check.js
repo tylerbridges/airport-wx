@@ -4,7 +4,7 @@
 // Writes "CHECK PASS" or "CHECK FAIL n" plus one line per row into <pre id="result"> so headless
 // Chrome (--dump-dom) and the uptime workflow can read it. Warnings don't fail the check.
 import { loadAirports, rank } from "./search.js";
-import { navChecks } from "./navcheck.js"; // nav hook
+import { navChecks } from "./navcheck.js?v=2"; // nav hook
 import { tripChecks } from "./check-trips.js"; // trips hook
 import { dataAsserts, pageAsserts } from "./check-scenarios.js"; // scenarios hook
 
@@ -374,7 +374,7 @@ async function uiChecks(add, scenario) {
         const v = A.view(x);
         const want = w.AWXCats.restLayout(v.now.level, v.peak.level, v.peak.level > v.now.level && v.peak.at !== v.hours[0].t);
         const rest = doc.querySelector('#sheet .bx-layer[data-layer="rest"]');
-        const got = rest.querySelector(".two") ? "split" : /^Clear through/.test(rest.querySelector(".sc-when").textContent) ? "clear" : "single";
+        const got = rest.querySelector(".two") ? "split" : rest.querySelector(".sc").dataset.layout === "clear" ? "clear" : "single";
         counts[got]++;
         expandable += doc.querySelectorAll("#sheet details, #sheet .morebtn, #sheet [aria-expanded]").length;
         if (got !== want) wrong.push(`${x.iata} ${got} (want ${want})`);

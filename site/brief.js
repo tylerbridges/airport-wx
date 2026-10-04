@@ -19,8 +19,9 @@ const SHOW_FROM = 4; // device-local hours the brief shows by itself: 4 AM ...
 const SHOW_TO = 11; // ... until 11 AM
 const TODAY_MAX = 6;
 const RECENT_END_MS = 6 * HOUR; // a program that ended this recently is worth a mention
-const T = window.AWXTest || { name: null };
-const app = () => window.AWXApp;
+const W = typeof window !== "undefined" ? window : {}; // require-free in Node (tools/brief.test.mjs)
+const T = W.AWXTest || { name: null };
+const app = () => W.AWXApp;
 const CAT_WORD = { storms: "storms", tstm: "storms", winter: "snow and ice", wind: "wind", fog: "low clouds", heat: "heat", runways: "runway closure", atc: "ATC staffing", vip: "VIP movement", space: "space launch", faa: "FAA program" };
 const RANK = { unlikely: 0, small: 1, usual: 1, possible: 2, likely: 3, very: 4, now: 5 };
 export const KINDS = ["level", "program_start", "program_end", "program_extend", "closure_start", "closure_end", "warning", "word", "plan_gs_add", "plan_gs_drop", "movement"];
@@ -142,14 +143,17 @@ function rangeText(start, end, tz) {
 
 /** Cause word for an hour's reasons: "storms", "low clouds", else the first plain reason. */
 function causeOf(reasons, level, a) {
-  const C = window.AWXCats;
+  const C = W.AWXCats;
+  let fallback = null;
   for (const r of reasons || []) {
     const c = C ? C.reason(r) : null;
     if (c && c.level != null && c.level < level) continue;
     if (c && CAT_WORD[c.cat] && c.cat !== "faa") return CAT_WORD[c.cat];
-    const m = /—\s*[^,(]*\(([^)]+)\)/.exec(String(r));
-    if (m) return m[1].toLowerCase().replace(/\bthunderstorms?\b/g, "storms");
+    // a program's or plan's cause: "Delays — weather (thunderstorms), …", "FAA plans a possible ground stop … (storms)"
+    const m = /—\s*[^,(]*\(([^)]+)\)/.exec(String(r)) || /\(([^)]+)\)\s*$/.exec(String(r));
+    if (m && !fallback && !/^(conditions|LAMP|TCF|ATCSCC)$/.test(m[1])) fallback = m[1].toLowerCase().replace(/\bthunderstorms?\b/g, "storms");
   }
+  if (fallback) return fallback;
   const first = app().brief.shortList(reasons, a)[0];
   return first ? lowerFirst(first) : null;
 }
@@ -408,6 +412,7 @@ if (typeof document !== "undefined" && document.getElementById("list")) {
   if (!document.getElementById("awx-brief-css")) document.head.append(h("style", { id: "awx-brief-css" }, CSS));
   window.AWXBrief = api;
   load();
+  if (W.AWXTrips && typeof W.AWXTrips.ready === "function") Promise.resolve(W.AWXTrips.ready()).then(() => render()).catch(() => {}); // trips arrive after the first render
   setInterval(() => { if (document.visibilityState === "visible") render(); }, 5 * MIN); // the 4–11 AM window
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") render(); });
   const A = app();
