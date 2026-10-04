@@ -185,10 +185,10 @@ export function delayOf(hr) {
   return { p: Math.max(0, Math.min(1, pp)), minutes: typeof d === "object" ? d.minutes ?? null : null, override: typeof d === "object" ? d.override ?? null : null };
 }
 
-// notams hook: runway closures and VIP movement restrictions (README "Notices") are their own concerns, not weather
+// restrictions hook: runway closures and VIP movement restrictions (README "Notices") are their own concerns, not weather
 const NOTICE_RES = [
   [/^VIP movement\b/, "vip", () => 2],
-  [/^Runways? \S.*?\bclosed\b/, "runway", (r) => (/ — (\d+ of \d+ runways|the runway best lined up with the wind)$/.test(r) ? 2 : 1)],
+  [/^Runways? \S.*?\bclosed\b/, "runway", () => 1],
 ];
 /** {kind: vip|runway, level} when the reason is a notice; else null. */
 export function noticeOf(reason) {
@@ -201,8 +201,8 @@ export function noticeOf(reason) {
 function hourWx(hr) {
   const reasons = hr.reasons || [];
   const progs = reasons.map(programOf).filter(Boolean);
-  const wx = reasons.filter((r) => !programOf(r) && !noticeOf(r)); // notams hook
-  const progLevel = Math.max(0, ...progs.map((p) => p.level), ...reasons.map(noticeOf).filter(Boolean).map((n) => n.level)); // notams hook
+  const wx = reasons.filter((r) => !programOf(r) && !noticeOf(r)); // restrictions hook
+  const progLevel = Math.max(0, ...progs.map((p) => p.level), ...reasons.map(noticeOf).filter(Boolean).map((n) => n.level)); // restrictions hook
   const wxLevel = hr.level > progLevel ? hr.level : Math.min(hr.level, Math.max(0, ...wx.map(reasonLevel)));
   return { wx, wxLevel, progs };
 }
@@ -368,18 +368,18 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
 
     // weather around the departure (a connection's departure is covered by the connection window)
     if (F && !connIn) {
-      if (depWin) { known++; weather(F, depWin, `around your ${depClock} departure`, "dep", i); notices(F, depWin, `around your ${depClock} departure`, "dep", i); } // notams hook
+      if (depWin) { known++; weather(F, depWin, `around your ${depClock} departure`, "dep", i); notices(F, depWin, `around your ${depClock} departure`, "dep", i); } // restrictions hook
       else if (!unknown.some((u) => u.iata === leg.from && u.at === leg.dep)) unknown.push({ iata: leg.from, at: leg.dep, what: "departure", side: "dep" });
     }
     // weather around the arrival, or across the connection
     if (X && !connOut) {
-      if (arrWin) { known++; weather(X, arrWin, `around your ${arrClock} arrival`, "arr", i); notices(X, arrWin, `around your ${arrClock} arrival`, "arr", i); } // notams hook
+      if (arrWin) { known++; weather(X, arrWin, `around your ${arrClock} arrival`, "arr", i); notices(X, arrWin, `around your ${arrClock} arrival`, "arr", i); } // restrictions hook
       else if (!unknown.some((u) => u.iata === leg.to && u.at === leg.arr)) unknown.push({ iata: leg.to, at: leg.arr, what: "arrival", side: "arr" });
     }
     if (X && connOut) {
       const w = windowAt(X, leg.arr, next.dep);
       const span = rangeText(leg.arr, next.dep, X.tz);
-      if (w) { known++; weather(X, w, `during your connection (${span})`, "conn", i); notices(X, w, `during your connection (${span})`, "conn", i); } // notams hook
+      if (w) { known++; weather(X, w, `during your connection (${span})`, "conn", i); notices(X, w, `during your connection (${span})`, "conn", i); } // restrictions hook
       else if (!unknown.some((u) => u.iata === leg.to && u.at === leg.arr)) unknown.push({ iata: leg.to, at: leg.arr, what: "connection", side: "conn" });
     }
 
@@ -497,7 +497,7 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
     }
   }
 
-  // notams hook: a VIP movement restriction or runway closure at a trip airport during the leg
+  // restrictions hook: a VIP movement restriction or runway closure at a trip airport during the leg
   function notices(A, w, when, side, legIdx) {
     const best = {};
     for (const h of w.hours || []) for (const r of h.reasons || []) {
@@ -515,7 +515,7 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
     }
   }
 
-  const order = { program: 0, notice: 1, connection: 1, weather: 2, note: 3 }; // notams hook: notice
+  const order = { program: 0, notice: 1, connection: 1, weather: 2, note: 3 }; // restrictions hook: notice
   concerns.sort((x, y) => y.level - x.level || (order[x.kind] ?? 9) - (order[y.kind] ?? 9) || x.leg - y.leg);
   for (const code of missing) {
     concerns.push({ level: 0, kind: "note", side: null, iata: code, leg: -1, short: `no data for ${code}`,

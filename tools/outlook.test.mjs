@@ -110,7 +110,7 @@ test("outlook: no forecast improvement for a program whose cause isn't weather",
 test("outlook: a quiet airport whose notices couldn't be read says so", () => {
   const o = O.evaluate(base(), options({ noticesDown: true }));
   assert.equal(o.kind, "unknown");
-  assert.equal(o.headline, "No disruptions reported · notices unavailable");
+  assert.equal(o.headline, "No disruptions reported · flight restrictions unavailable");
 });
 
 test("airport health: missing/old airport forecasts and stale source-success timestamps qualify quiet outlooks", () => {

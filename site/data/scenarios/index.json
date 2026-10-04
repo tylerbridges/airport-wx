@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-04T22:37:50.529Z",
+ "generated": "2026-10-04T22:56:09.342Z",
  "groups": {
   "delays": "Delays & programs",
   "weather": "Weather",
@@ -842,81 +842,6 @@
    ]
   },
   {
-   "name": "ils-outage-ifr",
-   "title": "ILS out in low clouds",
-   "group": "nonweather",
-   "blurb": "SEA's runway 16R ILS is out while low clouds hang on; PHX's glideslope outage doesn't matter in clear skies.",
-   "description": "NOTAMs take the runway 16R instrument landing system at SEA out of service while SEA is IFR (ceiling 700 ft, 4 miles in rain and mist) for the next 6 hours, then clears. The ILS outage is Low only in the IFR hours. PHX has a glideslope outage in clear weather: information only, no reason and no level.",
-   "file": "ils-outage-ifr.json",
-   "wx": "ils-outage-ifr/wx/",
-   "lagMin": 0,
-   "live": false,
-   "model": null,
-   "delayOverride": false,
-   "assert": [
-    {
-     "t": "level",
-     "iata": "SEA",
-     "of": "now",
-     "op": "==",
-     "v": 2
-    },
-    {
-     "t": "reason",
-     "iata": "SEA",
-     "re": "^Runway 16R ILS out of service until "
-    },
-    {
-     "t": "hourReason",
-     "iata": "SEA",
-     "at": [
-      0,
-      4
-     ],
-     "re": "^Runway 16R ILS out of service",
-     "every": true
-    },
-    {
-     "t": "hourLevel",
-     "iata": "SEA",
-     "at": [
-      8,
-      23
-     ],
-     "op": "==",
-     "v": 0,
-     "note": "VFR after the TAF's FM group: the ILS outage no longer counts"
-    },
-    {
-     "t": "level",
-     "iata": "PHX",
-     "of": "peak",
-     "op": "==",
-     "v": 0
-    },
-    {
-     "t": "noReason",
-     "iata": "PHX",
-     "re": "glideslope"
-    },
-    {
-     "t": "notice",
-     "iata": "PHX",
-     "kind": "ils",
-     "re": "^Runway 26 glideslope",
-     "level": 0
-    },
-    {
-     "t": "sheet",
-     "iata": "SEA",
-     "re": "Notices.*instrument landing system \\(ILS\\) out of service"
-    },
-    {
-     "t": "noPercent"
-    }
-   ]
-  },
-  {
    "name": "lax-ga-only-closure",
    "title": "LAX closed to transient GA only",
    "group": "delays",
@@ -1463,99 +1388,11 @@
    ]
   },
   {
-   "name": "runway-closure",
-   "title": "Runway closures (NOTAMs)",
-   "group": "nonweather",
-   "blurb": "LGA's only into-wind runway closed, DEN down to 2 of 6 runways, an MSP runway closed for weeks.",
-   "description": "Clear weather. NOTAMs close LGA runway 4/22 while a 040° wind at 18 kt makes it the runway lined up with the wind (Moderate), four of DEN's six runways (Moderate), and MSP runway 12R/30L plus taxiway C (Low; the taxiway is information only).",
-   "file": "runway-closure.json",
-   "wx": "runway-closure/wx/",
-   "lagMin": 0,
-   "live": false,
-   "model": null,
-   "delayOverride": false,
-   "assert": [
-    {
-     "t": "level",
-     "iata": "LGA",
-     "of": "now",
-     "op": "==",
-     "v": 2
-    },
-    {
-     "t": "reason",
-     "iata": "LGA",
-     "re": "^Runway 4/22 closed until .* — the runway best lined up with the wind$"
-    },
-    {
-     "t": "level",
-     "iata": "DEN",
-     "of": "now",
-     "op": "==",
-     "v": 2
-    },
-    {
-     "t": "reason",
-     "iata": "DEN",
-     "re": "^Runways 16L/34R, 16R/34L, 17R/35L and 7/25 closed until .* — 4 of 6 runways$"
-    },
-    {
-     "t": "level",
-     "iata": "MSP",
-     "of": "now",
-     "op": "==",
-     "v": 1
-    },
-    {
-     "t": "reason",
-     "iata": "MSP",
-     "re": "^Runway 12R/30L closed until "
-    },
-    {
-     "t": "notice",
-     "iata": "MSP",
-     "kind": "taxiway",
-     "re": "^Taxiway C closed",
-     "level": 0
-    },
-    {
-     "t": "notice",
-     "iata": "LGA",
-     "kind": "runway",
-     "level": 2
-    },
-    {
-     "t": "noticeSource",
-     "name": "notam",
-     "ok": true
-    },
-    {
-     "t": "card",
-     "iata": "LGA",
-     "re": "Runway 4/22 closed"
-    },
-    {
-     "t": "sheet",
-     "iata": "LGA",
-     "re": "Notices.*Runway 4/22 is closed.*best lined up with the wind"
-    },
-    {
-     "t": "airportDetail",
-     "iata": "MSP",
-     "page": "notices",
-     "re": "Taxiway C closed"
-    },
-    {
-     "t": "noPercent"
-    }
-   ]
-  },
-  {
    "name": "source-outage",
    "title": "FAA status feed down",
    "group": "system",
-   "blurb": "The FAA status feed and the NOTAM search fail; the page says so.",
-   "description": "The FAA NAS status request fails, and so does the airport NOTAM search; everything else works. The page must say FAA delay info and airport notices are unavailable.",
+   "blurb": "FAA status and flight restrictions unavailable.",
+   "description": "FAA status and nearby flight restriction feeds fail; weather still works.",
    "file": "source-outage.json",
    "wx": "source-outage/wx/",
    "lagMin": 0,
@@ -1584,18 +1421,13 @@
     },
     {
      "t": "noticeSource",
-     "name": "notam",
-     "ok": false
-    },
-    {
-     "t": "noticeSource",
      "name": "tfr",
-     "ok": true
+     "ok": false
     },
     {
      "t": "sheet",
      "iata": "MSP",
-     "re": "Airport notices \\(runway closures, flight restrictions\\) unavailable right now.*Airport notices unavailable — runway closures and flight restrictions may be missing"
+     "re": "Nearby flight restrictions unavailable"
     }
    ]
   },
@@ -1962,7 +1794,7 @@
     {
      "t": "sheet",
      "iata": "DCA",
-     "re": "Notices.*VIP movement nearby: flight restrictions"
+     "re": "Flight restrictions.*VIP movement nearby: flight restrictions"
     },
     {
      "t": "noPercent"

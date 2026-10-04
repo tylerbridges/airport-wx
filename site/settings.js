@@ -26,7 +26,7 @@ const SOURCES = [
   ["National Weather Service", "Warnings and advisories", ["nws"]],
   ["Storm Prediction Center", "Severe storm outlook", ["spc"]],
   ["NOAA LAMP", "Hourly thunder, wind and cloud guidance", ["lamp"]],
-  ["Notices (NOTAMs, TFRs)", "Runway closures, airport notices and flight restrictions", ["notam", "tfr"], "notice"], // notams hook: status.noticeSources
+  ["Flight restrictions", "Nearby FAA flight restrictions", ["tfr"], "notice"], // restrictions hook: status.noticeSources
   ["Bureau of Transportation Statistics", "On-time history for delay chances", []],
 ];
 
@@ -395,13 +395,13 @@ function buildData(body) {
   const buildText = test ? "Test scenario (not live)" : st.sample ? "Sample data (no live build yet)" : build ? when(Date.parse(build.generated)) : st.loaded ? "Couldn't load" : "Loading…";
   const relay = valueRow("Live relay", "Checking…", { "data-id": "relay" });
   const src = (st.data && st.data.sources) || {};
-  const nsrc = (st.data && st.data.noticeSources) || {}; // notams hook: NOTAM and TFR sources live apart from `sources`
+  const nsrc = (st.data && st.data.noticeSources) || {}; // restrictions hook: TFR sources live apart from `sources`
   const srcRows = SOURCES.map(([name, what, keys, from]) => {
     const S = from === "notice" ? nsrc : src;
     const have = keys.filter((k) => S[k]);
     const down = have.filter((k) => !S[k].ok).length;
     const part = have.filter((k) => S[k].ok && S[k].error).length;
-    const failed = have.filter((k) => !S[k].ok).map((k) => ({ notam: "NOTAMs", tfr: "TFRs" }[k] || k));
+    const failed = have.filter((k) => !S[k].ok).map((k) => ({ tfr: "TFRs" }[k] || k));
     const stat = !keys.length ? ["History", ""] : !have.length ? ["—", ""] : down === have.length ? [from === "notice" ? "Failed" : "Unavailable", "awx-bad"]
       : from === "notice" && down ? [failed.join(", ") + " failed", "awx-warn"] : down || part ? ["Partly unavailable", "awx-warn"] : ["OK", "awx-good"];
     return h("div", { class: "awx-row" }, h("span", { class: "awx-rt" }, name, h("small", {}, what)), h("span", { class: "awx-rv " + stat[1] }, stat[0]));

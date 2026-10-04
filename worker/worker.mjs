@@ -259,7 +259,7 @@ export function overlay({ now = new Date(), majors = [], others = [], build = nu
       const b = buildBy.get(a.iata);
       // the build's per-airport ops plan ({...plan items, items}) stands in for opsPlanFor(plan)
       const o = { spc: b?.spc ?? null, tcf: b?.tcf || [], cwa: b?.cwa || [], opsplan: b?.opsplan ?? null };
-      o.notices = b?.notices ?? null; // notams hook: the build's NOTAMs/TFRs, rescored against the live hours
+      o.notices = b?.notices ? { items: (b.notices.items || []).filter((x) => x.src === "tfr"), count: (b.notices.items || []).filter((x) => x.src === "tfr").length } : null; // restrictions hook: the build's TFRs, rescored against the live hours
       if (!faaParsed) o.faa = (b?.faa || []).map((f) => ({ ...f })); // copies: assemble may add an ops-plan end
       if (!ok("sigmet")) o.sigmets = b?.sigmets || [];
       if (!nwsMap[a.iata]) { o.alerts = b?.alerts || []; nwsFallback++; }

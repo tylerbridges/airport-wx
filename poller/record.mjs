@@ -29,7 +29,7 @@ objects are left out, and timestamps are ISO 8601 shortened ("2026-10-03T22:00Z"
        faa?: [{type: ground_stop|ground_delay|delay|closure, cause, reason, detail, scope?, active?}],
        atcscc?: [{id, type: GS|GDP|AFP|other, issued, cause, causeText, title, active, cnx, start, end}],
        opsplan?: {staffing?, constraints?, programs?, sirs?, notes?},
-       notices?: {key, items?: [{id, src: notam|tfr, kind, cause, level, from, to, dup?, nm?}]}}},
+       notices?: {key, items?: [{id, src: tfr, kind, cause, level, from, to, dup?, nm?}]}}},
      opsplan?: {plan: {advisory, issued, eventTime, eventText, validEnd}, remarks, staffing, enroute: {constraints, active, planned},
                 cdrs, launches, afp: {active, planned}, sirs}}
 
@@ -44,10 +44,9 @@ objects are left out, and timestamps are ISO 8601 shortened ("2026-10-03T22:00Z"
   sirs [{facility, item, status: closed|limited|out of service|construction|maintenance|other, what, runways, until, cause, raw}],
   notes [{text, airports, continuing, raw}] (narrative sentences about delays/deviations naming the airport).
   Nationally: staffing/sirs naming no airport (center areas), en route items, CDRS/SWAP, launches, AFPs.
-- \`notices\` (README "Notices") is the airport's NOTAM/TFR state: runway, ILS, taxiway, construction, lighting,
-  de-icing NOTAMs and TFRs within 30 NM (vip, space, security, stadium, hazards …), level = the highest risk level
+- \`notices\` (README "Notices") is the airport's TFR state within 30 NM (vip, space, security, stadium, hazards …), level = the highest risk level
   the item set in the next 24 hours (0 = information). Written only when the set changes (\`key\` "none" = no
-  notices now); \`down\` lists "notam"/"tfr" when those sources failed.
+  notices now); \`down\` lists "tfr" when that source failed.
 - \`cause\` classes: weather, volume, equipment, staffing, runway, security, airline, vip, space, other, unknown.
 - Closures carry \`scope\`: full (airport closed), runway (some runways), limited (closed only to some users, e.g. GA).
 
@@ -70,7 +69,7 @@ objects are left out, and timestamps are ISO 8601 shortened ("2026-10-03T22:00Z"
 
 The first 200 KB of each source's latest successful raw response (metar.json, taf.json, airsigmet.json, faa.xml,
 nws.json = one point's alerts, spc.geojson, lamp.txt + lamp-airports.txt, atcscc.html (+ atcscc-detail.html if links were followed),
-tcf.json, cwa.json, notam-search.json or notam-api.json = one airport's NOTAM reply, tfr-list.json + tfr-detail.xml = one TFR),
+tcf.json, cwa.json, tfr-list.json + tfr-detail.xml = one TFR),
 overwritten every poll. \`sources.json\` has, per source: ok, error, http status, bytes,
 url, files and fileAt (when the files were captured; a source that failed keeps its previous files).
 `;
@@ -120,7 +119,7 @@ const planKey = (op) => (op?.plan ? `${op.plan.advisory}|${shortIso(op.plan.issu
 /** From truth lines (oldest first): previous t, the last recorded METAR obsTime per airport, the last ops plan key. */
 export function truthState(lines) {
   const lastObs = {};
-  const lastNotices = {}; // notams hook
+  const lastNotices = {}; // restrictions hook
   let t = null;
   let lastPlan = null;
   for (let i = lines.length - 1; i >= 0; i--) {
@@ -130,15 +129,15 @@ export function truthState(lines) {
     if (lastPlan == null && j.opsplan?.plan) lastPlan = planKey(j.opsplan);
     for (const [iata, a] of Object.entries(j.airports || {})) {
       if (a?.metar?.obsTime && !(iata in lastObs)) lastObs[iata] = secs(a.metar.obsTime);
-      if (a?.notices?.key && !(iata in lastNotices)) lastNotices[iata] = a.notices.key; // notams hook
+      if (a?.notices?.key && !(iata in lastNotices)) lastNotices[iata] = a.notices.key; // restrictions hook
     }
   }
   return { t, lastObs, lastPlan, lastNotices };
 }
 
-const downOf = (status) => Object.entries({ ...(status.sources || {}), ...(status.noticeSources || {}) }).filter(([, s]) => !s.ok).map(([n]) => n); // notams hook: notam/tfr too
+const downOf = (status) => Object.entries({ ...(status.sources || {}), ...(status.noticeSources || {}) }).filter(([, s]) => !s.ok).map(([n]) => n); // restrictions hook: TFR too
 
-/** notams hook: an airport's notices for the truth log, and a key that changes when the set does. */
+/** restrictions hook: an airport's notices for the truth log, and a key that changes when the set does. */
 export function noticeTruth(n) {
   const items = (n?.items || []).map((x) => ({ id: x.id, src: x.src, kind: x.kind, cause: x.cause, level: x.peak ?? 0, from: x.from, to: x.to, dup: x.dup || undefined, nm: x.nm ?? undefined }));
   const key = items.length ? items.map((x) => `${x.id}:${x.level}:${x.to || ""}`).sort().join("|") : "none";
@@ -160,7 +159,7 @@ export function truthLine(status, prev = { t: null, lastObs: {} }) {
     o.atcscc = (a.atcscc || [])
       .filter((x) => x.active || prevT == null || (Date.parse(x.issued) || 0) > prevT)
       .map(({ id, type, issued, cause, causeText, title, active, cnx, start, end }) => ({ id, type, issued, cause, causeText, title, active, cnx, start, end }));
-    if (status.noticeSources && a.notices !== undefined) { // notams hook: only when the airport's set changed
+    if (status.noticeSources && a.notices !== undefined) { // restrictions hook: only when the airport's set changed
       const nt = noticeTruth(a.notices);
       if (nt.key !== (prev.lastNotices?.[a.iata] ?? "none")) o.notices = nt;
     }

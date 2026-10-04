@@ -1,16 +1,41 @@
 {
   "title": "FAA status feed down",
-  "description": "The FAA NAS status request fails, and so does the airport NOTAM search; everything else works. The page must say FAA delay info and airport notices are unavailable.",
-  "omit": ["faa.xml", "notams.json"],
+  "description": "FAA status and nearby flight restriction feeds fail; weather still works.",
+  "omit": [
+    "faa.xml",
+    "tfr-list.json"
+  ],
   "assert": [
-    { "t": "source", "name": "faa", "ok": false },
-    { "t": "source", "name": "metar", "ok": true },
-    { "t": "check", "id": "sources", "expect": "fail" },
-    { "t": "rendered", "text": "FAA delay info unavailable" },
-    { "t": "noticeSource", "name": "notam", "ok": false },
-    { "t": "noticeSource", "name": "tfr", "ok": true },
-    { "t": "sheet", "iata": "MSP", "re": "Airport notices \\(runway closures, flight restrictions\\) unavailable right now.*Airport notices unavailable — runway closures and flight restrictions may be missing" }
+    {
+      "t": "source",
+      "name": "faa",
+      "ok": false
+    },
+    {
+      "t": "source",
+      "name": "metar",
+      "ok": true
+    },
+    {
+      "t": "check",
+      "id": "sources",
+      "expect": "fail"
+    },
+    {
+      "t": "rendered",
+      "text": "FAA delay info unavailable"
+    },
+    {
+      "t": "noticeSource",
+      "name": "tfr",
+      "ok": false
+    },
+    {
+      "t": "sheet",
+      "iata": "MSP",
+      "re": "Nearby flight restrictions unavailable"
+    }
   ],
   "group": "system",
-  "blurb": "The FAA status feed and the NOTAM search fail; the page says so."
+  "blurb": "FAA status and flight restrictions unavailable."
 }

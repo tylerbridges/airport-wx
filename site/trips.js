@@ -10,7 +10,7 @@
 //   - manual trips (stored only on this device, localStorage "awx-trips"), and the Trips settings sheet
 //     (flight calendar status and how to connect it).
 // Calendar trips come from data/trips.json (airports and times only); concerns from ./trip-risk.js.
-import { tripStatus, flightLine, rolesAt, clockText, whenText, rangeText, LEVEL_LABELS, STATUS, TRIP_KEEP_AFTER_ARRIVAL_MS } from "./trip-risk.js?v=3";
+import { tripStatus, flightLine, rolesAt, clockText, whenText, rangeText, LEVEL_LABELS, STATUS, TRIP_KEEP_AFTER_ARRIVAL_MS } from "./trip-risk.js?v=4";
 import { mountSearch, loadAirports, airportsLoaded, placeLine } from "./search.js";
 import { calendarDraft, nextScheduled, MAX_CALENDAR_BYTES, flightKey } from "./trip-import.js?v=1";
 
@@ -155,7 +155,7 @@ const delayWordsFor = (d, iata) => { const L = window.AWXDelay && window.AWXDela
 function airportHealth(a) {
   const st = app()?.state, data = st?.data;
   const ns = data?.noticeSources || {};
-  const noticesDown = ["notam", "tfr"].some((k) => ns[k] && (!ns[k].ok || ns[k].error || ns[k].stale));
+  const noticesDown = ["tfr"].some((k) => ns[k] && (!ns[k].ok || ns[k].error || ns[k].stale));
   return window.AWXOutlook?.health ? window.AWXOutlook.health(a, {
     now: nowMs(), generated: data?.generated, sources: data?.sources, sample: st?.sample, noticesDown, offline: st?.offline,
   }) : { quality: "Some data unavailable" };

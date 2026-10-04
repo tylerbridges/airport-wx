@@ -9,7 +9,7 @@ Product goal: a traveler should feel confident they know about any disruption at
 
 ## Queued
 - Movement (ADS-B traffic, logging since 2026-10): after 4+ weeks of logging, add the departure-rate index as a live feature in the delay model.
-- NOTAMs and FAA flight restrictions (TFRs), hub cascade warnings, 3-day range, delay-cause chips.
+- FAA flight restrictions (TFRs), hub cascade warnings, 3-day range, delay-cause chips.
 - Morning brief, per-airport change log, "what it means for me".
 - Radar loop in the airport sheet.
 - Terminal maps and lounges: shipped (OSM terminal map with gate search, curated lounges). Next: verify every lounge entry and official map link against the operator pages (all are "check before you go" until then); show the departure gate's concourse and nearest lounge on trip legs (TODO in `site/terminals.js`).

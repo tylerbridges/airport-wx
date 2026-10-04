@@ -55,9 +55,8 @@ jobs:
             git show "FETCH_HEAD:changes/state.json" > .cache/changes/state.json 2>/dev/null || rm -f .cache/changes/state.json
           fi
           ls -l .cache/changes
-      # notams hook: NOTAM/TFR replies kept between runs (poller/notices-poll.mjs refreshes each airport's NOTAMs
-      # at most every 30 min and reuses them for up to 3 h). A new key per run saves; the prefix restores the latest.
-      - name: Notice cache
+      # Keep FAA TFR details between runs.
+      - name: Flight restriction cache
         continue-on-error: true
         uses: actions/cache@v4
         with:
@@ -72,9 +71,6 @@ jobs:
           # trips hook: the flight calendar link (README "Trips"). Empty when the secret isn't set
           # (trips.json says "not configured"); the poller never logs or publishes it.
           FLIGHTY_ICS_URL: ${{ secrets.FLIGHTY_ICS_URL }}
-          # notams hook: optional FAA NOTAM API key (README "Notices"); without it the public NOTAM Search is tried
-          FAA_NOTAM_CLIENT_ID: ${{ secrets.FAA_NOTAM_CLIENT_ID }}
-          FAA_NOTAM_CLIENT_SECRET: ${{ secrets.FAA_NOTAM_CLIENT_SECRET }}
         run: node poller/poll.mjs
       # brief hook: compare this poll with the previous one -> site/data/changes.json (last 36 h of per-airport
       # events, deployed with the page) and .cache/changes/out (state + this run's events for the history step)

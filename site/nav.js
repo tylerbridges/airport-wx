@@ -8,7 +8,7 @@
 import { mountSearch } from "./search.js";
 import { mountMap } from "./map.js?v=7"; // map hook: Map tab (site/map.js)
 import { h, icon, prefs, reducedMotion, trapFocus, app } from "./navui.js";
-import { initSettings, openSettings, settingsOpen } from "./settings.js?v=2";
+import { initSettings, openSettings, settingsOpen } from "./settings.js?v=3";
 
 const TABS = [
   { id: "airports", label: "Airports", title: "Airports", icon: "terminal" },

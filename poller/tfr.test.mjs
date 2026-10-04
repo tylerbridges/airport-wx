@@ -56,12 +56,11 @@ test("TFR detail XML: areas (merged polygon, else circles), schedules, text", as
   assert.equal(tfrTime("202610061800"), Date.UTC(2026, 9, 6, 18));
 });
 
-test("poll --fixtures: notice sources, items at the airports and their hours (DCA VIP, MCO space, LGA nightly runway)", async () => {
+test("poll --fixtures: notice sources, items at the airports and their hours (DCA VIP, MCO space; no airport NOTAM source)", async () => {
   const dir = await mkdtemp(join(tmpdir(), "awx-notices-"));
   try {
     const { status } = await run({ fixtures: true, out: join(dir, "status.json"), now: NOW, rawDir: join(dir, "raw") });
-    assert.equal(status.noticeSources.notam.ok, true);
-    assert.equal(status.noticeSources.notam.via, "search");
+    assert.equal(status.noticeSources.notam, undefined);
     assert.equal(status.noticeSources.tfr.ok, true);
     const ap = (c) => status.airports.find((a) => a.iata === c);
     const dca = ap("DCA");
@@ -69,11 +68,9 @@ test("poll --fixtures: notice sources, items at the airports and their hours (DC
     assert.equal(dca.peak.level, 2);
     assert.match(dca.peak.reasons[0], /^VIP movement — brief ground holds possible /);
     assert.ok(ap("MCO").notices.items.some((x) => x.kind === "space"));
-    assert.ok(ap("LGA").notices.items.some((x) => x.kind === "runway" && x.sched));
-    assert.equal(ap("DEN").notices.items[0].dup, true); // the ops plan SIR reports it
-    assert.ok(ap("ORD").notices.other >= 1); // obstacle light: counted, not listed
+    assert.ok(status.airports.every((a) => (a.notices?.items || []).every((x) => x.src === "tfr")));
     const raw = JSON.parse(await readFile(join(dir, "raw", "sources.json"), "utf8"));
-    assert.deepEqual(raw.notam.files, ["notams.json"]);
+    assert.equal(raw.notam, undefined);
     assert.deepEqual(raw.tfr.files, ["tfr-list.json"]);
   } finally {
     await rm(dir, { recursive: true, force: true });

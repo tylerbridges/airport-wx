@@ -98,7 +98,7 @@
     const incomplete = unavailable || missingWeather || missingForecast || opts.sample || opts.offline || weatherOnly || opts.noticesDown;
     const quality = opts.offline ? "Offline · showing last-known airport data" : outdated ? "Data may be outdated" : missingWeather ? "Recent weather observation unavailable"
       : missingForecast ? "Airport forecast unavailable or outdated" : unavailable || opts.sample ? "Some data unavailable" : weatherOnly ? "Weather only · FAA delay coverage unavailable"
-      : opts.hidden ? "Some disruptions hidden by your settings" : opts.noticesDown ? "Airport notices unavailable" : "";
+      : opts.hidden ? "Some disruptions hidden by your settings" : opts.noticesDown ? "Nearby flight restrictions unavailable" : "";
     return { outdated, incomplete, quality, checked: Number.isFinite(generated) ? generated : null,
       observed: Number.isFinite(observed) ? observed : null, forecastIssued: Number.isFinite(forecastIssued) ? forecastIssued : null, missingWeather, missingForecast, weatherOnly };
 
@@ -125,9 +125,9 @@
       kind = "forecast";
       headline = s.meaningful ? s.L.word.replace(/^Delays/, "Flight delays") : s.level >= 3 ? "Flight delays likely" : s.level >= 2 ? "Flight delays possible" : "Minor flight disruption possible";
     }
-    if ((outdated || incomplete) && kind === "normal") { kind = "unknown"; headline = opts.offline ? "Offline · status unconfirmed" : outdated ? "Status may be outdated" : opts.noticesDown ? "No disruptions reported · notices unavailable" : "No disruptions reported · some data unavailable"; }
+    if ((outdated || incomplete) && kind === "normal") { kind = "unknown"; headline = opts.offline ? "Offline · status unconfirmed" : outdated ? "Status may be outdated" : opts.noticesDown ? "No disruptions reported · flight restrictions unavailable" : "No disruptions reported · some data unavailable"; }
     else if (opts.hidden && kind === "normal") headline = "No issues in your selected categories";
-    if (kind === "normal" && opts.noticesDown) headline += " · notices unavailable"; // airport NOTAMs/TFRs couldn't be read: never an unqualified "normal"
+    if (kind === "normal" && opts.noticesDown) headline += " · flight restrictions unavailable"; // nearby TFRs couldn't be read: never an unqualified "normal"
     const window = h ? windowFor(a, opts, at) : null;
     const end = first && ms(first.end);
     // Recovery is a forecast, never a promise tied to an FAA program's scheduled end, and only for weather: a program

@@ -5,8 +5,8 @@
 // Chrome (--dump-dom) and the uptime workflow can read it. Warnings don't fail the check.
 import { loadAirports, rank } from "./search.js";
 import { navChecks } from "./navcheck.js?v=3"; // nav hook
-import { tripChecks } from "./check-trips.js"; // trips hook
-import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=3"; // scenarios hook; More details page helpers
+import { tripChecks } from "./check-trips.js?v=2"; // trips hook
+import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=4"; // scenarios hook; More details page helpers
 
 const P = new URLSearchParams(location.search);
 const MOCK = P.get("mock") === "1";
@@ -86,16 +86,16 @@ async function checkData(data, ctx) {
   }
   r("sources", down.length ? "fail" : partial.length ? "warn" : Object.keys(src).length ? "pass" : "fail", "All sources",
     down.length ? `unavailable: ${down.join(", ")}` : partial.length ? `partly unavailable: ${partial.join(", ")}` : `${Object.keys(src).length} ok`);
-  // notams hook: NOTAM and TFR sources (README "Notices"). Kept out of "All sources": they warn, never fail, because
-  // NOTAM Search may refuse automated requests until the optional FAA NOTAM API key is configured.
+  // restrictions hook: TFR source (README "Notices"). Kept out of "All sources": they warn, never fail, because
+  // Optional TFR coverage warns separately from the core feeds.
   const ns = data.noticeSources;
-  const nsBits = (s) => [s.ok ? "ok" : "error", s.via ? `via ${s.via === "api" ? "FAA NOTAM API" : "FAA NOTAM Search"}` : null, s.configured != null ? (s.configured ? "API key configured" : "API key not configured") : null,
-    s.notams != null ? `${s.notams} NOTAMs` : null, s.airports != null ? `${s.airports} airports` : null, s.tfrs != null ? `${s.tfrs} TFRs parsed of ${s.listed ?? "?"} listed` : null, s.error].filter(Boolean).join(" · ");
-  if (!ns) r("notices", "warn", "Notices (NOTAMs and TFRs)", "not in this build");
+  const nsBits = (s) => [s.ok ? "ok" : "error",
+    s.tfrs != null ? `${s.tfrs} TFRs parsed of ${s.listed ?? "?"} listed` : null, s.error].filter(Boolean).join(" · ");
+  if (!ns) r("notices", "warn", "Flight restrictions", "not in this build");
   else {
-    for (const [k, label] of [["notam", "NOTAM source"], ["tfr", "TFR source"]]) {
+    for (const [k, label] of [["tfr", "TFR source"]]) {
       const s = ns[k];
-      r(`notices:${k}`, s && s.ok ? (s.error ? "warn" : "pass") : "warn", label, s ? nsBits(s) + (k === "notam" && !s.ok && !s.configured ? " — add the FAA NOTAM API key (README \"Notices\")" : "") : "missing");
+      r(`notices:${k}`, s && s.ok ? (s.error ? "warn" : "pass") : "warn", label, s ? nsBits(s) : "missing");
     }
   }
 

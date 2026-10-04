@@ -246,7 +246,7 @@ test("optional notice source failures qualify quiet Trips; absent notice source 
   assert.equal(tripStatus(quietTrip, airports, { now: NOW, health: healthFor() }).status, "ok");
   const r = tripStatus(quietTrip, airports, { now: NOW, health: healthFor({ noticesDown: true }) });
   assert.equal(r.status, "unknown");
-  assert.match(r.concerns[0].text, /notices unavailable/);
+  assert.match(r.concerns[0].text, /flight restrictions unavailable/);
 });
 
 test("real source-outage and stale-data scenarios qualify Trips just like the airport sheet", async () => {

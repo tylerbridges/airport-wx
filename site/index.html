@@ -374,7 +374,7 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 .two .facts { font-size: 11.5px; gap: 0 8px; }
 .cchip.high { --c: var(--l0); } .cchip.medium { --c: var(--l2); } .cchip.low { --c: var(--muted); }
 .hidnote { margin: 18px 0 0; font-size: 12.5px; color: var(--muted); }
-.ntc-down { margin: 14px 4px 0; font-size: 13px; line-height: 1.35; } /* notams hook: notices couldn't be read */
+.ntc-down { margin: 14px 4px 0; font-size: 13px; line-height: 1.35; } /* restrictions hook: notices couldn't be read */
 .scard .ntc-down { margin: 8px 0 0; }
 /* phase3 hook: the routine delay line under the Now / Coming up card (site/delay.js routineOutlook) */
 .dl-routine { margin: 8px 2px 0; font-size: 14px; font-weight: 600; line-height: 1.3; }
@@ -793,16 +793,16 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
   <div class="sheet" id="panel" role="dialog" aria-modal="true" aria-labelledby="panelTitle"></div>
 </div>
 <div class="sr" id="announce" aria-live="polite"></div>
-<script src="offline.js?v=1"></script>
-<script src="outlook.js?v=6"></script>
-<script src="cats.js?v=2"></script><!-- build2b: disruption categories -->
+<script src="offline.js?v=2"></script>
+<script src="outlook.js?v=7"></script>
+<script src="cats.js?v=3"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=3"></script><!-- build2b: shared sheet drag / back / scroll lock -->
-<script src="notices.js?v=1"></script><!-- notams hook: the airport sheet's "Notices" card -->
-<script src="app.js?v=42" defer></script>
+<script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
+<script src="app.js?v=43" defer></script>
 <script type="module" src="searched.js?v=6"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=11"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
-<script type="module" src="trips.js?v=12"></script><!-- trips hook -->
-<script type="module" src="nav.js?v=12"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
+<script type="module" src="trips.js?v=13"></script><!-- trips hook -->
+<script type="module" src="nav.js?v=13"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
 <script type="module" src="movement.js?v=4"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
 <script type="module" src="brief.js?v=5"></script><!-- brief hook: morning brief + airport "Today" card -->
 <script type="module" src="terminals.js?v=3"></script><!-- terminals hook: terminal map + lounges cards in the airport sheet -->
