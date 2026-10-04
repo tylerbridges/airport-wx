@@ -31,3 +31,6 @@ import "./trips.test.mjs";
 import "./trip-risk.test.mjs";
 // movement: ADS-B traffic rates
 import "./movement.test.mjs";
+// notams hook: NOTAMs + TFRs (README "Notices")
+import "./notams.test.mjs";
+import "./tfr.test.mjs";
