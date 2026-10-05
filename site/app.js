@@ -1962,7 +1962,14 @@
     // headline), then improvements, scheduled ends and FAA extension outlooks; each bullet's dot carries its colour
     const leadNotes = lead ? [leadSub, ...lead.notes].filter(Boolean) : [];
     const ahead = [];
-    if (lead && !merged) ahead.push(h("li", { class: "la-i" }, h("span", { class: "la-dot " + lead.cls, "aria-hidden": "true" }),
+    // a later, higher risk window (o.peak) comes first; the delay outlook joins it when they say the same thing
+    const pk = o.peak;
+    const pkMerged = pk && lead && !merged && pk.headline === lead.word;
+    if (pk) ahead.push(h("li", { class: "la-i" }, h("span", { class: "la-dot la-lv" + pk.level, "aria-hidden": "true" }),
+      h("span", {}, h("b", { class: "la-lv" + pk.level }, pk.headline), pk.when ? " " + pk.when + " " : " ", pill(pk.level, true),
+        pk.reasons.length ? h("span", { class: "la-sub" }, pk.reasons.join(" · ")) : null,
+        ...(pkMerged ? leadNotes : []).map((n) => h("span", { class: "la-sub" }, n)))));
+    if (lead && !merged && !pkMerged) ahead.push(h("li", { class: "la-i" }, h("span", { class: "la-dot " + lead.cls, "aria-hidden": "true" }),
       h("span", {}, h("b", { class: lead.cls }, lead.word), lead.when ? " " + lead.when : "", ...leadNotes.map((n) => h("span", { class: "la-sub" }, n)))));
     const AHEAD = { "Forecast improvement": (v) => v, "Scheduled end": (v) => "FAA scheduled end " + v, "FAA extension outlook": (v) => "FAA extension outlook: " + v };
     for (const r of o.rows || []) ahead.push(h("li", { class: "la-i" }, h("span", { class: "la-dot" + (r.label === "Forecast improvement" ? " la-good" : ""), "aria-hidden": "true" }),
@@ -2140,17 +2147,19 @@
     // the headline: the delay outlook and what happens next sit in the top card, not in cards further down
     const lead = window.AWXDelay && typeof AWXDelay.outlookLead === "function" ?safeCall(() => AWXDelay.outlookLead(a)) : null; // phase3 hook
     const nextRows = safeCall(() => travelRows(a)) || [];
-    // rest state: Now | Coming up, or one full-width "Now" / clear card
+    // rest state: one full-width "Now" card; a later, higher risk ("split" in CATS.restLayout) leads its Looking ahead list
     const restCards = () => {
       if (layout === "split") {
         const pk = sm.peakHour || v.hours[0];
         const pt = Date.parse(pk.t);
         const nowO = outlook(a);
-        return h("div", { class: "two" },
-          stateCard({ a, kind: "now", simple: true, big: true, label: "Now", outlook: nowO, level: sm.nowLevel, when: nowO.kind === "unknown" ? nowO.quality || "Forecast unavailable" : sm.open ? NO_END : "through " + whenLabel(sm.nowEnd, tz), delay: v.hours[0].delay,
-            normalNote, reasons: shortList(((n) => hourReasons(a, n.x, sm.nowLevel, n.reasons))(nowHourOf(a, v, sm)), a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true), chips: cardSources(v.now.reasons, "now") }),
-          stateCard({ a, kind: "peak", simple: true, big: true, lead, rows: nextRows, label: "Coming up", outlook: outlook(a, pt), level: sm.level, when: rangeText(sm.start, sm.end, tz), delay: pk.delay,
-            reasons: shortList(hourReasons(a, pk, sm.level), a), programs: programsAt(v, pt, false), impact: CATS.impact(pk.reasons, programsAt(v, pt, false)), facts: factsRow(pk, a, pt, false, true), chips: cardSources(pk.reasons, "fc") }));
+        const pkO = outlook(a, pt);
+        const peak = { headline: pkO.headline, level: sm.level, when: rangeText(sm.start, sm.end, tz),
+          reasons: shortList(hourReasons(a, pk, sm.level), a).filter((r) => r !== pkO.headline && !/^(Ground stop|Ground delay program|Delays\b|Airport closed)/.test(r)).slice(0, 2) };
+        return stateCard({ a, layout, kind: "nowpeak", full: true, simple: true, big: true, lead, peak, rows: nextRows, label: "Now", outlook: nowO, level: sm.nowLevel,
+          when: nowO.kind === "unknown" ? nowO.quality || "Forecast unavailable" : sm.open ? NO_END : "through " + whenLabel(sm.nowEnd, tz), delay: v.hours[0].delay,
+          normalNote, reasons: shortList(((n) => hourReasons(a, n.x, sm.nowLevel, n.reasons))(nowHourOf(a, v, sm)), a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true),
+          chips: cardSources(v.now.reasons, "now"), empty: null });
       }
       const currentOutlook = outlook(a);
       let when = layout === "clear" ? "Clear through " + whenLabel(lastMs, tz) : nowWhen();

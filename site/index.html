@@ -440,6 +440,9 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 .la-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); transform: translateY(-1px); }
 .la-dot.dl-hi { background: var(--l3); } .la-dot.dl-mid { background: var(--l2); } .la-dot.la-good { background: var(--l0); }
 .la-i b { font-weight: 700; }
+.la-i .pill.sm { padding: 1px 7px; font-size: 11px; vertical-align: 1px; }
+.la-dot.la-lv1 { background: var(--l1); } .la-dot.la-lv2 { background: var(--l2); } .la-dot.la-lv3 { background: var(--l3); } .la-dot.la-lv4 { background: var(--l4); }
+b.la-lv2 { color: var(--l2); } b.la-lv3 { color: var(--l3); } b.la-lv4 { color: var(--l4); }
 .la-sub { display: block; font-size: 13px; color: var(--muted); }
 .sh-log { list-style: none; margin: 0; padding: 2px 0 0; }
 .sh-log li { display: flex; gap: 10px; padding: 6px 0; font-size: 14px; line-height: 1.35; border-bottom: 1px solid var(--line); }
@@ -844,7 +847,7 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="cats.js?v=3"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=5"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
-<script src="app.js?v=60" defer></script>
+<script src="app.js?v=61" defer></script>
 <script type="module" src="searched.js?v=7"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=14"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="trips.js?v=22"></script><!-- trips hook -->
