@@ -971,7 +971,9 @@
       "aria-valuemin": "0", "aria-valuemax": String(n - 1), "aria-valuenow": String(Math.max(0, day.cur)),
       "aria-valuetext": day.cur >= 0 ? slotText(slots[day.cur], a) : slotText(slots[0], a),
       "data-start": String(day.start), "data-tz": tz,
-    }, label, tl, ticks, naNote, big ? h("div", { class: "tl-cap" }, sm.open ? "Future hours are forecast estimates; FAA end time is unknown." : "Colours show weather and delay risk. Future hours are forecasts.") : null);
+    }, label, tl, ticks, naNote, big ? h("div", { class: "tl-cap" }, h("div", { class: "tl-key", "aria-label": "Colour key: Clear, Low, Moderate, High, Severe" },
+      ["Clear", "Low", "Moderate", "High", "Severe"].map((w, i) => h("span", { class: "tk" }, h("i", { class: "tk-dot l" + i, "aria-hidden": "true" }), w))),
+      sm.open ? h("div", { class: "tl-note" }, "Future hours are forecast estimates; FAA end time is unknown.") : null) : null);
     const T = { wrap, tl, lens, lensSeg, label, segs, slots, day, a, rest: day.cur, big, opts };
     wrap._tl = T;
     wireBigScrub(T);
@@ -1999,6 +2001,7 @@
       delay,
       list,
       leadEl,
+      o.big ? o.cur : null,
       aheadEl,
       progLine,
       o.simple ? null : o.facts);
@@ -2158,7 +2161,7 @@
         const pkO = outlook(a, pt);
         const peak = { headline: pkO.headline, level: sm.level, when: rangeText(sm.start, sm.end, tz),
           reasons: shortList(hourReasons(a, pk, sm.level), a).filter((r) => r !== pkO.headline && !/^(Ground stop|Ground delay program|Delays\b|Airport closed)/.test(r)).slice(0, 2) };
-        return stateCard({ a, layout, kind: "nowpeak", full: true, simple: true, big: true, lead, peak, rows: nextRows, label: "Now", outlook: nowO, level: sm.nowLevel,
+        return stateCard({ a, layout, kind: "nowpeak", full: true, simple: true, big: true, cur: safeCall(() => currentLine(a)), lead, peak, rows: nextRows, label: "Now", outlook: nowO, level: sm.nowLevel,
           when: nowO.kind === "unknown" ? nowO.quality || "Forecast unavailable" : sm.open ? NO_END : "through " + whenLabel(sm.nowEnd, tz), delay: v.hours[0].delay,
           normalNote, reasons: shortList(((n) => hourReasons(a, n.x, sm.nowLevel, n.reasons))(nowHourOf(a, v, sm)), a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true),
           chips: cardSources(v.now.reasons, "now"), empty: null });
@@ -2167,7 +2170,7 @@
       let when = layout === "clear" ? "Clear through " + whenLabel(lastMs, tz) : nowWhen();
       if (currentOutlook.kind === "unknown") when = currentOutlook.quality || "Forecast unavailable";
       else if (layout === "clear" && currentOutlook.kind !== "normal") when = "This hour";
-      return stateCard({ a, layout, kind: "nowpeak", full: true, simple: true, big: true, lead, rows: nextRows, label: "Now", outlook: currentOutlook, level: sm.nowLevel, when, delay: v.hours[0].delay,
+      return stateCard({ a, layout, kind: "nowpeak", full: true, simple: true, big: true, cur: safeCall(() => currentLine(a)), lead, rows: nextRows, label: "Now", outlook: currentOutlook, level: sm.nowLevel, when, delay: v.hours[0].delay,
         normalNote, reasons: shortList(((n) => hourReasons(a, n.x, sm.nowLevel, n.reasons))(nowHourOf(a, v, sm)), a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true),
         chips: cardSources(v.now.reasons, "now"), empty: null });
     };
@@ -2222,11 +2225,11 @@
         tlHolder.replaceChildren(makeTl());
         dayBtn.textContent = sheetDay ? "‹ Now" : "Tomorrow ›";
         dayBtn.setAttribute("aria-pressed", String(sheetDay === 1));
-        tlTitle.textContent = sheetDay ? "Tomorrow" : "Next 24 hours";
+        tlTitle.textContent = sheetDay ? "Tomorrow" : "Past 12 h · Next 24 h";
         if (window.AWXTrips) window.AWXTrips.decorateSheet(sheet, a); // trips hook: plane markers on the shown day
         scheduleLenses();
       } }, sheetDay ? "‹ Now" : "Tomorrow ›");
-    const tlTitle = h("span", {}, sheetDay ? "Tomorrow" : "Next 24 hours");
+    const tlTitle = h("span", {}, sheetDay ? "Tomorrow" : "Past 12 h · Next 24 h");
 
     // detail cards (build2b), each only when it has content
     const secs = [];
@@ -2538,11 +2541,12 @@
       // The primary sheet retains warnings; this page carries the full conditions and outlook.
       const parts = [];
       if (a.metar) parts.push(currentWeather(a));
+      if (v.hours && v.hours.length) parts.push(safeCall(() => next12(a, v))); // Next 12 hours (filtered below)
       if (v.spc || v.tcf?.length) parts.push(section("Storm outlook", "bolt", [
         v.spc ? h("p", { class: "muted" }, v.spc === "TSTM" ? "General thunderstorms possible in the area (no severe risk)" : (SPC_NAMES[v.spc] || "Elevated") + " risk of severe storms today") : null,
         ...(v.tcf || []).map((x) => h("div", { class: "item" }, "Thunderstorms, " + ({ high: "widespread", medium: "scattered", low: "isolated" }[x.coverage] || "some") + " coverage", x.valid ? h("span", { class: "muted" }, " · around " + whenLabel(Date.parse(x.valid), dispTz(a))) : null))
       ].filter(Boolean)));
-      content = parts.length ? parts : [h("p", { class: "muted" }, "Weather reports are unavailable right now.")];
+      content = parts.filter(Boolean).length ? parts.filter(Boolean) : [h("p", { class: "muted" }, "Weather reports are unavailable right now.")];
     } else if (md.page === "traffic") {
       const traffic = window.AWXMovement ? safeCall(() => AWXMovement.card(a)) : null;
       content = [traffic || h("p", { class: "muted" }, "Aircraft movement data is unavailable right now.")];
@@ -2623,9 +2627,12 @@
     return out;
   }
   /** Visibility in plain words: "Good (10+ miles)", "Poor (2 miles)". */
+  function visMiles(v) {
+    return v >= 10 ? "10+ miles" : v < 1 ? "under 1 mile" : (Math.round(v * 4) / 4) + (v === 1 ? " mile" : " miles");
+  }
   function visWords(v) {
     if (v == null) return "—";
-    const mi = v >= 10 ? "10+ miles" : v < 1 ? "under 1 mile" : (Math.round(v * 4) / 4) + (v === 1 ? " mile" : " miles");
+    const mi = visMiles(v);
     return (v > 5 ? "Good" : v >= 3 ? "Moderate" : v >= 1 ? "Poor" : "Very poor") + " (" + mi + ")";
   }
   function currentWeather(a) {
@@ -2665,6 +2672,62 @@
         h("pre", { class: "raw" }, metarMarked(m.raw)))], null, { cls: "cw av", meta: obs });
   }
   const compass = (d) => ["north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"][Math.round(((Number(d) % 360) + 360) % 360 / 45) % 8];
+  const compassAbbr = (d) => ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][Math.round(((Number(d) % 360) + 360) % 360 / 45) % 8];
+  /** "N 12 mph" / "Calm" / "Variable 8 mph", plus ", gusts 24" only when the gust is above the sustained wind (both in kt). */
+  function windShort(dir, spd, gust) {
+    if (spd == null) return "";
+    if (spd === 0) return "Calm";
+    const g = gust != null && mph1(gust) > mph1(spd) ? ", gusts " + mph1(gust) : "";
+    return (dir == null || dir === "VRB" ? "Variable" : compassAbbr(dir)) + " " + mph1(spd) + " mph" + g;
+  }
+  /**
+   * The Now card's current-conditions line: "75° · Heavy thunderstorms · W 29 mph, gusts 52 · Vis 2 mi", built from the same
+   * observation and functions as the Weather page's Current weather card. A button that opens that page; with no observation
+   * in the last 2 hours it says so instead (outlook.js health, the same rule as the sheet's qualification).
+   */
+  function currentLine(a) {
+    const m = a.metar;
+    const obs = m && Date.parse(m.obsTime);
+    if (!m || !Number.isFinite(obs) || refNow() - obs > 2 * HOUR || obs - refNow() > 10 * 60000) return h("p", { class: "cl-none muted" }, "Current weather unavailable");
+    const w = m.wind || {};
+    const parts = [m.temp != null ? f1(m.temp) + "°" : null, shortCond(metarCond(m), m.raw).replace(/, gusty$/, ""), windShort(w.dir, w.spd, m.gust),
+      m.visib != null ? "Vis " + visMiles(m.visib).replace(/ miles?$/, " mi") : null].filter(Boolean);
+    return h("button", { type: "button", class: "cur-line", "data-detail": "weather", "aria-haspopup": "dialog",
+      "aria-label": "Current weather: " + parts.join(", ") + ". Open weather details.", onclick: () => openDetails(a.iata, "weather") },
+      h("span", { class: "cl-t" }, parts.join(" · ")), h("span", { class: "chev", "aria-hidden": "true" }, "›"));
+  }
+  /**
+   * "Next 12 hours" on the Weather page: four 3-hour blocks from the next full hour, from the airport's hourly forecast
+   * (v.hours). Each block shows its most disruptive hour's weather, the strongest wind and gust, and low clouds; hours with
+   * no forecast say "No forecast" (never a quiet block). Aviation mode adds the block's worst flight category.
+   */
+  function next12(a, v) {
+    const tz = dispTz(a);
+    const t0 = Math.floor(refNow() / HOUR) * HOUR + HOUR;
+    const FC = ["LIFR", "IFR", "MVFR", "VFR"];
+    const rows = [];
+    for (let b = 0; b < 4; b++) {
+      const s = t0 + b * 3 * HOUR, e = s + 3 * HOUR;
+      const hrs = (v.hours || []).filter((x) => { const t = Date.parse(x.t); return t >= s && t < e; });
+      let text = "No forecast", cat = null;
+      if (hrs.length) {
+        const key = (x) => (x.level || 0) * 1e6 + (x.wgst || 0) * 1e3 + (x.wspd || 0);
+        const rep = hrs.reduce((best, x) => (key(x) > key(best) ? x : best), hrs[0]);
+        let wx = shortCond({ wx: rep.wx, wgst: rep.wgst, vis: rep.vis });
+        wx = wx.replace(/^No significant weather, gusty$/, "Gusty");
+        const spd = hrs.reduce((best, x) => (x.wspd != null && (!best || x.wspd > best.wspd) ? x : best), null);
+        const gust = Math.max(...hrs.map((x) => (x.wgst != null ? x.wgst : -1)));
+        const cig = Math.min(...hrs.map((x) => (x.cig != null ? x.cig : Infinity)));
+        text = [wx, spd ? windShort(spd.wdir, spd.wspd, gust >= 0 ? gust : null) : "", cig < 500 ? "Very low clouds" : cig < 1000 ? "Low clouds" : ""].filter(Boolean).join(" · ");
+        cat = hrs.reduce((best, x) => (FC.indexOf(x.fltCat) >= 0 && (best == null || FC.indexOf(x.fltCat) < FC.indexOf(best)) ? x.fltCat : best), null);
+      }
+      rows.push(h("li", { class: "nx-i" }, h("span", { class: "nx-t" }, rangeText(s, e, tz)),
+        h("span", { class: "nx-s" }, text, aviation() && cat ? [" ", fcChip(cat)] : null)));
+    }
+    const hs = AWXOutlook.health(a, outlookOpts(a, v));
+    return section("Next 12 hours", "clock", [h("ul", { class: "nx-list" }, rows),
+      hs.missingForecast ? h("p", { class: "muted small nx-note" }, "The airport forecast may be outdated or unavailable.") : null], null, { cls: "nx12", meta: zoneAbbr(refNow(), tz) });
+  }
   /** Crosswind/headwind for the best-aligned runway (headings from data/airports-all.json via site/searched.js). */
   async function fillCrosswind(a) {
     const el = document.querySelector(`.cw-xw[data-icao="${a.icao}"]`);
