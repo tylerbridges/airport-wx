@@ -973,7 +973,7 @@
     ticks.append(h("span", { class: "last", style: "left:100%" }, tickLabel(day.end, tz), endDay !== lastDay ? h("small", { class: "tick-day" }, endDay) : null));
     const label = h("div", { class: "lenslabel", "aria-hidden": "true" });
     const na = slots.findIndex((x, i) => x.kind === "na" && slots.slice(i).every((y) => y.kind === "na"));
-    const naNote = na >= 0 ? h("div", { class: "nanote" }, "Forecast not available yet from " + timelineDay(slots[na].t, tz) + " " + hourLabel(slots[na].t, tz)) : null;
+    const naNote = na >= 0 ? h("div", { class: "nanote" }, "No forecast yet from " + whenLabel(slots[na].t, tz)) : null;
     const wrap = h("div", {
       class: "tl-wrap" + (big ? " bigwrap" : " cardwrap"), tabindex: "0", role: "slider",
       "aria-label": "Hourly risk at " + codeOf(a) + ", " + (opts.dayOff ? "tomorrow" : "past 12 hours and next 24 hours"),
@@ -2722,7 +2722,7 @@
     const rows = [];
     for (let b = 0; b < 4; b++) {
       const s = t0 + b * 3 * HOUR, e = s + 3 * HOUR;
-      const hrs = (v.hours || []).filter((x) => { const t = Date.parse(x.t); return t >= s && t < e; });
+      const hrs = (v.hours || []).filter((x) => { const t = Date.parse(x.t); return t >= s && t < e && x.level != null; }); // hours no forecast covers stay "No forecast"
       let text = "No forecast", cat = null;
       if (hrs.length) {
         const key = (x) => (x.level || 0) * 1e6 + (x.wgst || 0) * 1e3 + (x.wspd || 0);

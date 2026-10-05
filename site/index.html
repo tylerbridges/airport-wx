@@ -450,9 +450,9 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 .cl-none { margin: 8px 0 0; font-size: 13.5px; }
 /* Next 12 hours (Weather page) */
 .nx-list { list-style: none; margin: 0; padding: 0; }
-.nx-i { display: flex; gap: 12px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 1.35; }
+.nx-i { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 1.35; }
 .nx-i:last-child { border-bottom: 0; }
-.nx-t { flex: none; width: 104px; color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+.nx-t { color: var(--muted); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .nx-s { min-width: 0; overflow-wrap: anywhere; }
 .nx-note { margin: 8px 0 0; }
 .sc-ahead { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
@@ -872,7 +872,7 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="cats.js?v=4"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=5"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
-<script src="app.js?v=67" defer></script>
+<script src="app.js?v=68" defer></script>
 <script type="module" src="searched.js?v=7"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=17"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="trips.js?v=25"></script><!-- trips hook -->
