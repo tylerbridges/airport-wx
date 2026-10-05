@@ -14,6 +14,8 @@ import { tripStatus, flightLine, rolesAt, clockText, whenText, rangeText, LEVEL_
 import { mountSearch, loadAirports, airportsLoaded, placeLine } from "./search.js";
 import { calendarDraft, nextScheduled, MAX_CALENDAR_BYTES, flightKey } from "./trip-import.js?v=1";
 
+import { CALENDAR_KEY, loadConnection, saveConnection, fetchCalendar } from "./calendar-link.js?v=1";
+
 const KEY = "awx-trips";
 const HOUR = 3600e3;
 const MIN = 60e3;
@@ -22,6 +24,9 @@ const T = window.AWXTest || { name: null, rebase: (d) => d };
 const app = () => window.AWXApp;
 
 const S = {
+  connection: T.name ? null : loadConnection(),
+  connectionAt: 0, connectionLoading: null, connectionFailed: false,
+  connectBusy: false, connectError: "", connectText: "", connectSeq: 0,
   cal: null, // data/trips.json
   calAt: 0,
   calFailed: false,
@@ -127,6 +132,24 @@ function loadCal(force) {
   return S.loading;
 }
 
+function connectedDoc() { return S.connection?.doc || S.cal; }
+function refreshConnection(force = false) {
+  if (T.name || !S.connection || S.connectionLoading || (!force && Date.now() - S.connectionAt < 10 * MIN)) return S.connectionLoading || Promise.resolve();
+  const link = S.connection.url, seq = S.connectSeq;
+  S.connectionAt = Date.now();
+  S.connectionLoading = (async () => {
+    try {
+      const [doc] = await Promise.all([fetchCalendar(link), loadAirports().catch(() => null)]);
+      if (seq !== S.connectSeq || S.connection?.url !== link) return;
+      const value = { url: link, doc };
+      S.connection = value; S.connectionFailed = false;
+      if (!saveConnection(value)) S.connectionFailed = true;
+    } catch { if (seq === S.connectSeq) S.connectionFailed = true; }
+    finally { S.connectionLoading = null; render(); }
+  })();
+  return S.connectionLoading;
+}
+
 const statusAirports = () => (app() && app().state.data && app().state.data.airports) || [];
 const byIata = (code) => statusAirports().find((a) => a.iata === code) || null;
 /** Zone for a code: the status data, the trip's own hints (manual trips), the search list. */
@@ -141,9 +164,10 @@ function tzFor(code, trip) {
 /** Calendar + manual trips retained until 24 h after scheduled arrival, soonest first. */
 function allTrips() {
   const now = nowMs();
-  const cal = ((S.cal && S.cal.trips) || []).map((t) => ({ ...t, source: "calendar" }));
+  const cal = (connectedDoc()?.trips || []).map((t) => ({ ...t, source: "calendar" }));
   const man = S.manual.map((t) => ({ ...t, source: "manual" }));
-  return [...cal, ...man]
+  const seen = new Set();
+  return [...man, ...cal].map(t => ({ ...t, legs: t.legs.filter(l => { const k = flightKey(l); if (seen.has(k)) return false; seen.add(k); return true; }) })).filter(t => t.legs.length)
     .map((t) => ({ ...t, legs: [...t.legs].sort((a, b) => Date.parse(a.dep) - Date.parse(b.dep)) }))
     .filter((t) => Date.parse(t.legs[t.legs.length - 1].arr) >= now - TRIP_KEEP_AFTER_ARRIVAL_MS)
     .sort((a, b) => Date.parse(a.legs[0].dep) - Date.parse(b.legs[0].dep));
@@ -258,7 +282,7 @@ function focusedTrip(focus) {
 function tripActions() {
   return h("div", { class: "trips-b" },
     h("button", { type: "button", class: "tadd", onclick: () => openEdit(null) }, "Add a trip"),
-    h("button", { type: "button", class: "tadd", onclick: openImport }, "Import .ics"));
+    h("button", { type: "button", class: "tadd", onclick: openConnect }, "Connect calendar"));
 }
 
 let tabBox = null; // the nav shell's Trips tab (site/nav.js calls render(container))
@@ -267,6 +291,7 @@ function render(container) {
   const focusedBox = active?.closest("#navTrips, #trips")?.id;
   if (container && container.nodeType) tabBox = container;
   loadCal(false);
+  refreshConnection();
   if (tabBox) renderTab(tabBox);
   const box = document.getElementById("trips");
   if (!box) { refreshOpen(); return; }
@@ -297,22 +322,23 @@ function renderTab(box) {
       h("h2", {}, "Your next trip starts here"),
       h("p", {}, "Add your flight times to see the airport outlook along your trip. Saved on this device."),
       h("button", { type: "button", class: "awx-btn primary", onclick: () => openEdit(null) }, "Add a trip"),
+      h("button", { type: "button", class: "awx-btn", onclick: openConnect }, "Connect flight calendar"),
       h("button", { type: "button", class: "awx-btn", onclick: openImport }, "Import a calendar file"),
       h("p", { class: "timport-note" }, "One-time .ics import · no calendar sync or upload"),
-      cs.warn ? h("p", { class: "warn", role: "status" }, "Repository calendar update unavailable. You can still add or import trips on this device.") : cs.connected ? h("p", {}, "The repository calendar has no active trips in the next 7 days.") : null));
+      cs.warn ? h("p", { class: "warn", role: "status" }, "Calendar update unavailable. Saved flight times may be outdated.") : cs.connected ? h("p", {}, "Your calendar has no recognized flights in the next 7 days.") : null));
     return;
   }
   const focus = nextScheduled(trips, nowMs());
   const rest = trips.filter((t) => t.id !== focus.trip.id);
-  box.replaceChildren(
+  box.replaceChildren(...[
     h("div", { class: "trips-h ttab-h" }, tripActions(),
       h("button", { type: "button", class: "tgear", "aria-label": "Trips settings", onclick: () => openTripSettings() }, svg("M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z", "gear"))),
-    cs.warn ? h("div", { class: "tcal-line warn", role: "status" }, "Repository calendar update unavailable · saved times may be outdated") : null,
+    cs.warn ? h("div", { class: "tcal-line warn", role: "status" }, "Calendar update unavailable · saved times may be outdated") : null,
     focusedTrip(focus),
     rest.length ? h("div", { class: "trips-h", style: "margin-top:20px" }, h("h2", {}, "Other trips")) : null,
-    rest.length ? h("div", { class: "tlist" }, rest.map(tripCard)) : null);
+    rest.length ? h("div", { class: "tlist" }, rest.map(tripCard)) : null].filter(k => k != null));
 }
-const calAgo = () => { const g = S.cal && Date.parse(S.cal.generated); return g ? " · updated " + ago(Math.max(0, nowMs() - g)) : ""; };
+const calAgo = () => { const g = connectedDoc() && Date.parse(connectedDoc().generated); return g ? " · updated " + ago(Math.max(0, nowMs() - g)) : ""; };
 
 /** Settings → Trips & flight calendar (site/settings.js through the nav shell), else this file's own Trips sheet. */
 function openTripSettings(focus) {
@@ -419,6 +445,7 @@ function show() {
 function closeTrip() {
   const w = document.getElementById("tripWrap");
   if (!w || w.hidden) return;
+  if (S.view?.kind === "connect" && S.connectBusy) S.connectSeq++;
   S.view = null;
   S.importDraft = null; S.importSeq++;
   w.classList.remove("open");
@@ -437,9 +464,10 @@ const sec = (title, ...kids) => h("div", { class: "sec" }, h("h3", {}, title), .
 function openTrip(id) { S.view = { kind: "trip", id }; drawView(); show(); }
 function openEdit(id) { S.view = { kind: "edit", id }; drawView(); show(); }
 function openImport() { S.importDraft = null; S.importError = ""; S.importBusy = false; S.importSeq++; S.view = { kind: "import" }; drawView(); show(); }
+function openConnect() { S.connectError = ""; S.connectBusy = false; S.connectText = ""; S.view = { kind: "connect" }; drawView(); show(); }
 function openSettings() { S.view = { kind: "settings" }; drawView(); show(); }
 /** Redraw an open trip sheet when the data refreshes (not the editor: it would lose the typing). */
-function refreshOpen() { if (S.view && S.view.kind !== "edit" && S.view.kind !== "import") drawView(true); }
+function refreshOpen() { if (S.view && S.view.kind !== "edit" && S.view.kind !== "import" && S.view.kind !== "connect") drawView(true); }
 
 function drawView(keep) {
   const sheet = wrap().querySelector(".sheet");
@@ -452,8 +480,9 @@ function drawView(keep) {
     kids = tripView(trip);
   } else if (S.view.kind === "edit") kids = editView(S.view.id);
   else if (S.view.kind === "import") kids = importView();
+  else if (S.view.kind === "connect") kids = connectView();
   else kids = settingsView();
-  sheet.replaceChildren(h("div", { class: "grab", "aria-hidden": "true" }), ...kids);
+  sheet.replaceChildren(h("div", { class: "grab", "aria-hidden": "true" }), ...kids.filter(k => k != null));
   if (keep) sheet.scrollTop = top; else sheet.scrollTop = 0;
   if (keep && S.view.kind === "import") sheet.querySelector('[role="alert"], [role="status"], .tbtn.primary, input')?.focus({ preventScroll: true });
 }
@@ -519,7 +548,7 @@ function tripView(trip) {
     }, h("b", {}, c), h("span", { class: "muted small" }, (byIata(c) && byIata(c).city) || ""))))),
     h("div", { class: "checked" },
       h("p", { class: "muted" }, sourceLine(trip)),
-      !manual && S.cal && S.cal.ok === false ? h("p", { class: "warn" }, "Your flight calendar couldn't be read on the last update — times may be out of date.") : null,
+      !manual && calStatus().warn ? h("p", { class: "warn" }, "Your flight calendar couldn't be read on the last update — times may be out of date.") : null,
       manual ? h("div", { class: "tbtns" },
         trip.legs.length <= 2 ? h("button", { type: "button", class: "tbtn", onclick: () => openEdit(trip.id) }, "Edit") : h("p", { class: "muted small" }, "To update multiple connections, delete this trip and import an updated calendar file."),
         h("button", { type: "button", class: "tbtn danger", onclick: (e) => {
@@ -681,7 +710,7 @@ function importView() {
     try {
       if (file.size > MAX_CALENDAR_BYTES) throw new Error("Choose a calendar file under 1 MB.");
       const [text, airports] = await Promise.all([file.text(), loadAirports().catch(() => { throw new Error("Airport directory unavailable. Check your connection and try again."); })]);
-      const draft = calendarDraft(text, { airports, existing: [...S.manual, ...((S.cal && S.cal.trips) || [])], now: nowMs() });
+      const draft = calendarDraft(text, { airports, existing: [...S.manual, ...(connectedDoc()?.trips || [])], now: nowMs() });
       if (S.view?.kind !== "import" || seq !== S.importSeq) return;
       S.importDraft = draft;
       if (!draft.trips.length) S.importError = draft.skipped ? "These matching flights are already saved. Nothing new to import." : "No recognizable timed flights in the next 7 days or recent 24 hours. The file needs departure and arrival airports and times.";
@@ -694,7 +723,7 @@ function importView() {
   const save = () => {
     if (!d?.trips.length) return;
     // Recheck matches in case another tab added a flight while this preview was open.
-    const known = new Set([...loadManual(), ...((S.cal && S.cal.trips) || [])].flatMap(t => t.legs.map(flightKey)));
+    const known = new Set([...loadManual(), ...(connectedDoc()?.trips || [])].flatMap(t => t.legs.map(flightKey)));
     const added = d.trips.filter(t => !t.legs.some(l => known.has(flightKey(l))));
     const before = S.manual;
     S.manual = [...loadManual(), ...added];
@@ -718,12 +747,62 @@ function importView() {
   ];
 }
 
+// ---------- private calendar connection ----------
+function connectView() {
+  const status = calStatus();
+  const input = h("input", { type: "url", class: "tin", value: S.connectText, placeholder: "webcal://… or https://…", autocomplete: "off", autocapitalize: "none", spellcheck: "false", "aria-label": "Calendar subscription link", oninput: e => { S.connectText = e.target.value; } });
+  const connect = async e => {
+    e.preventDefault();
+    if (!S.connectText.trim() || S.connectBusy) return;
+    if (T.name) { S.connectError = "Calendar connections are unavailable in test scenarios. Return to live data to connect."; drawView(true); return; }
+    const url = S.connectText.trim(), seq = ++S.connectSeq;
+    S.connectBusy = true; S.connectError = ""; drawView(true);
+    try {
+      const [doc] = await Promise.all([fetchCalendar(url), loadAirports().catch(() => null)]);
+      if (seq !== S.connectSeq || S.view?.kind !== "connect") return;
+      const value = { url, doc };
+      if (!saveConnection(value)) throw new Error("Device storage is unavailable. The calendar was not connected.");
+      S.connection = value; S.connectionAt = Date.now(); S.connectionFailed = false; S.connectText = "";
+      closeTrip(); window.AWXNav?.go("trips"); render();
+    } catch (err) {
+      if (seq !== S.connectSeq || S.view?.kind !== "connect") return;
+      S.connectError = err.name === "TypeError" || err.name === "AbortError" ? "Couldn't connect right now. Check your connection and try again." : err.message;
+    } finally { if (seq === S.connectSeq) { S.connectBusy = false; if (S.view?.kind === "connect") drawView(true); } }
+  };
+  const disconnect = () => {
+    if (!saveConnection(null)) { S.connectError = "Device storage is unavailable. Try again to disconnect."; drawView(true); return; }
+    S.connectSeq++; S.connection = null; S.connectionFailed = false; S.connectionAt = 0;
+    closeTrip(); render();
+  };
+  return [
+    head(h("h2", { id: "tripTitle", class: "th2" }, "Connect flight calendar")),
+    h("p", { class: "muted" }, "Paste a calendar link to keep your flights up to date. Saved on this device."),
+    S.connection ? sec("Your calendar", h("div", { class: "tcal" }, status.text), h("div", { class: "tbtns" },
+      h("button", { type: "button", class: "tbtn", onclick: async e => { e.currentTarget.disabled = true; await refreshConnection(true); if (S.view?.kind === "connect") drawView(true); } }, "Refresh now"),
+      h("button", { type: "button", class: "tbtn danger", onclick: disconnect }, "Disconnect"))) : null,
+    h("form", { class: "box", onsubmit: connect },
+      h("label", { class: "tfield" }, h("div", { class: "tlabel" }, S.connection ? "Replace calendar link" : "Calendar subscription link"), input),
+      h("p", { class: "muted small" }, "Shared iCloud and Google calendars supported. Only airports and scheduled times are kept. Keep your flight-calendar link private."),
+      h("button", { type: "submit", class: "tbtn primary", disabled: S.connectBusy }, S.connectBusy ? "Connecting…" : S.connection ? "Replace calendar" : "Connect calendar")),
+    S.connectError ? h("p", { role: "alert", class: "terr" }, S.connectError) : null,
+    h("details", { class: "sec" },
+      h("summary", { class: "tbtn", style: "min-height:44px;display:flex;align-items:center;cursor:pointer" }, "Get a link from Flighty"),
+      h("ol", { class: "muted", style: "padding-left:20px;line-height:1.4" },
+        h("li", {}, "Flighty → Settings → Calendar Sync → enable Calendar Export to a dedicated flight calendar."),
+        h("li", {}, "Apple Calendar → Calendars → info beside that calendar → Public Calendar → Share Link."),
+        h("li", {}, "Paste that link above. For Google Calendar, copy its iCal link from calendar settings.")),
+      h("p", { class: "muted small" }, "Anyone with a public calendar link can read it. Flight and friend share pages are not supported here. Sync updates scheduled times while Airports is open.")),
+    h("button", { type: "button", class: "tbtn", onclick: openImport }, "Import a calendar file instead"),
+  ];
+}
+
 // ---------- settings ----------
 
 /** Flight calendar status: {connected, ok, warn, text} ("Connected · 3 upcoming flights" / "Not connected"). */
 function calStatus() {
-  const c = S.cal;
-  if (S.calFailed) return { connected: !!c?.configured, ok: false, warn: true, text: "Couldn't check — saved repository calendar times may be out of date" };
+  const c = connectedDoc();
+  if (S.connection && S.connectionFailed) return { connected: true, ok: false, warn: true, text: "Connected · update unavailable; saved times may be outdated" };
+  if (!S.connection && S.calFailed) return { connected: !!c?.configured, ok: false, warn: true, text: "Couldn't check — saved calendar times may be out of date" };
   if (!c || !c.configured) return { connected: false, ok: false, text: "Not connected" };
   if (c.ok === false) return { connected: true, ok: false, warn: true, text: "Connected · couldn't read it on the last update" + (c.error ? ` (${c.error})` : "") };
   const now = nowMs();
@@ -733,13 +812,13 @@ function calStatus() {
 
 function settingsView() {
   const st = calStatus();
-  const g = S.cal && Date.parse(S.cal.generated);
+  const g = connectedDoc() && Date.parse(connectedDoc().generated);
   const man = S.manual.map((t) => ({ ...t, source: "manual" })).sort((a, b) => Date.parse(a.legs[0].dep) - Date.parse(b.legs[0].dep));
   return [
     head(h("h2", { id: "tripTitle", class: "th2" }, "Trips")),
     sec("Add your flights", h("div", { class: "muted small" }, "Save flights on this device, or import a calendar snapshot."),
-      h("div", { class: "tbtns" }, h("button", { type: "button", class: "tbtn primary", onclick: () => openEdit(null) }, "Add a trip"), h("button", { type: "button", class: "tbtn", onclick: openImport }, "Import calendar file"))),
-    st.connected || st.warn ? sec("Repository calendar", h("div", { class: "tcal" + (st.warn ? " warn" : "") }, st.text), g ? h("div", { class: "muted small" }, "Checked " + ago(Math.max(0, nowMs() - g))) : null) : null,
+      h("div", { class: "tbtns" }, h("button", { type: "button", class: "tbtn primary", onclick: () => openEdit(null) }, "Add a trip"), h("button", { type: "button", class: "tbtn", onclick: openConnect }, "Connect calendar"), h("button", { type: "button", class: "tbtn", onclick: openImport }, "Import calendar file"))),
+    st.connected || st.warn ? sec("Flight calendar", h("div", { class: "tcal" + (st.warn ? " warn" : "") }, st.text), g ? h("div", { class: "muted small" }, "Checked " + ago(Math.max(0, nowMs() - g))) : null) : null,
     sec("Added on this device",
       man.length ? man.map((t) => h("div", { class: "item tman" },
         h("div", {}, h("b", {}, t.legs.map((l) => l.from).concat(t.legs[t.legs.length - 1].to).join(" → ")),
@@ -852,17 +931,19 @@ function init() {
     e.stopImmediatePropagation(); // the airport sheet underneath stays open
     closeTrip();
   }, true);
-  window.addEventListener("storage", (e) => { if (e.key === KEY) { S.manual = loadManual(); render(); } });
+  window.addEventListener("storage", (e) => { if (e.key === CALENDAR_KEY) { S.connection = T.name ? null : loadConnection(); S.connectSeq++; S.connectionAt = 0; S.connectionFailed = false; render(); } if (e.key === KEY) { S.manual = loadManual(); render(); } });
   window.AWXTrips = {
     render, decorateSheet, liveIds, openTrip, openEdit, openSettings: openTripSettings,
     // site/settings.js (Settings → Trips & flight calendar) and site/nav.js (Trips tab)
-    openAdd: () => openEdit(null), openImport,
+    openAdd: () => openEdit(null), openImport, openConnect,
     calStatus,
     ready: () => (S.loading || (S.calAt ? Promise.resolve() : loadCal(true))),
     list: () => S.manual.map((t) => ({ id: t.id, from: t.legs[0].from, to: t.legs[t.legs.length - 1].to, dep: t.legs[0].dep, name: t.legs.length > 1 ? "via " + t.legs.slice(1).map((l) => l.from).join(", ") : "" })),
     routes: () => allTrips().flatMap((t) => t.legs.map((l) => ({ from: l.from, to: l.to }))),
     _state: () => ({ cal: S.cal, manual: S.manual, trips: allTrips().map((t) => ({ id: t.id, source: t.source, ...resultOf(t) })) }),
   };
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshConnection(); });
+  setInterval(() => { if (!document.hidden) refreshConnection(); }, MIN);
   render();
   loadCal(true);
 }

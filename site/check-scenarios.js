@@ -268,7 +268,8 @@ export async function dataAsserts(add, { sc, data, delta, shift }) {
   }
 }
 
-const later = (w, ms) => new Promise((r) => w.setTimeout(r, ms));
+// Run waits in the visible check page; offscreen iframe timers may be clamped to one second.
+const later = (w, ms) => new Promise((r) => setTimeout(r, ms));
 async function until(w, fn, ms) {
   const t0 = Date.now();
   let v;
@@ -440,6 +441,9 @@ export async function consistencyChecks(add, w, doc, where = "") {
   scanText(doc.getElementById("national"), "national strip");
   const now = A.refNow();
   const H = 3600e3;
+  // Hide the large airport list while inspecting sheets, avoiding repeated layout of every timeline.
+  const listEl = doc.getElementById("list"), listDisplay = listEl.style.display;
+  listEl.style.display = "none";
   let compared = 0, noPill = 0;
   for (const card of doc.querySelectorAll("#list .card[data-iata]")) {
     const iata = card.dataset.iata;
@@ -475,6 +479,7 @@ export async function consistencyChecks(add, w, doc, where = "") {
     scanText(c, iata);
   }
   A.closeSheet();
+  listEl.style.display = listDisplay;
   if (A.openNational) { A.openNational(); await later(w, 40); scanText(doc.getElementById("panel"), "national panel"); if (A.closePanel) A.closePanel(); }
   for (const a of A.state.data.airports.filter((x) => !x.trip).slice(0, 3)) {
     if (await openDetailsPage(w, doc, a.iata)) scanText(doc.getElementById("mdSheet"), a.iata + " More details");

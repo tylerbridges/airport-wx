@@ -54,6 +54,13 @@ export async function bundle({ entry = join(HERE, "worker.mjs"), version = "dev"
   const catalog = await loadMonitoredAirports();
   const airportModule = modules.find(m=>m.name === "airport-catalog.mjs");
   if (airportModule) airportModule.code = `export default ${JSON.stringify(catalog)};\n`;
+  const calendarModule = modules.find(m => m.name === "calendar-airports.mjs");
+  if (calendarModule) {
+    const global = JSON.parse(await readFile(join(ROOT, "site/data/airports-all.json"), "utf8"));
+    const f = Object.fromEntries(global.f.map((k, i) => [k, i]));
+    const calendarAirports = global.a.map(r => ({ iata: r[f.iata], name: r[f.name], city: r[f.city], tz: global.tz[r[f.tz]] }));
+    calendarModule.code = `export default ${JSON.stringify(calendarAirports)};\n`;
+  }
   const airports = JSON.parse(await readFile(join(ROOT, "airports.json"), "utf8"));
   const metadata = {
     main_module: MAIN,

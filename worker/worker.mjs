@@ -10,6 +10,8 @@
 // Every source is independent: a failed live source falls back to the build's value (`stale: true`).
 // Pure ES modules only (no node: imports); README "Live relay" has the architecture and limits.
 import airportCatalog from "./airport-catalog.mjs";
+import calendarAirports from "./calendar-airports.mjs";
+import { readCalendar } from "./calendar.mjs";
 import { assemble, computeGlobal } from "../poller/core.mjs";
 import { parseFaaXml } from "../poller/lib.mjs";
 import { parseMetar, parseTaf } from "../poller/taf-parse.mjs";
@@ -75,8 +77,8 @@ export function allowedOrigin(o) {
   return o === "https://tylerbridges.github.io" || /^http:\/\/localhost(?::\d{1,5})?$/.test(String(o || ""));
 }
 
-export function corsHeaders(origin) {
-  const h = { "Access-Control-Allow-Methods": "GET, OPTIONS", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Max-Age": "86400", Vary: "Origin" };
+export function corsHeaders(origin, calendar = false) {
+  const h = { "Access-Control-Allow-Methods": calendar ? "POST, OPTIONS" : "GET, OPTIONS", "Access-Control-Allow-Headers": "Content-Type", "Access-Control-Max-Age": "86400", Vary: "Origin" };
   if (allowedOrigin(origin)) h["Access-Control-Allow-Origin"] = origin;
   return h;
 }
@@ -426,7 +428,8 @@ export default {
     const url = new URL(request.url);
     const origin = request.headers.get("Origin");
     const e = { ...env, ctx, origin: url.origin };
-    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(origin) });
+    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(origin, url.pathname === "/calendar") });
+    if (url.pathname === "/calendar" && request.method === "POST") return readCalendar(request, calendarAirports, allowedOrigin(origin) ? origin : null, corsHeaders(origin, true));
     if (request.method !== "GET" && request.method !== "HEAD") return reply({ error: "method not allowed" }, 405, origin, { Allow: "GET, OPTIONS" });
     if (url.pathname === "/health") return reply({ ok: true, version: env.VERSION || "dev", time: new Date().toISOString() }, 200, origin, { "Cache-Control": "no-store" });
     if (url.pathname === "/status") return status(url, e, origin);

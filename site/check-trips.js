@@ -32,7 +32,7 @@ export async function tripChecks(add, { url, data, shift = (d) => d, asserts = [
   const trips = doc.trips || [];
   const flights = trips.reduce((n, t) => n + (t.legs || []).length, 0);
   const age = Date.now() - Date.parse(doc.generated);
-  if (!doc.configured) add("pass", "Trips", "flight calendar not configured (no FLIGHTY_ICS_URL secret) · manual trips only");
+  if (!doc.configured) add("pass", "Trips", "No shared flight calendar connected · device trips and calendar connections stay private");
   else if (doc.ok === false) add("fail", "Trips: flight calendar fetch", `configured, last fetch failed: ${doc.error || "unknown error"}`);
   else add("pass", "Trips", `configured · ${trips.length} trip${trips.length === 1 ? "" : "s"}, ${flights} flight${flights === 1 ? "" : "s"} · last fetch ok ${Number.isFinite(age) ? ago(Math.max(0, age)) : ""}`.trim());
 
