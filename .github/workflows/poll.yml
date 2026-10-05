@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -112,7 +112,16 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
+      # deploy-pages sometimes can't see the just-uploaded artifact yet ("No artifacts named
+      # github-pages"); wait and try once more before failing the run.
       - id: deployment
+        continue-on-error: true
+        uses: actions/deploy-pages@v4
+      - name: Wait before retrying the deploy
+        if: ${{ steps.deployment.outcome == 'failure' }}
+        run: sleep 30
+      - id: deployment_retry
+        if: ${{ steps.deployment.outcome == 'failure' }}
         uses: actions/deploy-pages@v4
 
       # ---- History (branch `history`): after the deploy, never fails the job (continue-on-error). ----
