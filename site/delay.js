@@ -410,9 +410,9 @@ export function delayBlock(a, i, opts = {}) {
   const cls = L.key === "now" || RANK[L.key] >= 3 ? "dl-hi" : RANK[L.key] === 2 ? "dl-mid" : "dl-lo";
   const covered = opts.coveredHours?.includes(hr.t);
   const kids = covered ? [] : [el("div", "dl-main", el("span", "dl-big " + cls, L.key === "now" ? L.word : L.word.replace(/^Delays/, "Flight delays")), when ? el("span", "dl-what", when) : null)];
-  const sub = [L.cue, L.size ? "When disrupted: " + L.size : ""].filter(Boolean).join(" · ");
+  const sub = covered ? "" : [L.cue, L.size ? "When disrupted: " + L.size : ""].filter(Boolean).join(" · "); // covered: the top card says it
   if (sub) kids.push(el("div", "dl-usual-b", sub));
-  if (L.key === "now" && NOW_KINDS[d.override]) kids.push(el("div", "dl-faa", d.override === "closure" ? "Airport closed" : NOW_KINDS[d.override] + " in effect"));
+  if (L.key === "now" && NOW_KINDS[d.override] && !covered) kids.push(el("div", "dl-faa", d.override === "closure" ? "Airport closed" : NOW_KINDS[d.override] + " in effect"));
   if (/^possible_/.test(d.override || "")) {
     kids.push(el("div", "dl-faa", "The FAA plans a possible " + (d.override === "possible_ground_stop" ? "ground stop" : "ground delay program")));
   }

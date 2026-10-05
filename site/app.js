@@ -1954,7 +1954,8 @@
     // the sheet's headline (o.big): the status in large level-coloured type; the delay outlook (o.lead) joins it
     // when it says the same thing ("Flight delays likely" + "5–9 PM"), else follows as a "Later" line
     const lead = o.lead;
-    const merged = lead && status === lead.word;
+    const bare = (x) => String(x || "").replace(/ \(\d+%\)$/, ""); // Aviation words carry the chance: "Flight delays likely (62%)"
+    const merged = lead && bare(status) === lead.word;
     const hcls = o.big ? " sc-big lv" + Math.max(0, Math.min(4, (shared?.level ?? o.level) || 0)) : "";
     const delay = status ? h("div", { class: "sc-head" + hcls }, h("span", { class: "sc-delay" }, status), merged && lead.when ? h("span", { class: "sc-hwhen" }, lead.when) : null) : null;
     const leadSub = lead ? cap([lead.cue, lead.size ? "When disrupted: " + lead.size : ""].filter(Boolean).join(" · ")) : "";
@@ -1964,7 +1965,7 @@
     const ahead = [];
     // a later, higher risk window (o.peak) comes first; the delay outlook joins it when they say the same thing
     const pk = o.peak;
-    const pkMerged = pk && lead && !merged && pk.headline === lead.word;
+    const pkMerged = pk && lead && !merged && bare(pk.headline) === lead.word;
     if (pk) ahead.push(h("li", { class: "la-i" }, h("span", { class: "la-dot la-lv" + pk.level, "aria-hidden": "true" }),
       h("span", {}, h("b", { class: "la-lv" + pk.level }, pk.headline), pk.when ? " " + pk.when + " " : " ", pill(pk.level, true),
         pk.reasons.length ? h("span", { class: "la-sub" }, pk.reasons.join(" · ")) : null,
@@ -2110,7 +2111,7 @@
   /** The outlook's what-happens-next rows ({label, value}): direction impacts, scheduled end, FAA extension outlook, forecast improvement. */
   function travelRows(a) {
     const o = outlook(a);
-    const covered = !aviation() && o.programs.length === 1 && o.programs[0].type !== "closure"; // its end is already in the card's time line
+    const covered = o.programs.length === 1 && o.programs[0].type !== "closure"; // its end and average are already in the card
     const rows = covered ? [] : o.impacts.map((r) => ({ label: r.label, value: r.value }));
     if (o.scheduledEnd && !covered) rows.push({ label: "Scheduled end", value: whenLabel(o.scheduledEnd, dispTz(a)) + " · may change" });
     if (o.extension) rows.push({ label: "FAA extension outlook", value: cap(o.extension) });
@@ -2288,7 +2289,13 @@
     // movement hook: "Traffic right now" (site/movement.js), its card body inside a build2b section card
     const mv = window.AWXMovement && typeof AWXMovement.card === "function" ? safeCall(() => AWXMovement.card(a)) : null;
     // Aviation mode only: the delay outlook's reasoning below the timeline (its headline is in the top card)
-    const dl = aviation() && window.AWXDelay && typeof AWXDelay.delayBlock === "function" ? safeCall(() => AWXDelay.delayBlock(a, null, { coveredHours: lead ? [lead.t] : [] })) : null; // phase3 hook
+    // the reasoning for the headline's own hour: the outlook's hour, else the current one while delays are happening now
+    const active = outlook(a).kind === "active";
+    const peakT = layout === "split" && sm.peakHour ? sm.peakHour.t : null; // the Looking ahead risk line's hour
+    const whyT = lead ? lead.t : peakT || (active ? v.hours[0].t : null);
+    const whyAt = whyT ? (a.hours || []).findIndex((x) => x.t === whyT) : -1; // delayBlock indexes a.hours
+    const dl = aviation() && window.AWXDelay && typeof AWXDelay.delayBlock === "function" ? safeCall(() => AWXDelay.delayBlock(a, whyAt >= 0 ? whyAt : null,
+      { coveredHours: [lead && lead.t, peakT, active && v.hours[0].t].filter(Boolean) })) : null; // phase3 hook
     // below the timeline: a short log of what already changed today (the full list opens from Today's changes)
     const log = window.AWXBrief && typeof AWXBrief.todayEvents === "function" ? safeCall(() => logSection(a)) : null; // brief hook
     const hiddenNote = v.hiddenCats && v.hiddenCats.size
