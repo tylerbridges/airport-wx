@@ -394,10 +394,14 @@ function decorateSheet(sheet, a) {
       const overlaps = !!sm && sm.level >= 2 && window.AWXOutlook?.overlaps({ start: sm.start, end: sm.end }, line.at, line.until);
       const inRange = a.hours?.some((hr) => Date.parse(hr.t) <= line.at && line.at < Date.parse(hr.t) + HOUR);
       const context = overlaps ? (line.role === "dep" ? "Your departure overlaps the highest-risk window here." : line.role === "arr" ? "Your arrival overlaps the highest-risk window here." : "Your connection overlaps the highest-risk window here.")
-        : !inRange ? (line.at < now ? "Forecast coverage for this scheduled time has expired. Check your airline for flight updates." : "Airport forecast not available for your scheduled travel time yet.") : null;
+        : !inRange ? (line.at < now ? "Forecast coverage for this scheduled time has expired. Check your airline for flight updates."
+          : r.status === "early" ? ((m) => (m ? "Forecast arrives about a day ahead — check back after " + m[1] + "." : null))(/check back after (.+?)\.?$/.exec(r.top || "")) // the label already says "too early to tell"
+          : "Airport forecast not available for this time yet.") : null;
+      // the "Your flight" label already says whose it is: "Thu 5:18 PM departure to SFO: too early to tell"
+      const text = line.text.replace(/^Your scheduled connection here/, "Connection here").replace(/^Your scheduled /, "").replace(/^./, (c) => c.toUpperCase());
       rows.push(h("button", { type: "button", class: "tfrow " + r.cls, "aria-label": `Your flight. ${line.text}. Open the trip`, onclick: () => openTrip(trip.id) },
         h("span", { class: "tfic" }, svg(PLANE, "tfi", line.role === "arr" ? 135 : line.role === "conn" ? 90 : 45)),
-        h("span", { class: "tft" }, h("span", { class: "tfl" }, "Your flight"), line.text, context ? h("span", { class: "tfcontext" }, context) : null)));
+        h("span", { class: "tft" }, h("span", { class: "tfl" }, "Your flight"), text, context ? h("span", { class: "tfcontext" }, context) : null)));
       marks.push({ at: line.at, what: line.role === "dep" ? "departure" : line.role === "arr" ? "arrival" : "connection" });
     }
   }
