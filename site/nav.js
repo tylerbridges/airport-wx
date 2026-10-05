@@ -77,6 +77,7 @@ function buildBar() {
 
 /** Switch tab through the hash (adds a history entry, so Back returns to the previous tab). */
 function go(id) {
+  setCompact(false);
   if (id === cur) { panelFor(id).scrollTo({ top: 0, behavior: reducedMotion() ? "auto" : "smooth" }); return; }
   // Avoid native anchor scrolling to the Airports page's existing #trips section.
   if (tabFromHash(location.hash) !== id || !location.hash) history.pushState(null, "", "#" + id);
@@ -100,7 +101,37 @@ function show(id) {
   if (id === "trips") renderTrips();
   if (id === "map") renderMap();
   if (prev) panelFor(id).scrollTop = scrollBy[id] || 0;
+  resetChromeScroll();
   if (id === "airports") requestAnimationFrame(() => app()?.placeLenses?.());
+}
+
+// Ignore scroll anchoring caused by the header resize, so it cannot flip the bars back.
+let chromeLast = 0, chromeAcc = 0, chromeQuiet = 0, chromeFrame = false;
+function setCompact(small) {
+  if (document.body.classList.contains("awx-compact") === small) return;
+  document.body.classList.toggle("awx-compact", small);
+  chromeAcc = 0;
+  chromeQuiet = performance.now() + 380;
+}
+function resetChromeScroll() {
+  chromeLast = panelFor(cur)?.scrollTop || 0;
+  chromeAcc = 0;
+  setCompact(false);
+}
+function chromeScroll(e) {
+  if (e.currentTarget !== panelFor(cur) || chromeFrame) return;
+  chromeFrame = true;
+  requestAnimationFrame(() => {
+    chromeFrame = false;
+    const y = panelFor(cur).scrollTop, d = y - chromeLast;
+    chromeLast = y;
+    if (performance.now() < chromeQuiet || nav.classList.contains("hide")) return;
+    if (y < 60) { chromeAcc = 0; setCompact(false); return; }
+    if (!d) return;
+    chromeAcc = (chromeAcc > 0) === (d > 0) ? chromeAcc + d : d;
+    if (chromeAcc > 24) setCompact(true);
+    else if (chromeAcc < -12) setCompact(false);
+  });
 }
 
 // ---------- Trips / Map ----------
@@ -279,6 +310,7 @@ function init() {
   document.body.classList.add("awx-nav-on");
   buildPanels();
   buildBar();
+  for (const t of TABS) panelFor(t.id).addEventListener("scroll", chromeScroll, { passive: true });
   buildMenu();
   initSettings({ openSearch, onToggle: () => syncBar() });
   const sw = $("sheetWrap");

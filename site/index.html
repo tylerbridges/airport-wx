@@ -625,7 +625,7 @@ html.lock .awx-panel, html.awx-sheet-lock .awx-panel { overflow-y: hidden; }
 .awx-nav {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 9; pointer-events: none;
   padding: 0 calc(env(safe-area-inset-right) + 14px) calc(max(env(safe-area-inset-bottom), 12px) + 4px) calc(env(safe-area-inset-left) + 14px);
-  transition: transform .32s cubic-bezier(.2, .8, .2, 1), opacity .2s ease;
+  transition: none;
 }
 .awx-nav::before {
   content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: calc(100% + 24px); pointer-events: none;
@@ -644,6 +644,28 @@ html.lock .awx-panel, html.awx-sheet-lock .awx-panel { overflow-y: hidden; }
 .awx-tabbar [role="tab"]:focus-visible, .awx-searchbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
 .awx-searchbtn { position: relative; flex: none; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; color: var(--text); }
 .awx-searchbtn svg { width: 26px; height: 26px; }
+/* Match the weather app's compact chrome and tactile button feedback. */
+.awx-navin { width: 100%; transition: max-width .28s cubic-bezier(.2,.8,.2,1); }
+.awx-tabbar { height: 52px; padding: 4px; border-radius: 26px; transition: height .28s cubic-bezier(.2,.8,.2,1), border-radius .28s ease; }
+.awx-tabbar [role="tab"] { gap: 0; border-radius: 22px; font-size: 10px; transition: transform .12s ease, background .2s ease, color .2s ease, font-size .28s ease; }
+.awx-tabbar [role="tab"] svg { width: 21px; height: 21px; transition: width .28s ease, height .28s ease, opacity .18s ease; }
+.awx-searchbtn { width: 52px; height: 52px; transition: width .28s ease, height .28s ease, transform .12s ease; }
+.awx-head { transition: margin-bottom .28s ease; }
+.awx-head h1 { transition: font-size .28s cubic-bezier(.2,.8,.2,1); }
+.awx-round { transition: transform .12s ease; }
+.awx-round svg { transition: width .28s ease, height .28s ease; }
+.awx-round:active, .awx-searchbtn:active, .awx-tabbar [role="tab"]:active { transform: scale(.94); }
+.awx-compact .awx-navin { max-width: 340px; }
+.awx-compact .awx-tabbar { height: 44px; padding: 0 3px; border-radius: 22px; }
+.awx-compact .awx-tabbar [role="tab"] { font-size: 12px; }
+.awx-compact .awx-tabbar [role="tab"] svg { width: 0; height: 0; opacity: 0; }
+.awx-compact .awx-searchbtn { width: 44px; height: 44px; }
+.awx-compact .awx-head { margin-bottom: 8px; }
+.awx-compact .awx-head h1 { font-size: 28px; }
+.awx-compact .awx-round svg { width: 18px; height: 18px; }
+@media (prefers-reduced-motion: reduce) {
+  .awx-navin, .awx-tabbar, .awx-head, .awx-head h1, .awx-round svg, .awx-searchbtn, .awx-tabbar [role="tab"], .awx-tabbar [role="tab"] svg { transition: none !important; }
+}
 /* Trips / Map empty states */
 .awx-empty { text-align: center; padding: 40px 8px 16px; }
 .awx-empty-ico { width: 76px; height: 76px; margin: 0 auto 16px; border-radius: 24px; display: grid; place-items: center; background: var(--card); color: var(--accent); }
@@ -801,11 +823,11 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="cats.js?v=3"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=4"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
-<script src="app.js?v=52" defer></script>
+<script src="app.js?v=53" defer></script>
 <script type="module" src="searched.js?v=7"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=11"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="trips.js?v=17"></script><!-- trips hook -->
-<script type="module" src="nav.js?v=16"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
+<script type="module" src="nav.js?v=17"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
 <script type="module" src="movement.js?v=4"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
 <script type="module" src="brief.js?v=5"></script><!-- brief hook: morning brief + airport "Today" card -->
 <script type="module" src="terminals.js?v=3"></script><!-- terminals hook: terminal map + lounges cards in the airport sheet -->
