@@ -39,8 +39,8 @@ class HttpError extends Error {
   }
 }
 
-/** GET url -> {status, text}; throws HttpError (with .status) on non-2xx, Error on timeout. */
-async function http(url, headers = {}) {
+/** One GET url -> {status, text}; throws HttpError (with .status) on non-2xx, Error on timeout. */
+async function httpOnce(url, headers = {}) {
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
   try {
@@ -53,6 +53,21 @@ async function http(url, headers = {}) {
     throw e;
   } finally {
     clearTimeout(timer);
+  }
+}
+// Transient failures (timeout, network error, HTTP 429/5xx) get two more tries with a short backoff, so a
+// single slow aviationweather.gov response doesn't mark a whole source unavailable. 4xx fails at once.
+const RETRY_DELAYS_MS = [2_000, 5_000];
+export const isTransient = (e) => e instanceof HttpError ? e.status === 429 || e.status >= 500 : true;
+/** GET url -> {status, text}, retrying transient failures; throws the last error. */
+async function http(url, headers = {}) {
+  for (let i = 0; ; i++) {
+    try {
+      return await httpOnce(url, headers);
+    } catch (e) {
+      if (i >= RETRY_DELAYS_MS.length || !isTransient(e)) throw e;
+      await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[i]));
+    }
   }
 }
 const parseJson = (t) => (t.trim() ? JSON.parse(t) : []);
