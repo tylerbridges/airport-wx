@@ -871,6 +871,9 @@ const CSS = `
 .tlabels span.mid{transform:translateX(-50%);text-align:center}
 .tlabels b{display:block;color:var(--text);font-size:12.5px;font-weight:700}
 .twrap{z-index:11}
+.twrap .sheet{top:0;bottom:0;max-height:none;border-radius:0;padding-top:calc(env(safe-area-inset-top) + 8px)}
+.twrap .two{grid-template-columns:repeat(2,minmax(0,1fr))}
+.twrap .two .box h4{flex-wrap:wrap}
 .th2{margin:0;font-size:28px;font-weight:800;letter-spacing:-.02em}
 .tstat .tbx{font-size:15px}
 .tbx{font-size:14px;margin-top:4px}

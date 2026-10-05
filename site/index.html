@@ -631,7 +631,7 @@ html.lock .awx-panel, html.awx-sheet-lock .awx-panel { overflow-y: hidden; }
   content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: calc(100% + 24px); pointer-events: none;
   background: linear-gradient(to top, color-mix(in srgb, var(--bg) 42%, transparent), transparent);
 }
-.awx-nav.hide { transform: translateY(calc(100% + 30px)); opacity: 0; }
+.awx-nav.hide { visibility: hidden; }
 .awx-navin { position: relative; max-width: 560px; margin: 0 auto; display: flex; gap: 10px; align-items: center; pointer-events: auto; }
 .awx-tabbar { position: relative; flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; height: 64px; padding: 5px; border-radius: 32px; }
 .awx-tabbar [role="tab"] {
@@ -821,13 +821,13 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="offline.js?v=3"></script>
 <script src="outlook.js?v=9"></script>
 <script src="cats.js?v=3"></script><!-- build2b: disruption categories -->
-<script src="sheet.js?v=4"></script><!-- build2b: shared sheet drag / back / scroll lock -->
+<script src="sheet.js?v=5"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
-<script src="app.js?v=55" defer></script>
+<script src="app.js?v=56" defer></script>
 <script type="module" src="searched.js?v=7"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=11"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
-<script type="module" src="trips.js?v=18"></script><!-- trips hook -->
-<script type="module" src="nav.js?v=18"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
+<script type="module" src="trips.js?v=19"></script><!-- trips hook -->
+<script type="module" src="nav.js?v=19"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
 <script type="module" src="movement.js?v=4"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
 <script type="module" src="brief.js?v=5"></script><!-- brief hook: morning brief + airport "Today" card -->
 <script type="module" src="terminals.js?v=3"></script><!-- terminals hook: terminal map + lounges cards in the airport sheet -->

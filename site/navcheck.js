@@ -71,6 +71,25 @@ export async function navChecks(add, url) {
     add(!jumps.length && restored ? "pass" : "fail", "Tabs share a fixed header and content origin; scroll positions are restored",
       jumps.length ? `vertical jumps: ${jumps.join(", ")}` : `header/content/bar unchanged; Airports scroll ${saved} px ${restored ? "restored" : "lost"}`);
 
+    // Every trip sheet uses the full viewport and the shared fixed bar visibility rule.
+    if (await until(() => w.AWXTrips, 3000)) {
+      const nav = d.querySelector(".awx-nav"), before = nav.getBoundingClientRect();
+      w.AWXTrips.openAdd();
+      await until(() => d.getElementById("tripSheet").getBoundingClientRect().top < 1, 1500);
+      const trip = d.getElementById("tripSheet"), r = trip.getBoundingClientRect();
+      const hidden = w.getComputedStyle(nav).visibility === "hidden";
+      add(Math.abs(r.top) < 1 && Math.abs(r.bottom - w.innerHeight) < 1 && hidden && d.body.style.position !== "fixed" ? "pass" : "fail",
+        "Trip sheet fills the viewport; bar hides without repositioning the page", `sheet ${Math.round(r.top)}–${Math.round(r.bottom)}, viewport ${w.innerHeight}; hidden=${hidden}`);
+      trip.querySelector(".close").click();
+      const samples = [];
+      for (let i = 0; i < 12; i++) {
+        const rr = nav.getBoundingClientRect(), css = w.getComputedStyle(nav);
+        samples.push(Math.abs(rr.bottom - before.bottom) < 1 && css.visibility === "visible" && css.transform === "none" && css.transitionDuration === "0s");
+        await sleep(20);
+      }
+      add(samples.every(Boolean) ? "pass" : "fail", "Trip dismissal keeps the bottom bar anchored immediately", "No translated, faded or moving bar during dismissal");
+    }
+
     // map hook: canvas map (site/map.js); deeper checks in site/map/check.js
     w.AWXNav.go("map");
     const mapReady = await until(() => d.querySelectorAll(".map-airport-row").length > 0 && w.AWXMap && w.AWXMap._state().dots > 0, 5000);

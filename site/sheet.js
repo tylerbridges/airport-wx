@@ -53,11 +53,15 @@
     var b = document.body;
     lock.y = root.scrollY || 0;
     lock.style = b.getAttribute("style");
-    b.style.position = "fixed";
-    b.style.top = -lock.y + "px";
-    b.style.left = "0";
-    b.style.right = "0";
-    b.style.width = "100%";
+    // The app's panels own scrolling; fixing its body makes Safari reposition the viewport.
+    lock.fixed = !b.classList.contains("awx-nav-on");
+    if (lock.fixed) {
+      b.style.position = "fixed";
+      b.style.top = -lock.y + "px";
+      b.style.left = "0";
+      b.style.right = "0";
+      b.style.width = "100%";
+    }
     document.documentElement.classList.add("awx-sheet-lock");
     document.addEventListener("touchmove", containInput, { capture: true, passive: false });
     document.addEventListener("wheel", containInput, { capture: true, passive: false });
@@ -65,11 +69,11 @@
   function unlockScroll() {
     if (!lock.n || --lock.n) return;
     var b = document.body;
-    if (lock.style == null) b.removeAttribute("style"); else b.setAttribute("style", lock.style);
+    if (lock.fixed) { if (lock.style == null) b.removeAttribute("style"); else b.setAttribute("style", lock.style); }
     document.documentElement.classList.remove("awx-sheet-lock");
     document.removeEventListener("touchmove", containInput, true);
     document.removeEventListener("wheel", containInput, true);
-    root.scrollTo(0, lock.y);
+    if (lock.fixed) root.scrollTo(0, lock.y);
   }
   function depth() {
     var s = history.state;
@@ -224,6 +228,7 @@
         clearInline();
         stack.push(entry);
         lockScroll();
+        document.dispatchEvent(new Event("awx:sheet-change"));
         if (useHistory && !transferring) history.pushState(Object.assign({}, history.state || {}, { awxSheets: stack.length }), "");
       },
       closed: function () {
@@ -233,6 +238,7 @@
         entry.open = false;
         if (i >= 0) stack.splice(i, 1);
         unlockScroll();
+        document.dispatchEvent(new Event("awx:sheet-change"));
         drag = null; hp = null; tp = null;
         var b = bd();
         if (b) { b.style.transition = ""; b.style.opacity = ""; }

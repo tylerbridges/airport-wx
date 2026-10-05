@@ -4,7 +4,7 @@
 // Writes "CHECK PASS" or "CHECK FAIL n" plus one line per row into <pre id="result"> so headless
 // Chrome (--dump-dom) and the uptime workflow can read it. Warnings don't fail the check.
 import { loadAirports, rank, decodeList } from "./search.js";
-import { navChecks } from "./navcheck.js?v=4"; // nav hook
+import { navChecks } from "./navcheck.js?v=5"; // nav hook
 import { tripChecks } from "./check-trips.js?v=5"; // trips hook
 import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=6"; // scenarios hook; More details page helpers
 

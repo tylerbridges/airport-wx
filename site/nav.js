@@ -296,7 +296,8 @@ const searchOpen = () => !!srch && !srch.hidden;
 function syncBar() {
   const sw = $("sheetWrap");
   const pw = $("panelWrap"); // build2b hook: the national list sheet (app.js)
-  const hide = (sw && !sw.hidden) || (pw && !pw.hidden) || settingsOpen() || searchOpen();
+  const hide = window.AWXSheet ? AWXSheet.openCount() > 0
+    : (sw && !sw.hidden) || (pw && !pw.hidden) || settingsOpen() || searchOpen();
   nav.classList.toggle("hide", !!hide);
   if (hide) nav.setAttribute("inert", ""); else nav.removeAttribute("inert");
 }
@@ -313,6 +314,7 @@ function init() {
   for (const t of TABS) panelFor(t.id).addEventListener("scroll", chromeScroll, { passive: true });
   buildMenu();
   initSettings({ openSearch, onToggle: () => syncBar() });
+  document.addEventListener("awx:sheet-change", syncBar);
   const sw = $("sheetWrap");
   if (sw) new MutationObserver(syncBar).observe(sw, { attributes: true, attributeFilter: ["hidden"] });
   if ($("panelWrap")) new MutationObserver(syncBar).observe($("panelWrap"), { attributes: true, attributeFilter: ["hidden"] }); // build2b hook
