@@ -1282,14 +1282,7 @@
      "re": "Ground stop started \\(storms\\).*Severe Thunderstorm Warning issued"
     },
     {
-     "t": "brief",
-     "favs": [
-      "EWR",
-      "JFK",
-      "BOS",
-      "ORD"
-     ],
-     "re": "[34] airports need attention EWR: Ground stop until [^—]+— storms JFK: Delay program until [^—]+— storms BOS: .*U\\.S\\.: 2 ground stops, 1 delay program"
+     "t": "noAirportBrief"
     }
    ]
   },
@@ -1387,12 +1380,7 @@
      "re": "Ground stop lifted.*Ground stop started \\(storms\\).*\\+1 earlier$"
     },
     {
-     "t": "brief",
-     "favs": [
-      "EWR",
-      "ORD"
-     ],
-     "re": "\\d airports? needs? attention EWR: Delays happening now — ground stop lifted \\d"
+     "t": "noAirportBrief"
     }
    ]
   },

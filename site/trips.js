@@ -11,7 +11,7 @@
 // Calendar trips come from data/trips.json (airports and times only); concerns from ./trip-risk.js.
 import { tripStatus, flightLine, rolesAt, clockText, whenText, rangeText, LEVEL_LABELS, STATUS, TRIP_KEEP_AFTER_ARRIVAL_MS } from "./trip-risk.js?v=7";
 import { mountSearch, loadAirports, airportsLoaded, placeLine } from "./search.js";
-import { calendarDraft, nextScheduled, todayScheduled, MAX_CALENDAR_BYTES, flightKey } from "./trip-import.js?v=3";
+import { calendarDraft, nextScheduled, todayScheduled, itineraryImpacts, MAX_CALENDAR_BYTES, flightKey } from "./trip-import.js?v=4";
 
 import { CALENDAR_KEY, loadConnection, saveConnection, fetchCalendar } from "./calendar-link.js?v=3";
 
@@ -278,6 +278,8 @@ function focusedTrip(focus) {
   card.append(h("div", { class: "tnext-action" }, r.level >= 2 || r.quality ? "Review trip outlook ›" : "View trip ›"));
   return card;
 }
+const todayFlight = () => todayScheduled(allTrips(), nowMs(), tzFor);
+function openTodayBrief() { const focus = todayFlight(); if (focus) openTrip(focus.trip.id); }
 function homeFlight(focus) {
   const { trip, leg } = focus;
   const r = resultOf(trip);
@@ -285,8 +287,10 @@ function homeFlight(focus) {
   return h("button", { type: "button", class: "card thome", "data-trip": trip.id,
     "aria-label": `Today's scheduled flight ${leg.from} to ${leg.to} at ${time}. ${r.label}. ${r.top}. View trip details`,
     onclick: () => openTrip(trip.id) },
-    h("span", { class: "thome-heading" }, "Today's flight", h("span", { "aria-hidden": "true" }, "›")),
-    h("span", { class: "thome-main" }, h("b", {}, `${leg.from} → ${leg.to}`), h("span", {}, time), pillEl(r, true)),
+    h("span", { class: "thome-heading" }, "Today's flight brief", h("span", { "aria-hidden": "true" }, "›")),
+    h("span", { class: "thome-main" }, h("b", {}, [trip.legs[0].from, ...trip.legs.map(l => l.to)].join(" → ")), h("span", {}, time), pillEl(r, true)),
+    h("span", { class: "thome-summary" }, r.top),
+    trip.source !== "manual" && calStatus().warn ? h("span", { class: "thome-note warn" }, "Calendar update unavailable · saved times may be outdated") : null,
     h("span", { class: "thome-note" }, "Scheduled · actual flight status unconfirmed"));
 }
 function tripActions() {
@@ -307,7 +311,7 @@ function render(container) {
   if (!box) { refreshOpen(); return; }
   const trips = allTrips();
   if (!trips.length) { box.replaceChildren(); renderFoot(); refreshOpen(); document.dispatchEvent(new CustomEvent("awx:trips")); const a = statusAirports().find((a) => a.iata === app()?.state.openIata); if (a) decorateSheet(document.getElementById("sheet"), a); return; }
-  const focus = todayScheduled(trips, nowMs(), tzFor);
+  const focus = todayFlight();
   box.replaceChildren(...(focus ? [homeFlight(focus)] : []));
   renderFoot();
   refreshOpen();
@@ -517,7 +521,7 @@ function levelBox(title, sub, at, note) {
 
 function tripView(trip) {
   const r = resultOf(trip);
-  const first = trip.legs[0], last = trip.legs[trip.legs.length - 1];
+  const first = trip.legs[0];
   const tzF = tzFor(first.from, trip);
   const legsEls = r.legs.map((l) => {
     const tf = tzFor(l.from, trip), tt = tzFor(l.to, trip);
@@ -531,32 +535,23 @@ function tripView(trip) {
         `Scheduled connection at ${l.conn.iata} · ${l.conn.minutes} min`, l.conn.tight ? h("span", { class: "badge l2" }, "Tight") : null) : null,
     );
   });
-  const sideBox = (title, level, side) => {
-    const c = r.concerns.find((x) => x.side === side && x.level >= 1);
-    return h("div", { class: "box" }, h("h4", {}, title, h("span", { class: "pill sm " + (level == null ? "off" : lv(level)) }, level == null ? "Unknown" : LEVEL_LABELS[level])),
-      h("div", { class: "tbx" }, c ? c.text : level == null ? r.quality || "Data incomplete" : "No issues expected"));
-  };
-  const items = r.concerns.length
-    ? r.concerns.map((c) => h("div", { class: "item" + (c.level ? "" : " info") },
-      c.level ? h("span", { class: "badge " + lv(c.level) }, LEVEL_LABELS[c.level]) : null,
-      h("div", { class: c.level ? "" : "muted", style: c.level ? "margin-top:4px" : "" }, c.text)))
-    : [h("div", { class: "muted", style: "font-size:14px" }, r.quality || ["early", "unknown", "scheduled", "past"].includes(r.status) ? r.top : "Nothing expected right now. We check FAA programs and the weather at every airport on your trip.")];
+  const impacts = itineraryImpacts(trip, r);
+  const impactSections = impacts.map(g => h("div", { class: "timpact", "data-impact-iata": g.iata },
+    h("h4", {}, `${g.role} · ${g.iata}`),
+    ...g.notes.map(text => h("p", {}, text)),
+    h("button", { type: "button", class: "timpact-link", onclick: () => openAirport(g.iata) }, `View ${g.iata} airport details ›`)));
   const codes = [...new Set(trip.legs.flatMap((l) => [l.from, l.to]))];
   const manual = trip.source === "manual";
   let delArmed = false;
   return [
     head(h("div", { id: "tripTitle" }, routeEl(trip, true))),
+    todayFlight()?.trip.id === trip.id ? h("div", { class: "tnext-label" }, "Today's flight brief") : null,
     h("div", { class: "where sh-where" }, dateLine(Date.parse(first.dep), tzF)),
     h("div", { class: "box tstat" }, pillEl(r), h("div", { class: "tbx", style: "margin-top:8px;font-weight:600" }, r.top),
       h("div", { class: "muted small", style: "margin-top:8px" }, r.scheduleNote), r.quality && r.concerns.some((c) => c.level > 0) ? h("div", { class: "muted small" }, r.quality) : null),
-    sec(trip.legs.length > 1 ? "Flights" : "Flight", ...legsEls,
+    impacts.length ? sec("Along your itinerary", ...impactSections) : null,
+    sec(trip.legs.length > 1 ? "Scheduled flights" : "Scheduled flight", ...legsEls,
       trip.legs.length > 1 ? h("div", { class: "muted small", style: "margin-top:8px" }, "Connection time is based on the schedule. Actual arrival, gates and time to reach the next flight are not available.") : null),
-    r.status === "past" ? null : sec("Departure vs. arrival", h("div", { class: "two" },
-      sideBox(`At departure · ${first.from}`, r.sides.dep, "dep"),
-      sideBox(`At arrival · ${last.to}`, r.sides.arr, "arr")),
-      trip.legs.length > 1 ? h("div", { style: "margin-top:10px" }, sideBox("Connection", r.sides.conn, "conn")) : null,
-      h("div", { class: "muted small", style: "margin-top:8px" }, "A ground delay or ground stop at your destination holds you at the departure airport, so it shows under departure.")),
-    sec("What could affect this trip", ...items),
     sec("Airports", h("div", { class: "tapts" }, codes.map((c) => h("button", {
       type: "button", class: "tapt", onclick: () => openAirport(c),
     }, h("b", {}, c), h("span", { class: "muted small" }, (byIata(c) && byIata(c).city) || ""))))),
@@ -858,6 +853,12 @@ const CSS = `
 .thome-heading{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px}
 .thome-main{display:flex;flex-wrap:wrap;align-items:center;gap:5px 10px;font-size:14px}
 .thome-main b{font-size:18px;letter-spacing:-.02em}
+.thome-summary{display:block;font-size:13px;line-height:1.4;margin-top:8px}
+.timpact{padding:12px 0;border-bottom:1px solid var(--line)}
+.timpact:last-child{border-bottom:0}
+.timpact h4{font-size:14px;margin:0 0 6px}
+.timpact p{font-size:14px;margin:6px 0;line-height:1.45}
+.timpact-link{min-height:44px;font-size:13px;font-weight:600;color:var(--brand)}
 .thome-note{display:block;font-size:11px;color:var(--muted);margin-top:5px}
 .thome:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
 .trips-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 4px 8px}
@@ -960,6 +961,7 @@ function init() {
   }, true);
   window.addEventListener("storage", (e) => { if (e.key === CALENDAR_KEY) { S.connection = T.name ? null : loadConnection(); S.connectSeq++; S.connectionAt = 0; S.connectionFailed = false; render(); } if (e.key === KEY) { S.manual = loadManual(); render(); } });
   window.AWXTrips = {
+    hasTodayFlight: () => !!todayFlight(), openTodayBrief,
     render, decorateSheet, liveIds, openTrip, openEdit, openSettings: openTripSettings,
     // site/settings.js (Settings → Trips & flight calendar) and site/nav.js (Trips tab)
     openAdd: () => openEdit(null), openImport, openConnect,

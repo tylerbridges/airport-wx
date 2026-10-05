@@ -6,7 +6,7 @@
 import { loadAirports, rank, decodeList } from "./search.js";
 import { navChecks } from "./navcheck.js?v=5"; // nav hook
 import { tripChecks } from "./check-trips.js?v=6"; // trips hook
-import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=7"; // scenarios hook; More details page helpers
+import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=8"; // scenarios hook; More details page helpers
 
 const P = new URLSearchParams(location.search);
 const MOCK = P.get("mock") === "1";
@@ -260,25 +260,28 @@ async function withPage(url, fn, size) {
   }
 }
 const frameSleep = (w, ms) => new Promise((r) => w.setTimeout(r, ms));
-// Brief uses the same airport cards and one accessible dialog, capped at three airports.
-async function briefViewChecks(add, w, doc) {
-  for (let n = 0; n < 30 && !w.AWXBrief; n++) await sleep(100);
-  const B = w.AWXBrief;
-  if (!B) { add("fail", "Brief module loads", "unavailable"); return; }
-  B.open();
-  const trigger = doc.querySelector("#brief .bf-open");
-  trigger?.focus(); trigger?.click();
-  const sheet = doc.getElementById("briefSheet");
-  const cards = [...(sheet?.querySelectorAll(".card") || [])];
-  const expected = B.model().airports;
-  add(cards.length === expected.length && cards.length > 0 && cards.length <= 3 ? "pass" : "fail", "Brief opens up to three relevant airport cards", cards.map(c => c.dataset.iata).join(", "));
-  add(cards.every((c, i) => c.dataset.iata === expected[i] && c.querySelector(".reason") && c.querySelector(".tl")) && !/\bnull\b/.test(sheet?.textContent || "") ? "pass" : "fail", "Brief reuses airport outlooks and timelines");
-  add(sheet?.getAttribute("role") === "dialog" && sheet.getAttribute("aria-modal") === "true" && sheet.contains(doc.activeElement) ? "pass" : "fail", "Brief dialog has focus and accessible labeling");
-  sheet?.dispatchEvent(new w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-  add(doc.getElementById("briefWrap")?.hidden && doc.activeElement === trigger ? "pass" : "fail", "Escape closes brief and restores focus");
-  trigger?.click();
-  doc.querySelector("#briefWrap .backdrop")?.click();
-  add(doc.getElementById("briefWrap")?.hidden && doc.activeElement === trigger ? "pass" : "fail", "Backdrop closes brief and restores focus");
+// One compact day-of entry opens the scheduled trip and only relevant airport concerns.
+async function flightBriefChecks(add, w, doc) {
+  for (let n = 0; n < 30 && !w.AWXTrips; n++) await sleep(100);
+  const T = w.AWXTrips;
+  if (!T) { add("fail", "Flight brief module loads", "unavailable"); return; }
+  await T.ready();
+  w.AWXNav?.go("airports");
+  const trigger = doc.querySelector(".thome");
+  add(!doc.getElementById("brief") && !doc.getElementById("briefWrap") ? "pass" : "fail", "No unrelated standalone airport brief");
+  add(!!trigger === T.hasTodayFlight() ? "pass" : "fail", "Home brief appears only for departure-day flights");
+  if (!trigger) return;
+  trigger.focus(); trigger.click();
+  const sheet = doc.getElementById("tripSheet");
+  const trip = T._state().trips.find(t => sheet?.textContent.includes(t.legs[0].from) && sheet?.textContent.includes(t.legs.at(-1).to));
+  const route = new Set(trip?.legs.flatMap(l => [l.from, l.to]) || []);
+  const groups = [...sheet.querySelectorAll(".timpact")];
+  add(sheet.textContent.includes("Today's flight brief") && !!sheet.querySelector(".tstat") && /scheduled|schedule/i.test(sheet.querySelector(".tstat")?.textContent || "") ? "pass" : "fail", "Brief presents overall outlook with schedule qualification");
+  add(groups.every(g => route.has(g.dataset.impactIata) && !!g.querySelector("p") && !!g.querySelector("button")) && (!trip || !trip.concerns.length || !!groups.length) ? "pass" : "fail", "Airport concerns stay grouped within the itinerary");
+  add(sheet.getAttribute("role") === "dialog" && sheet.getAttribute("aria-modal") === "true" && sheet.contains(doc.activeElement) ? "pass" : "fail", "Flight brief opens an accessible dialog");
+  sheet.dispatchEvent(new w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  await frameSleep(w, 450);
+  add(doc.getElementById("tripWrap")?.hidden && doc.activeElement === trigger ? "pass" : "fail", "Escape closes flight brief and restores focus");
 }
 
 // Aviation codes that must not reach Traveler mode outside Pilot details: flight categories, coded weather groups,
@@ -812,7 +815,7 @@ async function runMock() {
     try { await (await import("./brief.js")).checkRow(add, { url: `./data/scenarios/${sc.name}/changes.json`, shift: (d) => shift(d, delta), mock: true, data }); } catch (e) { add("fail", "Change log", "check failed: " + (e.message || e)); } // brief hook
     if (RENDER) {
       const expect = (sc.assert || []).filter((x) => x.t === "rendered");
-      const r = await renderPage(`./index.html?test=${sc.name}${(sc.group === "trips" || sc.name === "hurricane-closure") ? "#trips" : ""}`, expect, async (w, doc) => { await pageAsserts(add, w, doc, sc.assert); await consistencyChecks(add, w, doc); if (["all-clear", "thunderstorm-ground-stop"].includes(sc.name)) await briefViewChecks(add, w, doc); }); // scenarios hook; one level, words = colours, no null/% everywhere
+      const r = await renderPage(`./index.html?test=${sc.name}${(sc.group === "trips" || sc.name === "hurricane-closure") ? "#trips" : ""}`, expect, async (w, doc) => { await pageAsserts(add, w, doc, sc.assert); await consistencyChecks(add, w, doc); if (["all-clear", "trip-all-clear", "trip-misconnect", "trip-weather-concerns"].includes(sc.name)) await flightBriefChecks(add, w, doc); }); // scenarios hook; one level, words = colours, no null/% everywhere
       add(r.ready && !r.errors.length ? "pass" : "fail", `Render ?test=${sc.name} at 390 px`, !r.ready ? "cards never appeared" : r.errors.length ? r.errors.join(" | ") : `${r.cards} cards, no errors`);
       for (const { x, ok } of r.results) add(ok ? "pass" : "fail", `Expect on page: ${x.selector ? `element ${x.selector}` : `text "${x.text}"`}`, ok ? "" : "not found");
     }

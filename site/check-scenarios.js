@@ -26,7 +26,7 @@
 //   {t:"header", re}       the "Updated …" / "Live updates unavailable …" line
 //   {t:"banner", re}       the banner area
 //   {t:"noPercent"}        Traveler mode: no "%" in delay-chance text (cards, every sheet, trips)
-//   {t:"brief", re, favs?} the morning brief, opened as the menu does (AWXBrief.open), with these starred airports (brief hook)
+//   {t:"noAirportBrief"} no standalone starred-airport brief is rendered
 //   {t:"today", iata, re}  the airport menu's Today’s changes popup (brief hook)
 //   {t:"details", iata, cards?: ["why","pilot","plan"], re?}  the sheet's "More details ›" row opens the full-height
 //        More details page with those cards (default all three); Traveler text outside Pilot details has no "%"
@@ -55,7 +55,7 @@ export async function openDetailsPage(w, doc, iata, page = "technical") {
 }
 
 const DATA = new Set(["words", "badge", "noFaa", "opsplan", "atcscc", "alert", "spc", "sigmet", "model", "movement", "airlineAlert", "tripConcern", "hourLevel", "hourReason", "cascade", "noCascade", "change", "notice", "noticeSource"]); // brief hook: change; restrictions hook: notice, noticeSource
-const PAGE = new Set(["card", "sheet", "airportDetail", "national", "header", "banner", "noPercent", "brief", "today", "details"]); // airportDetail: selected secondary menu page
+const PAGE = new Set(["card", "sheet", "airportDetail", "national", "header", "banner", "noPercent", "noAirportBrief", "today", "details"]); // airportDetail: selected secondary menu page
 export const isPageAssert = (x) => PAGE.has(x.t);
 
 async function getJson(url) {
@@ -338,15 +338,10 @@ export async function pageAsserts(add, w, doc, asserts) {
         got = e ? `says "${e.textContent.replace(/\s+/g, " ").trim().slice(0, 200)}"` : `no #${id}`;
         break;
       }
-      case "brief": { // brief hook: opened the way the menu does, whatever the time of day
-        const B = w.AWXBrief;
-        if (x.favs && A.setFavs) A.setFavs(x.favs); // test mode: not saved (site/testmode.js)
-        if (B) { B.open(); await later(w, 60); }
-        const e = doc.getElementById("brief");
-        const t = e && !e.hidden ? e.innerText.replace(/\s+/g, " ").trim() : "";
-        ok = !!t && re(x.re).test(t) && !/\d\s?%/.test(t);
-        label = `morning brief /${x.re}/`;
-        got = !B ? "site/brief.js didn't load" : t ? `brief says "${t.slice(0, 240)}"` : "no brief shown";
+      case "noAirportBrief": {
+        ok = !doc.getElementById("brief") && !doc.getElementById("briefWrap");
+        label = "No standalone airport brief";
+        got = ok ? "Flight context owns the brief" : "Standalone airport brief found";
         break;
       }
       case "today": { // brief hook

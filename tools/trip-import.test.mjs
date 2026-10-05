@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { calendarDraft, nextScheduled, todayScheduled, MAX_CALENDAR_BYTES } from "../site/trip-import.js";
+import { calendarDraft, nextScheduled, todayScheduled, itineraryImpacts, MAX_CALENDAR_BYTES } from "../site/trip-import.js";
 const NOW = Date.parse("2026-10-04T12:00:00Z");
 const airports = [{ iata: "MSP", tz: "America/Chicago", city: "Minneapolis" }, { iata: "ORD", tz: "America/Chicago", city: "Chicago" }, { iata: "SEA", tz: "America/Los_Angeles", city: "Seattle" }];
 const cal = (...events) => ["BEGIN:VCALENDAR", ...events.map(e => ["BEGIN:VEVENT", ...e, "END:VEVENT"].join("\n")), "END:VCALENDAR"].join("\n");
@@ -59,4 +59,21 @@ test("main-page flight is departure-day only, including local midnight and passe
   assert.equal(todayScheduled([later], Date.parse("2026-10-05T18:00:00Z")), null);
   assert.equal(todayScheduled([trip, later], Date.parse("2026-10-06T04:59:00Z")).future, false, "passed schedule remains on departure day without claiming arrival");
   assert.equal(todayScheduled([trip, later], Date.parse("2026-10-06T05:00:00Z")), null);
+});
+
+test("flight brief groups only itinerary concerns, retaining connection and missing coverage", () => {
+  const trip = { legs: [{ from: "MSP", to: "ORD" }, { from: "ORD", to: "SEA" }] };
+  const result = { concerns: [
+    { iata: "JFK", level: 4, text: "Unrelated ground stop" },
+    { iata: "ORD", level: 2, text: "Tight scheduled connection" },
+    { iata: "ORD", level: 3, text: "Storms at connection time" },
+    { iata: "ORD", level: 2, text: "Tight scheduled connection" },
+    { iata: "MSP", level: 0, text: "Observation unavailable" }
+  ], unknown: [{ iata: "SEA", what: "arrival" }, { iata: "SEA", what: "arrival" }, { iata: "JFK", what: "arrival" }] };
+  assert.deepEqual(itineraryImpacts(trip, result), [
+    { iata: "MSP", role: "Departure", level: 0, notes: ["Observation unavailable"] },
+    { iata: "ORD", role: "Connection", level: 3, notes: ["Tight scheduled connection", "Storms at connection time"] },
+    { iata: "SEA", role: "Arrival", level: 0, notes: ["Forecast unavailable for this scheduled arrival."] }
+  ]);
+  assert.deepEqual(itineraryImpacts(trip, { concerns: [], unknown: [] }), []);
 });

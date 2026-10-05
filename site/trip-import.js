@@ -48,3 +48,21 @@ export function todayScheduled(trips, now = Date.now(), zoneOf = (code, trip) =>
   const pick = future[0] || recent[0];
   return pick ? { ...pick, future: !!future.length } : null;
 }
+
+/** Group the trip model's concerns by itinerary airport; never infer an en-route flight path. */
+export function itineraryImpacts(trip, result) {
+  const route = [...new Set(trip.legs.flatMap(l => [l.from, l.to]))];
+  return route.map(iata => {
+    const notes = [...new Set((result.concerns || []).filter(c => c.iata === iata && c.text).map(c => c.text))];
+    for (const u of result.unknown || []) if (u.iata === iata) {
+      const text = `Forecast unavailable for this scheduled ${u.what}.`;
+      if (!notes.includes(text)) notes.push(text);
+    }
+    const concerns = (result.concerns || []).filter(c => c.iata === iata);
+    const roles = [];
+    if (trip.legs[0].from === iata) roles.push("Departure");
+    if (trip.legs.slice(0, -1).some(l => l.to === iata)) roles.push("Connection");
+    if (trip.legs[trip.legs.length - 1].to === iata) roles.push("Arrival");
+    return { iata, role: roles.join(" / "), level: Math.max(0, ...concerns.map(c => c.level || 0)), notes };
+  }).filter(g => g.notes.length);
+}

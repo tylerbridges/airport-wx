@@ -640,7 +640,7 @@
     if (md.iata) renderDetails(true);
     if (window.AWXExtra) window.AWXExtra.render(); // build2a hook: search + searched/starred non-major airports (site/searched.js)
     if (window.AWXTrips) window.AWXTrips.render(); // trips hook: "Your trips" (site/trips.js)
-    if (window.AWXBrief) safeCall(() => window.AWXBrief.render()); // brief hook: morning brief (site/brief.js)
+    if (window.AWXBrief) safeCall(() => window.AWXBrief.render()); // brief hook: refresh airport changes (site/brief.js)
     if (panel.kind === "national") renderNationalPanel();
     document.dispatchEvent(new CustomEvent("awx:render"));
   }
@@ -1043,7 +1043,7 @@
       const T = w._tl;
       if (!T || w.classList.contains("scrub")) continue;
       const cardEl = w.closest(".card");
-      if (cardEl && !w.closest(".sheet")) {
+      if (cardEl) {
         if (state.openIata || document.body.dataset.tab && document.body.dataset.tab !== "airports") continue;
         const r = cardEl.getBoundingClientRect();
         if (r.bottom < 0 || r.top > innerHeight) continue;
@@ -1251,8 +1251,8 @@
     return aviation() ? [window.AWXDelay ? safeCall(() => AWXDelay.delayLine(a)) : null] : [];
   }
 
-  function card(a, idx, count, options = {}) {
-    const open = options.onOpen || (() => openSheet(a.iata));
+  function card(a, idx, count) {
+    const open = () => openSheet(a.iata);
     const v = view(a);
     const sm = summary(a);
     const health = AWXOutlook.health(a, outlookOpts(a, v));
@@ -1264,7 +1264,7 @@
     const rsn = (rs) => shortList((rs || []).filter((r) => !(progs.length && PROG_RE.test(r))), a);
     const reason = rsn(later && sm.peakHour ? hourReasons(a, sm.peakHour, sm.level) : ((n) => hourReasons(a, n.x, sm.nowLevel, n.reasons))(nowHourOf(a, v, sm)))[0] || (progs.length ? programCause(v.now.reasons) : null)
       || (sm.level ? (sm.words ? "Busier than usual" : "Minor weather conditions") : sm.current?.headline || "Operating normally");
-    const mine = !options.overview && state.filter === "mine";
+    const mine = state.filter === "mine";
     const code = codeOf(a);
     const el = h("div", {
       class: "card", role: "button", tabindex: "0", "data-iata": a.iata, "data-level": String(sm.level),
@@ -1280,7 +1280,7 @@
         h("div", { class: "right" },
           staleTag(),
           unknown ? h("span", { class: "pill off" }, "Unknown") : pill(sm.level, false, later ? "Upcoming · " : ""),
-          options.overview ? null : h("button", {
+          h("button", {
             type: "button", class: "star", "aria-pressed": String(fav), "aria-label": (fav ? "Remove " : "Add ") + code + (fav ? " from" : " to") + " my airports",
             onclick: (e) => { e.stopPropagation(); toggleFav(a.iata); },
             onkeydown: (e) => e.stopPropagation(),
@@ -2725,7 +2725,6 @@
     state, openSheet, closeSheet, toggleFav, render, // build2a hook: used by site/searched.js
     // build2b: for site/searched.js, the settings UI and check.js
     openDetails, closeDetails, detailRow, popupFocus, refreshDetails: () => { if (md.iata) renderDetails(true); }, // Airport details pages
-    airportCard: (a, onOpen) => card(a, 0, 1, { overview: true, onOpen }),
     ensureCardTimeline, prefs: PREFS, codeOf, view, outlook, summary, hourLevel, slotText, refNow, whenLabel, dispTz, zoneAbbr, clock, hourLabel, daySlots, openNational, closePanel, placeLenses,
     timeline: (a) => timeline(a, {}), // a status.json-shaped airport (searched.js builds one from a shard entry)
     version: APP_V,
