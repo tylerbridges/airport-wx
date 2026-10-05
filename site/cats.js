@@ -167,7 +167,7 @@
       else if (c.level > lvl) lvl = c.level;
     });
     if (!dropped) return { level: hr.level, reasons: hr.reasons || [], dropped: 0 };
-    return { level: unknown ? hr.level : Math.min(hr.level, lvl), reasons: kept, dropped: dropped };
+    return { level: unknown || hr.level == null ? hr.level : Math.min(hr.level, lvl), reasons: kept, dropped: dropped }; // null = no forecast stays unknown
   }
 
   /**

@@ -35,8 +35,13 @@ export function lampUrl(cycle) {
 const LAMP_HEAD = /^\s*([A-Z][A-Z0-9]{3})\s+.*\bLAMP\b/i;
 const LAMP_DATE = /(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{2})(\d{2})\s*UTC/i;
 
-function lampInt(s) {
-  return /^\d{1,3}$/.test(s) ? Number(s) : null;
+// LAMP writes missing values as 9s filling the field ("99", "999"; runs such as "999999…" fill several cells).
+// Each numeric row also has a valid range, so a sentinel can never reach the risk rules (a 999-kt gust):
+// gusts 0–98 kt (99 = missing), ceiling category 1–8, visibility category 1–7, probabilities 0–100 (999 = missing).
+function lampInt(s, max = 100) {
+  if (!/^\d{1,3}$/.test(s) || /^9{3}$/.test(s)) return null;
+  const n = Number(s);
+  return n <= max ? n : null;
 }
 
 /**
@@ -103,12 +108,12 @@ export function parseLamp(text, want = null) {
         const one = !!(rows.LP1 || rows.CP1);
         hours.push({
           t: iso(t),
-          gust: wgs === "NG" ? 0 : lampInt(wgs),
+          gust: wgs === "NG" ? 0 : lampInt(wgs, 98),
           tstmProb: lampInt(cell(rows.LP1 ? "LP1" : "LP2", k)),
           convProb: lampInt(cell(rows.CP1 ? "CP1" : "CP2", k)),
           probHrs: one ? 1 : rows.LP2 || rows.CP2 ? 2 : null,
-          cig: lampInt(cell("CIG", k)),
-          vis: lampInt(cell("VIS", k)),
+          cig: ((v) => (v != null && v >= 1 ? v : null))(lampInt(cell("CIG", k), 8)),
+          vis: ((v) => (v != null && v >= 1 ? v : null))(lampInt(cell("VIS", k), 7)),
           typ: /^[A-Z]$/.test(typ) ? typ : null,
           pFrz: lampInt(cell("POZ", k)),
           pPrecip: lampInt(cell("PPO", k)),
@@ -137,6 +142,22 @@ export function lampBlocks(text, want) {
 // ---------- FAA ATCSCC advisories ----------
 
 export const ATCSCC_URL = "https://www.fly.faa.gov/adv/advADB.jsp";
+/**
+ * The advisory list for one UTC date: what fly.faa.gov's "Advisories Database Selection Form" (/adv/advAdvisoryForm,
+ * form action /adv/adv_list, GET) submits for ATCSCC advisories, categories Airspace Flow Programs, Ground Stops and
+ * Ground Delay Programs. advADB.jsp itself shows only the most recent advisory (usually the operations plan).
+ */
+export function atcsccListUrl(date) {
+  const d = new Date(date);
+  const ymd = `${d.getUTCFullYear()}-${p2(d.getUTCMonth() + 1)}-${p2(d.getUTCDate())}`;
+  return `https://www.fly.faa.gov/adv/adv_list?whichAdvisories=ATCSCC&advisoryCategory=NotAll&date=${ymd}`
+    + "&gStop=true&_gStop=on&gDelay=true&_gDelay=on&airflow=true&_airflow=on&_ctop=on&_route=on&_other=on";
+}
+/** True when html is an advisory list page (its section tables, or the "no advisories match" line). */
+export function isAdvisoryList(html) {
+  const t = htmlToText(html).toUpperCase();
+  return /NO ADVISORIES MATCH YOUR SELECTION/.test(t) || /\b(GROUND STOPS|GROUND DELAY PROGRAMS|AIRSPACE FLOW PROGRAMS)\b/.test(t) && /BRIEF TITLE/.test(t);
+}
 
 /** Rough HTML -> text: drops scripts/styles/tags, keeps line structure. */
 export function htmlToText(html) {
@@ -156,12 +177,27 @@ export function htmlToText(html) {
     .replace(/\n{3,}/g, "\n\n");
 }
 
-/** Links on the advisory list page: [{href (absolute), title}]. */
+/**
+ * Links on the advisory list page: [{href (absolute), title}]. On the list table (adv_list) the link text is only the
+ * advisory number, so a link in a table row takes the whole row as its title: "064 BOS/ZBW 10/05/26 CDM GROUND STOP
+ * 10/05/26 19:43" (number, control element, date, brief title, send time).
+ */
 export function atcsccLinks(html, base = ATCSCC_URL) {
   const out = [];
   const seen = new Set();
   const re = /<a\b([^>]*)>([\s\S]*?)<\/a\s*>/gi;
   const page = String(html ?? "").replace(/<(script|style)\b[\s\S]*?<\/\1\s*>/gi, "").replace(/<!--[\s\S]*?-->/g, "");
+  const rowOf = new Map(); // anchor offset -> its table row's text
+  const tr = /<tr\b[^>]*>([\s\S]*?)<\/tr\s*>/gi;
+  let r;
+  while ((r = tr.exec(page))) {
+    if (!/<a\b/i.test(r[1]) || /<tr\b/i.test(r[1])) continue;
+    const text = htmlToText(r[1]).replace(/\s+/g, " ").trim();
+    const inner = r.index + r[0].indexOf(r[1]);
+    const a = /<a\b/gi;
+    let x;
+    while ((x = a.exec(r[1]))) rowOf.set(inner + x.index, text);
+  }
   let m;
   while ((m = re.exec(page))) {
     let href = attrOf(m[1], "href");
@@ -173,6 +209,7 @@ export function atcsccLinks(html, base = ATCSCC_URL) {
     let abs;
     try { abs = new URL(href, base).href; } catch { continue; }
     let title = htmlToText(m[2]).replace(/\s+/g, " ").trim();
+    if ((!title || /^\d+$/.test(title)) && rowOf.has(m.index)) title = rowOf.get(m.index);
     if (!title) {
       try { title = new URL(abs).searchParams.get("title") || ""; } catch { /* ignore */ }
     }
@@ -186,6 +223,7 @@ export function atcsccLinks(html, base = ATCSCC_URL) {
 
 export function advType(s) {
   const t = String(s ?? "").toUpperCase();
+  if (/\bPROPOSED\b/.test(t)) return "other"; // a proposed program isn't in effect
   if (/GROUND STOP|\bGS\b/.test(t)) return "GS";
   if (/GROUND DELAY|\bGDP\b/.test(t)) return "GDP";
   if (/AIRSPACE FLOW|\bAFP\b/.test(t)) return "AFP";
@@ -325,17 +363,27 @@ export function finalizeAtcscc(list, now = new Date()) {
 }
 
 /**
- * Gather advisories: those printed on the list page, plus the program advisories (GS/GDP/AFP)
- * linked from it (or, if no link title names a program, the first `fallback` advisory links).
- * getText(url) -> page text. Returns {list, links, followed, failed, firstError, firstDetail}.
+ * Gather advisories: those printed on the page, plus the program advisories (GS/GDP/AFP, not proposed ones) linked
+ * from it or from the advisory list pages (`lists`: adv_list html, newest first) — only the newest per control
+ * element and program — or, if no link title names a program, the first `fallback` advisory links.
+ * getText(url) -> page text. Returns {list, links, followed, failed, firstError, firstDetail, listed (list pages
+ * recognised), degraded (nothing parsed, nothing followable and no list recognised: the source must not count as fresh)}.
  */
-export async function collectAtcscc(html, getText, { base = ATCSCC_URL, now = new Date(), max = 40, fallback = 30, budgetMs = 45e3, concurrency = 4 } = {}) {
+export async function collectAtcscc(html, getText, { base = ATCSCC_URL, lists = null, now = new Date(), max = 40, fallback = 30, budgetMs = 45e3, concurrency = 4 } = {}) {
   const t0 = Date.now();
   const found = inlineAdvisories(html, now);
-  const links = atcsccLinks(html, base);
+  // list pages (adv_list, newest first): links only; the advADB page itself may carry links and inline advisories
+  const listPages = (lists || []).filter((x) => typeof x === "string");
+  const listed = listPages.filter(isAdvisoryList).length;
+  const links = [];
+  for (const l of [...listPages.flatMap((p) => atcsccLinks(p, base)), ...atcsccLinks(html, base)]) if (!links.some((x) => x.href === l.href)) links.push(l);
   const label = (l) => { try { return l.title + " " + decodeURIComponent(l.href); } catch { return l.title + " " + l.href; } };
-  let follow = links.filter((l) => PROGRAM_RE.test(label(l)));
-  if (!follow.length) follow = links.filter((l) => /ADVZY|advn=/i.test(label(l))).slice(0, fallback);
+  let follow = links.filter((l) => PROGRAM_RE.test(label(l)) && !/\bPROPOSED\b/i.test(l.title));
+  // the newest advisory per control element and program decides whether it is in effect (a later CNX ends it)
+  const keyOf = (l) => { const c = /\b([A-Z0-9]{3,4})\/Z[A-Z]{2}\b/.exec(l.title)?.[1]; return c ? c + "|" + advType(l.title) : null; };
+  const keys = new Set();
+  follow = follow.filter((l) => { const k = keyOf(l); if (!k) return true; if (keys.has(k)) return false; keys.add(k); return true; });
+  if (!follow.length) follow = links.filter((l) => /ADVZY|advn=/i.test(label(l)) && !/\bPROPOSED\b/i.test(l.title)).slice(0, fallback);
   follow = follow.slice(0, max);
   let failed = 0;
   let firstError = null;
@@ -361,7 +409,10 @@ export async function collectAtcscc(html, getText, { base = ATCSCC_URL, now = ne
     }
   };
   await Promise.all(Array.from({ length: Math.min(concurrency, follow.length) }, worker));
-  return { list: finalizeAtcscc(found, now), links: links.length, followed: follow.length, failed, firstError, firstDetail };
+  // Nothing parsed, nothing to follow and no advisory list recognised: the feed is degraded, not "no advisories"
+  // (a recognised list saying "no advisories match" is a real, quiet answer).
+  const degraded = !found.length && !follow.length && !listed;
+  return { list: finalizeAtcscc(found, now), links: links.length, followed: follow.length, failed, firstError, firstDetail, listed, degraded };
 }
 
 // ---------- geometry for TCF / CWA ----------

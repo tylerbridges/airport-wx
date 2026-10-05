@@ -186,18 +186,20 @@ export function analogWords(an) {
 /** {i (peak hour), s, e (window), p} over the 24 hours, or null without delay numbers. */
 /** Overnight hour (1–4 AM airport time, site/outlook.js quietHour): few flights, so it never leads a delay outlook. */
 const quiet = (h, a) => !!(globalThis.AWXOutlook && a && globalThis.AWXOutlook.quietHour(h.t, a.tz));
-function peakWindow(a, include = () => true) {
+// Hours that have ended (t + 1 h <= now) and hours no forecast covers (level null) never lead or widen a window.
+function peakWindow(a, include = () => true, now = refNow()) {
   const hs = a.hours || [];
+  const live = (h) => h && Date.parse(h.t) + HOUR > now && h.level !== null && h.delay && h.delay.p != null && include(h);
   let i = -1;
-  hs.forEach((h, k) => { if (h.delay && h.delay.p != null && include(h) && (i < 0 || h.delay.p > hs[i].delay.p)) i = k; });
+  hs.forEach((h, k) => { if (live(h) && (i < 0 || h.delay.p > hs[i].delay.p)) i = k; });
   if (i < 0) return null;
   const p = hs[i].delay.p;
-  const near = (k) => hs[k] && include(hs[k]) && hs[k].delay && hs[k].delay.p != null && hs[k].delay.p >= p - 0.1;
+  const near = (k) => live(hs[k]) && hs[k].delay.p >= p - 0.1;
   let s = i;
   let e = i;
   while (near(s - 1)) s--;
   while (near(e + 1)) e++;
-  return { i, s, e, p };
+  return { i, s, e, p, started: Date.parse(hs[s].t) <= now }; // started: the window runs from now ("through 9 PM")
 }
 
 
@@ -214,7 +216,7 @@ export function delayLine(a) {
   const cls = RANK[L.key] >= 3 ? "dl-hi" : RANK[L.key] === 2 ? "dl-mid" : "dl-lo";
   const start = Date.parse(a.hours[w.s].t);
   const end = Date.parse(a.hours[w.e].t) + HOUR;
-  const when = L.key === "unlikely" || (w.s === 0 && w.e === a.hours.length - 1) ? "" : " " + rangeLabel(start, end, tzOf(a), w.s === 0);
+  const when = L.key === "unlikely" || (w.started && w.e === a.hours.length - 1) ? "" : " " + rangeLabel(start, end, tzOf(a), w.started);
   return el("div", "dl-line " + cls, L.word + when, L.cue ? el("span", "dl-usual", " · " + L.cue) : null);
 }
 
@@ -247,13 +249,13 @@ function sourceLine() {
 
 const isAviation = () => !!(globalThis.AWXPrefs && globalThis.AWXPrefs.getPrefs().mode === "aviation");
 /** The window the sheet's "Delay outlook" card shows (null = the card is left out): every hour in Aviation mode, else notable ones. */
-function cardWindow(a, aviation = isAviation()) {
+function cardWindow(a, aviation = isAviation(), now = refNow()) {
   const include = (hr) => {
     if (!aviation && quiet(hr, a)) return false;
     const L = likelihood(hr.delay, { iata: a.iata });
     return aviation || L?.key !== "now" && notable(hr.delay, hr.level, L);
   };
-  return a ? peakWindow(a, include) : null;
+  return a ? peakWindow(a, include, now) : null;
 }
 
 // ---------- routine outlook line (the sheet's one line when the Delay outlook card is left out) ----------
@@ -288,7 +290,7 @@ export function routineOutlook(a, now = refNow()) {
   if (!tz) return null;
   const today = dayKey(now, tz);
   const idx = [];
-  hs.forEach((h, i) => { const t = Date.parse(h.t); if (t + HOUR > now && dayKey(t, tz) === today && h.delay && h.delay.p != null && !quiet(h, a)) idx.push(i); });
+  hs.forEach((h, i) => { const t = Date.parse(h.t); if (t + HOUR > now && h.level !== null && dayKey(t, tz) === today && h.delay && h.delay.p != null && !quiet(h, a)) idx.push(i); });
   if (!idx.length) return null;
   const Ls = idx.map((i) => likelihood(hs[i].delay, { iata: a.iata, aviation: false }));
   if (Ls.some((L) => !L || L.key === "now" || L.key === "unknown")) return null;
@@ -310,8 +312,8 @@ export function routineOutlook(a, now = refNow()) {
  * line's, else the current hour. {i, L, from: "card" | "routine" | "now", routine?} or null without delay numbers.
  */
 export function outlookHour(a, now = refNow()) {
-  const w = cardWindow(a);
-  if (w) return { i: w.i, s: w.s, e: w.e, L: likelihood(a.hours[w.i].delay, { iata: a.iata }), from: "card" };
+  const w = cardWindow(a, isAviation(), now);
+  if (w) return { i: w.i, s: w.s, e: w.e, started: w.started, L: likelihood(a.hours[w.i].delay, { iata: a.iata }), from: "card" };
   const r = routineOutlook(a, now);
   if (r) return { i: r.i, L: r.L, from: "routine", routine: r };
   const d = a && a.hours && a.hours[0] && a.hours[0].delay;
@@ -337,7 +339,7 @@ export function whyBlock(a, now = refNow()) {
     if (o.from === "routine") head = o.routine.text;
     else if (o.from === "card" && L.key !== "now") {
       const start = Date.parse(a.hours[o.s].t), end = Date.parse(a.hours[o.e].t) + HOUR;
-      head = L.word.replace(/^Delays/, "Flight delays") + " " + (o.s === 0 && o.e === a.hours.length - 1 ? "in the next 24 hours" : rangeLabel(start, end, tzOf(a), o.s === 0));
+      head = L.word.replace(/^Delays/, "Flight delays") + " " + (o.started && o.e === a.hours.length - 1 ? "in the next 24 hours" : rangeLabel(start, end, tzOf(a), o.started));
     }
     kids.push(el("div", "dl-why-h", head));
     const an = analogWords(d.analog);
@@ -374,12 +376,12 @@ export function outlookLead(a) {
   const L = likelihood(d, { iata: a.iata, aviation: false });
   if (!L || L.key === "now" || L.key === "unknown" || !notable(d, hr.level, L)) return null;
   const start = Date.parse(a.hours[w.s].t), end = Date.parse(a.hours[w.e].t) + HOUR;
-  const when = w.s === 0 && w.e === a.hours.length - 1 ? "in the next 24 hours" : rangeLabel(start, end, tzOf(a), w.s === 0);
+  const when = w.started && w.e === a.hours.length - 1 ? "in the next 24 hours" : rangeLabel(start, end, tzOf(a), w.started);
   const notes = [];
   if (d.modelCoverage === "pooled") notes.push("No airport-specific delay history; estimate uses other airports.");
   if (globalThis.AWXApp?.state.data?.delayModel?.basis !== "model") notes.push(sourceLine().textContent);
   if (/^possible_/.test(d.override || "")) notes.push("The FAA plans a possible " + (d.override === "possible_ground_stop" ? "ground stop" : "ground delay program") + ".");
-  return { t: hr.t, start, key: L.key, word: L.word.replace(/^Delays/, "Flight delays"), when, size: L.size || "", cue: L.cue || "",
+  return { t: hr.t, start, end, key: L.key, word: L.word.replace(/^Delays/, "Flight delays"), when, size: L.size || "", cue: L.cue || "",
     cls: RANK[L.key] >= 3 ? "dl-hi" : RANK[L.key] === 2 ? "dl-mid" : "dl-lo", notes };
 }
 
@@ -405,7 +407,7 @@ export function delayBlock(a, i, opts = {}) {
   else if (i == null) {
     const start = Date.parse(a.hours[w.s].t);
     const end = Date.parse(a.hours[w.e].t) + HOUR;
-    when = w.s === 0 && w.e === a.hours.length - 1 ? "in the next 24 hours" : rangeLabel(start, end, tzOf(a), w.s === 0);
+    when = w.started && w.e === a.hours.length - 1 ? "in the next 24 hours" : rangeLabel(start, end, tzOf(a), w.started);
   } else when = idx === 0 ? "this hour" : "at " + dayPrefix(t0, tzOf(a)) + clock(t0, tzOf(a));
   const cls = L.key === "now" || RANK[L.key] >= 3 ? "dl-hi" : RANK[L.key] === 2 ? "dl-mid" : "dl-lo";
   const covered = opts.coveredHours?.includes(hr.t);

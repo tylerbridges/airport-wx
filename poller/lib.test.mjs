@@ -85,7 +85,7 @@ const XML = `<?xml version="1.0"?>
 </AIRPORT_STATUS_INFORMATION>`;
 
 test("FAA XML parser covers all four program types and ignores unknown ones", () => {
-  const r = parseFaaXml(XML, { now: NOW, tzFor: () => "America/Los_Angeles" });
+  const r = parseFaaXml(XML, { now: NOW, tzFor: (c) => (c === "ANC" ? "America/Anchorage" : "America/Los_Angeles") });
   assert.equal(r.updated, "Sat Oct 03 19:15:00 2026 GMT");
   assert.deepEqual(r.byAirport.SFO, [{ type: "ground_stop", reason: "fog", detail: "until 5:30 PM PT", badge: "GROUND STOP", end: "2026-10-04T00:30:00.000Z" }]);
   assert.deepEqual(r.byAirport.EWR, [{ type: "ground_delay", reason: "wind", detail: "avg 52m, max 2h 8m", badge: "GDP avg 52m" }]);
@@ -96,6 +96,11 @@ test("FAA XML parser covers all four program types and ignores unknown ones", ()
   assert.equal(faaTimeMs("", "America/Chicago", NOW), null);
   assert.equal(r.byAirport.ANC[0].type, "closure");
   assert.equal(r.byAirport.ANC[0].detail, "until 9 PM AKT");
+  assert.equal(r.byAirport.ANC[0].end, "2026-10-04T05:00:00.000Z");
+  // the same Reopen read at an airport in another zone keeps its instant and is shown in that airport's zone
+  const la = parseFaaXml(XML, { now: NOW, tzFor: () => "America/Los_Angeles" });
+  assert.equal(la.byAirport.ANC[0].detail, "until 10 PM PT");
+  assert.equal(la.byAirport.ANC[0].end, "2026-10-04T05:00:00.000Z");
   assert.equal(r.byAirport.XXX, undefined);
 });
 
@@ -246,4 +251,16 @@ test("fixture run writes a schema-shaped status.json", async () => {
   for (const a of disk.airports) assert.equal(new Set(a.now.reasons).size, a.now.reasons.length);
   assert.equal(by.ORD.now.reasons.filter((r) => /^Visibility/.test(r)).length, 1);
   assert.ok(here);
+});
+
+test("FAA times with a stated zone use that zone; the text is shown in the airport's zone", () => {
+  // SFO end time written in Eastern time: 7:45 PM EDT = 23:45Z = 4:45 PM PDT
+  assert.equal(faaTimeMs("7:45 pm EDT", "America/Los_Angeles", NOW), Date.parse("2026-10-03T23:45:00Z"));
+  assert.equal(formatFaaTime("7:45 pm EDT", "America/Los_Angeles", NOW), "4:45 PM PT");
+  assert.equal(faaTimeMs("6:00 pm CST", "America/New_York", NOW), Date.parse("2026-10-04T00:00:00Z"));
+  assert.equal(faaTimeMs("9:30 pm UTC", "America/Chicago", NOW), Date.parse("2026-10-03T21:30:00Z"));
+  assert.equal(faaTimeMs("3:00 pm HST", "Pacific/Honolulu", NOW), Date.parse("2026-10-04T01:00:00Z"));
+  assert.equal(faaTimeMs("5:30 pm PT", "America/New_York", NOW), Date.parse("2026-10-04T00:30:00Z"));
+  // no zone: the airport's
+  assert.equal(faaTimeMs("5:30 pm", "America/Los_Angeles", NOW), Date.parse("2026-10-04T00:30:00Z"));
 });

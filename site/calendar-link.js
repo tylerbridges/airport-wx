@@ -1,5 +1,5 @@
 // This connection stays in this browser. Only the private POST relay reads the source calendar.
-import { privacyProblems } from "./trip-risk.js?v=8";
+import { privacyProblems } from "./trip-risk.js?v=9";
 export const CALENDAR_KEY = "awx-calendar-link";
 export function loadConnection(storage = localStorage) {
   try {

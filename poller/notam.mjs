@@ -56,10 +56,49 @@ export function closureScope(text) {
   const allRwy = /\bRWY\s+ALL\b[^.]*\bCLSD\b|\bALL\s+RWYS?\b[^.]*\bCLSD\b/.test(s);
   const qualified = /\bCLSD\s+TO\b|\bEXC\b|\bEXCEPT\b|\bPPR\b/.test(s);
   if (!fullAd && !allRwy && closedRunways(s).length) return "runway";
-  if (fullAd || allRwy) return qualified ? "limited" : "full";
+  // An airport closure is "limited" only when it narrows who is shut out (GA, transient, non-scheduled,
+  // size/weight, particular runways) or lets airline flights in; closed to everyone except emergency,
+  // medevac, relief, military, evacuation or PPR flights is a full closure for travelers.
+  if (fullAd || allRwy) return qualified && narrowsClosure(s) ? "limited" : "full";
   if (/\b(TWY|APRON|RAMP)\b[^.]*\bCLSD\b/.test(s)) return "limited";
   if (/\bCLSD\b/.test(s) && qualified) return "limited";
   return "full";
+}
+
+// "CLSD TO <who>" naming a subset of users (or a size/weight limit, or runways) narrows the closure.
+const NARROW_TO = /\b(GA|TRANSIENT|PRIVATE|NON[\s-]?SKED|UNSKED|WINGSPAN|TAIL\s+HGT|WEIGHT|GROSS\s+WT|WT|LENGTH|LBS?|HEL\w*|ROTORCRAFT|TRAINING|TGL|PARACHUT\w*|GLIDERS?|ULTRALIGHTS?|BALLOONS?|PISTON|RWY|RWYS)\b|\d+\s*FT\b/;
+// "EXC <who>" letting scheduled airline flights (or particular runways) operate narrows it too.
+const AIRLINE_EXC = /\b(SKED|SCHEDULED|ACR|AIR\s+CARRIER|AIRLINES?|PART\s*121|PART\s*129|PAX|PASSENGER|RWY|RWYS)\b/;
+function clauses(s) {
+  const to = /\bCLSD\s+TO\s+(.*?)(?=\bEXC\b|\bEXCEPT\b|\.|$)/.exec(s)?.[1] || "";
+  const exc = /\b(?:EXC|EXCEPT)\b\s*(.*)$/.exec(s)?.[1] || "";
+  return { to, exc };
+}
+function narrowsClosure(s) {
+  const { to, exc } = clauses(s);
+  if (to && !/^ALL\b/.test(to.trim()) && NARROW_TO.test(to)) return true;
+  if (to && /^ALL\b/.test(to.trim()) && /\b(WINGSPAN|TAIL\s+HGT|WEIGHT|GROSS\s+WT|LENGTH)\b/.test(to)) return true;
+  return !!exc && AIRLINE_EXC.test(exc.replace(/\bNON[\s-]?SKED\b|\bUNSKED\b/g, ""));
+}
+
+// Who a full closure still lets in, in plain words ("emergency and medical flights").
+const EXEMPT = [
+  [/\b(EMERG\w*|EMER)\b/, "emergency"],
+  [/\b(MEDEVAC|LIFEGUARD|AIR\s+AMBULANCE|HOSP\w*|MED\w*)\b/, "medical"],
+  [/\b(RELIEF|HUMANITARIAN|DISASTER|FEMA)\b/, "relief"],
+  [/\bEVAC\w*\b/, "evacuation"],
+  [/\b(MIL|MILITARY|DOD)\b/, "military"],
+];
+const list = (w) => (w.length < 2 ? w.join("") : w.slice(0, -1).join(", ") + " and " + w[w.length - 1]);
+function exemptPhrase(s) {
+  const { exc } = clauses(s);
+  const who = EXEMPT.filter(([re]) => re.test(exc)).map(([, w]) => w);
+  const ppr = /\bPPR\b/.test(s);
+  const parts = [];
+  if (who.length) parts.push(`${list(who)} flights`);
+  if (ppr) parts.push("flights approved in advance");
+  if (!parts.length && exc) parts.push("some special flights");
+  return parts.length ? ` except ${parts.join(" and ")}` : "";
 }
 
 const PHRASES = [
@@ -157,6 +196,9 @@ export function describeClosure(text, { tz = "America/New_York", now = new Date(
     const ids = runways.join(", ");
     const rest = translateNotam(text).replace(/^Runway\s+\S+\s+closed\s*/i, "").trim();
     plain = `${runways.length > 1 ? "Runways" : "Runway"} ${ids} closed${rest ? " " + rest : ""}.`;
+  } else if (scope === "full" && /\bCLSD\b/.test(body) && /\bCLSD\s+TO\b|\bEXC\b|\bEXCEPT\b|\bPPR\b/.test(body)) {
+    // closed to everyone but emergency/medical/relief/PPR flights: say who, never the coded remainder
+    plain = `Airport closed${exemptPhrase(body)}.`;
   } else if (scope === "full" && /\bCLSD\b/.test(body)) {
     const rest = translateNotam(text).replace(/^Airport closed\s*/i, "").trim();
     plain = `Airport closed${rest ? " " + rest : ""}.`;

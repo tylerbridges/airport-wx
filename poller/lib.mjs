@@ -140,16 +140,22 @@ function tzOffset(t, tz) {
   return Date.UTC(Number(o.year), Number(o.month) - 1, Number(o.day), Number(o.hour) % 24, Number(o.minute), Number(o.second)) - Math.floor(t / 1000) * 1000;
 }
 
+// Fixed UTC offsets (hours) of the zone abbreviations the FAA writes; generic ones ("ET") follow the region's rules.
+const ZONE_OFFSET = { EST: -5, EDT: -4, CST: -6, CDT: -5, MST: -7, MDT: -6, PST: -8, PDT: -7, AKST: -9, AKDT: -8, HST: -10, HDT: -9, UTC: 0, GMT: 0, Z: 0 };
+const ZONE_REGION = { ET: "America/New_York", CT: "America/Chicago", MT: "America/Denver", PT: "America/Los_Angeles", AKT: "America/Anchorage" };
+
 /**
  * An FAA clock string ("5:30 pm EDT", "2130Z", "Oct 03 at 2130 UTC") as an instant: the next such
- * clock time (at most 12 h in the past) in the airport's zone. null if there is no time.
+ * clock time (at most 12 h in the past). A stated zone ("7:45 pm EDT" for SFO) is used as written; with
+ * none, the airport's zone. null if there is no time.
  */
 export function faaTimeMs(raw, tz, now = new Date()) {
   const s = String(raw || "").trim();
-  const a = /(\d{1,2}):(\d{2})\s*([ap])\.?m\.?/i.exec(s);
+  const a = /(\d{1,2}):(\d{2})\s*([ap])\.?m\.?(?:\s*\b(AKST|AKDT|AKT|[ECMPH][SD]T|[ECMP]T|UTC|GMT|Z)\b)?/i.exec(s);
   if (a) {
     const hh = (Number(a[1]) % 12) + (a[3].toLowerCase() === "p" ? 12 : 0);
-    const off = tzOffset(+now, tz);
+    const z = (a[4] || "").toUpperCase();
+    const off = z in ZONE_OFFSET ? ZONE_OFFSET[z] * 3600e3 : tzOffset(+now, ZONE_REGION[z] || tz);
     const loc = new Date(+now + off);
     let t = Date.UTC(loc.getUTCFullYear(), loc.getUTCMonth(), loc.getUTCDate(), hh, Number(a[2])) - off;
     if (t < +now - 12 * 3600e3) t += 24 * 3600e3;
@@ -172,12 +178,11 @@ export function faaTimeMs(raw, tz, now = new Date()) {
 export function formatFaaTime(raw, tz, now = new Date()) {
   const s = String(raw || "").trim().replace(/\.$/, "");
   if (!s) return "";
-  const a = /(\d{1,2}):(\d{2})\s*([ap])\.?m\.?\s*((?:AK|[ECMPH])[SD]?T)?/i.exec(s);
+  const a = /(\d{1,2}):(\d{2})\s*([ap])\.?m\.?/i.exec(s);
   if (a) {
-    const abbr = a[4] ? { E: "ET", C: "CT", M: "MT", P: "PT", H: "HST", A: "AKT" }[a[4][0].toUpperCase()] : null;
-    const zone = abbr || tzAbbr(now, tz);
-    const min = a[2] === "00" ? "" : ":" + a[2];
-    return `${Number(a[1])}${min} ${a[3].toUpperCase()}M ${zone}`;
+    // in the airport's own zone, whatever zone the FAA wrote it in ("7:45 pm EDT" at SFO -> "4:45 PM PT")
+    const ms = faaTimeMs(s, tz, now);
+    return `${fmtClock(ms, tz)} ${tzAbbr(ms, tz)}`;
   }
   const u = /(\d{2}):?(\d{2})\s*(?:Z|UTC|GMT)\b/i.exec(s);
   if (u) {

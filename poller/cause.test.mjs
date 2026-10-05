@@ -35,3 +35,13 @@ test("cause phrases are plain English with a useful detail only", () => {
   assert.equal(causePhrase("unknown", ""), "");
   assert.equal(causePhrase(undefined, undefined), "");
 });
+
+test("cause phrase: slash-joined details keep every part, and shorthand is spelled out", () => {
+  assert.equal(causePhrase("weather", "snow/ice"), "weather (snow and ice)");
+  assert.equal(causePhrase("weather", "tstms/wind"), "weather (thunderstorms and wind)");
+  assert.equal(causePhrase(undefined, "wind/rwy config"), "weather (wind and runway configuration)");
+  assert.equal(causePhrase("runway", "RWY CONFIG"), "runway work or configuration");
+  assert.equal(causePhrase("weather", "WEATHER / SNOW/ICE"), "weather (snow and ice)");
+  assert.equal(causePhrase("weather", "WEATHER / SNOW-ICE"), "weather (snow and ice)");
+  for (const t of ["snow/ice", "wind/rwy config", "tstms/wind"]) assert.doesNotMatch(causePhrase(undefined, t), /\b(RWY|TSTMS|CONFIG)\b/i);
+});

@@ -153,3 +153,17 @@ test("pooled airport More details keeps uncertainty without an undefined routine
   assert.equal(o.L.word, "Delay forecast uncertain");
   assert.equal(o.from, "now");
 });
+
+test("delay window: hours that have ended (t + 1 h <= now) and hours with no forecast never lead the card window", () => {
+  D.setReport(REPORT);
+  const now = Date.parse("2026-07-16T19:30:00Z");
+  const t0 = Date.parse("2026-07-16T17:00:00Z"); // hours 0–1 ended, hour 2 holds now
+  const a = { iata: "ORD", tz: "America/Chicago", hours: Array.from({ length: 24 }, (_, i) => ({
+    t: new Date(t0 + i * 3600e3).toISOString(), level: i === 6 ? null : i === 0 || i === 4 ? 1 : 0,
+    delay: { p: i === 0 ? 0.9 : i === 4 ? 0.6 : i === 6 ? 0.95 : 0.05, minutes: 40 } })) };
+  const o = D.outlookHour(a, now);
+  assert.equal(o.from, "card");
+  assert.equal(o.i, 4, "the ended 0.9 hour and the uncovered 0.95 hour are skipped");
+  assert.equal(o.s, 4); assert.equal(o.e, 4); assert.equal(o.started, false);
+  D.setReport(null);
+});

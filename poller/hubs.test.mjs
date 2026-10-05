@@ -129,7 +129,7 @@ test("assemble: hub exposure is recorded for research without changing risk", as
   const out = assemble({ airports, now, metars: [], tafs, sigmets: null, faaParsed, spc: null, nws: null });
   const aus = out.find((a) => a.iata === "AUS");
   const dfw = out.find((a) => a.iata === "DFW");
-  assert.deepEqual(dfw.hours.slice(0, 3).map((h) => h.level), [4, 4, 0]);
+  assert.deepEqual(dfw.hours.slice(0, 3).map((h) => h.level), [4, 4, null]); // DFW has no METAR/TAF here: after the stop, no forecast (null), not Clear
   assert.equal(dfw.cascade, undefined);
   assert.equal(aus.hours[0].level, 1); // the hour of the ground stop itself: no note
   assert.deepEqual(aus.hours.slice(1, 7).map(h => h.level), [1, 1, 1, 1, 1, 1]);

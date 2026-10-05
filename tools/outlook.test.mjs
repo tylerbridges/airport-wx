@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 const O = createRequire(import.meta.url)("../site/outlook.js");
 const now = Date.parse("2026-10-04T14:15:00Z"), H = 3600000;
-const sources = Object.fromEntries(["faa", "atcscc", "metar", "taf", "nws"].map((k) => [k, { ok: true }]));
+const sources = Object.fromEntries(["faa", "atcscc", "metar", "taf", "nws", "sigmet", "spc", "lamp", "tcf", "cwa"].map((k) => [k, { ok: true }]));
 const base = () => ({ iata: "ORD", metar: { obsTime: "2026-10-04T14:00:00Z" }, taf: { issued: "2026-10-04T12:00:00Z" }, faa: [], atcscc: [], hours: Array.from({ length: 24 }, (_, i) => ({ t: new Date(now - 15 * 60000 + i * H).toISOString(), level: 0, reasons: [] })) });
 const options = (more = {}) => ({ now, generated: new Date(now).toISOString(), sources, ...more });
 test("outlook: a last-known active restriction remains visible without forecast hours", () => {
@@ -163,4 +163,69 @@ test("severe weather with a low model chance does not imply likely delays", () =
   a.hours[2].reasons = ["Gusts 35 kt"];
   assert.equal(O.evaluate(a, opts).headline, "Strong winds expected");
   assert.equal(O.evaluate(a, {...opts, words: () => ({key:"likely", word:"Delays likely"})}).headline, "Flight delays likely");
+});
+
+// ---------- accuracy fixes (Oct 5) ----------
+test("condition headline: storms and winter outrank visibility; dense fog needs fog wording and ≤ 1/2 sm; 1/8 and mixed fractions parse", () => {
+  const hd = (reasons, wx) => O.conditionHeadline({ reasons, wx }, true);
+  assert.equal(hd(["Snow, visibility 1/4 sm", "Visibility 1/4 sm"]), "Winter weather");
+  assert.equal(hd(["Thunderstorms", "Visibility 1/2 sm"]), "Storms near the airport");
+  assert.equal(hd(["Visibility 1/8 sm"], "FG"), "Dense fog");
+  assert.equal(hd(["Mist", "Visibility 3/8 sm"]), "Dense fog");
+  assert.equal(hd(["Visibility 1/8 sm"]), "Low visibility");
+  assert.equal(hd(["Visibility 0 sm"], "HZ"), "Low visibility");
+  assert.equal(hd(["Mist", "Visibility 1 1/2 sm"]), "Low visibility");
+  assert.equal(hd(["Dense Fog Advisory"]), "Dense fog");
+  assert.equal(O.reasonVisibility("Visibility 1 1/2 sm"), 1.5);
+  assert.equal(O.reasonVisibility("Snow, visibility 1/8 sm; Visibility 3/8 sm"), 0.125);
+});
+test("no forecast: hours beyond the airport forecast are unknown (null), never Clear, in evaluate, summary and windows", () => {
+  const a = base();
+  for (let i = 20; i < 24; i++) { a.hours[i].level = null; a.hours[i].fltCat = null; }
+  const o = O.evaluate(a, options({ at: Date.parse(a.hours[21].t) + 60000 }));
+  assert.equal(o.kind, "unknown"); assert.equal(o.level, null); assert.equal(o.headline, "Forecast unavailable for this time");
+  const sm = O.summary(a, options());
+  assert.equal(sm.byT.get(a.hours[22].t), null);
+  assert.equal(sm.byT.get(a.hours[5].t), 0);
+  // a delay chance on an uncovered hour never opens a window
+  a.hours[22].delay = { p: 0.9, k: "very" };
+  assert.equal(O.windowFor(a, { words: wordsFor }, now), null);
+  // an FAA restriction in force still scores an uncovered hour
+  a.faa = [{ type: "ground_stop", end: new Date(now + 24 * H).toISOString() }];
+  assert.equal(O.levelAt(a, a.hours[22], options(), Date.parse(a.hours[22].t), now), 4);
+});
+test("recovery: 'lower risk' only once the level falls to Low/Clear and stays; a one-level drop is easing; never inside the delay window", () => {
+  const a = base();
+  const set = (i, level) => { a.hours[i].level = level; a.hours[i].reasons = level ? ["Thunderstorms"] : []; };
+  set(0, 4); set(1, 4); set(2, 3); set(3, 3); set(4, 3); set(5, 0); set(6, 0);
+  let o = O.evaluate(a, options());
+  assert.equal(o.recovery, Date.parse(a.hours[5].t)); assert.equal(o.eases, null);
+  // stays High to the end: no recovery, eases to High after hour 2
+  for (let i = 5; i < 24; i++) set(i, 3);
+  o = O.evaluate(a, options());
+  assert.equal(o.recovery, null); assert.deepEqual(o.eases, { at: Date.parse(a.hours[2].t), level: 3 });
+  // a Low hour inside the sheet's delay window (notBefore) moves to the first confirmed hour after it
+  const b = base();
+  b.hours[0].level = 3; b.hours[0].reasons = ["Thunderstorms"];
+  for (let i = 1; i < 24; i++) b.hours[i].level = 1;
+  assert.equal(O.evaluate(b, options()).recovery, Date.parse(b.hours[1].t));
+  assert.equal(O.evaluate(b, options({ notBefore: Date.parse(b.hours[3].t) })).recovery, Date.parse(b.hours[3].t));
+  // uncovered hours never confirm a recovery
+  for (let i = 1; i < 24; i++) b.hours[i].level = null;
+  assert.equal(O.evaluate(b, options()).recovery, null);
+});
+test("airport health: missing or stale storm sources (SIGMET, SPC, LAMP, TCF, CWA) qualify a quiet headline", () => {
+  for (const k of ["sigmet", "spc", "lamp", "tcf", "cwa"]) {
+    const o = O.evaluate(base(), options({ sources: { ...sources, [k]: { ok: false } } }));
+    assert.equal(o.kind, "unknown", k); assert.equal(o.headline, "No disruptions reported · storm data unavailable", k);
+    assert.equal(o.quality, "Storm data unavailable", k);
+  }
+  const old = new Date(now - 4 * H).toISOString();
+  assert.equal(O.evaluate(base(), options({ sources: { ...sources, lamp: { ok: true, at: old } } })).headline, "No disruptions reported · storm data unavailable");
+  const { cwa, ...noCwa } = sources;
+  assert.equal(O.evaluate(base(), options({ sources: noCwa })).kind, "unknown");
+  assert.equal(O.evaluate(base(), options({ sources: { ...sources, spc: { ok: true, at: new Date(now - 2 * H).toISOString() } } })).headline, "Operating normally");
+  // a known disruption keeps its headline
+  const a = base(); a.faa = [{ type: "ground_stop", end: new Date(now + H).toISOString() }];
+  assert.equal(O.evaluate(a, options({ sources: { ...sources, tcf: { ok: false } } })).headline, "Ground Stop");
 });

@@ -82,14 +82,15 @@
     const hs = a.hours || [];
     let peak = -1;
     hs.forEach((h, i) => {
-      if (ms(h.t) + HOUR <= after) return;
+      if (ms(h.t) + HOUR <= after || h.level == null) return; // an hour no forecast covers is unknown, never a window
+
       const s = score(h, opts);
       if (s.level < 2) return;
       if (peak < 0 || s.level > score(hs[peak], opts).level || s.level === score(hs[peak], opts).level && (s.L?.rate || 0) > (score(hs[peak], opts).L?.rate || 0)) peak = i;
     });
     if (peak < 0) return null;
     const target = score(hs[peak], opts);
-    const near = (i) => i >= 0 && i < hs.length && score(hs[i], opts).level === target.level;
+    const near = (i) => i >= 0 && i < hs.length && hs[i].level != null && score(hs[i], opts).level === target.level;
     let start = peak, end = peak;
     while (near(start - 1) && ms(hs[start - 1].t) + HOUR > after) start--;
     while (near(end + 1)) end++;
@@ -110,26 +111,52 @@
     const limit = (k) => (k === "atcscc" && faaFresh ? 3 * HOUR : 30 * 60000);
     const unavailable = required.some((k) => !sources[k]?.ok || sources[k].error || sources[k].stale || age(k) > limit(k));
     const advisoriesAge = required.includes("atcscc") && sources.atcscc?.ok && age("atcscc") > 30 * 60000 ? age("atcscc") : null;
+    // Storm sources (Convective SIGMETs, SPC outlook, LAMP thunder chances, TCF, CWAs): a quiet outlook without them
+    // could be silently wrong, so it is qualified ("storm data unavailable"). SIGMETs are refreshed by the live relay
+    // (30 min); the rest come only from the GitHub build, so they may lag up to 3 hours.
+    const STORM = ["sigmet", "spc", "lamp", "tcf", "cwa"];
+    const stormDown = !weatherOnly && STORM.some((k) => !sources[k] || !sources[k].ok || sources[k].error || sources[k].stale || age(k) > (k === "sigmet" ? 30 * 60000 : 3 * HOUR));
     const outdated = !Number.isFinite(generated) || now - generated > 30 * 60000 || generated - now > 5 * 60000;
     const observed = ms(a.metar?.obsTime), forecastIssued = ms(a.taf?.issued);
     const missingWeather = !Number.isFinite(observed) || now - observed > 2 * HOUR || observed - now > 10 * 60000;
     const missingForecast = !a.taf || !Number.isFinite(forecastIssued) || now - forecastIssued > 12 * HOUR || forecastIssued - now > 10 * 60000;
-    const incomplete = unavailable || missingWeather || missingForecast || opts.sample || opts.offline || weatherOnly || opts.noticesDown;
+    const incomplete = unavailable || missingWeather || missingForecast || opts.sample || opts.offline || weatherOnly || opts.noticesDown || stormDown;
     const quality = opts.offline ? "Offline · showing last-known airport data" : outdated ? "Data may be outdated" : missingWeather ? "Recent weather observation unavailable"
       : missingForecast ? "Airport forecast unavailable or outdated" : unavailable || opts.sample ? "Some data unavailable" : weatherOnly ? "Weather only · FAA delay coverage unavailable"
-      : opts.hidden ? "Some disruptions hidden by your settings" : opts.noticesDown ? "Nearby flight restrictions unavailable" : "";
-    return { outdated, incomplete, quality, advisoriesAge, checked: Number.isFinite(generated) ? generated : null,
+      : stormDown ? "Storm data unavailable" : opts.hidden ? "Some disruptions hidden by your settings" : opts.noticesDown ? "Nearby flight restrictions unavailable" : "";
+    return { outdated, incomplete, quality, advisoriesAge, stormDown, checked: Number.isFinite(generated) ? generated : null,
       observed: Number.isFinite(observed) ? observed : null, forecastIssued: Number.isFinite(forecastIssued) ? forecastIssued : null, missingWeather, missingForecast, weatherOnly };
 
+  }
+  // "1/8", "3/8", "1 1/2", "0.25", "2" (statute miles) -> number
+  function visNumber(s) {
+    const m = /^(?:(\d+)\s+)?(\d+)\/(\d+)$/.exec(String(s).trim());
+    if (m) return Number(m[3]) ? Number(m[1] || 0) + Number(m[2]) / Number(m[3]) : null;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
+  }
+  /** Lowest visibility (sm) a set of reasons states ("Visibility 1/8 sm", "Snow, visibility 1 1/2 sm"), or null. */
+  function reasonVisibility(r) {
+    let low = null;
+    for (const m of String(r).matchAll(/visibility\s+(?:under\s+)?((?:\d+\s+)?\d+\/\d+|\d+(?:\.\d+)?)\s*sm\b/gi)) {
+      const v = visNumber(m[1]);
+      if (v != null && (low == null || v < low)) low = v;
+    }
+    return low;
   }
   function conditionHeadline(h, current = false) {
     const r = (h?.reasons || []).join(" ");
     const suffix = current ? "" : " expected";
-    if (/Dense Fog|Visibility (?:0(?:\.\d+)?|1\/2|1\/4) sm/i.test(r)) return "Dense fog" + suffix;
+    // storms and winter weather outrank the visibility they bring (snow at 1/4 sm is winter weather, not fog)
+    if (/Thunder|Convective SIGMET|\bstorms\b/i.test(r)) return "Storms near the airport" + suffix;
+    if (/Snow|Freezing|Ice|Winter|Blizzard/i.test(r)) return "Winter weather" + suffix;
+    const vis = reasonVisibility(r);
+    const fog = /\b(Fog|Mist)\b/i.test(r) || /(^|[\s+-])(FG|BR|FZFG|MIFG|BCFG|PRFG)\b/.test(String(h?.wx || ""));
+    if (/Dense Fog/i.test(r) || fog && vis != null && vis <= 0.5) return "Dense fog" + suffix;
+    if (vis != null && vis <= 0.5) return "Low visibility" + suffix;
     if (/Fog/i.test(r)) return "Fog" + suffix;
-    if (/Thunder|Convective SIGMET/i.test(r)) return "Storms near the airport" + suffix;
-    if (/Snow|Freezing|Ice|Winter/i.test(r)) return "Winter weather" + suffix;
     if (/Ceiling/i.test(r)) return "Low clouds" + suffix;
+    if (vis != null) return "Low visibility" + suffix;
     if (/Gust|Wind/i.test(r)) return "Strong winds" + suffix;
     return current ? "Disruption possible" : "Disruption possible in forecast";
   }
@@ -137,7 +164,7 @@
     const now = opts.now ?? Date.now(), at = opts.at ?? now;
     const h = (a.hours || []).find((x) => ms(x.t) <= at && at < ms(x.t) + HOUR);
     const current = at < Math.floor(now / HOUR) * HOUR + HOUR;
-    const { outdated, incomplete, quality } = health(a, opts);
+    const { outdated, incomplete, quality, stormDown } = health(a, opts);
     const programs = restrictions(a, at, now);
     const impacts = directionRows(programs, current);
     const s = score(h, opts);
@@ -150,28 +177,41 @@
         : first.type === "ground_delay" ? current ? "Arrivals delayed" : "Arrival delay program scheduled"
         : impacts.length === 1 ? impacts[0].label + (current ? " delayed" : " delays scheduled") : current ? "Flight delays in effect" : "Flight delays scheduled";
       level = Math.max(level, first.type === "closure" || first.type === "ground_stop" ? 4 : first.type === "ground_delay" ? 3 : 2);
-    } else if (!h) { kind = "unknown"; headline = "Forecast unavailable for this time"; level = null; }
+    } else if (!h || h.level == null) { kind = "unknown"; headline = "Forecast unavailable for this time"; level = null; } // no forecast covers this hour: unknown, never normal
     else if (s.meaningful || s.level > 0) {
       kind = "forecast";
       headline = s.meaningful ? s.L.word.replace(/^Delays/, "Flight delays") : conditionHeadline(h, current);
     }
-    if ((outdated || incomplete) && kind === "normal") { kind = "unknown"; headline = opts.offline ? "Offline · status unconfirmed" : outdated ? "Status may be outdated" : opts.noticesDown ? "No disruptions reported · flight restrictions unavailable" : "No disruptions reported · some data unavailable"; }
+    if ((outdated || incomplete) && kind === "normal") { kind = "unknown"; headline = opts.offline ? "Offline · status unconfirmed" : outdated ? "Status may be outdated" : opts.noticesDown ? "No disruptions reported · flight restrictions unavailable" : stormDown ? "No disruptions reported · storm data unavailable" : "No disruptions reported · some data unavailable"; }
     else if (opts.hidden && kind === "normal") headline = "No issues in your selected categories";
     if (kind === "normal" && opts.noticesDown) headline += " · flight restrictions unavailable"; // nearby TFRs couldn't be read: never an unqualified "normal"
     const window = h ? windowFor(a, opts, at) : null;
     const end = first && ms(first.end);
     // Recovery is a forecast, never a promise tied to an FAA program's scheduled end, and only for weather: a program
     // for volume, staffing, equipment or an airline's IT outage doesn't end because the weather improves.
-    let recovery = null;
-    if (h && s.level >= 2 && programs.every((f) => f.cause === "weather")) {
-      const i = a.hours.indexOf(h);
-      const lower = a.hours.find((x, j) => j > i && score(x, opts).level < s.level && !restrictions(a, ms(x.t), now).length && (j + 1 >= a.hours.length || score(a.hours[j + 1], opts).level < s.level));
-      if (lower) recovery = ms(lower.t);
+    // "Lower disruption risk" (recovery) only when the level falls to Low/Clear (≤ 1) and stays there for the next hour
+    // too; a drop of a level or two that stays disruptive is easing ({at, level}: "Eases to Moderate after 9 PM"). Neither
+    // falls inside the delay window shown above it (this outlook's window, or opts.notBefore from the sheet's delay line):
+    // the first confirmed hour at or after that window's end is used instead. Hours no forecast covers never confirm.
+    let recovery = null, eases = null;
+    if (h && h.level != null && s.level >= 2 && programs.every((f) => f.cause === "weather")) {
+      const hs = a.hours, i = hs.indexOf(h);
+      const lv = (j) => (j < hs.length && hs[j].level != null ? score(hs[j], opts).level : null);
+      const ok = (j, max) => lv(j) != null && lv(j) <= max && !restrictions(a, ms(hs[j].t), now).length && (j + 1 >= hs.length || lv(j + 1) != null && lv(j + 1) <= max);
+      let after = Number.isFinite(opts.notBefore) ? opts.notBefore : -Infinity;
+      if (window && window.start <= ms(h.t) + HOUR && window.end > after) after = window.end; // the window this hour is in
+      const from = (max) => hs.findIndex((x, j) => j > i && ms(x.t) >= after && ok(j, max));
+      const j1 = from(1);
+      if (j1 >= 0) recovery = ms(hs[j1].t);
+      else {
+        const j2 = from(s.level - 1);
+        if (j2 >= 0) eases = { at: ms(hs[j2].t), level: Math.max(lv(j2), j2 + 1 < hs.length ? lv(j2 + 1) : 0) };
+      }
     }
     const reasons = uniq((h?.reasons || []).map((r) => opts.plain ? opts.plain(r, a) : r)).slice(0, 2);
     return { kind, headline, level, at, current, quality, reasons, programs, impacts,
       scheduledEnd: Number.isFinite(end) ? end : null,
-      extension: first?.extension || null, window, recovery,
+      extension: first?.extension || null, window, recovery, eases,
       cue: s.meaningful ? s.L.cue : "", size: s.meaningful ? s.L.size : "",
       basis: first ? current ? "FAA restriction" : "Scheduled FAA restriction" : kind === "forecast" ? "Airport forecast" : "Current conditions",
       // This definition deliberately describes an airport hour rather than a personal flight outcome.
@@ -181,6 +221,7 @@
   /** The level of hour h as the sheet and map show it: its own level, raised by notable delay chances and FAA restrictions in force at `at`. */
   function levelAt(a, h, opts, at, now) {
     const p = restrictions(a, at, now)[0];
+    if (h && h.level == null) return p ? PROG_LEVEL[p.type] || 2 : null; // no forecast: unknown unless an FAA restriction is in force
     return Math.max(score(h, opts).level, p ? PROG_LEVEL[p.type] || 2 : 0);
   }
   /**
@@ -195,7 +236,8 @@
     const now = opts.now ?? Date.now();
     const current = evaluate(a, { ...opts, at: now });
     const hs = (a.hours || []).filter((h) => ms(h.t) + HOUR > now);
-    const levels = hs.map((h, i) => ({ t: h.t, level: i === 0 && ms(h.t) <= now && current.level != null ? current.level : levelAt(a, h, opts, Math.max(ms(h.t), now), now) }));
+    // an hour no forecast covers has level null (unknown); the current hour keeps a number (health qualifies it)
+    const levels = hs.map((h, i) => ({ t: h.t, level: i === 0 && ms(h.t) <= now && current.level != null ? current.level : i === 0 ? levelAt(a, h, opts, Math.max(ms(h.t), now), now) ?? 0 : levelAt(a, h, opts, Math.max(ms(h.t), now), now) }));
     const L = (i) => levels[i].level;
     const nowLevel = levels.length ? L(0) : current.level || 0;
     const open = (current.programs || []).find((f) => f.source === "faa" && !Number.isFinite(ms(f.end)) && !f.perm && PROG_LEVEL[f.type]) || null;
@@ -203,7 +245,7 @@
       current, levels, byT: new Map(levels.map((x) => [x.t, x.level])), nowHour: hs[0] || null, open, openLevel: open ? PROG_LEVEL[open.type] : null, uncertainFrom: null };
     if (!levels.length) return out;
     let p = 0;
-    levels.forEach((x, i) => { if (x.level > L(p)) p = i; });
+    levels.forEach((x, i) => { if (x.level != null && x.level > L(p)) p = i; });
     let q = p;
     while (q + 1 < levels.length && L(q + 1) === L(p)) q++;
     let r = 0;
@@ -221,5 +263,5 @@
     const start = ms(at), end = Number.isFinite(ms(until)) ? ms(until) : start + 1;
     return !!window && start < window.end && end > window.start;
   }
-  return { conditionHeadline, quietHour, health, evaluate, summary, levelAt, score, restrictions, directionRows, windowFor, overlaps, PROG_LEVEL, RAISE };
+  return { conditionHeadline, reasonVisibility, quietHour, health, evaluate, summary, levelAt, score, restrictions, directionRows, windowFor, overlaps, PROG_LEVEL, RAISE };
 });

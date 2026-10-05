@@ -50,7 +50,7 @@ test("plainTafHour words TEMPO and PROB groups", () => {
 test("travelerImpact is measured and picks the most disruptive cause", () => {
   assert.equal(travelerImpact(3, { wxString: "FG", visib: 0.25, clouds: [{ cover: "VV", base: 100 }] }), "Arrivals are often slowed in these conditions; delays of 30+ min possible");
   assert.equal(travelerImpact(4, { wxString: "+TSRA", wgst: 50 }), "Storms can pause departures and arrivals (ground stops) — expect delays");
-  assert.equal(travelerImpact(3, { wgst: 38, wspd: 25 }), "Strong crosswinds may cause delays or diversions");
+  assert.equal(travelerImpact(3, { wgst: 38, wspd: 25 }), "Strong gusty winds may cause delays or diversions");
   assert.equal(travelerImpact(4, { wxString: "FZRA" }), "De-icing and slower operations — delays likely");
   assert.equal(travelerImpact(2, { wxString: "-SN" }), "De-icing and slower operations — delays likely");
   assert.equal(travelerImpact(0, { clouds: [{ cover: "FEW", base: 5000 }] }), "Flights operating normally");
@@ -138,4 +138,14 @@ test("thunder chances in words: 60+ likely, 30–59 chance, under 30 slight chan
   // site/app.js plainReason uses the same cut-offs (Traveler mode only)
   const app = readFileSync(join(HERE, "../site/app.js"), "utf8");
   assert.match(app, /n >= 60 \? "Thunderstorms likely" : n >= 30 \? "Chance of thunderstorms" : "Slight chance of thunderstorms"/);
+});
+
+test("traveler impact: gusts make no runway (crosswind) claim; blowing/drifting snow alone isn't de-icing", () => {
+  assert.doesNotMatch(travelerImpact(3, { wgst: 40, wspd: 28 }), /crosswind/i);
+  assert.equal(travelerImpact(3, { wgst: 40, wspd: 28 }), "Strong gusty winds may cause delays or diversions");
+  assert.doesNotMatch(travelerImpact(2, { wxString: "BLSN", wgst: 30, wspd: 22 }), /De-icing/);
+  assert.doesNotMatch(travelerImpact(2, { wxString: "DRSN" }), /De-icing/);
+  assert.equal(travelerImpact(2, { wxString: "-SN BLSN" }), "De-icing and slower operations — delays likely");
+  assert.equal(travelerImpact(2, { wxString: "SHSN" }), "De-icing and slower operations — delays likely");
+  assert.equal(travelerImpact(3, { wxString: "FZRA" }), "De-icing and slower operations — delays likely");
 });

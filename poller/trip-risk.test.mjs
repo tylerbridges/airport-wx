@@ -211,7 +211,7 @@ test("site/trip-risk.js is a byte-identical copy of poller/trip-risk.mjs", async
 });
 
 const Outlook = createRequire(import.meta.url)("../site/outlook.js");
-const healthySources = Object.fromEntries(["faa", "atcscc", "metar", "taf", "nws"].map((k) => [k, { ok: true }]));
+const healthySources = Object.fromEntries(["faa", "atcscc", "metar", "taf", "nws", "sigmet", "spc", "lamp", "tcf", "cwa"].map((k) => [k, { ok: true }]));
 const healthFor = (more = {}) => (a) => Outlook.health(a, { now: NOW, generated: at(0), sources: healthySources, ...more });
 const healthyAirport = (code) => ap(code, "America/Chicago", {}, { metar: { obsTime: at(0) }, taf: { issued: at(0) } });
 const quietTrip = { legs: [{ from: "MSP", to: "ATL", dep: at(2), arr: at(4) }] };
@@ -369,4 +369,16 @@ test("connection remains a schedule-based assessment after its planned arrival/d
 
 test("advisory-only storms do not claim an overhead observation", () => {
  assert.equal(plainReason("Convective SIGMET over airport until 9 PM"), "Storms near the airport");
+});
+
+test("hours no forecast covers (level null) are unknown for trips, never clear", () => {
+  const MSP = ap("MSP", "America/Chicago");
+  for (let i = 18; i < 24; i++) Object.assign(MSP.hours[i], { level: null, fltCat: null });
+  assert.equal(windowAt(MSP, T0 + 20 * H), null);
+  const w = windowAt(MSP, T0 + 17 * H + 30 * 60e3); // ±1 h: 16 and 17 covered, 18 not: only covered hours count
+  assert.deepEqual(w.hours.map((h) => h.t), [MSP.hours[16].t, MSP.hours[17].t]);
+  const ATL = ap("ATL", "America/New_York");
+  const r = tripStatus({ legs: [{ from: "MSP", to: "ATL", dep: at(20), arr: at(22) }] }, by(MSP, ATL), { now: NOW });
+  assert.notEqual(r.status, "ok");
+  assert.equal(r.legs[0].depAt, null);
 });

@@ -84,7 +84,7 @@ export function assemble({ airports, now, metars, tafs, sigmets, isigmets = null
     if (nt) applyNotices(hours, nt, { faa, opsplan: op, tz: a.tz, now });
     // plain-English items for the sheet ("From the FAA Command Center"), same texts as the risk reasons
     const opOut = op
-      ? { ...op, items: opsPlanItems(op, { faa, atcscc: adv, tz: a.tz, now }).map(({ kind, level, text, cause, until, raw, dup, ifr }) => ({ kind, level, text, cause, until, raw, dup, ifr })) }
+      ? { ...op, items: opsPlanItems(op, { faa, atcscc: adv, tz: a.tz, now }).map(({ kind, level, text, cause, until, raw, dup, ifr, constraint }) => ({ kind, level, text, cause, until, raw, dup, ifr, constraint })) }
       : null;
     const { now: nowS, peak } = summarize(hours, a.tz);
     // phase3 hook: chance of a real delay per hour (FAA programs override; README "Delay model")

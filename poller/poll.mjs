@@ -9,7 +9,7 @@ import { readFile, writeFile, mkdir, rm } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseFaaXml, expandTemplate, pool } from "./lib.mjs";
-import { lampCycles, lampUrl, parseLamp, lampBlocks, ATCSCC_URL, collectAtcscc } from "./sources.mjs";
+import { lampCycles, lampUrl, parseLamp, lampBlocks, ATCSCC_URL, atcsccListUrl, collectAtcscc } from "./sources.mjs";
 import { parseOpsPlan, opsPlanNational } from "./opsplan.mjs";
 import { assemble } from "./core.mjs"; // live relay: pure assembly shared with worker/worker.mjs
 import { runGlobal } from "./global.mjs"; // build2a hook: global METAR/TAF shards for searched airports
@@ -168,7 +168,13 @@ function liveProviders(airports, now, raw) {
     },
     atcscc: async () => {
       const html = await get("atcscc", "atcscc.html", ATCSCC_URL);
-      return atcsccFrom(html, async (url) => (await http(url)).text, now, raw);
+      // the advisory lists for today and yesterday (UTC; a program issued late yesterday can still be running)
+      const lists = await Promise.all([0, 1].map(async (d) => {
+        const url = atcsccListUrl(+now - d * 86400e3);
+        try { const r = await http(url); if (d === 0) raw.save("atcscc", "atcscc-list.html", r.text, {}, false); return r.text; }
+        catch (e) { raw.note("atcscc", { [`list${d}Error`]: String(e?.message || e) }); return null; }
+      }));
+      return atcsccFrom(html, async (url) => (await http(url)).text, now, raw, lists);
     },
     tcf: async () => {
       const url = `${AWC}/tcf?format=geojson`;
@@ -183,18 +189,21 @@ function liveProviders(airports, now, raw) {
   };
 }
 
-async function atcsccFrom(html, getText, now, raw) {
-  const r = await collectAtcscc(html, getText, { now });
+async function atcsccFrom(html, getText, now, raw, lists = null) {
+  const r = await collectAtcscc(html, getText, { now, lists });
   if (r.firstDetail != null) raw.save("atcscc", "atcscc-detail.html", r.firstDetail, {}, false);
   // The page is "The Most Recent ATCSCC Advisory": usually the DCC operations plan.
   let plan = null;
   try { plan = parseOpsPlan(html); } catch { /* not a plan */ }
   raw.note("atcscc", {
-    links: r.links, followed: r.followed, failed: r.failed, parsed: r.list.length,
+    links: r.links, followed: r.followed, failed: r.failed, parsed: r.list.length, listed: r.listed, degraded: r.degraded,
     opsplan: plan ? { advisory: plan.advisory, issued: plan.issued, staffing: plan.staffing.length, constraints: plan.constraints.length, programs: plan.programs.length, sirs: plan.sirs.length, launches: plan.launches.length } : null,
   });
   if (r.followed && r.failed === r.followed && !r.list.length) throw new Error(`all ${r.failed} advisory pages failed: ${r.firstError}`);
-  return { list: r.list, plan, partial: r.failed ? `${r.failed} of ${r.followed} advisory pages failed: ${r.firstError}` : null };
+  // degraded (no advisory list, nothing to follow, nothing parsed): ok with an error, so health never counts it as fresh
+  const partial = [r.degraded ? "advisory list unavailable — no ground stop or delay program advisories could be read" : null,
+    r.failed ? `${r.failed} of ${r.followed} advisory pages failed: ${r.firstError}` : null].filter(Boolean).join("; ") || null;
+  return { list: r.list, plan, partial };
 }
 
 function fixtureProviders(airports, now, raw) {
@@ -230,12 +239,14 @@ function fixtureProviders(airports, now, raw) {
     },
     atcscc: async () => {
       const html = await fx("atcscc", "atcscc.html");
+      let list = null;
+      try { list = await read("atcscc-list.html"); } catch { /* no list fixture */ }
       const getText = async (url) => {
         const n = /advn=(\d+)/i.exec(url)?.[1];
         if (!n) throw new Error("no fixture for " + url);
         return read(`atcscc-adv-${Number(n)}.html`);
       };
-      return atcsccFrom(html, getText, now, raw);
+      return atcsccFrom(html, getText, now, raw, [list]);
     },
     tcf: async () => JSON.parse(await fx("tcf", "tcf.json")),
     cwa: async () => JSON.parse(await fx("cwa", "cwa.json")),

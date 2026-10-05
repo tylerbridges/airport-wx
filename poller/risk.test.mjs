@@ -440,3 +440,15 @@ test("FAA possible narrative is qualified rather than presented as confirmed del
   const items = opsPlanItems({notes:[{airports:["ATL"],possible:true,raw:"ATL POSSIBLE HOLDING"}],plan:{}}, {now:new Date("2026-10-04T18:00:00Z")});
   assert.equal(items[0].text,"FAA reports possible delays at ATL");
 });
+
+test("hoursOutput: hours beyond the TAF's valid period are 'no forecast' (level null), not Clear; other sources keep their level", () => {
+  const t = { validTimeFrom: hr(-1), validTimeTo: hr(20), fcsts: [{ ...vfr, timeTo: hr(20) }] };
+  const out = hoursOutput(buildHours({ now: NOW, tz: "America/Chicago", taf: t }));
+  assert.equal(out[5].level, 0);
+  assert.equal(out[5].fltCat, "VFR");
+  for (const h of out.slice(20)) { assert.equal(h.level, null); assert.equal(h.fltCat, null); }
+  // an FAA program still scores an uncovered hour
+  const end = new Date((hr(23) + 1800) * 1000).toISOString();
+  const prog = hoursOutput(buildHours({ now: NOW, tz: "America/Chicago", taf: t, faa: [{ type: "ground_stop", end }] }));
+  assert.equal(prog[22].level, 4);
+});

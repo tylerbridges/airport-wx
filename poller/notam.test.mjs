@@ -25,7 +25,7 @@ test("closure scope: limited (LAX GA NOTAM), full, runway", () => {
   assert.equal(closureScope("snow removal"), "full");
   assert.equal(closureScope(RWY), "runway");
   assert.equal(closureScope("!X 1/1 X RWY 16L/34R CLSD EXC TAX"), "runway");
-  assert.equal(closureScope("!X 1/1 X AD AP CLSD EXC PPR"), "limited");
+  assert.equal(closureScope("!X 1/1 X AD AP CLSD EXC PPR"), "full"); // PPR-only exemption: closed for travelers
   assert.equal(closureScope("!X 1/1 X TWY B CLSD"), "limited");
   assert.deepEqual(closedRunways(RWY), ["7L/25R"]);
   assert.deepEqual(closedRunways("RWY 4L/22R CLSD. RWY 4R/22L CLSD"), ["4L/22R", "4R/22L"]);
@@ -104,4 +104,23 @@ test("size-limited closures (live PHL NOTAM) aren't called general aviation", ()
   // NON SKED alone is not general aviation either
   const ns = describeClosure("!X 1/1 X AD AP CLSD TO NON SKED ACFT EXC PPR 2609301806-2610311200", { now: new Date("2026-10-03T22:17:00Z") });
   assert.equal(ns.plain, "Closed to non-scheduled flights unless approved in advance. Scheduled airline flights aren't affected. Through Oct 31.");
+});
+
+test("closures exempting only emergency/medevac/PPR flights are full; narrowing subsets stay limited", () => {
+  const MED = "!MIA 10/012 MIA AD AP CLSD EXC MEDEVAC AND EMERG ACFT 2610031800-2610051200";
+  const ALL = "!MIA 10/013 MIA AD AP CLSD TO ALL ACFT EXC HURRICANE EVAC AND RELIEF FLT PPR 2610031800-2610051200";
+  assert.equal(closureScope(MED), "full");
+  assert.equal(closureScope(ALL), "full");
+  assert.equal(closureScope("!X 1/1 X AD AP CLSD EXC MIL ACFT"), "full");
+  assert.equal(closureScope("!X 1/1 X AD AP CLSD EXC SKED AIR CARRIER OPS"), "limited");
+  assert.equal(closureScope("!X 1/1 X AD AP CLSD TO TRANSIENT ACFT"), "limited");
+  assert.equal(closureScope("!X 1/1 X AD AP CLSD TO ACFT MORE THAN 100000 LBS"), "limited");
+  const m = describeClosure(MED, { tz: "America/New_York", now: NOW });
+  assert.equal(m.plain, "Airport closed except emergency and medical flights. Through Oct 5.");
+  const a = describeClosure(ALL, { tz: "America/New_York", now: NOW });
+  assert.equal(a.plain, "Airport closed except relief and evacuation flights and flights approved in advance. Through Oct 5.");
+  for (const d of [m, a]) assert.doesNotMatch(d.plain, /\b(MEDEVAC|EMERG|FLT|ACFT|EXC|PPR|CLSD)\b/);
+  const fi = assessFaa({ type: "closure", reason: MED, ...m });
+  assert.equal(fi.level, 4);
+  assert.match(fi.text, /^Airport closed/);
 });

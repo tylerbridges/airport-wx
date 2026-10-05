@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expandTemplate } from "./lib.mjs";
 import {
-  awcTime, lampCycles, lampUrl, parseLamp, lampBlocks, htmlToText, atcsccLinks, advType, parsePeriod, resolveDdhhmm,
+  awcTime, lampCycles, lampUrl, parseLamp, lampBlocks, htmlToText, atcsccLinks, atcsccListUrl, isAdvisoryList, advType, parsePeriod, resolveDdhhmm,
   parseAdvisory, inlineAdvisories, finalizeAtcscc, collectAtcscc, shapeContains, tcfCoverage, tcfAt, cwaAt,
 } from "./sources.mjs";
 
@@ -319,4 +319,58 @@ test("advisory extension outlook: preserve published words, never infer a percen
     assert.equal(parseAdvisory(GS + "\nPROBABILITY OF EXTENSION: " + raw, { now: NOW }).extension, expected);
   }
   assert.equal(parseAdvisory(GS, { now: NOW }).extension, null);
+});
+
+// Real PHJH block (history branch raw/latest/lamp-airports.txt, 2026-10-05 2230Z) with missing values written as 9s:
+// "22999999…" in WGS used to read as a 999-kt gust.
+test("LAMP (real bulletin): missing-value sentinels (99/999) are null, never a 999-kt gust", async () => {
+  const text = await readFile(join(dirname(fileURLToPath(import.meta.url)), "fixtures/lamp-missing.txt"), "utf8");
+  const h = parseLamp(text).stations.PHJH.hours;
+  assert.deepEqual(h.map((x) => x.gust), [24, 23, 24, 24, 22, null, null, null, null, null, null, null, null, null, null, null, null, null, null, 0, 0, 0, 0, 0, 0]);
+  assert.ok(h.every((x) => x.gust == null || x.gust < 99));
+  assert.deepEqual(h.slice(0, 3).map((x) => x.pPrecip), [1, 1, 2]);
+  assert.ok(h.every((x) => x.cig === 8 && x.vis === 7));
+  // every numeric row: a 999 cell and out-of-range categories are null; a real 99% probability stays
+  const blk = [" KXYZ   GFS LAMP GUIDANCE  10/05/2026  2230 UTC", " UTC  23 00 01", " WGS  99999 25", " PPO 999 99100", " CIG  99  8  0", " VIS  99  7 12", " LP1 999 40  5"].join("\n");
+  const x = parseLamp(blk).stations.KXYZ.hours;
+  assert.deepEqual(x.map((r) => r.gust), [null, null, 25]);
+  assert.deepEqual(x.map((r) => r.pPrecip), [null, 99, 100]);
+  assert.deepEqual(x.map((r) => r.cig), [null, 8, null]);
+  assert.deepEqual(x.map((r) => r.vis), [null, 7, null]);
+  assert.deepEqual(x.map((r) => r.tstmProb), [null, 40, 5]);
+});
+
+// ATCSCC (Oct 5 live samples): advADB.jsp now shows only the most recent advisory (the operations plan) with one
+// link, "Advisories Database Selection Form" (followed 0, parsed 0). Its form submits GET /adv/adv_list.
+const fx = (f) => readFile(join(dirname(fileURLToPath(import.meta.url)), "fixtures", f), "utf8");
+test("ATCSCC: the advisory list (adv_list) is read row by row; the newest program per airport is followed; the real detail parses", async () => {
+  const LIVE = new Date("2026-10-05T20:00:00Z");
+  assert.match(atcsccListUrl(LIVE), /^https:\/\/www\.fly\.faa\.gov\/adv\/adv_list\?whichAdvisories=ATCSCC&advisoryCategory=NotAll&date=2026-10-05&gStop=true/);
+  const list = await fx("atcscc-list-real.html");
+  assert.equal(isAdvisoryList(list), true);
+  const links = atcsccLinks(list, "https://www.fly.faa.gov/adv/adv_list");
+  const bos = links.find((l) => /advn=64\b/.test(l.href));
+  assert.equal(bos.href, "https://www.fly.faa.gov/adv/adv_otherdis?adv_date=10052026&advn=64");
+  assert.match(bos.title, /^064 BOS\/ZBW 10\/05\/26 CDM GROUND STOP 10\/05\/26 19:43$/);
+  const detail = await fx("atcscc-detail-real.html");
+  const seen = [];
+  const r = await collectAtcscc("<html>most recent advisory</html>", async (url) => { seen.push(url); return /advn=64\b/.test(url) ? detail : "<html></html>"; },
+    { base: "https://www.fly.faa.gov/adv/adv_list", lists: [list], now: LIVE });
+  assert.equal(r.listed, 1); assert.equal(r.degraded, false);
+  assert.ok(seen.some((u) => /advn=64\b/.test(u)));
+  assert.ok(!seen.some((u) => /advn=43\b/.test(u)), "DEN's older ground stop: only the newest (its CNX) is followed");
+  assert.ok(!links.filter((l) => /PROPOSED/.test(l.title)).some((l) => seen.includes(l.href)), "proposed programs are not followed");
+  const gs = r.list.find((a) => a.airport === "BOS" && a.type === "GS");
+  assert.equal(gs.cause, "runway"); assert.equal(gs.causeText, "RWY-TAXI / CONSTRUCTION");
+  assert.equal(gs.end, "2026-10-05T20:45:00.000Z"); assert.equal(gs.active, true);
+  assert.equal(advType("CDM PROPOSED GROUND DELAY PROGRAM"), "other");
+});
+test("ATCSCC: a page with no followable advisories and no recognised list is degraded; a quiet list is not", async () => {
+  const page = await fx("atcscc.html");
+  const r = await collectAtcscc(page, async () => "", { now: NOW });
+  assert.deepEqual([r.followed, r.list.length, r.listed, r.degraded], [0, 0, 0, true]);
+  const quiet = await collectAtcscc(page, async () => "", { now: NOW, lists: [await fx("atcscc-list.html")] });
+  assert.deepEqual([quiet.followed, quiet.listed, quiet.degraded], [0, 1, false]);
+  const failedList = await collectAtcscc(page, async () => "", { now: NOW, lists: [null, "<html>Service unavailable</html>"] });
+  assert.equal(failedList.degraded, true);
 });

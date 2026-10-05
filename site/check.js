@@ -5,7 +5,7 @@
 // Chrome (--dump-dom) and the uptime workflow can read it. Warnings don't fail the check.
 import { loadAirports, rank, decodeList } from "./search.js";
 import { navChecks } from "./navcheck.js?v=5"; // nav hook
-import { tripChecks } from "./check-trips.js?v=7"; // trips hook
+import { tripChecks } from "./check-trips.js?v=8"; // trips hook
 import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=8"; // scenarios hook; More details page helpers
 
 const P = new URLSearchParams(location.search);
@@ -382,6 +382,12 @@ async function uiChecks(add, scenario) {
         A.closeSheet();
       }
       add(hits.length ? "fail" : "pass", "Traveler mode shows no aviation codes outside Pilot details (sheets and More details)", hits.slice(0, 4).join("; ") || `home + ${A.state.data.airports.length} sheets and their More details pages`);
+      // an FAA time written in another zone ("7:45 PM EDT" for SFO) is read in that zone and shown in the airport's
+      const sfo = { tz: "America/Los_Angeles" };
+      const other = A.retime ? A.retime("Ground stop until 7:45 PM EDT", sfo) : "";
+      const same = A.retime ? A.retime("Ground stop until 7:45 PM PT", sfo) : "";
+      const zoneOk = /until [34]:45 PM P[DS]T$/.test(other) && /until 7:45 PM P[DS]T$/.test(same);
+      add(zoneOk ? "pass" : "fail", "FAA times with a stated zone are converted to the airport's local time", zoneOk ? other : `${other} / ${same}`);
     });
 
     await withPage(url, async (w, doc) => {

@@ -48,13 +48,22 @@ export const CAUSE_LABEL = {
   unknown: "",
 };
 
-const ACRONYMS = new Set(["IT", "ATC", "ILS", "VIP", "TFR", "GPS", "FAA", "ARTCC", "TRACON", "RWY", "TWY", "NAS"]);
+const ACRONYMS = new Set(["IT", "ATC", "ILS", "VIP", "TFR", "GPS", "FAA", "ARTCC", "TRACON", "NAS"]);
+// FAA shorthand spelled out, so a cause detail never carries a raw code ("wind/rwy config" -> "wind and runway configuration")
+const EXPAND = {
+  RWY: "runway", RWYS: "runways", TWY: "taxiway", TWYS: "taxiways", CONFIG: "configuration", TSTM: "thunderstorms", TSTMS: "thunderstorms",
+  TS: "thunderstorms", WX: "weather", VIS: "visibility", CIG: "ceilings", CIGS: "ceilings", VOL: "volume", EQ: "equipment", EQUIP: "equipment",
+  CONST: "construction", MAINT: "maintenance", ARR: "arrivals", DEP: "departures", WND: "wind", "SNOW-ICE": "snow and ice",
+};
+// A leading "<category> /" or "<category>:" header ("WEATHER / THUNDERSTORMS", "WX:Low Ceilings", "TM Initiatives:MIT:VOL")
+// names the class; otherwise a slash joins details ("snow/ice", "tstms/wind") and every part is kept.
+const HEADER = /^(WEATHER|WX|VOLUME|VOL|STAFFING|EQUIPMENT|EQ|COMPANY REQ\w*|AIRLINE REQ\w*|CARRIER REQ\w*|RUNWAY|RWY|RWY-TAXI\w*|RUNWAY-TAXI\w*|SECURITY|OTHER|TM INITIATIVES|VIP|SPACE|AIRLINE|COMPANY|NON-RWY)$/i;
 
 function tidyDetail(s) {
   return s
     .trim()
     .split(/\s+/)
-    .map((w) => (ACRONYMS.has(w.toUpperCase()) ? w.toUpperCase() : w.toLowerCase()))
+    .map((w) => (EXPAND[w.toUpperCase()] || (ACRONYMS.has(w.toUpperCase()) ? w.toUpperCase() : w.toLowerCase())))
     .join(" ");
 }
 
@@ -68,7 +77,10 @@ export function causePhrase(cause, text) {
   if (!label) return "";
   const s = String(text ?? "").trim();
   const sep = s.search(/[/:]/);
-  let detail = sep >= 0 ? s.slice(sep + 1) : s;
+  let detail = sep >= 0 && HEADER.test(s.slice(0, sep).trim()) ? s.slice(sep + 1) : s;
+  // "snow/ice" -> "snow and ice"; "tstms/wind/rwy config" -> "tstms, wind and rwy config"
+  const parts = detail.split(/\s*\/\s*/).map((x) => x.trim()).filter(Boolean);
+  detail = parts.length > 1 ? parts.slice(0, -1).join(", ") + " and " + parts[parts.length - 1] : parts[0] || "";
   detail = detail.replace(/[.\s]+$/, "").trim();
   if (!detail || detail.length > 40 || !/^[A-Za-z][A-Za-z0-9 ,'&-]*$/.test(detail)) return label;
   const d = tidyDetail(detail);

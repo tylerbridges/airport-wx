@@ -20,7 +20,8 @@ test("cats: every reason in the sample and scenarios is read back with the polle
       for (const h of [...a.hours, ...(a.observed || [])]) {
         const lv = h.reasons.map((r) => C.reason(r));
         for (let i = 0; i < lv.length; i++) assert.notEqual(lv[i].level, null, `${f} ${a.iata}: unread reason "${h.reasons[i]}"`);
-        assert.equal(Math.max(0, ...lv.map((x) => x.level)), h.level, `${f} ${a.iata} ${h.t}: ${JSON.stringify(h.reasons)}`);
+        // level null = no forecast covers the hour: only informational (level 0) reasons may sit there
+        assert.equal(Math.max(0, ...lv.map((x) => x.level)), h.level ?? 0, `${f} ${a.iata} ${h.t}: ${JSON.stringify(h.reasons)}`);
         n++;
       }
       for (const x of (a.opsplan && a.opsplan.items) || []) if (x.level) assert.equal(C.reason(x.text).level, x.level, x.text);

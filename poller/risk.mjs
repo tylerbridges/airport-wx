@@ -368,6 +368,16 @@ export function opsPlanItems(op, { faa = [], atcscc = [], tz = "UTC", now = new 
   const out = [];
   const active = (t) => (faa || []).some((f) => f.type === (t === "GS" ? "ground_stop" : "ground_delay"))
     || (atcscc || []).some((a) => a.active && a.type === t);
+  // the NAS status program (else the active ATCSCC advisory) of a plan program: {cause, text}
+  const statusCause = (t) => {
+    for (const k of t === "GS/GDP" ? ["GS", "GDP"] : [t]) {
+      const f = (faa || []).find((x) => x.type === (k === "GS" ? "ground_stop" : "ground_delay"));
+      if (f) return { cause: f.cause, text: f.reason };
+      const a = (atcscc || []).find((x) => x.active && x.type === k);
+      if (a) return { cause: a.cause, text: a.causeText };
+    }
+    return null;
+  };
   const con = (op.constraints || [])[0];
   const ph = con ? constraintPhrase(con.reason) : null;
   const conCause = con ? classifyCause(con.reason) : "unknown";
@@ -379,8 +389,14 @@ export function opsPlanItems(op, { faa = [], atcscc = [], tz = "UTC", now = new 
     const until = untilText(toMs(p.until), tz, now);
     if (p.status === "active") {
       const dup = p.program === "GS/GDP" ? active("GS") || active("GDP") : active(p.program);
-      const text = name.charAt(0).toUpperCase() + name.slice(1) + until + (ph ? ` (${ph.short})` : "");
-      out.push({ kind: "program", level: dup ? 0 : p.program === "GS" ? 4 : 3, text, cause: conCause, until: p.until, raw: p.raw, at: "span", from, to, ...(dup ? { dup: true } : {}) });
+      // The same program in the NAS status / an active advisory: its cause wins (BOS: NAS "runway construction" vs the
+      // plan's terminal constraint "wind"); the plan's constraint stays only as `constraint` for the technical detail.
+      const fc = dup ? statusCause(p.program) : null;
+      const fcText = fc ? causePhrase(fc.cause, fc.text) : "";
+      const Name = name.charAt(0).toUpperCase() + name.slice(1);
+      const text = dup && fcText ? `${Name}${until} — ${fcText}` : Name + until + (ph ? ` (${ph.short})` : "");
+      const cause = dup && fc && fc.cause && fc.cause !== "unknown" ? fc.cause : conCause;
+      out.push({ kind: "program", level: dup ? 0 : p.program === "GS" ? 4 : 3, text, cause, until: p.until, raw: p.raw, at: "span", from, to, ...(dup ? { dup: true } : {}), ...(dup && fcText && ph ? { constraint: ph.long } : {}) });
     } else {
       const text = `FAA plans a possible ${name}${until} (${ph ? ph.short : "conditions"})`;
       out.push({ kind: "program", level: 2, text, cause: conCause, until: p.until, raw: p.raw, at: "span", from, to });
@@ -751,8 +767,13 @@ export function summarize(hours, tz) {
   };
 }
 
+/**
+ * status.json hours. An hour no METAR or TAF covers (fltCat null: beyond the TAF's valid period, or no TAF) with
+ * nothing else raising it has level null: no forecast, shown grey, never Clear. Reasons from other sources
+ * (FAA programs, warnings, LAMP…) keep their level there.
+ */
 export function hoursOutput(hours) {
-  return hours.map((h) => ({ t: h.t.toISOString(), level: h.level, reasons: uniqueItems(h.items).map((i) => i.text), fltCat: h.fltCat, ...(h.cond || {}) }));
+  return hours.map((h) => ({ t: h.t.toISOString(), level: h.fltCat == null && !h.level ? null : h.level, reasons: uniqueItems(h.items).map((i) => i.text), fltCat: h.fltCat, ...(h.cond || {}) }));
 }
 
 /**

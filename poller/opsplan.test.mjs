@@ -235,3 +235,22 @@ test("FAA narrative: recovery is not an active delay; residual and possible hold
     if (/POSSIBLE/.test(text)) assert.match(note.text, /possible delays/);
   }
 });
+
+test("ops plan: a program the NAS status already has takes the NAS cause; the plan's constraint stays technical", async () => {
+  const p = parseOpsPlan(await realPage());
+  const san = opsPlanFor(p, "SAN", NOW);
+  // BOS on Oct 5: NAS/advisory cause runway construction, plan terminal constraint WIND
+  const op = { ...san, constraints: [{ reason: "WIND", raw: "BOS/N90/PHL/LAX - WIND" }] };
+  const faa = [{ type: "ground_delay", reason: "RWY-TAXI / CONSTRUCTION", cause: "runway" }];
+  const [x] = opsPlanItems(op, { faa, tz: "America/Los_Angeles", now: NOW });
+  assert.equal(x.dup, true);
+  assert.equal(x.text, "Ground delay program until 5:59 PM — runway work or configuration (construction)");
+  assert.doesNotMatch(x.text, /wind/i);
+  assert.equal(x.cause, "runway");
+  assert.equal(x.constraint, "wind");
+  // an active ATCSCC advisory's cause is used the same way
+  const [y] = opsPlanItems(op, { atcscc: [{ type: "GDP", active: true, cause: "volume", causeText: "VOLUME / VOLUME" }], tz: "America/Los_Angeles", now: NOW });
+  assert.equal(y.text, "Ground delay program until 5:59 PM — high traffic volume");
+  // no NAS/advisory program: the plan's own words stay
+  assert.equal(opsPlanItems(op, { tz: "America/Los_Angeles", now: NOW })[0].text, "Ground delay program until 5:59 PM (wind)");
+});

@@ -246,10 +246,13 @@ export function travelerImpact(level, conditions = {}) {
   const toks = wxTokens(c.wx);
   const has = (code, nearOk = false) => toks.some((t) => (nearOk || t.int !== "VC") && (t.desc.includes(code) || t.ph.includes(code)));
   if (has("TS") || has("FC")) return "Storms can pause departures and arrivals (ground stops) — expect delays";
-  if (toks.some((t) => t.desc.includes("FZ") && !t.ph.includes("FG")) || has("PL") || has("SN") || has("SG")) {
+  // falling snow only: blowing or drifting snow (BLSN/DRSN) alone is wind lifting snow already on the ground
+  const falling = (code) => toks.some((t) => t.int !== "VC" && t.ph.includes(code) && !t.desc.includes("BL") && !t.desc.includes("DR"));
+  if (toks.some((t) => t.desc.includes("FZ") && !t.ph.includes("FG")) || has("PL") || falling("SN") || falling("SG")) {
     return "De-icing and slower operations — delays likely";
   }
-  if (c.wgst != null && c.wgst >= 35) return "Strong crosswinds may cause delays or diversions";
+  // gusts alone say nothing about which runway is in use, so no crosswind claim
+  if (c.wgst != null && c.wgst >= 35) return "Strong gusty winds may cause delays or diversions";
   if ((c.ceiling != null && c.ceiling < 500) || (c.vis != null && c.vis < 1) || has("FG")) {
     return "Arrivals are often slowed in these conditions; delays of 30+ min possible";
   }

@@ -214,7 +214,8 @@ function hourWx(hr) {
 export function windowAt(a, t0, t1 = t0) {
   if (!a || !Array.isArray(a.hours) || !a.hours.length) return null;
   const lo = t0 - HOUR, hi = t1 + HOUR;
-  const rows = a.hours.filter((h) => { const s = Date.parse(h.t); return s < hi && s + HOUR > lo; });
+  // an hour no forecast covers (level null) is unknown: it never counts as clear
+  const rows = a.hours.filter((h) => { const s = Date.parse(h.t); return s < hi && s + HOUR > lo && h.level != null; });
   if (!rows.length) return null;
   let level = 0, wxLevel = 0, delay = null;
   const scored = [];
@@ -336,7 +337,7 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
     if (quality && !qualifications.some((q) => q.iata === a.iata && q.side === side)) qualifications.push({ iata: a.iata, quality, side, leg });
     return quality;
   };
-  const covered = (a, t) => (a?.hours || []).some((h) => { const ms = toMs(h.t); return ms <= t && t < ms + HOUR; });
+  const covered = (a, t) => (a?.hours || []).some((h) => { const ms = toMs(h.t); return ms <= t && t < ms + HOUR && h.level != null; }); // level null: no forecast
   const displayAt = (w, quality) => w ? { level: quality && w.level === 0 ? null : w.level, reason: w.reasons[0] || null, delay: w.delay, quality } : null;
   const seen = new Set();
   const add = (c) => {

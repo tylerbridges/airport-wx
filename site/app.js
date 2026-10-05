@@ -273,18 +273,26 @@
    * "forecast 4–7 PM", "Sun 2:05 AM to Sun 10:05 AM"). Rewrites them for the display settings: zone suffix as
    * "CDT"; with "My time zone" or 24-hour clock each time is resolved to an instant and written again.
    */
+  // A time written with another zone than the airport's ("7:45 PM EDT" at SFO) is read in the zone it states.
+  const ZONE_TZ = { ET: "America/New_York", CT: "America/Chicago", MT: "America/Denver", PT: "America/Los_Angeles", AKT: "America/Anchorage", HT: "Pacific/Honolulu",
+    HST: "Pacific/Honolulu", EST: "Etc/GMT+5", EDT: "Etc/GMT+4", CST: "Etc/GMT+6", CDT: "Etc/GMT+5", MST: "Etc/GMT+7", MDT: "Etc/GMT+6", PST: "Etc/GMT+8", PDT: "Etc/GMT+7",
+    AKST: "Etc/GMT+9", AKDT: "Etc/GMT+8" };
   function retime(text, a) {
     const s = String(text || "");
     if (!a || !/\d (AM|PM)\b/.test(s)) return s;
     const src = a.tz || "UTC";
     const tz = dispTz(a);
-    const convert = S.clock === "24" || tz !== src;
     const ref = dataRef();
     const base = ymd(ref, src);
-    const resolve = (h12, mi, ap, wd, tomorrow, after) => {
+    const foreignZone = (zone) => {
+      const z = zone && ZONE_TZ[zone];
+      return z && localToUtc(base.year, base.month, base.day, 12, 0, z) !== localToUtc(base.year, base.month, base.day, 12, 0, src) ? z : null;
+    };
+    const resolve = (h12, mi, ap, wd, tomorrow, after, zsrc = src) => {
       const hr = (Number(h12) % 12) + (ap === "PM" ? 12 : 0);
       const cands = [];
-      for (let d = -1; d <= 7; d++) cands.push({ d, t: localToUtc(base.year, base.month, base.day + d, hr, Number(mi || 0), src) });
+      const zb = zsrc === src ? base : ymd(ref, zsrc);
+      for (let d = -1; d <= 7; d++) cands.push({ d, t: localToUtc(zb.year, zb.month, zb.day + d, hr, Number(mi || 0), zsrc) });
       if (wd) {
         const c = cands.find((x) => fmt(src, { weekday: "short" }, "wd").format(x.t) === wd && x.t >= ref - 24 * HOUR);
         if (c) return c.t;
@@ -294,15 +302,17 @@
       return (cands.find((x) => x.t >= min) || cands[1]).t;
     };
     return s.replace(TIME_RE, (all, wd, h1, m1, h2, m2, ap, zone, tmw) => {
+      const zsrc = foreignZone(zone) || src;
+      const convert = S.clock === "24" || tz !== src || zsrc !== src;
       if (!convert) {
         if (!zone) return all;
         const t = resolve(h2 || h1, h2 ? m2 : m1, ap, wd, !!tmw);
         return all.replace(" " + zone, " " + zoneAbbr(t, src));
       }
-      const end = resolve(h2 || h1, h2 ? m2 : m1, ap, wd, !!tmw);
+      const end = resolve(h2 || h1, h2 ? m2 : m1, ap, wd, !!tmw, undefined, zsrc);
       let start = null;
       if (h2) {
-        start = resolve(h1, m1, ap, wd, !!tmw);
+        start = resolve(h1, m1, ap, wd, !!tmw, undefined, zsrc);
         if (start > end) start -= 24 * HOUR;
       }
       const one = (t) => (dayKey(t, tz) === dayKey(refNow(), tz) ? clock(t, tz) : whenLabel(t, tz));
@@ -899,7 +909,7 @@
     const tz = dispTz(a);
     const when = (dayKey(s.t, tz) === dayKey(refNow(), tz) ? "" : timelineDay(s.t, tz) + " ") + hourLabel(s.t, tz);
     if (s.kind === "none") return when + " · No report";
-    if (s.kind === "na") return when + " · Forecast not available yet";
+    if (s.kind === "na") return when + " · No forecast";
     if (s.level === 0 && s.kind !== "obs" && AWXOutlook.health(a, outlookOpts(a, view(a))).quality) return when + " · Status unconfirmed";
     const top = plainList(s.reasons, a)[0];
     return [s.kind === "now" ? "Now" : when, s.kind === "obs" ? (s.observed ? "Observed" : "Earlier forecast") : s.kind === "fc" ? "Forecast" : null, LEVELS[s.level].label, top, s.kind === "fc" && AWXOutlook.quietHour(s.t, a.tz) ? "Few flights" : null].filter(Boolean).join(" · ");
@@ -909,7 +919,7 @@
     const tz = dispTz(a), day = dayKey(s.t, tz) === dayKey(refNow(), tz) ? "" : timelineDay(s.t, tz) + " ";
     const when = s.kind === "now" ? "Now" : day + hourLabel(s.t, tz);
     if (s.kind === "none") return when + " · No report";
-    if (s.kind === "na") return when + " · Forecast unavailable";
+    if (s.kind === "na") return when + " · No forecast";
     if (s.level === 0) return when + " · " + (AWXOutlook.health(a, outlookOpts(a, view(a))).quality ? "Status unconfirmed" : s.kind === "fc" && AWXOutlook.quietHour(s.t, a.tz) ? "Few flights" : "Low risk");
     const r = (s.reasons || []).join(" ");
     const topic = (s.reasons || []).some(x => /^Airport closed\b/i.test(x)) ? "Airport closed" : (s.reasons || []).some(x => /^Ground stop\b/i.test(x)) ? "Ground Stop"
@@ -1797,7 +1807,8 @@
     return [lead, ...items.map((x) => h("div", { class: "item" + (x.level ? "" : " info") },
       x.level ? h("span", { class: "badge " + lv(x.level) }, LEVELS[x.level].label) : null,
       h("div", { class: x.level ? "" : "muted", style: x.level ? "margin-top:4px" : "" },
-        retime(x.text, a) + (x.ifr ? " — can slow landings in low clouds or poor visibility" : "") + "." + (x.dup ? opts.dupNote || " Also in Delays & closures above." : "")),
+        retime(x.text, a) + (x.ifr ? " — can slow landings in low clouds or poor visibility" : "") + "." + (x.dup ? opts.dupNote || " Also in Delays & closures above." : "")
+        + (opts.constraints && x.constraint ? " The plan's terminal constraint: " + x.constraint + "." : "")), // technical detail only (More details → FAA plan)
       aviation() && x.level ? h("div", { class: "chips" }, confChip("FAA", CATS.reason(x.text).conf || "high")) : null,
       opts.raw === false ? null : rawToggle(x.raw)))];
   }
@@ -2110,13 +2121,16 @@
   /** "FAA gives no end time" when an FAA program in force has none (its 3–5 hour hold in the hour levels isn't an end). */
   const NO_END = "FAA gives no end time";
   /** The outlook's what-happens-next rows ({label, value}): direction impacts, scheduled end, FAA extension outlook, forecast improvement. */
-  function travelRows(a) {
-    const o = outlook(a);
+  function travelRows(a, lead = null) {
+    // the forecast improvement never falls inside the delay window shown above it (lead: AWXDelay.outlookLead)
+    const v = a.hours?.length ? view(a) : a;
+    const o = AWXOutlook.evaluate(v, { ...outlookOpts(a, v), at: refNow(), notBefore: lead && Number.isFinite(lead.end) ? lead.end : undefined });
     const covered = o.programs.length === 1 && o.programs[0].type !== "closure"; // its end and average are already in the card
     const rows = covered ? [] : o.impacts.map((r) => ({ label: r.label, value: r.value }));
     if (o.scheduledEnd && !covered) rows.push({ label: "Scheduled end", value: whenLabel(o.scheduledEnd, dispTz(a)) + " · may change" });
     if (o.extension) rows.push({ label: "FAA extension outlook", value: cap(o.extension) });
     if (o.recovery) rows.push({ label: "Forecast improvement", value: "Lower disruption risk forecast after " + whenLabel(o.recovery, dispTz(a)) });
+    else if (o.eases) rows.push({ label: "Forecast improvement", value: "Eases to " + LEVELS[o.eases.level].label + " after " + whenLabel(o.eases.at, dispTz(a)) });
     return rows;
   }
 
@@ -2148,7 +2162,7 @@
 
     // the headline: the delay outlook and what happens next sit in the top card, not in cards further down
     const lead = window.AWXDelay && typeof AWXDelay.outlookLead === "function" ?safeCall(() => AWXDelay.outlookLead(a)) : null; // phase3 hook
-    const nextRows = safeCall(() => travelRows(a)) || [];
+    const nextRows = safeCall(() => travelRows(a, lead)) || [];
     // rest state: one full-width "Now" card; a later, higher risk ("split" in CATS.restLayout) leads its Looking ahead list
     const restCards = () => {
       if (layout === "split") {
@@ -2177,13 +2191,13 @@
       const c = s.h ? (isNow ? nowCond : s.h) : null;
       const label = cap(whenLabel(s.t, tz));
       const zulu = aviation() ? " · " + new Date(s.t).toISOString().slice(11, 13) + "00Z" : "";
-      const when = (s.kind === "obs" ? (s.observed ? "Observed" : "Earlier forecast") : s.kind === "none" ? "No report" : s.kind === "na" ? "Forecast not available yet" : isNow ? "Now" : "Forecast") + zulu;
+      const when = (s.kind === "obs" ? (s.observed ? "Observed" : "Earlier forecast") : s.kind === "none" ? "No report" : s.kind === "na" ? "No forecast" : isNow ? "Now" : "Forecast") + zulu;
       const progs = past || s.kind === "na" ? [] : programsAt(v, s.key, isNow);
       const unsure = !past && !isNow && sm.uncertainFrom != null && s.key >= sm.uncertainFrom && s.level != null && s.level < sm.openLevel;
       return stateCard({ a, kind: "hour", past, normalNote: isNow ? normalNote : unsure ? NO_END + " — the program may still be in place" : null, isNow, full: true, simple: !aviation(), max: 3, label, level: s.level, when, delay: !past && s.h ? s.h.delay : null,
         reasons: shortList(s.reasons, a), programs: progs, impact: s.level == null ? null : CATS.impact(s.reasons, progs),
         facts: c ? factsRow(c, a, s.key, past, true) : null, chips: s.level == null ? [] : cardSources(s.reasons, s.kind),
-        empty: s.kind === "none" ? "No weather report for this hour" : s.kind === "na" ? "Forecast not available yet" : null });
+        empty: s.kind === "none" ? "No weather report for this hour" : s.kind === "na" ? "No forecast for this hour" : null });
     };
 
     const boxWrap = h("div", { class: "boxwrap", "aria-live": "polite" });
@@ -2475,7 +2489,7 @@
     const kids = [];
     const sub = (t) => h("div", { class: "subt md-sub" }, t);
     // FAA Command Center operations plan: every item for this airport (programs, staffing, constraints, SIRs with end dates)
-    const items = planItems(v, a, { raw: false, dupNote: " Also in the FAA airport status." });
+    const items = planItems(v, a, { raw: false, dupNote: " Also in the FAA airport status.", constraints: true });
     const launches = launchesNear(a);
     kids.push(sub("FAA Command Center plan"));
     if (items.length) kids.push(...items);
@@ -2779,7 +2793,7 @@
     state, openSheet, closeSheet, toggleFav, render, // build2a hook: used by site/searched.js
     // build2b: for site/searched.js, the settings UI and check.js
     openDetails, closeDetails, detailRow, popupFocus, refreshDetails: () => { if (md.iata) renderDetails(true); }, // Airport details pages
-    ensureCardTimeline, prefs: PREFS, codeOf, view, outlook, summary, hourLevel, slotText, refNow, whenLabel, dispTz, zoneAbbr, clock, hourLabel, daySlots, openNational, closePanel, placeLenses,
+    ensureCardTimeline, prefs: PREFS, codeOf, view, outlook, summary, hourLevel, slotText, refNow, whenLabel, dispTz, zoneAbbr, clock, hourLabel, daySlots, openNational, closePanel, placeLenses, retime,
     timeline: (a) => timeline(a, {}), // a status.json-shaped airport (searched.js builds one from a shard entry)
     version: APP_V,
   };
