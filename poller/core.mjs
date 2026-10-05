@@ -11,7 +11,7 @@ import { classifyCause, causePhrase } from "./cause.mjs";
 import { plainMetar, travelerImpact } from "./plain.mjs";
 import { opsPlanFor } from "./opsplan.mjs";
 import { scoreHours, HUBS } from "./delay.mjs"; // phase3 hook: delay model (README "Delay model")
-import { cascades, applyCascade } from "./hubs.mjs"; // hubs hook: hub cascade warnings (README "Hub cascade")
+import { cascades, TOP_ROUTES, sameTracon } from "./hubs.mjs"; // hubs hook: hub cascade warnings (README "Hub cascade")
 import { sigmetAdvisoriesAt } from "./aviation-advisories.mjs";
 import { noticesFor, applyNotices } from "./notices.mjs"; // restrictions hook: FAA TFRs (README "Notices")
 
@@ -33,7 +33,6 @@ export function assemble({ airports, now, metars, tafs, sigmets, isigmets = null
   const tafBy = latestBy(tafs, "icaoId", "issueTime");
   const validTaf = (x) => (x && !(toMs(x.validTimeTo) != null && toMs(x.validTimeTo) < +now) ? x : null);
   const out = [];
-  const rows = new Map(); // hubs hook: internal risk rows per airport, for the cascade pass
   const known = new Set(airports.map((a) => a.iata));
   for (const a of airports) {
     const o = (over && over(a)) || {}; // live relay
@@ -96,7 +95,6 @@ export function assemble({ airports, now, metars, tafs, sigmets, isigmets = null
     }) : null;
     const hoursOut = hoursOutput(hours);
     if (dl) hoursOut.forEach((h, i) => { if (dl[i]) h.delay = dl[i]; });
-    rows.set(a.iata, hours); // hubs hook
 
     out.push({
       iata: a.iata, icao: a.icao, name: a.name, city: a.city, state: a.state, tz: a.tz, lat: a.lat, lon: a.lon,
@@ -129,7 +127,7 @@ export function assemble({ airports, now, metars, tafs, sigmets, isigmets = null
       ...(nt ? { notices: { items: nt.items.filter((x) => x.src === "tfr"), count: nt.items.filter((x) => x.src === "tfr").length } } : {}), // restrictions hook
     });
   }
-  // hubs hook: hub cascade notes (poller/hubs.mjs) — reasons and levels of the affected hours, now/peak again
+  // hubs hook: research-only network exposure; keep live levels and probability estimates unchanged
   const mine = new Set(out.map((e) => e.iata));
   const from = new Map((hubsFrom || []).filter((b) => b && Array.isArray(b.hours) && b.hours.length).map((b) => [b.iata, b]));
   // without delay scoring here (relay without model files) a hub's delay numbers come from hubsFrom, as the relay shows them
@@ -139,19 +137,23 @@ export function assemble({ airports, now, metars, tafs, sigmets, isigmets = null
     const bd = new Map(b.hours.map((h) => [h.t, h.delay]));
     return { ...e, hours: e.hours.map((h) => (h.delay || !bd.get(h.t) ? h : { ...h, delay: bd.get(h.t) })) };
   };
-  const notes = cascades([...out.map(withDelay), ...[...from.values()].filter((b) => !mine.has(b.iata))]);
+  const researchAirports = [...out.map(withDelay), ...[...from.values()].filter((b) => !mine.has(b.iata))];
+  const researchBy = new Map(researchAirports.map(a => [a.iata, a]));
+  const notes = cascades(researchAirports);
+  // Research only: archive exposures and negative cases without changing any live risk or delay score.
   for (const e of out) {
-    const n = notes.get(e.iata);
-    const hours = rows.get(e.iata);
-    if (!n || !hours) continue;
-    const summary = applyCascade(hours, n);
-    if (summary.length) e.cascade = summary;
-    const { now: nowS, peak } = summarize(hours, e.tz);
-    e.now = nowS;
-    e.peak = peak;
-    const delays = e.hours.map((h) => h.delay);
-    e.hours = hoursOutput(hours);
-    e.hours.forEach((h, i) => { if (delays[i]) h.delay = delays[i]; });
+    const candidates = (TOP_ROUTES[e.iata] || []).filter(hub => hub !== e.iata && !sameTracon(hub, e.iata));
+    if (!candidates.length) continue;
+    e.hubResearch = {
+      version: 1, routeBasis: "approximate-top-routes", lagHours: [1, 4],
+      hubs: candidates.map(hub => {
+        const a = researchBy.get(hub);
+        return { hub, available: !!a?.hours?.length,
+          metarAt: a?.metar?.obsTime ?? null, tafIssued: a?.taf?.issued ?? null };
+      }),
+      signalCount: (notes.get(e.iata) || []).length,
+      signals: (notes.get(e.iata) || []).map(({ i, hub, kind }) => ({ t: e.hours[i].t, hub, kind })),
+    };
   }
   out.sort(compareAirports);
   return out;

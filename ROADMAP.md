@@ -9,7 +9,7 @@ Product goal: a traveler should feel confident they know about any disruption at
 
 ## Queued
 - Movement (ADS-B traffic, logging since 2026-10): after 4+ weeks of logging, add the departure-rate index as a live feature in the delay model.
-- FAA flight restrictions (TFRs), hub cascade warnings, 3-day range, delay-cause chips.
+- FAA flight restrictions (TFRs), 3-day range, delay-cause chips.
 - Morning brief, per-airport change log, "what it means for me".
 - Radar loop in the airport sheet.
 - Terminal maps and lounges: shipped (OSM terminal map with gate search, curated lounges). Next: verify every lounge entry and official map link against the operator pages (all are "check before you go" until then); show the departure gate's concourse and nearest lounge on trip legs (TODO in `site/terminals.js`).
@@ -23,3 +23,15 @@ Today the app uses FAA programs (ground stops, delay programs, general delays) p
 - AeroDataBox free tier: ~300 board lookups/month, enough only for trip airports.
 - Not viable: OpenSky (no schedules, previous-day flights, licence needed for operational use), AviationStack/Aviation Edge/FlightLabs/Cirium (quotas or price), FAA SWIM (persistent messaging connection), FAA ASPM (login, next-day).
 Revisit with a capped AeroAPI or AeroDataBox integration limited to starred and trip airports.
+
+## Parked: related-airport spillover risk (research only)
+Disabled from live airport levels, At risk, map warnings and knock-on trip concerns until validated.
+Versioned hubResearch snapshots now retain approximate candidate routes, available/missing hub coverage,
+weather issue times, candidate target-hour exposure and zero-signal controls. History retains current hub
+states and FAA program causes/windows each poll, plus baseline forecast probabilities each hour.
+Join these as-issued inputs to later FAA, ADS-B and BTS outcomes; source outages are unknown, not controls.
+The existing hub-weather model inputs are separate from this unvalidated FAA spillover heuristic.
+Before promotion: obtain measured route volumes and licensed flight-level status/aircraft links where
+available; test lead windows, false alarms, calibration and incremental skill against the baseline on
+held-out airports/dates. Association alone must not be described as confirmed causation. No automatic
+promotion: review the evidence before enabling a live risk feature.

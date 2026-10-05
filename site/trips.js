@@ -12,7 +12,7 @@
 // Calendar trips come from data/trips.json (airports and times only); concerns from ./trip-risk.js.
 import { tripStatus, flightLine, rolesAt, clockText, whenText, rangeText, LEVEL_LABELS, STATUS, TRIP_KEEP_AFTER_ARRIVAL_MS } from "./trip-risk.js?v=6";
 import { mountSearch, loadAirports, airportsLoaded, placeLine } from "./search.js";
-import { calendarDraft, nextScheduled, MAX_CALENDAR_BYTES, flightKey } from "./trip-import.js?v=1";
+import { calendarDraft, nextScheduled, MAX_CALENDAR_BYTES, flightKey } from "./trip-import.js?v=2";
 
 import { CALENDAR_KEY, loadConnection, saveConnection, fetchCalendar } from "./calendar-link.js?v=2";
 

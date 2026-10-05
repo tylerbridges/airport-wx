@@ -67,7 +67,7 @@ test("cascade reason: one step at most, never above Moderate; cats.js and trip-r
       assert.ok(Math.max(base, r.level) <= Math.max(base, Math.min(base + 1, 2)), `${kind} on ${base}`);
       assert.deepEqual([C.reason(r.text).level, C.reason(r.text).cat], [r.level, "faa"]);
       assert.equal(parseCascade(r.text).level, r.level);
-      assert.deepEqual(programOf(r.text), { kind: "cascade", level: r.level, hub: "ORD", what: kind });
+      assert.equal(programOf(r.text), null);
     }
   }
 });
@@ -117,7 +117,7 @@ test("applyCascade: Low -> Moderate, None -> Low, Moderate+ unchanged; summary r
   assert.deepEqual(h2.map((h) => h.level), [1, 1, 2]);
 });
 
-test("assemble: a hub ground stop raises Low to Moderate one to four hours later, never sets 'happening now'", async () => {
+test("assemble: hub exposure is recorded for research without changing risk", async () => {
   const { assemble } = await import("./core.mjs");
   const now = new Date("2026-10-04T18:30:00Z");
   const mk = (iata, icao, city, tz) => ({ iata, icao, name: iata, city, state: "TX", tz, lat: 30, lon: -97 });
@@ -132,15 +132,19 @@ test("assemble: a hub ground stop raises Low to Moderate one to four hours later
   assert.deepEqual(dfw.hours.slice(0, 3).map((h) => h.level), [4, 4, 0]);
   assert.equal(dfw.cascade, undefined);
   assert.equal(aus.hours[0].level, 1); // the hour of the ground stop itself: no note
-  assert.deepEqual(aus.hours.slice(1, 7).map((h) => h.level), [2, 2, 2, 2, 2, 1]); // GS hours 0–1 -> 1–5
-  assert.ok(aus.hours[1].reasons.includes("DFW ground stop may delay flights to and from Dallas–Fort Worth"));
-  assert.ok(aus.hours.every((h) => h.level <= 2));
-  assert.equal(aus.peak.level, 2);
-  assert.deepEqual(aus.cascade.map((c) => [c.hub, c.kind, c.text]), [["DFW", "ground stop", "DFW ground stop may delay flights to and from Dallas–Fort Worth"]]);
-  assert.ok(!aus.hours.some((h) => h.delay && h.delay.override), "a cascade never sets an FAA override");
+  assert.deepEqual(aus.hours.slice(1, 7).map(h => h.level), [1, 1, 1, 1, 1, 1]);
+  assert.ok(aus.hours.every(h => !h.reasons.some(r => /may delay/.test(r))));
+  assert.equal(aus.peak.level, 1);
+  assert.equal(aus.cascade, undefined);
+  assert.equal(aus.hubResearch.signalCount, 5);
+  assert.equal(aus.hubResearch.signals[0].hub, "DFW");
+  assert.equal(aus.hubResearch.hubs.find(h => h.hub === "DFW").available, true);
+  assert.equal(aus.hubResearch.hubs.find(h => h.hub === "DEN").available, false);
+  assert.equal(dfw.hubResearch.signalCount, 0);
+  assert.ok(!aus.hours.some(h => h.delay?.override));
 });
 
-test("trips: a leg to a hub after its ground stop gets the specific cascade concern", () => {
+test("trips: parked spillover notes are ignored; directly applicable Ground Stops still warn", () => {
   const note = "DFW ground stop may delay flights to and from Dallas–Fort Worth";
   const MSP = ap("MSP", "Minneapolis", { 2: { level: 2, reasons: [note] }, 3: { level: 2, reasons: [note] } });
   const DFW = ap("DFW", "Dallas–Fort Worth", gsHours(0, 1));
@@ -148,8 +152,8 @@ test("trips: a leg to a hub after its ground stop gets the specific cascade conc
   const at = (h, m = 0) => new Date(T0 + h * H + m * 60e3).toISOString();
   const by = { MSP, DFW, ATL };
   const r = tripStatus({ legs: [{ from: "MSP", to: "DFW", dep: at(3, 10), arr: at(5, 40) }] }, by, { now: T0 + 20 * 60e3 });
-  assert.equal(r.label, "Possible delays");
-  assert.equal(r.top, "Your MSP→DFW leg: DFW ground stop — knock-on delays possible around your 4:10 PM departure.");
+  assert.equal(r.label, "On track");
+  assert.ok(!r.concerns.some(c => /knock-on|DFW ground stop/.test(c.text)));
   assert.ok(!r.concerns.some((c) => c.kind === "weather"), "the note isn't a weather concern");
   // a leg that doesn't touch DFW ignores MSP's DFW note
   const r2 = tripStatus({ legs: [{ from: "MSP", to: "ATL", dep: at(3, 10), arr: at(6) }] }, by, { now: T0 + 20 * 60e3 });

@@ -1,5 +1,5 @@
 // Device-only calendar snapshots. No I/O; caller keeps the source file in memory only.
-import { tripsFromIcs, makeLookup, groupTrips, fnvHash } from "./trips-parser.js?v=1";
+import { tripsFromIcs, makeLookup, groupTrips, fnvHash } from "./trips-parser.js?v=2";
 
 export const MAX_CALENDAR_BYTES = 1024 * 1024;
 export const flightKey = (l) => [l.from, l.to, Date.parse(l.dep)].join("|");

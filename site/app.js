@@ -478,9 +478,28 @@
       clearTimeout(timer);
     }
   }
+  // Old offline snapshots or a relay still deploying may contain the parked heuristic.
+  function withoutLegacySpillover(a) {
+    const re = /^[A-Z]{3} (?:closure|ground stop|ground delay program|delays) may (?:disrupt|delay|spread to) (?:some )?flights to and from /;
+    const clean = h => {
+      const reasons = (h?.reasons || []).filter(r => !re.test(r));
+      if (reasons.length === (h?.reasons || []).length) return h;
+      const levels = reasons.map(r => CATS.reason(r).level);
+      const level = levels.some(l => l == null) ? h.level : Math.min(h.level, Math.max(0, ...levels));
+      return Object.assign({}, h, { reasons, level });
+    };
+    const hours = (a.hours || []).map(clean), now = clean(a.now);
+    if (!a.cascade && now === a.now && hours.every((h, i) => h === a.hours[i])) return a;
+    let peak = a.peak;
+    if (hours.length) {
+      const best = hours.reduce((x, h) => h.level > x.level ? h : x, hours[0]);
+      peak = { level: best.level, at: best.t, reasons: best.reasons };
+    }
+    return Object.assign({}, a, { hours, now, peak, cascade: undefined });
+  }
   /** state.data = the build with the live airports (and sources) over it, unless the last live call failed. */
   function mergeLive() {
-    const b = state.build;
+    const b = state.build && Object.assign({}, state.build, { airports: state.build.airports.map(withoutLegacySpillover) });
     const L = live.data;
     state.liveWx = {};
     viewCache = new WeakMap();
@@ -488,7 +507,7 @@
     const by = new Map(L.airports.map((a) => [a.iata, a]));
     const airports = b.airports.map((a) => {
       const fresh = by.get(a.iata);
-      return Object.assign({}, fresh || a, { coverage: { generated: fresh ? L.generated : b.generated, sources: fresh ? Object.assign({}, b.sources, L.sources) : b.sources } });
+      return Object.assign({}, withoutLegacySpillover(fresh || a), { coverage: { generated: fresh ? L.generated : b.generated, sources: fresh ? Object.assign({}, b.sources, L.sources) : b.sources } });
     })
       .sort((x, y) => y.peak.level - x.peak.level || y.now.level - x.now.level || x.iata.localeCompare(y.iata));
     state.data = Object.assign({}, b, { airports, sources: Object.assign({}, b.sources, L.sources), live: L.generated });
@@ -1527,7 +1546,10 @@
 
   let lastFocus = null;
   function openSheet(iata) {
-    if (panel.kind) closePanel(true);
+    if (panel.kind) {
+      if (window.AWXSheet?.transfer) return AWXSheet.transfer(() => closePanel(true), () => openSheet(iata));
+      closePanel(true);
+    }
     state.openIata = iata;
     sheetDay = 0;
     lastFocus = document.activeElement;
@@ -2656,7 +2678,7 @@
     const s = nationalSummary();
     const p = $("panel");
     if (!s) { p.replaceChildren(panelHead("Across the U.S.")); return; }
-    const row = (a, what) => h("button", { type: "button", class: "nrow", onclick: () => { closePanel(true); openSheet(a.iata); } },
+    const row = (a, what) => h("button", { type: "button", class: "nrow", onclick: () => openSheet(a.iata) },
       h("span", { class: "ncode" }, codeOf(a)), h("span", { class: "ntext" }, h("span", {}, a.city + ", " + a.state), h("span", { class: "muted" }, what)), pill(levelOf(a), true));
     const grp = (title, list, what) => (list.length ? h("div", { class: "ngrp" }, h("h3", {}, title), h("div", { class: "glist" }, list.map((a) => row(a, what(a))))) : null);
     const progText = (a, t) => { const f = (view(a).faa || []).find((x) => x.type === t); return f ? programLine(f, a) : t === "ground_stop" ? "Ground stop" : "Delay program"; };
@@ -2665,7 +2687,7 @@
       grp("Ground stops", s.stops, (a) => progText(a, "ground_stop")),
       grp("Delay programs", s.gdps, (a) => progText(a, "ground_delay")),
       grp("Delays", s.delays, (a) => delaysNow(view(a)).join(" · ") || "Delays"),
-      ...s.stormRegions.map((r) => grp("Storms in the " + r, s.regions[r], (a) => plainList(view(a).peak.reasons, a)[0] || "Thunderstorms")),
+      ...s.stormRegions.map((r) => grp("Storms in " + (/^(Alaska|Hawaii)$/.test(r) ? "" : "the ") + r, s.regions[r], (a) => plainList(view(a).peak.reasons, a)[0] || "Thunderstorms")),
       s.items.length ? h("div", { class: "ngrp" }, h("h3", {}, "National FAA notices"), h("div", { class: "glist" }, s.items.map((x) => h("div", { class: "nrow static" }, h("span", { class: "ntext" }, x.text)))),
         srcLine("atcscc", s.items.map((x) => x.raw))) : null,
       !s.line ? h("p", { class: "muted" }, "Nothing affecting flights nationally right now.") : null].filter(Boolean));

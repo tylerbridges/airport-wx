@@ -9,7 +9,7 @@ const flight = ["UID:private-user@example.com", "SUMMARY:Jane Doe DL 1234 · MSP
 test("local import shares the server parser with only its browser reexport path changed", async () => {
   const server = await readFile(new URL("../poller/trips.mjs", import.meta.url), "utf8");
   const browser = await readFile(new URL("../site/trips-parser.js", import.meta.url), "utf8");
-  assert.equal(browser, server.replace('from "./trip-risk.mjs";', 'from "./trip-risk.js?v=3";'));
+  assert.equal(browser, server.replace('from "./trip-risk.mjs";', 'from "./trip-risk.js?v=4";'));
 });
 test("local calendar draft preserves airport zones and schedules, discards identifying fields", () => {
   const d = calendarDraft(cal(flight), { airports, now: NOW });

@@ -139,9 +139,12 @@ test("record end to end from a fixture poll (README, truth, forecast, raw sample
     assert.equal(truth.airports.DEN.opsplan.sirs[0].until, "2026-11-05T00:00Z");
     assert.deepEqual(truth.airports.MCO.opsplan.programs.map((p) => [p.program, p.status]), [["GS", "possible"]]);
     assert.equal(truth.airports.ORD.faa[0].cause, "weather");
+    assert.equal(truth.airports.AUS.hubResearch.version, 1);
+    assert.ok(truth.hubStates.ORD);
     assert.equal(truth.airports.LAX.faa[0].scope, "limited");
     const fc = JSON.parse((await readFile(join(work, "history/forecast/2026/10/03.jsonl"), "utf8")).trim());
     assert.equal(fc.airports.ATL.hours.length, 24);
+    assert.equal(fc.airports.AUS.hubResearch.version, 1);
     assert.ok(fc.airports.ATL.lamp.hours.length > 20);
     assert.equal(fc.airports.ATL.lamp.hours[0].probHrs, 1);
   } finally {
@@ -163,4 +166,25 @@ test("truth line: the ops plan is written once per plan (advisory + issue time)"
   assert.equal(l2.airports?.BNA?.opsplan, undefined);
   const l3 = truthLine(mk("2026-10-03T23:30:00.000Z", { ...op, plan: { advisory: "074", issued: "2026-10-03T23:28:00.000Z" } }), prev);
   assert.equal(l3.opsplan.plan.advisory, "074");
+});
+
+
+test("hub research: positive and negative exposures, missing coverage and baseline forecasts survive recording", () => {
+  const research = { version: 1, routeBasis: "approximate-top-routes", lagHours: [1, 4],
+    hubs: [{hub: "ORD", available: true}, {hub: "DFW", available: false}], signalCount: 0, signals: [] };
+  const s = status("2026-10-03T19:20:00.000Z", "2026-10-03T18:51:00.000Z", { hubResearch: research });
+  s.delayModel = { basis: "model", updated: "2026-10-03" };
+  s.airports[0].hours[0].delay = { p: .3, minutes: 25 };
+  s.airports.push({ iata: "AUS", hours: [{ t: s.airports[0].hours[0].t, level: 0, reasons: [] }],
+    hubResearch: { ...research, signalCount: 1, signals: [{ t: "2026-10-03T20:00:00.000Z", hub: "ORD", kind: "ground stop" }] } });
+  const truth = truthLine(s), forecast = forecastLine(s);
+  assert.deepEqual(truth.delayModel, s.delayModel);
+  assert.deepEqual(forecast.delayModel, s.delayModel);
+  assert.equal(truth.airports.ORD.hubResearch.signalCount, 0);
+  assert.equal(truth.airports.ORD.hubResearch.hubs[1].available, false);
+  assert.equal(truth.airports.AUS.hubResearch.signals[0].t, "2026-10-03T20:00Z");
+  assert.deepEqual(truth.hubStates.ORD.delay, {p: .3, minutes: 25});
+  assert.deepEqual(forecast.airports.ORD.hours[0].delay, {p: .3, minutes: 25});
+  assert.equal(forecast.airports.AUS.hours[0].level, 0);
+  assert.deepEqual(truth.down, ["faa"]);
 });

@@ -16,10 +16,7 @@
 //   - a full closure holds for its whole window (start through reopening), so a departure from or an
 //     arrival at a closed airport during it is a Disruption: "MIA is closed until 6 PM — your 4:15 PM
 //     arrival is likely cancelled or diverted.";
-//   - hub cascade (poller/hubs.mjs): a leg to or from a hub whose ground stop / delay program / closure /
-//     likely delays put a cascade note on the other end at the flight time: "Your MSP→ORD leg: ORD ground
-//     stop — knock-on delays possible …" (Moderate; Minor for hub delays), unless the hub's program
-//     already holds this flight;
+//   - related-airport spillover is parked; historical cascade text is ignored;
 //   - connections: a tight connection (< 60 min domestic, < 90 international) is flagged when the
 //     connecting airport is Moderate or worse around the arrival, or has a delay program.
 // Each concern is one plain sentence with a level (0–4); concerns are ordered by severity.
@@ -149,7 +146,7 @@ const CASCADE_RE = /^([A-Z]{3}) (closure|ground stop|ground delay program|delays
  */
 export function programOf(reason) {
   const c = CASCADE_RE.exec(String(reason || ""));
-  if (c) return { kind: "cascade", level: c[3] ? 1 : 2, hub: c[1], what: c[2] };
+  if (c) return null; // Parked: legacy cascade text is not a confirmed program.
   for (const [re, kind, level] of PROGRAM_RES) if (re.test(String(reason || ""))) return { kind, level };
   return null;
 }
@@ -199,11 +196,12 @@ export function noticeOf(reason) {
 
 /** Weather-only level of one hour: the hour's level unless FAA programs (or notices) set it, then the strongest weather reason (capped). */
 function hourWx(hr) {
-  const reasons = hr.reasons || [];
+  const reasons = (hr.reasons || []).filter(r => !CASCADE_RE.test(String(r)));
   const progs = reasons.map(programOf).filter(Boolean);
   const wx = reasons.filter((r) => !programOf(r) && !noticeOf(r)); // restrictions hook
   const progLevel = Math.max(0, ...progs.map((p) => p.level), ...reasons.map(noticeOf).filter(Boolean).map((n) => n.level)); // restrictions hook
-  const wxLevel = hr.level > progLevel ? hr.level : Math.min(hr.level, Math.max(0, ...wx.map(reasonLevel)));
+  const level = (hr.reasons || []).length !== reasons.length ? Math.min(hr.level, Math.max(progLevel, ...wx.map(reasonLevel))) : hr.level;
+  const wxLevel = level > progLevel ? level : Math.min(level, Math.max(0, ...wx.map(reasonLevel)));
   return { wx, wxLevel, progs };
 }
 
@@ -421,8 +419,7 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
         } else if (p.kind === "closed") {
           add({ level: 4, kind: "program", side, iata: leg.from, leg: i, key: `closed-${leg.from}`, short: `${leg.from} closed`,
             text: `${leg.from} is closed${until} — your ${depClock} departure is likely delayed or cancelled.` });
-        } else if (p.kind === "cascade" && p.hub === leg.to) {
-          cascade(p, leg, i, side, `around your ${depClock} departure`);
+
         } else if (p.kind === "delay") {
           const d = delayParts(p.detail || p.reason.replace(/^Delays[^,]*,\s*/, ""));
           if (d.dep) add({ level: 2, kind: "program", side, iata: leg.from, leg: i, key: `depdelay-${leg.from}`, short: `departure delays at ${leg.from}`,
@@ -449,8 +446,7 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
       if (p.kind === "closed") {
         add({ level: 4, kind: "program", side, iata: leg.to, leg: i, key: `closed-${leg.to}`, short: `${leg.to} closed`,
           text: `${leg.to} is closed${untilText(p, X.tz, now)} — your ${arrClock} arrival is likely cancelled or diverted.` });
-      } else if (p.kind === "cascade" && p.hub === leg.from) {
-        cascade(p, leg, i, side, `around your ${arrClock} arrival`);
+
       } else if (p.kind === "delay") {
         const d = delayParts(p.detail || p.reason.replace(/^Delays[^,]*,\s*/, ""));
         if (d.arr) add({ level: 2, kind: "program", side, iata: leg.to, leg: i, key: `arrdelay-${leg.to}`, short: `arrival delays at ${leg.to}`,
@@ -486,14 +482,6 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
       }
     }
   });
-
-  // hub cascade on a leg to/from the hub; skipped when the hub's own program already holds this leg
-  function cascade(p, leg, legIdx, side, when) {
-    if (concerns.some((c) => c.leg === legIdx && c.iata === p.hub && c.kind === "program")) return;
-    add({ level: p.what === "delays" ? 1 : 2, kind: "program", side, iata: p.hub, leg: legIdx, key: `cascade-${p.hub}-${legIdx}`,
-      short: `knock-on delays from the ${p.hub} ${p.what}`,
-      text: `Your ${leg.from}→${leg.to} leg: ${p.hub} ${p.what} — knock-on delays possible ${when}.` });
-  }
 
   function weather(A, w, when, side, legIdx) {
     const d = w.delay && !w.delay.override && w.delay.p >= 0.2 ? w.delay : null;

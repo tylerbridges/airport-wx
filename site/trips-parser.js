@@ -427,4 +427,4 @@ export function redactedSample(cal, stats, lookup, { max = 6 } = {}) {
 }
 
 // Privacy check of trips.json lives in trip-risk.mjs (shared with the check page).
-export { PRIVACY_RE, privacyProblems } from "./trip-risk.js?v=3";
+export { PRIVACY_RE, privacyProblems } from "./trip-risk.js?v=4";

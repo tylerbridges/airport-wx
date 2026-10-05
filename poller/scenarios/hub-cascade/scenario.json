@@ -1,31 +1,132 @@
 {
-  "title": "Hub cascade: DFW ground stop",
+  "title": "Hub spillover: research only",
   "at": "2026-10-06T19:30:00Z",
-  "description": "A two-hour ground stop at DFW (thunderstorms). Airports with heavy DFW service get a hub cascade note for the 1–4 hours after it: Austin (low clouds, Low) goes up one step to Moderate; Houston and Minneapolis (quiet) go to Low. Nothing becomes \"Delays happening now\" there, and Seattle (no DFW in its top routes) gets nothing. A calendar trip MSP→DFW leaving after the ground stop ends shows the specific knock-on concern.",
+  "description": "DFW has a Ground Stop. Related-airport exposures are archived for research, but do not raise AUS, IAH or MSP risk or create knock-on trip warnings. Local weather and directly applicable FAA restrictions retain their own risk.",
   "assert": [
-    { "t": "faa", "iata": "DFW", "type": "ground_stop" },
-    { "t": "level", "iata": "DFW", "of": "now", "op": "==", "v": 4 },
-    { "t": "noCascade", "iata": "DFW" },
-    { "t": "cascade", "iata": "AUS", "hub": "DFW", "re": "^DFW ground stop may delay flights to and from Dallas–Fort Worth$" },
-    { "t": "cascade", "iata": "IAH", "hub": "DFW" },
-    { "t": "cascade", "iata": "MSP", "hub": "DFW" },
-    { "t": "noCascade", "iata": "SEA" },
-    { "t": "hourLevel", "iata": "AUS", "at": [0, 0], "op": "==", "v": 0 },
-    { "t": "hourLevel", "iata": "AUS", "at": [1, 6], "op": "==", "v": 2 },
-    { "t": "hourReason", "iata": "AUS", "at": [1, 6], "re": "^DFW ground stop may delay flights to and from Dallas–Fort Worth$", "every": true },
-    { "t": "hourReason", "iata": "MSP", "at": [1, 6], "re": "^DFW ground stop may delay some flights to and from Dallas–Fort Worth$", "every": true },
-    { "t": "level", "iata": "AUS", "of": "peak", "op": "==", "v": 2 },
-    { "t": "level", "iata": "IAH", "of": "peak", "op": "==", "v": 1 },
-    { "t": "level", "iata": "MSP", "of": "peak", "op": "==", "v": 1 },
-    { "t": "words", "iata": "AUS", "at": [0, 23], "notKey": "now" },
-    { "t": "words", "iata": "MSP", "at": [0, 23], "notKey": "now" },
-    { "t": "trips", "count": 1, "configured": true },
-    { "t": "trip", "i": 0, "status": "Possible delays", "re": "^Your MSP→DFW leg: DFW ground stop — knock-on delays possible around your .+ departure\\.$" },
-    { "t": "card", "iata": "AUS", "re": "DFW ground stop may delay flights to and from Dallas–Fort Worth" },
-    { "t": "sheet", "iata": "IAH", "re": "DFW ground stop may delay some flights to and from Dallas–Fort Worth" },
-    { "t": "noPercent" },
-    { "t": "rendered", "text": "Test scenario: Hub cascade: DFW ground stop" }
+    {
+      "t": "faa",
+      "iata": "DFW",
+      "type": "ground_stop"
+    },
+    {
+      "t": "level",
+      "iata": "DFW",
+      "of": "now",
+      "op": "==",
+      "v": 4
+    },
+    {
+      "t": "hourLevel",
+      "iata": "AUS",
+      "at": [
+        0,
+        0
+      ],
+      "op": "==",
+      "v": 0
+    },
+    {
+      "t": "hourLevel",
+      "iata": "AUS",
+      "at": [
+        1,
+        6
+      ],
+      "op": "==",
+      "v": 1
+    },
+    {
+      "t": "level",
+      "iata": "AUS",
+      "of": "peak",
+      "op": "==",
+      "v": 1
+    },
+    {
+      "t": "level",
+      "iata": "IAH",
+      "of": "peak",
+      "op": "==",
+      "v": 0
+    },
+    {
+      "t": "level",
+      "iata": "MSP",
+      "of": "peak",
+      "op": "==",
+      "v": 0
+    },
+    {
+      "t": "words",
+      "iata": "AUS",
+      "at": [
+        0,
+        23
+      ],
+      "notKey": "now"
+    },
+    {
+      "t": "words",
+      "iata": "MSP",
+      "at": [
+        0,
+        23
+      ],
+      "notKey": "now"
+    },
+    {
+      "t": "trips",
+      "count": 1,
+      "configured": true
+    },
+    {
+      "t": "trip",
+      "i": 0,
+      "status": "On track"
+    },
+    {
+      "t": "noPercent"
+    },
+    {
+      "t": "rendered",
+      "text": "Test scenario: Hub spillover: research only"
+    },
+    {
+      "t": "noCascade",
+      "iata": "DFW"
+    },
+    {
+      "t": "noCascade",
+      "iata": "AUS"
+    },
+    {
+      "t": "noCascade",
+      "iata": "IAH"
+    },
+    {
+      "t": "noCascade",
+      "iata": "MSP"
+    },
+    {
+      "t": "noCascade",
+      "iata": "SEA"
+    },
+    {
+      "t": "noReason",
+      "iata": "AUS",
+      "re": "may delay|may spread"
+    },
+    {
+      "t": "noReason",
+      "iata": "IAH",
+      "re": "may delay|may spread"
+    },
+    {
+      "t": "noReason",
+      "iata": "MSP",
+      "re": "may delay|may spread"
+    }
   ],
   "group": "delays",
-  "blurb": "DFW ground stop; AUS, IAH and MSP get knock-on notes."
+  "blurb": "DFW Ground Stop; related-airport spillover stays research-only."
 }

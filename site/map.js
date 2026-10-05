@@ -43,7 +43,7 @@ const getJson = (url) => fetch(url).then((r) => { if (!r.ok) throw Error(url + "
 export function mountMap(container) {
   const saved = safe(() => JSON.parse(localStorage.getItem(STORE)) || {}, {}) || {};
   let filter = ["all", "mine", "risk"].includes(saved.filter) ? saved.filter : "all";
-  let showRings = saved.rings !== false, showCascade = saved.cascade !== false;
+  let showRings = saved.rings !== false, showCascade = false;
   let offset = 0, minOff = 0, maxOff = 23, at = Date.now();
   let view = null, bv = null, W = 0, H = 0, dpr = 1;
   let all = [], shown = [], byCode = new Map(), dots = [], edges = [], labelBoxes = [];
@@ -63,8 +63,7 @@ export function mountMap(container) {
   const sw = (key, label, note) => h("button", { type: "button", role: "switch", class: "mapx-sw", "data-key": key, "aria-checked": String(key === "rings" ? showRings : showCascade), onclick: () => toggleLayer(key) },
     h("span", { class: "mapx-sw-t" }, h("b", {}, label), h("span", {}, note)), h("i", { "aria-hidden": "true" }));
   const layers = h("div", { class: "mapx-layers glass", id: "mapxLayers", hidden: true, role: "group", "aria-label": "Map overlays" },
-    sw("rings", "FAA programs", "Ring around airports with a ground stop, delay program or closure"),
-    sw("cascade", "Hub cascades", "Lines from a hub with a program to airports it may delay"));
+    sw("rings", "FAA programs", "Ring around airports with a ground stop, delay program or closure"));
   const layersBtn = h("button", { type: "button", class: "mapx-lbtn glass", "aria-expanded": "false", "aria-controls": "mapxLayers", onclick: () => openLayers(layers.hidden) }, "Overlays");
   const toolBtn = (label, aria, fn) => h("button", { type: "button", class: "glass", "aria-label": aria, onclick: fn }, label);
   const listTitle = h("h2", { tabindex: "-1" }, "Airports on the map");

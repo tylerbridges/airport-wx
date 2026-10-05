@@ -47,13 +47,11 @@
       "of": "peak",
       "op": "<=",
       "v": 1,
-      "note": "at most a Low hub cascade note from SFO (poller/hubs.mjs)"
+      "note": "Connected-hub spillover is research-only and cannot raise risk."
     },
     {
-      "t": "cascade",
-      "iata": "LAX",
-      "hub": "SFO",
-      "re": "^SFO ground delay program may delay some flights to and from San Francisco$"
+      "t": "noCascade",
+      "iata": "LAX"
     },
     {
       "t": "level",
@@ -61,7 +59,7 @@
       "of": "peak",
       "op": "<=",
       "v": 1,
-      "note": "at most a Low hub cascade note from SFO (poller/hubs.mjs)"
+      "note": "Connected-hub spillover is research-only and cannot raise risk."
     },
     {
       "t": "noFaa",

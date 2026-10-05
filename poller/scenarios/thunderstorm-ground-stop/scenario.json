@@ -2,14 +2,53 @@
   "title": "Thunderstorm ground stop at ORD",
   "description": "Severe thunderstorms over Chicago: FAA ground stop at ORD, convective SIGMET, Severe Thunderstorm Warning, SPC Enhanced risk.",
   "assert": [
-    { "t": "level", "iata": "ORD", "of": "now", "op": "==", "v": 4 },
-    { "t": "faa", "iata": "ORD", "type": "ground_stop" },
-    { "t": "faa", "iata": "ORD", "type": "ground_stop", "cause": "weather", "note": "needs FAA cause classification (cause.mjs, other branch)" },
-    { "t": "level", "iata": "MDW", "of": "now", "op": ">=", "v": 3 },
-    { "t": "level", "iata": "ATL", "of": "peak", "op": "<=", "v": 1, "note": "at most a Low hub cascade note from ORD (poller/hubs.mjs)" },
-    { "t": "cascade", "iata": "ATL", "hub": "ORD", "re": "^ORD ground stop may delay some flights to and from Chicago$" },
-    { "t": "noCascade", "iata": "MDW", "hub": "ORD" },
-    { "t": "rendered", "text": "Test scenario" }
+    {
+      "t": "level",
+      "iata": "ORD",
+      "of": "now",
+      "op": "==",
+      "v": 4
+    },
+    {
+      "t": "faa",
+      "iata": "ORD",
+      "type": "ground_stop"
+    },
+    {
+      "t": "faa",
+      "iata": "ORD",
+      "type": "ground_stop",
+      "cause": "weather",
+      "note": "needs FAA cause classification (cause.mjs, other branch)"
+    },
+    {
+      "t": "level",
+      "iata": "MDW",
+      "of": "now",
+      "op": ">=",
+      "v": 3
+    },
+    {
+      "t": "level",
+      "iata": "ATL",
+      "of": "peak",
+      "op": "<=",
+      "v": 1,
+      "note": "Connected-hub spillover is research-only and cannot raise risk."
+    },
+    {
+      "t": "noCascade",
+      "iata": "ATL"
+    },
+    {
+      "t": "noCascade",
+      "iata": "MDW",
+      "hub": "ORD"
+    },
+    {
+      "t": "rendered",
+      "text": "Test scenario"
+    }
   ],
   "group": "weather",
   "blurb": "Severe storms over Chicago: ORD ground stop, SIGMET, warnings."

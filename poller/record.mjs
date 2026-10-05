@@ -10,6 +10,7 @@
 import { readFile, writeFile, mkdir, appendFile, readdir, copyFile, rm, stat } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { HUBS } from "./hubs.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -26,7 +27,7 @@ objects are left out, and timestamps are ISO 8601 shortened ("2026-10-03T22:00Z"
     {t, down?: [sources that failed this poll],
      airports: {IATA: {
        metar?: {obsTime, raw, fltCat, visib, ceiling, wx, wspd, wgst},
-       faa?: [{type: ground_stop|ground_delay|delay|closure, cause, reason, detail, scope?, active?}],
+       faa?: [{type: ground_stop|ground_delay|delay|closure, cause, reason, detail, scope?, active?, start?, end?, trend?}],
        atcscc?: [{id, type: GS|GDP|AFP|other, issued, cause, causeText, title, active, cnx, start, end}],
        opsplan?: {staffing?, constraints?, programs?, sirs?, notes?},
        notices?: {key, items?: [{id, src: tfr, kind, cause, level, from, to, dup?, nm?}]}}},
@@ -56,7 +57,8 @@ objects are left out, and timestamps are ISO 8601 shortened ("2026-10-03T22:00Z"
        taf?: {issued, raw}, lamp?: {issued, hours: [{t, gust, tstmProb, cig, vis, typ, pFrz, pPrecip}]},
        spc?, tcf?: [{valid, coverage, confidence, tops}], cwa?: [{hazard, validFrom, validTo, raw}],
        alerts?: [{event, onset, ends}],
-       hours: [24 x {t, level, reasons?}]}}}
+       hubResearch?: {version, routeBasis, lagHours, hubs, signalCount, signals?},
+       hours: [24 x {t, level, reasons?, delay?}]}}}
 
 - Written by the first poll of each UTC hour. \`hours\` are the site's rule-based risk levels
   (0 None … 4 Severe) for the 24 hours from issuedHour; \`reasons\` are the texts shown on the site.
@@ -64,6 +66,16 @@ objects are left out, and timestamps are ISO 8601 shortened ("2026-10-03T22:00Z"
   LP2 2-h when only that row exists: probHrs says which), convProb = CP1 (1-h convection probability),
   cig category 1–8 (1 <200 ft … 8 >12,000 ft/unlimited), vis category 1–7 (1 <1/2 mi … 7 >6 mi), typ R/S/Z,
   pFrz = POZ %, pPrecip = PPO %.
+
+## Research-only hub exposure (truth and forecast)
+
+\`airports[IATA].hubResearch\` version 1 records the approximate route basis, hypothesized lag window,
+all candidate hubs (including missing coverage), their weather issue timestamps,
+and candidate target-hour signals. \`signalCount: 0\` preserves negative cases; a missing hub has
+\`available: false\`, not a zero-risk observation. These are hypotheses, never observed outcomes.
+The truth log retains this snapshot and deduplicated current-hour hubStates each poll; the forecast log retains the first snapshot each hour, with baseline delay estimates for every forecast hour.
+Join by issuance time to later FAA/ADS-B/BTS outcomes, respecting source failures in \`down\`.
+Do not feed these candidates into live risk, trips or a deployed model before validation.
 
 ## raw/latest/ — format check
 
@@ -155,7 +167,8 @@ export function truthLine(status, prev = { t: null, lastObs: {} }) {
     if (m && m.obsTime && secs(m.obsTime) !== prev.lastObs?.[a.iata]) {
       o.metar = { obsTime: m.obsTime, raw: m.raw, fltCat: m.fltCat, visib: m.visib, ceiling: m.ceiling, wx: m.wx, wspd: m.wind?.spd, wgst: m.gust };
     }
-    o.faa = (a.faa || []).map((f) => ({ type: f.type, cause: f.cause, reason: f.reason, detail: f.detail, scope: f.scope, active: f.active }));
+    o.hubResearch = a.hubResearch;
+    o.faa = (a.faa || []).map((f) => ({ type: f.type, cause: f.cause, reason: f.reason, detail: f.detail, scope: f.scope, active: f.active, start: f.start, end: f.end, trend: f.trend }));
     o.atcscc = (a.atcscc || [])
       .filter((x) => x.active || prevT == null || (Date.parse(x.issued) || 0) > prevT)
       .map(({ id, type, issued, cause, causeText, title, active, cnx, start, end }) => ({ id, type, issued, cause, causeText, title, active, cnx, start, end }));
@@ -170,7 +183,11 @@ export function truthLine(status, prev = { t: null, lastObs: {} }) {
     const c = compact(o);
     if (c) airports[a.iata] = c;
   }
-  return compact({ t: status.generated, down: downOf(status), airports, opsplan: newPlan ? status.opsplan : null }) || { t: shortIso(status.generated) };
+  return compact({ t: status.generated, down: downOf(status), delayModel: status.delayModel,
+    hubStates: Object.fromEntries((status.airports || []).filter(a => HUBS.has(a.iata) && a.hours?.length).map(a => {
+      const { t, level, reasons, delay } = a.hours[0];
+      return [a.iata, { t, level, reasons, delay }];
+    })), airports, opsplan: newPlan ? status.opsplan : null }) || { t: shortIso(status.generated) };
 }
 
 export function issuedHourOf(status) {
@@ -182,18 +199,19 @@ export function forecastLine(status) {
   const airports = {};
   for (const a of status.airports || []) {
     const o = {
+      hubResearch: a.hubResearch || null,
       taf: a.taf ? { issued: a.taf.issued, raw: a.taf.raw } : null,
       lamp: a.lamp || null,
       spc: a.spc || null,
       tcf: (a.tcf || []).map(({ valid, coverage, confidence, tops }) => ({ valid, coverage, confidence, tops })),
       cwa: (a.cwa || []).map(({ hazard, validFrom, validTo, raw }) => ({ hazard, validFrom, validTo, raw })),
       alerts: (a.alerts || []).map(({ event, onset, ends }) => ({ event, onset, ends })),
-      hours: (a.hours || []).map(({ t, level, reasons }) => ({ t, level, reasons })),
+      hours: (a.hours || []).map(({ t, level, reasons, delay }) => ({ t, level, reasons, delay })),
     };
     const c = compact(o);
     if (c) airports[a.iata] = c;
   }
-  return compact({ t: status.generated, issuedHour: issuedHourOf(status), down: downOf(status), airports });
+  return compact({ t: status.generated, issuedHour: issuedHourOf(status), down: downOf(status), delayModel: status.delayModel, airports });
 }
 
 // ---------- file steps ----------
