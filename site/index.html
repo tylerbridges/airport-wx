@@ -260,7 +260,11 @@ table.lt { border-collapse: collapse; font-size: 12px; }
 .tl .s.quiet.past { opacity: .3; }
 .tl .s.quiet.past.l0 { opacity: .14; }
 .tl .s.tick { animation: segtick .18s ease-out; }
-.tl-cap { margin-top: 2px; font-size: 11.5px; line-height: 1.3; color: var(--muted); }
+.tl-cap { margin-top: 2px; font-size: 12px; line-height: 1.3; color: var(--muted); }
+.tl-key { display: flex; flex-wrap: nowrap; align-items: center; gap: 4px 12px; white-space: nowrap; }
+.tl-key .tk { display: inline-flex; align-items: center; gap: 5px; }
+.tk-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.tl-note { margin-top: 2px; }
 .stale-tag { font-size: 11px; font-weight: 600; color: var(--muted); white-space: nowrap; }
 .stale-line { margin: 2px 0 8px; font-size: 13px; color: var(--muted); }
 @keyframes segtick { 50% { transform: scaleY(1.35); } }
@@ -438,6 +442,19 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 .sc-lead { margin-top: 4px; }
 .sc-lsub { margin-top: 3px; font-size: 14px; color: var(--muted); line-height: 1.35; }
 /* Looking ahead: a small label and compact bullets, less weight than the headline */
+/* Current-conditions line under the headline (opens the Weather page) */
+.cur-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 44px; margin-top: 6px; padding: 6px 0; background: none; border: 0; color: var(--text); font: inherit; font-size: 14px; line-height: 1.3; font-weight: 600; text-align: left; font-variant-numeric: tabular-nums; }
+.cur-line .cl-t { min-width: 0; overflow-wrap: anywhere; }
+.cur-line .chev { flex: none; color: var(--muted); font-size: 20px; line-height: 1; }
+.cur-line:focus-visible { outline: 2px solid var(--l1); outline-offset: 2px; border-radius: 8px; }
+.cl-none { margin: 8px 0 0; font-size: 13.5px; }
+/* Next 12 hours (Weather page) */
+.nx-list { list-style: none; margin: 0; padding: 0; }
+.nx-i { display: flex; gap: 12px; align-items: baseline; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 1.35; }
+.nx-i:last-child { border-bottom: 0; }
+.nx-t { flex: none; width: 104px; color: var(--muted); font-weight: 600; font-variant-numeric: tabular-nums; }
+.nx-s { min-width: 0; overflow-wrap: anywhere; }
+.nx-note { margin: 8px 0 0; }
 .sc-ahead { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
 .la-h { font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .la-list { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
