@@ -211,3 +211,23 @@ test("changes: runChanges writes changes.json, state and events; a broken status
   assert.ok(JSON.parse(await readFile(out, "utf8")).error);
   assert.ok(logs.some((l) => /^FAIL changes/.test(l)));
 });
+
+test("observed backfill: every observed hour change reaches the log once, in the right direction", async () => {
+  const { observedEvents } = await import("./changes.mjs");
+  const H = 3600e3, T = Date.parse("2026-10-05T18:00:00Z");
+  const hr = (k, level, reasons = []) => ({ t: new Date(T + k * H).toISOString(), level, reasons });
+  // 14Z clear, 15Z gusts (Moderate), 16Z clear, 17Z gusts; now 18:05Z (17Z complete)
+  const a = { iata: "BOS", observed: [hr(-4, 0), hr(-3, 2, ["Gusts 25 kt"]), hr(-2, 0), hr(-1, 2, ["Gusts 29 kt"])] };
+  const now = T + 5 * 60e3;
+  let r = observedEvents(a, null, now, []);
+  assert.deepEqual(r.events.map((e) => [e.t.slice(11, 16), e.from, e.to, e.obs]), [["15:00", 0, 2, true], ["16:00", 2, 0, true], ["17:00", 0, 2, true]]);
+  assert.match(r.events[0].sentence, /^Risk up to Moderate/);
+  assert.equal(r.obs, hr(-1, 0).t);
+  // a poll-time level event already covers the 15Z rise: only the other two are added
+  r = observedEvents(a, null, now, [{ t: new Date(T - 3 * H + 20 * 60e3).toISOString(), iata: "BOS", kind: "level", from: 0, to: 2 }]);
+  assert.deepEqual(r.events.map((e) => e.t.slice(11, 16)), ["16:00", "17:00"]);
+  // hours already looked at aren't looked at again; a missing hour isn't a change; the current hour waits
+  assert.equal(observedEvents(a, hr(-1, 0).t, now, []).events.length, 0);
+  assert.equal(observedEvents({ iata: "X", observed: [hr(-4, 0), hr(-2, 3)] }, null, now, []).events.length, 0);
+  assert.equal(observedEvents({ iata: "X", observed: [hr(-1, 0), hr(0, 3)] }, null, now, []).events.length, 0);
+});

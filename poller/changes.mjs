@@ -13,10 +13,11 @@
 //        copies <dir>/out/state.json to <historyDir>/changes/state.json and appends this run's events to
 //        <historyDir>/changes/YYYY/MM/DD.jsonl (by event time, UTC; a line already there isn't added again)
 //
-// Event: {t, iata, kind, from, to, sentence, cause?, prog?}. The sentence carries no time of its own (the page
+// Event: {t, iata, kind, from, to, sentence, cause?, prog?, obs?}. The sentence carries no time of its own (the page
 // prefixes "3:10 PM" in the display zone); extensions say "until 5:30 PM" in the airport's zone and keep
 // the new end in `to`. Kinds:
-//   level            from/to = risk level (0–4); debounced: a change that reverts within 10 minutes is ignored
+//   level            from/to = risk level (0–4); debounced: a change that reverts within 10 minutes is ignored.
+//                    obs: true = backfilled from the observed hours the timeline shows (observedEvents)
 //   program_start    to = ground_stop | ground_delay | delay (FAA NAS status, or an active ATCSCC GS/GDP)
 //   program_end      from = the program type
 //   program_extend   prog = type, from/to = old/new end (ISO)
@@ -245,6 +246,37 @@ export function diffAirport(prev, a, ctx) {
   return { state: st, events: ev };
 }
 
+/**
+ * Observed backfill. The timeline's past hours come from that hour's reports (status airports[].observed: the worst
+ * METAR or SPECI in the hour), while the level events above follow the poller's current level at each poll. So a
+ * completed observed hour whose level differs from the hour before also gets a level event ({obs: true}, timed at
+ * the hour's start) when no level event already falls between the start of the earlier hour and the end of the
+ * later one: short spells (a gusty hour, a brief low ceiling) and gaps between polls (a missed or late build) still
+ * reach the log, and the log ties out to the timeline. Each hour is looked at once (state obs = last hour done).
+ */
+export function observedEvents(a, prevObs, ms, recent) {
+  const obs = (a.observed || []).filter((o) => o && o.level != null && Number.isFinite(Date.parse(o.t)) && Date.parse(o.t) + HOUR <= ms);
+  if (!obs.length) return { obs: prevObs ?? null, events: [] };
+  const done = prevObs ? Date.parse(prevObs) : -Infinity;
+  // each logged change covers one observed change in the same direction (up or down) near it
+  const mine = recent.filter((e) => e.iata === a.iata && e.kind === "level" && e.to !== e.from)
+    .map((e) => ({ t: Date.parse(e.t), up: e.to > e.from })).sort((p, q) => p.t - q.t);
+  const used = new Set();
+  const events = [];
+  for (let i = 1; i < obs.length; i++) {
+    const x = obs[i - 1], y = obs[i];
+    const ty = Date.parse(y.t), tx = Date.parse(x.t);
+    if (x.level === y.level || ty - tx > HOUR) continue; // a missing hour isn't a change
+    const up = y.level > x.level;
+    const k = mine.findIndex((m, j) => !used.has(j) && m.up === up && m.t >= tx && m.t < ty + HOUR);
+    if (k >= 0) { used.add(k); continue; }
+    if (ty <= done) continue;
+    const cause = up ? causeOfReasons(y.reasons, y.level) : null;
+    events.push({ t: new Date(ty).toISOString(), iata: a.iata, kind: "level", from: x.level, to: y.level, sentence: levelSentence(x.level, y.level, cause), ...(cause ? { cause } : {}), obs: true });
+  }
+  return { obs: obs[obs.length - 1].t, events };
+}
+
 const okOf = (status) => {
   const s = status.sources || {};
   const ok = (k) => !s[k] || s[k].ok !== false;
@@ -269,9 +301,19 @@ export function computeChanges({ status, prev = null, movement = null, likelihoo
   const airports = {};
   const events = [];
   for (const a of status.airports || []) {
-    const r = diffAirport(prev && prev.airports ? prev.airports[a.iata] : null, a, ctx);
+    const pa = prev && prev.airports ? prev.airports[a.iata] : null;
+    const r = diffAirport(pa, a, ctx);
     airports[a.iata] = r.state;
     events.push(...r.events);
+  }
+  // observed backfill (after this poll's own events, so a change it already logged isn't repeated)
+  const known = [...((prev && prev.recent) || []), ...events];
+  for (const a of status.airports || []) {
+    if (!Array.isArray(a.observed)) { if (prev?.airports?.[a.iata]?.obs) airports[a.iata].obs = prev.airports[a.iata].obs; continue; }
+    const o = observedEvents(a, prev?.airports?.[a.iata]?.obs ?? null, ms, known);
+    if (o.obs) airports[a.iata].obs = o.obs;
+    events.push(...o.events);
+    known.push(...o.events);
   }
   const recent = keep([...((prev && prev.recent) || []), ...events]);
   const state = { v: 1, t, since: (prev && prev.since) || t, airports, recent };
