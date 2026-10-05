@@ -64,7 +64,10 @@ function dayPrefix(ms, tz) {
   return fmt(tz, { weekday: "short" }, "wd").format(ms) + " ";
 }
 /** "6–9 PM", "11 AM – 2 PM", "tomorrow 6–9 AM", "through 9 PM" (window starting now). */
+/** Start of the hour holding ms in tz: forecast windows read "7–9 PM", never "7:22–9:22 PM". */
+const hourFloor = (ms, tz) => ms - (Number(fmt(tz, { minute: "numeric" }, "mi").format(ms)) || 0) * 60e3 - (((ms % 60e3) + 60e3) % 60e3);
 function rangeLabel(start, end, tz, fromNow) {
+  start = hourFloor(start, tz); end = hourFloor(end, tz);
   const b = clock(end, tz);
   if (fromNow) return "through " + dayPrefix(end, tz) + b;
   const a = clock(start, tz);
