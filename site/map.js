@@ -87,8 +87,7 @@ export function mountMap(container) {
   const slider = h("input", { type: "range", class: "mapx-slider", min: "0", max: "23", step: "1", value: "0", "aria-label": "Forecast hour" });
   const legendBox = h("div", { class: "mapx-legend", "aria-hidden": "true" });
   const attrib = h("a", { class: "mapx-attr", hidden: true, href: "https://www.openstreetmap.org/copyright", target: "_blank", rel: "noopener" }, "© OpenStreetMap");
-  const timeBox = h("div", { class: "mapx-time glass" }, h("div", { class: "mapx-when" }, h("span", { "aria-hidden": "true" }, whenB, whenS), attrib), slider, legendBox,
-    h("span", { class: "map-open-hint", style: "font-size:12px;color:var(--muted)" }, "Tap an airport for current status"));
+  const timeBox = h("div", { class: "mapx-time glass" }, h("div", { class: "mapx-when" }, h("span", { "aria-hidden": "true" }, whenB, whenS), attrib), slider, legendBox);
   const stage = h("div", { class: "mapx-stage", tabindex: "0", role: "group", "aria-label": "Airport risk map. Drag or use the arrow keys to pan, plus and minus to zoom. The airport list below has the same information." },
     base, over, h("div", { class: "mapx-top" }, seg, layersBtn), layers, tools, timeBox);
   const list = h("ul", { class: "map-airport-list", "aria-label": "Airports on the map" });
@@ -333,7 +332,9 @@ export function mountMap(container) {
       text: dk ? "#fff" : "#000", halo: dk ? "rgba(0,0,0,.9)" : "rgba(255,255,255,.95)", edge: dk ? "#000" : "#fff" };
   }
   function resize() {
-    const want = Math.max(340, container.clientHeight - 58) + "px"; // the list heading peeks out below the map
+    // about two-thirds of the screen, so the list below shows and the page scrolls easily with a thumb
+    const ch = container.clientHeight;
+    const want = Math.round(Math.max(340, Math.min(ch - 58, ch * 0.64))) + "px";
     if (stage.style.height !== want) stage.style.height = want;
     const w = stage.clientWidth, hh = stage.clientHeight;
     if (!w || !hh) return false;
