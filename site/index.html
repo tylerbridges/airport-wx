@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Airports">
 <script src="testmode.js"></script>
 <!-- /build2a hook -->
@@ -571,6 +571,9 @@ b.la-lv2 { color: var(--l2); } b.la-lv3 { color: var(--l3); } b.la-lv4 { color: 
 .mapx-legend { display: flex; flex-wrap: wrap; gap: 3px 12px; font-size: 12px; color: var(--muted); }
 .mapx-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .mapx-legend i, .map-row-status i { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
+.mapx-legend i.radar { border-radius: 2px; background: linear-gradient(90deg, rgba(38,52,84,.25), rgba(38,52,84,.85)); }
+:root[data-theme="dark"] .mapx-legend i.radar { background: linear-gradient(90deg, rgba(205,222,255,.25), rgba(205,222,255,.85)); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .mapx-legend i.radar { background: linear-gradient(90deg, rgba(205,222,255,.25), rgba(205,222,255,.85)); } }
 .mapx-legend i.nodata, .map-airport-row.unknown .map-row-status i { background: transparent; box-shadow: inset 0 0 0 2px var(--muted); }
 .mapx-listhead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 18px 4px 10px; }
 .mapx-listhead h2 { margin: 0; font-size: 20px; font-weight: 700; outline: none; }
@@ -852,11 +855,11 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="cats.js?v=3"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=5"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
-<script src="app.js?v=62" defer></script>
+<script src="app.js?v=63" defer></script>
 <script type="module" src="searched.js?v=7"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=15"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="trips.js?v=22"></script><!-- trips hook -->
-<script type="module" src="nav.js?v=20"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
+<script type="module" src="nav.js?v=21"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
 <script type="module" src="movement.js?v=4"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
 <script type="module" src="brief.js?v=7"></script><!-- brief hook: airport Today’s changes -->
 <script type="module" src="terminals.js?v=3"></script><!-- terminals hook: terminal map + lounges cards in the airport sheet -->

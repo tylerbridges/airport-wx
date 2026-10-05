@@ -12,6 +12,7 @@
 //   Access:   the list under the map mirrors the dots (same filter, same hour); the stage pans with arrow keys.
 import { h, app } from "./navui.js";
 import { loadAirports } from "./search.js";
+import { makeRadar } from "./map/mrms.js?v=1"; // map hook: radar overlay
 
 const HOUR = 3600e3;
 const WORDS = ["Clear", "Minor", "Moderate", "High", "Severe"];
@@ -43,7 +44,7 @@ const getJson = (url) => fetch(url).then((r) => { if (!r.ok) throw Error(url + "
 export function mountMap(container) {
   const saved = safe(() => JSON.parse(localStorage.getItem(STORE)) || {}, {}) || {};
   let filter = ["all", "mine", "risk"].includes(saved.filter) ? saved.filter : "all";
-  let showRings = saved.rings !== false, showCascade = false;
+  let showRings = saved.rings !== false, showCascade = false, showRadar = saved.radar === true;
   let offset = 0, minOff = 0, maxOff = 23, at = Date.now();
   let view = null, bv = null, W = 0, H = 0, dpr = 1;
   let all = [], shown = [], byCode = new Map(), dots = [], edges = [], labelBoxes = [];
@@ -54,16 +55,24 @@ export function mountMap(container) {
   const shardChecks = new Map(); // code -> latest bounded refresh context; requests share searched.js shard TTL
   const shardLoading = new Set();
 
+  const layerOn = (k) => (k === "rings" ? showRings : k === "radar" ? showRadar : showCascade);
+  let radarAt = 0;
+  const radar = makeRadar((tileArrived) => { // new tiles redraw the base at most every 150 ms; a new scan also updates the legend
+    if (!tileArrived) legend();
+    const t = performance.now();
+    if (t - radarAt > 150) { radarAt = t; draw(true); } else setTimeout(() => draw(true), 160);
+  });
   // ---------- DOM ----------
   const base = h("canvas", { class: "mapx-base", "aria-hidden": "true" });
   const over = h("canvas", { class: "mapx-over", "aria-hidden": "true" });
   const segBtns = [["all", "All"], ["mine", "My airports"], ["risk", "At risk"]].map(([k, label]) =>
     h("button", { type: "button", "data-filter": k, "aria-pressed": String(k === filter), onclick: () => setFilter(k) }, label));
   const seg = h("div", { class: "mapx-seg glass", role: "group", "aria-label": "Airports to show" }, segBtns);
-  const sw = (key, label, note) => h("button", { type: "button", role: "switch", class: "mapx-sw", "data-key": key, "aria-checked": String(key === "rings" ? showRings : showCascade), onclick: () => toggleLayer(key) },
+  const sw = (key, label, note) => h("button", { type: "button", role: "switch", class: "mapx-sw", "data-key": key, "aria-checked": String(layerOn(key)), onclick: () => toggleLayer(key) },
     h("span", { class: "mapx-sw-t" }, h("b", {}, label), h("span", {}, note)), h("i", { "aria-hidden": "true" }));
   const layers = h("div", { class: "mapx-layers glass", id: "mapxLayers", hidden: true, role: "group", "aria-label": "Map overlays" },
-    sw("rings", "FAA programs", "Ring around airports with a ground stop, delay program or closure"));
+    sw("rings", "FAA programs", "Ring around airports with a ground stop, delay program or closure"),
+    sw("radar", "Radar", "Rain and snow right now (NOAA MRMS, U.S. mainland)"));
   const layersBtn = h("button", { type: "button", class: "mapx-lbtn glass", "aria-expanded": "false", "aria-controls": "mapxLayers", onclick: () => openLayers(layers.hidden) }, "Overlays");
   const toolBtn = (label, aria, fn) => h("button", { type: "button", class: "glass", "aria-label": aria, onclick: fn }, label);
   const listTitle = h("h2", { tabindex: "-1" }, "Airports on the map");
@@ -87,14 +96,15 @@ export function mountMap(container) {
   container.replaceChildren(h("section", { class: "mapx" }, stage, listHead, list, foot));
 
   // ---------- data ----------
-  function store() { safe(() => localStorage.setItem(STORE, JSON.stringify({ filter, rings: showRings, cascade: showCascade }))); }
+  function store() { safe(() => localStorage.setItem(STORE, JSON.stringify({ filter, rings: showRings, cascade: showCascade, radar: showRadar }))); }
   function setFilter(k) {
     filter = k; segBtns.forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.filter === k))); store(); render();
   }
   function toggleLayer(k) {
-    if (k === "rings") showRings = !showRings; else showCascade = !showCascade;
-    layers.querySelector(`[data-key="${k}"]`).setAttribute("aria-checked", String(k === "rings" ? showRings : showCascade));
-    store(); draw();
+    if (k === "rings") showRings = !showRings; else if (k === "radar") showRadar = !showRadar; else showCascade = !showCascade;
+    layers.querySelector(`[data-key="${k}"]`).setAttribute("aria-checked", String(layerOn(k)));
+    if (k === "radar") { radar.setOn(showRadar); legend(); }
+    store(); draw(k === "radar");
   }
   function openLayers(open) {
     layers.hidden = !open; layersBtn.setAttribute("aria-expanded", String(open));
@@ -202,6 +212,12 @@ export function mountMap(container) {
   function legend() {
     const items = WORDS.map((word, i) => h("span", {}, h("i", { class: "l" + i }), word));
     if (shown.some((e) => e.lv == null)) items.push(h("span", {}, h("i", { class: "nodata" }), "No data"));
+    if (showRadar) {
+      const r = radar.state(), A = app();
+      const t = r.valid ? safe(() => A.clock(r.valid, sliderZone().tz), "") : "";
+      items.push(h("span", { class: "mapx-rleg" }, h("i", { class: "radar" }),
+        r.failed && !r.valid ? "Radar unavailable" : offset !== 0 ? "Radar shows now only" : t ? "Radar " + t : "Radar loading"));
+    }
     legendBox.replaceChildren(...items);
   }
 
@@ -367,6 +383,7 @@ export function mountMap(container) {
       const slots = visibleSlots(VM.tileZoom(view.z));
       safe(() => {
         VM.drawBase(ctx, slots, { dark: dk, dpr, z: view.z });
+        drawRadar(ctx, dk);
         VM.drawTop(ctx, slots, { dark: dk, dpr, z: view.z, w: W, h: H, roads: false, classes: { state: 1 }, avoid: labelBoxes });
       });
       return;
@@ -390,8 +407,16 @@ export function mountMap(container) {
     };
     ctx.fillStyle = P.land;
     if (land) { path(land); ctx.fill(); }
-    if (us) { path(us); ctx.fill(); ctx.lineJoin = "round"; ctx.strokeStyle = P.state; ctx.lineWidth = 0.9; ctx.stroke(); }
+    if (us) { path(us); ctx.fill(); }
+    drawRadar(ctx, dk);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (us) { path(us); ctx.lineJoin = "round"; ctx.strokeStyle = P.state; ctx.lineWidth = 0.9; ctx.stroke(); }
     ctx.setTransform(1, 0, 0, 1, 0, 0);
+  }
+  /** Radar overlay (map hook, site/map/mrms.js): under the labels and lines, current hour only. */
+  function drawRadar(ctx, dk) {
+    if (!showRadar || offset !== 0) return;
+    safe(() => radar.draw(ctx, visibleSlots(Math.max(3, Math.min(9, Math.round(view.z)))), dk));
   }
   /** Keep the base canvas lined up with the current view by CSS while it hasn't been redrawn for it. */
   function placeBase() {
@@ -586,7 +611,7 @@ export function mountMap(container) {
     else return;
     e.preventDefault(); clamp(); draw(true);
   });
-  slider.addEventListener("input", () => { offset = Number(slider.value) || 0; render(); });
+  slider.addEventListener("input", () => { const was = offset; offset = Number(slider.value) || 0; render(); if (showRadar && (was === 0) !== (offset === 0)) draw(true); });
 
   // ---------- lifecycle ----------
   let pending = false;
@@ -619,13 +644,15 @@ export function mountMap(container) {
     if (frame) cancelAnimationFrame(frame);
     frame = 0; paint(performance.now());
   }
+  if (showRadar) radar.setOn(true);
   window.AWXMap = { // map hook: read by the check page (site/map/check.js)
     _state: () => (flush(), { dots: dots.length, onScreen: dots.filter((d) => d.on).length, shown: shown.length, rows: list.querySelectorAll(".map-airport-row").length,
       base: baseKind, vmap: vmState, offset, minOff, maxOff, at, filter, when: whenB.textContent,
       levels: Object.fromEntries(shown.map((e) => [e.code, e.lv])), heads: Object.fromEntries(shown.map((e) => [e.code, e.head])),
       labels: dots.filter((d) => d.label).length, rings: dots.filter((d) => d.on && hasRing(d.e)).length, pulsing }),
     pos: (code) => { flush(); const d = dots.find((x) => x.e.code === code); if (!d) return null; const r = over.getBoundingClientRect(); return { x: r.left + d.sx, y: r.top + d.sy, on: d.on }; },
-    setOffset: (k) => { offset = Math.max(minOff, Math.min(maxOff, k)); render(); },
+    setOffset: (k) => { offset = Math.max(minOff, Math.min(maxOff, k)); render(); draw(true); },
+    radar: () => radar.state(),
     setFilter,
     fit: () => { fit(); draw(true); },
   };
