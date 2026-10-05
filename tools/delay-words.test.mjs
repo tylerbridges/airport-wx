@@ -144,3 +144,12 @@ test("delay words: pre-test support controls caps independently of test outcomes
   assert.deepEqual(D.likelihood({ p: 0.75 }, { ...opts, report: a }), D.likelihood({ p: 0.75 }, { ...opts, report: b }));
   assert.equal(D.likelihood({ p: 0.75 }, { ...opts, report: a }).word, "Delays very likely");
 });
+
+test("pooled airport More details keeps uncertainty without an undefined routine headline", () => {
+  const now = Date.parse("2026-10-04T18:00:00Z");
+  const a = { iata: "BZN", tz: "America/Denver", hours: [{ t: new Date(now).toISOString(), level: 0, delay: { p: 0.05, modelCoverage: "pooled", typicalScope: "pooled" } }] };
+  assert.equal(D.routineOutlook(a, now), null);
+  const o = D.outlookHour(a, now);
+  assert.equal(o.L.word, "Delay forecast uncertain");
+  assert.equal(o.from, "now");
+});

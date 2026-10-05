@@ -7,6 +7,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { spawnSync } from "node:child_process";
 import {
   btsIndex2, btsAdd2, scheduledArrivalDate, truthFromAcc, sideReal, mergeAcc, accEntries, fitLogistic, predictRows, isotonicFit, brier, auc, reliability, gate,
   timeSplit, programRates, lampFromIemCsv, lampLookup, climatology, airportRecords, buildRows, buildAnalogs, median,
@@ -474,4 +475,13 @@ test("real IEM LAV midnight and 06Z: complete coverage and restored issuance tim
     assert.ok(lampLookup(byTime, run + 8 * HOUR, issued + 6 * HOUR));
     assert.equal(lampLookup(byTime, run + 8 * HOUR, issued + 6 * HOUR + 1), null, "expired archive cycle is missing, not current");
   }
+});
+
+test("BTS CLI preserves the header when CSV arrives on stdin", async () => {
+  const out = join(tmpdir(), `awx-bts-stdin-${process.pid}`);
+  try {
+    const run = spawnSync(process.execPath, [join(dirname(fileURLToPath(import.meta.url)), "train-data.mjs"), "bts", "--month", "2026-10", "--file", "-", "--out", out, "--airports", "ORD"], { input: HEAD + "\n2026-10-04,DTW,ORD,2330,20,2300,20,0,,0,,0,20\n", encoding: "utf8" });
+    assert.equal(run.status, 0, run.stderr);
+    assert.match(run.stdout, /1 rows, 1 departure\/arrival sides/);
+  } finally { await rm(out, { recursive: true, force: true }); }
 });

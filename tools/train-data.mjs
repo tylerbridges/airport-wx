@@ -90,10 +90,12 @@ async function loadAirports(list = "all") {
 
 async function btsStep(opts) {
   const airports = await loadAirports(opts.airports);
+  // Resolve metadata before readline starts consuming the piped CSV.
+  const zones = await loadAirportZones();
   const wanted = new Set(airports.map((a) => a.iata));
   const input = !opts.file || opts.file === "-" ? process.stdin : createReadStream(opts.file);
   const rl = createInterface({ input, crlfDelay: Infinity });
-  const r = await aggregateBts(rl, wanted);
+  const r = await aggregateBts(rl, wanted, zones);
   await mkdir(join(opts.out, "bts"), { recursive: true });
   await mkdir(join(opts.out, "samples"), { recursive: true });
   await writeFile(join(opts.out, "bts", `${opts.month}.json.gz`), gzipSync(JSON.stringify({ month: opts.month, rows: r.rows, kept: r.kept, header: r.header, entries: r.entries })));

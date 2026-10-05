@@ -288,7 +288,7 @@ export function routineOutlook(a, now = refNow()) {
   hs.forEach((h, i) => { const t = Date.parse(h.t); if (t + HOUR > now && dayKey(t, tz) === today && h.delay && h.delay.p != null) idx.push(i); });
   if (!idx.length) return null;
   const Ls = idx.map((i) => likelihood(hs[i].delay, { iata: a.iata, aviation: false }));
-  if (Ls.some((L) => !L || L.key === "now")) return null;
+  if (Ls.some((L) => !L || L.key === "now" || L.key === "unknown")) return null;
   let b = 0;
   Ls.forEach((L, k) => { if (RANK[L.key] > RANK[Ls[b].key] || (RANK[L.key] === RANK[Ls[b].key] && L.rate > Ls[b].rate)) b = k; });
   const key = Ls[b].key;
@@ -330,7 +330,7 @@ export function whyBlock(a, now = refNow()) {
   } else {
     const d = a.hours[o.i].delay;
     const L = o.L;
-    let head = L.word;
+    let head = L.key === "unknown" ? L.sentence : L.word;
     if (o.from === "routine") head = o.routine.text;
     else if (o.from === "card" && L.key !== "now") {
       const start = Date.parse(a.hours[o.s].t), end = Date.parse(a.hours[o.e].t) + HOUR;
@@ -340,7 +340,7 @@ export function whyBlock(a, now = refNow()) {
     const an = analogWords(d.analog);
     if (an && analogAgrees(d.analog, L)) kids.push(el("div", "dl-analog", an));
     const { bin } = calibrate(Number(d.p));
-    if (L.key !== "now" && bin && bin.rate != null && bin.n) {
+    if (L.key !== "now" && L.key !== "unknown" && bin && bin.rate != null && bin.n) {
       kids.push(el("div", "dl-analog", RANK[L.key] >= RANK.possible
         ? `Across airports, warnings like this were followed by delays ${inTen(bin.rate)} times.`
         : `Across airports, hours given this outlook had delays ${inTen(bin.rate)} times.`));
@@ -395,7 +395,7 @@ export function delayBlock(a, i, opts = {}) {
   const an = analogWords(d.analog);
   if (an && analogAgrees(d.analog, L)) why.push(el("div", "dl-analog", an));
   const { bin } = calibrate(Number(d.p));
-  if (L.key !== "now" && bin && bin.rate != null && bin.n) why.push(el("div", "dl-analog", `Across airports, warnings like this were followed by delays ${inTen(bin.rate)} times.`));
+  if (L.key !== "now" && L.key !== "unknown" && bin && bin.rate != null && bin.n) why.push(el("div", "dl-analog", `Across airports, warnings like this were followed by delays ${inTen(bin.rate)} times.`));
   if (d.pTypical != null && d.typicalScope !== "pooled" && L.key !== "now") why.push(el("div", "dl-analog", `On a typical day at this hour, delays happen ${inTen(d.pTypical)} times.`));
   why.push(sourceLine());
   kids.push(aviation ? el("div", "dl-why", ...why) : el("div", "dl-srcline", "Airport-wide weather and air traffic control risk · forecast estimate"));
