@@ -427,11 +427,18 @@ async function uiChecks(add, scenario) {
         pointer("pointerup");
         bar.dispatchEvent(new w.MouseEvent("click", { bubbles: true, cancelable: true }));
         add(waits && previews && el._tl.shown == null && !A.state.openIata ? "pass" : "fail", "Main timeline: hold then release", "Preview waits for the hold; release restores Now without opening the card");
-        pointer("pointerdown"); pointer("pointermove", 20);
+        pointer("pointerdown");
+        bar.dispatchEvent(new w.PointerEvent("pointermove", { pointerId: 7, button: 0, clientX: x, clientY: y + 20, bubbles: true }));
         await sleep(300);
         const cancelled = el._tl.shown == null;
         pointer("pointerup", 20);
-        add(cancelled ? "pass" : "fail", "Main timeline: swipes cancel the pending hold", "Moving before activation never selects an hour");
+        add(cancelled ? "pass" : "fail", "Main timeline: vertical swipes cancel the pending hold", "Vertical scrolling before activation never selects an hour");
+        pointer("pointerdown");
+        bar.dispatchEvent(new w.PointerEvent("pointermove", { pointerId: 7, button: 0, clientX: rect.left + 1, clientY: y + 2, bubbles: true }));
+        await sleep(30);
+        const pastSelected = el._tl.shown === 0 && el._tl.shown < el._tl.rest;
+        pointer("pointerup");
+        add(pastSelected && el._tl.shown == null ? "pass" : "fail", "Main timeline: drag into the past", "Horizontal drag selects the earliest hour before the hold timer; release restores Now");
       }
       const undim = wraps.filter((el) => {
         const segs = [...el.querySelectorAll(".tl .s")];

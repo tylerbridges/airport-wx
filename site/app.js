@@ -959,7 +959,7 @@
     return wrap;
   }
 
-  // Read-only card timelines are built just ahead of scrolling, rather than for every airport at once.
+  // Card timelines are built just ahead of scrolling, rather than for every airport at once.
   function mountTimeline(slot) {
     if (!slot?._airport || !slot.isConnected) return;
     const a = slot._airport;
@@ -1082,7 +1082,7 @@
   let swallowClick = 0, swallowCard = null;
   document.addEventListener("click", (e) => { if (Date.now() < swallowClick && (!swallowCard || e.target.closest(".card") === swallowCard)) { e.stopPropagation(); e.preventDefault(); } }, true);
 
-  /** Timelines preview only while held; cards wait 240 ms and yield to swipes. */
+  /** Cards activate on a horizontal drag or 240 ms hold; vertical swipes keep scrolling. */
   function wireBigScrub(T) {
     const bar = T.tl;
     let g = null, raf = 0, holdTimer = 0;
@@ -1093,6 +1093,13 @@
       T.shown = i;
       placeLens(T, i, true);
       if (T.opts.onPreview) T.opts.onPreview(i);
+    };
+    const activate = () => {
+      if (!g || g.cancelled || !bar.isConnected) return;
+      clearTimeout(holdTimer);
+      g.active = true;
+      try { bar.setPointerCapture(g.id); } catch (x) { /* ignore */ }
+      show(slotAt(T, g.x));
     };
     const finish = () => {
       const pointer = g;
@@ -1110,12 +1117,6 @@
       if (e.button > 0 || g) return;
       heldKeys.clear();
       g = { id: e.pointerId, x: e.clientX, y: e.clientY, startX: e.clientX, active: false };
-      const activate = () => {
-        if (!g || g.cancelled || !bar.isConnected) return;
-        g.active = true;
-        try { bar.setPointerCapture(g.id); } catch (x) { /* ignore */ }
-        show(slotAt(T, g.x));
-      };
       if (T.big) { activate(); e.preventDefault(); }
       else holdTimer = setTimeout(activate, 240);
     });
@@ -1123,9 +1124,17 @@
       if (!g || e.pointerId !== g.id) return;
       if (!T.big) {
         const dx = Math.abs(e.clientX - g.startX), dy = Math.abs(e.clientY - g.y);
-        if (!g.active && Math.hypot(dx, dy) > 8) { clearTimeout(holdTimer); g.cancelled = true; return; }
         if (g.cancelled) return;
-        if (g.active && dy > 12 && dy > dx) { finish(); return; }
+        if (dx > 8 && dx > dy) {
+          g.horizontal = true;
+          g.x = e.clientX;
+          if (!g.active) activate();
+        }
+        if (!g.horizontal && dy > 8 && dy > dx) {
+          if (g.active) finish();
+          else { clearTimeout(holdTimer); g.cancelled = true; }
+          return;
+        }
         if (!g.active) return;
       }
       g.x = e.clientX;
@@ -1134,6 +1143,10 @@
         if (g) show(slotAt(T, g.x));
       });
     });
+    // Safari must not hand an established horizontal scrub back to page scrolling.
+    bar.addEventListener("touchmove", (e) => {
+      if (g?.active && g.horizontal && e.cancelable) e.preventDefault();
+    }, { passive: false });
     const up = (e) => { if (g && e.pointerId === g.id) finish(); };
     bar.addEventListener("pointerup", up);
     bar.addEventListener("pointercancel", up);

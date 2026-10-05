@@ -476,4 +476,4 @@ List performance: card timelines mount just before entering the viewport; all mo
 
 The Airports view offers My airports and At risk; the full catalog is accessed through Search by code, city or name. Selecting a monitored airport opens its overview directly, reusing the search history entry so it stays open. The internal full-list mode remains available only to audit every monitored airport in the check page.
 
-Timeline labels summarize the selected time, severity and main disruption in a single short line, without an ellipsis. Full reasons remain in the hour card and accessible slider description. Main-page hold previews retain lazy rendering and show only the selected hour while held.
+Timeline labels summarize the selected time, severity and main disruption in a single short line, without an ellipsis. Full reasons remain in the hour card and accessible slider description. Main-page previews retain lazy rendering: hold briefly or drag horizontally to select an hour, including faded past hours and hours with no report. The lens stays on that hour during the drag; release restores Now. Vertical swipes keep scrolling.
