@@ -267,7 +267,7 @@ table.lt { border-collapse: collapse; font-size: 12px; }
 .ticks span.last { transform: translateX(-100%); }
 .lenslabel {
   position: absolute; top: 0; left: 0; width: max-content; max-width: 100%; font-size: 11px; font-weight: 700; line-height: 16px;
-  color: var(--text); white-space: normal; pointer-events: none;
+  color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none;
 }
 .tl-wrap.spring .lenslabel { transition: left .42s cubic-bezier(.34, 1.56, .64, 1); }
 /* Liquid Glass lens: rim, inner highlight, soft shadow; magnified copy of the segment under it */
@@ -800,7 +800,7 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="cats.js?v=3"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=4"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
-<script src="app.js?v=50" defer></script>
+<script src="app.js?v=51" defer></script>
 <script type="module" src="searched.js?v=7"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=11"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="trips.js?v=17"></script><!-- trips hook -->
