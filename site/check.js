@@ -408,9 +408,31 @@ async function uiChecks(add, scenario) {
           now < T.day.start + 12 * HOUR || now >= T.day.start + 13 * HOUR;
       });
       add(wraps.length && !wrongWindow.length ? "pass" : "fail", "Rolling timelines: 12 past hours, 24 forecast hours, Now one-third across", `${wraps.length - wrongWindow.length} of ${wraps.length}`);
-      for (const el of wraps) el.dispatchEvent(new w.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
-      add(wraps.every((el) => el.getAttribute("role") === "img" && !el.hasAttribute("tabindex") && el._tl.shown == null && !el.classList.contains("scrub")) ? "pass" : "fail",
-        "Main timelines are read-only", "No slider focus or keyboard scrubbing");
+      for (const el of wraps) {
+        el.dispatchEvent(new w.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+        el.dispatchEvent(new w.KeyboardEvent("keyup", { key: "ArrowRight", bubbles: true }));
+      }
+      add(wraps.every((el) => el.getAttribute("role") === "slider" && el.getAttribute("tabindex") === "0" && el._tl.shown == null && !el.classList.contains("scrub")) ? "pass" : "fail",
+        "Main timeline previews return on release", "Keyboard previews restore Now; touch previews wait for a hold");
+      if (wraps[0]) {
+        const el = wraps[0], card = el.closest(".card"), bar = el.querySelector(".tl");
+        card.style.contentVisibility = "visible";
+        card.scrollIntoView({ block: "center" });
+        const rect = bar.getBoundingClientRect(), x = rect.left + rect.width * .7, y = rect.top + 5;
+        const pointer = (type, dx = 0) => bar.dispatchEvent(new w.PointerEvent(type, { pointerId: 7, button: 0, clientX: x + dx, clientY: y, bubbles: true }));
+        pointer("pointerdown");
+        const waits = el._tl.shown == null;
+        await sleep(300);
+        const previews = el._tl.shown != null;
+        pointer("pointerup");
+        bar.dispatchEvent(new w.MouseEvent("click", { bubbles: true, cancelable: true }));
+        add(waits && previews && el._tl.shown == null && !A.state.openIata ? "pass" : "fail", "Main timeline: hold then release", "Preview waits for the hold; release restores Now without opening the card");
+        pointer("pointerdown"); pointer("pointermove", 20);
+        await sleep(300);
+        const cancelled = el._tl.shown == null;
+        pointer("pointerup", 20);
+        add(cancelled ? "pass" : "fail", "Main timeline: swipes cancel the pending hold", "Moving before activation never selects an hour");
+      }
       const undim = wraps.filter((el) => {
         const segs = [...el.querySelectorAll(".tl .s")];
         const cur = segs.findIndex((s) => s.classList.contains("cur"));
@@ -422,6 +444,7 @@ async function uiChecks(add, scenario) {
         });
       });
       add(!undim.length ? "pass" : "fail", "Past hours are dimmed", undim.length ? `${undim.length} timelines with undimmed past hours` : "all past hours dimmed");
+      await sleep(450); // Release animates the lens back to Now before measuring its settled position.
       if (A.placeLenses) A.placeLenses(); // (virtual-time runs may not have run the animation frame yet)
       const off = wraps.map((el) => {
         const card = el.closest(".card");

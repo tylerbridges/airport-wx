@@ -886,8 +886,28 @@
     return [s.kind === "now" ? "Now" : when, s.kind === "obs" ? (s.observed ? "Observed" : "Earlier forecast") : s.kind === "fc" ? "Forecast" : null, LEVELS[s.level].label, top].filter(Boolean).join(" · ");
   }
 
+  function conciseSlotText(s, a) {
+    const tz = dispTz(a), day = dayKey(s.t, tz) === dayKey(refNow(), tz) ? "" : timelineDay(s.t, tz) + " ";
+    const when = s.kind === "now" ? "Now" : day + hourLabel(s.t, tz);
+    if (s.kind === "none") return when + " · No report";
+    if (s.kind === "na") return when + " · Forecast unavailable";
+    if (s.level === 0) return when + " · " + (AWXOutlook.health(a, outlookOpts(a, view(a))).quality ? "Status unconfirmed" : "Low risk");
+    const r = (s.reasons || []).join(" ");
+    const topic = (s.reasons || []).some(x => /^Airport closed\b/i.test(x)) ? "Airport closed" : (s.reasons || []).some(x => /^Ground stop\b/i.test(x)) ? "Ground Stop"
+      : /Ground delay|Delay program|Delays|FAA reports/i.test(r) ? "Delays"
+      : /Thunder|Convective/i.test(r) ? "Storms" : /Fog/i.test(r) ? "Fog" : /Visibility/i.test(r) ? "Poor visibility"
+      : /Ceiling|Low clouds/i.test(r) ? "Low clouds" : /Gust|Wind/i.test(r) ? "Strong winds"
+      : /Snow|Freezing|Ice|Winter/i.test(r) ? "Winter weather" : /VIP|restrictions/i.test(r) ? "Restrictions"
+      : /Space launch/i.test(r) ? "Space launch" : "Disruption";
+    return when + " · " + LEVELS[s.level].label + ": " + topic;
+  }
+  function conciseNowWords(a, slot) {
+    const text = nowWords(a).split(",")[0];
+    return text.length <= 34 ? text : conciseSlotText(slot, a);
+  }
+
   /**
-   * Timeline element. Cards are read-only; opts.big enables held previews in the detail sheet.
+   * Timeline element. Card previews require a brief hold; detail previews start immediately.
    * The lens sits on the current hour at rest.
    */
   function timeline(a, opts = {}) {
@@ -926,16 +946,16 @@
     const na = slots.findIndex((x, i) => x.kind === "na" && slots.slice(i).every((y) => y.kind === "na"));
     const naNote = na >= 0 ? h("div", { class: "nanote" }, "Forecast not available yet from " + timelineDay(slots[na].t, tz) + " " + hourLabel(slots[na].t, tz)) : null;
     const wrap = h("div", {
-      class: "tl-wrap" + (big ? " bigwrap" : " cardwrap"), tabindex: big ? "0" : null, role: big ? "slider" : "img",
-      "aria-label": big ? "Hourly risk, " + (opts.dayOff ? "tomorrow" : "past 12 hours and next 24 hours") : timelineLabel(a),
-      "aria-description": big ? "Hold and slide to preview an hour. Release to return to the normal view." : null,
-      "aria-valuemin": big ? "0" : null, "aria-valuemax": big ? String(n - 1) : null, "aria-valuenow": big ? String(Math.max(0, day.cur)) : null,
-      "aria-valuetext": big ? (day.cur >= 0 ? slotText(slots[day.cur], a) : slotText(slots[0], a)) : null,
+      class: "tl-wrap" + (big ? " bigwrap" : " cardwrap"), tabindex: "0", role: "slider",
+      "aria-label": "Hourly risk at " + codeOf(a) + ", " + (opts.dayOff ? "tomorrow" : "past 12 hours and next 24 hours"),
+      "aria-description": "Hold and slide to preview an hour. Release to return to Now. Swipe to scroll.",
+      "aria-valuemin": "0", "aria-valuemax": String(n - 1), "aria-valuenow": String(Math.max(0, day.cur)),
+      "aria-valuetext": day.cur >= 0 ? slotText(slots[day.cur], a) : slotText(slots[0], a),
       "data-start": String(day.start), "data-tz": tz,
     }, label, tl, ticks, naNote, big ? h("div", { class: "tl-cap" }, sm.open ? "Future hours are forecast estimates; FAA end time is unknown." : "Colours show weather and delay risk. Future hours are forecasts.") : null);
     const T = { wrap, tl, lens, lensSeg, label, segs, slots, day, a, rest: day.cur, big, opts };
     wrap._tl = T;
-    if (big) wireBigScrub(T);
+    wireBigScrub(T);
     return wrap;
   }
 
@@ -973,7 +993,7 @@
       lens.hidden = true;
       label.textContent = "";
       label.hidden = true;
-      if (T.big) {
+      if (T.wrap.getAttribute("role") === "slider") {
         wrap.setAttribute("aria-valuenow", "0");
         wrap.setAttribute("aria-valuetext", "No hour selected. Hold and slide to preview.");
       }
@@ -989,10 +1009,10 @@
     lensSeg.style.cssText = seg.style.cssText.replace(/(^|;)\s*width[^;]*/g, "") + ";width:" + sw + "px";
     wrap.classList.toggle("scrub", !!scrub);
     label.hidden = false;
-    label.textContent = scrub || i !== T.rest || T.slots[i].kind === "na" ? slotText(T.slots[i], T.a) : nowWords(T.a);
+    label.textContent = scrub || i !== T.rest || T.slots[i].kind === "na" ? conciseSlotText(T.slots[i], T.a) : conciseNowWords(T.a, T.slots[i]);
     const lw = Math.min(W, label.offsetWidth);
     label.style.left = Math.max(0, Math.min(W - lw, cx - lw / 2)) + "px";
-    if (T.big) {
+    if (T.wrap.getAttribute("role") === "slider") {
       wrap.setAttribute("aria-valuenow", String(i));
       wrap.setAttribute("aria-valuetext", slotText(T.slots[i], T.a));
     }
@@ -1024,8 +1044,8 @@
       T.lensSeg.className = "lens-seg " + (seg.classList.contains("nd") ? "nd" : lv(T.slots[i].level)) + (seg.classList.contains("past") ? " past" : "");
       T.lensSeg.style.cssText = seg.style.cssText.replace(/(^|;)\s*width[^;]*/g, "") + ";width:" + sw + "px";
       T.label.hidden = false;
-      T.label.textContent = i !== T.rest || T.slots[i].kind === "na" ? slotText(T.slots[i], T.a) : nowWords(T.a);
-      if (T.big) { T.wrap.setAttribute("aria-valuenow", String(i)); T.wrap.setAttribute("aria-valuetext", slotText(T.slots[i], T.a)); }
+      T.label.textContent = i !== T.rest || T.slots[i].kind === "na" ? conciseSlotText(T.slots[i], T.a) : conciseNowWords(T.a, T.slots[i]);
+      if (T.wrap.getAttribute("role") === "slider") { T.wrap.setAttribute("aria-valuenow", String(i)); T.wrap.setAttribute("aria-valuetext", slotText(T.slots[i], T.a)); }
     }
     for (const p of plans) if (!p.hidden) p.lw = Math.min(p.W, p.T.label.offsetWidth);
     for (const p of plans) if (!p.hidden) p.T.label.style.left = Math.max(0, Math.min(p.W - p.lw, p.cx - p.lw / 2)) + "px";
@@ -1059,13 +1079,13 @@
     setTimeout(() => T.wrap.classList.remove("spring"), 450);
   }
 
-  let swallowClick = 0;
-  document.addEventListener("click", (e) => { if (Date.now() < swallowClick) { e.stopPropagation(); e.preventDefault(); } }, true);
+  let swallowClick = 0, swallowCard = null;
+  document.addEventListener("click", (e) => { if (Date.now() < swallowClick && (!swallowCard || e.target.closest(".card") === swallowCard)) { e.stopPropagation(); e.preventDefault(); } }, true);
 
-  /** Detail timelines preview only while a pointer or navigation key is held. */
+  /** Timelines preview only while held; cards wait 240 ms and yield to swipes. */
   function wireBigScrub(T) {
     const bar = T.tl;
-    let g = null, raf = 0;
+    let g = null, raf = 0, holdTimer = 0;
     const heldKeys = new Set();
     const keys = new Set(["ArrowRight", "ArrowLeft", "Home", "End"]);
     const show = (i) => {
@@ -1076,23 +1096,38 @@
     };
     const finish = () => {
       const pointer = g;
+      clearTimeout(holdTimer);
+      holdTimer = 0;
       g = null;
       heldKeys.clear();
       if (raf) { cancelAnimationFrame(raf); raf = 0; }
       if (pointer && bar.hasPointerCapture(pointer.id)) bar.releasePointerCapture(pointer.id);
+      if ((pointer?.active || pointer?.cancelled) && !T.big) { swallowClick = Date.now() + 350; swallowCard = T.wrap.closest(".card"); }
       if (T.opts.onRelease) T.opts.onRelease();
       springBack(T);
     };
     bar.addEventListener("pointerdown", (e) => {
       if (e.button > 0 || g) return;
       heldKeys.clear();
-      g = { id: e.pointerId, x: e.clientX };
-      try { bar.setPointerCapture(e.pointerId); } catch (x) { /* ignore */ }
-      show(slotAt(T, g.x));
-      e.preventDefault();
+      g = { id: e.pointerId, x: e.clientX, y: e.clientY, startX: e.clientX, active: false };
+      const activate = () => {
+        if (!g || g.cancelled || !bar.isConnected) return;
+        g.active = true;
+        try { bar.setPointerCapture(g.id); } catch (x) { /* ignore */ }
+        show(slotAt(T, g.x));
+      };
+      if (T.big) { activate(); e.preventDefault(); }
+      else holdTimer = setTimeout(activate, 240);
     });
     bar.addEventListener("pointermove", (e) => {
       if (!g || e.pointerId !== g.id) return;
+      if (!T.big) {
+        const dx = Math.abs(e.clientX - g.startX), dy = Math.abs(e.clientY - g.y);
+        if (!g.active && Math.hypot(dx, dy) > 8) { clearTimeout(holdTimer); g.cancelled = true; return; }
+        if (g.cancelled) return;
+        if (g.active && dy > 12 && dy > dx) { finish(); return; }
+        if (!g.active) return;
+      }
       g.x = e.clientX;
       if (!raf) raf = requestAnimationFrame(() => {
         raf = 0;
@@ -1307,6 +1342,7 @@
       g = null;
       if (!was.on) return;
       swallowClick = Date.now() + 400;
+      swallowCard = null;
       for (const c of was.list) { c.style.transform = ""; }
       el.classList.remove("lifted");
       $("list").classList.remove("reordering");
