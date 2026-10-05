@@ -1958,11 +1958,17 @@
     const hcls = o.big ? " sc-big lv" + Math.max(0, Math.min(4, (shared?.level ?? o.level) || 0)) : "";
     const delay = status ? h("div", { class: "sc-head" + hcls }, h("span", { class: "sc-delay" }, status), merged && lead.when ? h("span", { class: "sc-hwhen" }, lead.when) : null) : null;
     const leadSub = lead ? cap([lead.cue, lead.size ? "When disrupted: " + lead.size : ""].filter(Boolean).join(" · ")) : "";
-    const leadEl = lead ? h("div", { class: "sc-lead" },
-      merged ? null : h("div", { class: "sc-later" }, h("span", { class: "sc-lw " + lead.cls }, lead.word), lead.when ? h("span", { class: "sc-hwhen" }, lead.when) : null),
-      leadSub ? h("div", { class: "sc-lsub" }, leadSub) : null,
-      ...lead.notes.map((n) => h("div", { class: "sc-lsub small" }, n))) : null;
-    const rowsEl = o.rows && o.rows.length ? h("div", { class: "sc-rows" }, o.rows.map((r) => h("div", { class: "sc-row" }, h("b", {}, r.label), h("span", {}, r.value)))) : null;
+    // "Looking ahead": one compact list under the current status — the delay outlook (when it isn't already the
+    // headline), then improvements, scheduled ends and FAA extension outlooks; each bullet's dot carries its colour
+    const leadNotes = lead ? [leadSub, ...lead.notes].filter(Boolean) : [];
+    const ahead = [];
+    if (lead && !merged) ahead.push(h("li", { class: "la-i" }, h("span", { class: "la-dot " + lead.cls, "aria-hidden": "true" }),
+      h("span", {}, h("b", { class: lead.cls }, lead.word), lead.when ? " " + lead.when : "", ...leadNotes.map((n) => h("span", { class: "la-sub" }, n)))));
+    const AHEAD = { "Forecast improvement": (v) => v, "Scheduled end": (v) => "FAA scheduled end " + v, "FAA extension outlook": (v) => "FAA extension outlook: " + v };
+    for (const r of o.rows || []) ahead.push(h("li", { class: "la-i" }, h("span", { class: "la-dot" + (r.label === "Forecast improvement" ? " la-good" : ""), "aria-hidden": "true" }),
+      h("span", {}, (AHEAD[r.label] || ((v) => r.label + ": " + v))(r.value))));
+    const leadEl = merged && leadNotes.length ? h("div", { class: "sc-lead" }, leadNotes.map((n) => h("div", { class: "sc-lsub" }, n))) : null;
+    const aheadEl = ahead.length ? h("div", { class: "sc-ahead" }, h("div", { class: "la-h" }, "Looking ahead"), h("ul", { class: "la-list" }, ahead)) : null;
     const primaryProgram = !aviation() && o.simple && shared?.programs.length === 1 && shared.programs[0].type !== "closure";
     const cause = primaryProgram ? plainCause(shared.programs[0]).toLowerCase() : "";
     const extraReasons = primaryProgram ? shortList(others, a).filter((r) => !cause || !r.toLowerCase().includes(cause) || /\d/.test(r)).slice(0, max) : [];
@@ -1984,7 +1990,7 @@
       delay,
       list,
       leadEl,
-      rowsEl,
+      aheadEl,
       progLine,
       o.simple ? null : o.facts);
   }

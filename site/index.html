@@ -430,16 +430,17 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 .two .sc .sc-head.sc-big { font-size: 18px; }
 .sc-big.lv2 .sc-delay { color: var(--l2); } .sc-big.lv3 .sc-delay { color: var(--l3); } .sc-big.lv4 .sc-delay { color: var(--l4); }
 .sc-hwhen { font-size: 15px; font-weight: 600; letter-spacing: 0; color: var(--text); }
-.sc-lead { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
-.sc-head + .sc-lead { margin-top: 4px; padding-top: 0; border-top: 0; }
-.sc-later { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
-.sc-lw { font-size: 18px; line-height: 1.2; font-weight: 800; letter-spacing: -.01em; }
+.sc-lead { margin-top: 4px; }
 .sc-lsub { margin-top: 3px; font-size: 14px; color: var(--muted); line-height: 1.35; }
-.sc-lsub.small { font-size: 12.5px; }
-.sc-rows { margin-top: 10px; }
-.sc-row { display: grid; gap: 2px; padding: 8px 0 0; font-size: 14px; border-top: 1px solid var(--line); }
-.sc-row + .sc-row { margin-top: 8px; }
-.sc-row b { font-size: 12px; color: var(--muted); }
+/* Looking ahead: a small label and compact bullets, less weight than the headline */
+.sc-ahead { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.la-h { font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.la-list { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
+.la-i { display: flex; gap: 9px; align-items: baseline; font-size: 14.5px; line-height: 1.35; }
+.la-dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--muted); transform: translateY(-1px); }
+.la-dot.dl-hi { background: var(--l3); } .la-dot.dl-mid { background: var(--l2); } .la-dot.la-good { background: var(--l0); }
+.la-i b { font-weight: 700; }
+.la-sub { display: block; font-size: 13px; color: var(--muted); }
 .sh-log { list-style: none; margin: 0; padding: 2px 0 0; }
 .sh-log li { display: flex; gap: 10px; padding: 6px 0; font-size: 14px; line-height: 1.35; border-bottom: 1px solid var(--line); }
 .sh-log li:last-child { border-bottom: 0; }
@@ -843,7 +844,7 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="cats.js?v=3"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=5"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
-<script src="app.js?v=59" defer></script>
+<script src="app.js?v=60" defer></script>
 <script type="module" src="searched.js?v=7"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=14"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="trips.js?v=22"></script><!-- trips hook -->
