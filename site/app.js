@@ -1848,6 +1848,7 @@
     if (state.offline) warn.unshift("Offline — last-known restrictions and weather; check your airline before travelling");
     if (quality?.missingWeather) warn.push("Recent weather observation unavailable for this airport");
     if (quality?.missingForecast) warn.push("Airport forecast unavailable or outdated");
+    if (quality?.advisoriesAge && !quality.incomplete) warn.push("FAA Command Center advisories last updated " + ago(quality.advisoriesAge) + " — planned programs may have changed; current FAA delays are live");
     const airportAge = quality?.checked != null ? ago(Math.max(0, refNow() - quality.checked)) : when;
     return h("div", { class: "checked" },
       warn.map((w) => h("p", { class: "warn" }, w)),

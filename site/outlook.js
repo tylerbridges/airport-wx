@@ -102,7 +102,14 @@
     const sources = coverage.sources || opts.sources || {};
     const generated = ms(coverage.generated || opts.generated);
     const required = weatherOnly ? ["metar", "taf"] : ["faa", "atcscc", "metar", "taf", "nws"];
-    const unavailable = required.some((k) => !sources[k]?.ok || sources[k].error || sources[k].stale || Number.isFinite(ms(sources[k].at)) && now - ms(sources[k].at) > 30 * 60000);
+    const age = (k) => (Number.isFinite(ms(sources[k]?.at)) ? now - ms(sources[k].at) : 0);
+    // FAA Command Center advisories come only from the GitHub build (the live relay doesn't fetch them). While the relay's
+    // FAA status (active ground stops, delay programs, closures) is fresh they may lag up to 3 hours before the outlook
+    // counts as incomplete; the sheet's checked line says how old they are (advisoriesAge).
+    const faaFresh = !!sources.faa?.ok && !sources.faa.error && !sources.faa.stale && age("faa") <= 30 * 60000;
+    const limit = (k) => (k === "atcscc" && faaFresh ? 3 * HOUR : 30 * 60000);
+    const unavailable = required.some((k) => !sources[k]?.ok || sources[k].error || sources[k].stale || age(k) > limit(k));
+    const advisoriesAge = required.includes("atcscc") && sources.atcscc?.ok && age("atcscc") > 30 * 60000 ? age("atcscc") : null;
     const outdated = !Number.isFinite(generated) || now - generated > 30 * 60000 || generated - now > 5 * 60000;
     const observed = ms(a.metar?.obsTime), forecastIssued = ms(a.taf?.issued);
     const missingWeather = !Number.isFinite(observed) || now - observed > 2 * HOUR || observed - now > 10 * 60000;
@@ -111,7 +118,7 @@
     const quality = opts.offline ? "Offline · showing last-known airport data" : outdated ? "Data may be outdated" : missingWeather ? "Recent weather observation unavailable"
       : missingForecast ? "Airport forecast unavailable or outdated" : unavailable || opts.sample ? "Some data unavailable" : weatherOnly ? "Weather only · FAA delay coverage unavailable"
       : opts.hidden ? "Some disruptions hidden by your settings" : opts.noticesDown ? "Nearby flight restrictions unavailable" : "";
-    return { outdated, incomplete, quality, checked: Number.isFinite(generated) ? generated : null,
+    return { outdated, incomplete, quality, advisoriesAge, checked: Number.isFinite(generated) ? generated : null,
       observed: Number.isFinite(observed) ? observed : null, forecastIssued: Number.isFinite(forecastIssued) ? forecastIssued : null, missingWeather, missingForecast, weatherOnly };
 
   }

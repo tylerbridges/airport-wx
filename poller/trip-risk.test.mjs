@@ -234,6 +234,15 @@ test("shared airport health: complete fresh Trips stay green, stale or failed so
   }
 });
 
+test("shared airport health: FAA advisories may lag up to 3 h while the live FAA status is fresh", () => {
+  const airports = by(healthyAirport("MSP"), healthyAirport("ATL"));
+  const src = (adv, faa = at(0)) => ({ sources: { ...healthySources, faa: { ok: true, at: faa }, atcscc: { ok: true, at: adv } } });
+  assert.equal(tripStatus(quietTrip, airports, { now: NOW, health: healthFor(src(at(-2))) }).status, "ok");
+  assert.ok(Outlook.health(healthyAirport("MSP"), { now: NOW, generated: at(0), ...src(at(-2)) }).advisoriesAge >= 2 * 3600e3 - 1);
+  assert.equal(tripStatus(quietTrip, airports, { now: NOW, health: healthFor(src(at(-4))) }).status, "unknown");
+  assert.equal(tripStatus(quietTrip, airports, { now: NOW, health: healthFor(src(at(-2), at(-1))) }).status, "unknown"); // FAA status itself stale
+});
+
 test("shared airport health: observation gaps affect the relevant airport, not every airport", () => {
   for (const metar of [null, { obsTime: "invalid" }, { obsTime: at(-3) }]) {
     const r = tripStatus(quietTrip, by(healthyAirport("MSP"), { ...healthyAirport("ATL"), metar }), { now: NOW, health: healthFor() });
