@@ -408,7 +408,7 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 .sc { position: relative; min-width: 0; display: flex; flex-direction: column; padding: 12px 14px; }
 .sc-when.in { font-size: 12.5px; font-weight: 500; color: var(--muted); }
 .sc .rline { margin: 4px 0 0; font-size: 14px; line-height: 1.3; }
-.sc.full .sc-delay { margin-top: 4px; font-size: 16px; line-height: 1.3; }
+.sc.full .sc-head { margin-top: 4px; font-size: 16px; line-height: 1.3; }
 .sc.full .sc-prog { margin-top: 4px; }
 .sc.full .facts { margin-top: 4px; }
 .sc.full .chips { padding-top: 4px; }
@@ -424,7 +424,28 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 .sc-h { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
 .sc h4 { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 13px; font-weight: 700; color: var(--muted); min-height: 22px; }
 .sc-when { margin-top: 2px; font-size: 12.5px; color: var(--muted); }
-.sc-delay { margin-top: 4px; font-size: 13px; font-weight: 700; }
+.sc-head { margin-top: 4px; font-size: 13px; font-weight: 700; }
+/* Sheet headline: the status (and the delay outlook) in large level-coloured type, what happens next under it */
+.sc .sc-head.sc-big { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; margin-top: 6px; font-size: clamp(21px, 6.2vw, 26px); line-height: 1.15; font-weight: 800; letter-spacing: -.02em; }
+.two .sc .sc-head.sc-big { font-size: 18px; }
+.sc-big.lv2 .sc-delay { color: var(--l2); } .sc-big.lv3 .sc-delay { color: var(--l3); } .sc-big.lv4 .sc-delay { color: var(--l4); }
+.sc-hwhen { font-size: 15px; font-weight: 600; letter-spacing: 0; color: var(--text); }
+.sc-lead { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.sc-head + .sc-lead { margin-top: 4px; padding-top: 0; border-top: 0; }
+.sc-later { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+.sc-lw { font-size: 18px; line-height: 1.2; font-weight: 800; letter-spacing: -.01em; }
+.sc-lsub { margin-top: 3px; font-size: 14px; color: var(--muted); line-height: 1.35; }
+.sc-lsub.small { font-size: 12.5px; }
+.sc-rows { margin-top: 10px; }
+.sc-row { display: grid; gap: 2px; padding: 8px 0 0; font-size: 14px; border-top: 1px solid var(--line); }
+.sc-row + .sc-row { margin-top: 8px; }
+.sc-row b { font-size: 12px; color: var(--muted); }
+.sh-log { list-style: none; margin: 0; padding: 2px 0 0; }
+.sh-log li { display: flex; gap: 10px; padding: 6px 0; font-size: 14px; line-height: 1.35; border-bottom: 1px solid var(--line); }
+.sh-log li:last-child { border-bottom: 0; }
+.lg-t { flex: none; min-width: 64px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.lg-s { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.lg-more { padding-top: 4px; font-size: 13px; color: var(--muted); }
 .sc .reasons { margin-top: 6px; font-size: 14px; line-height: 1.3; }
 .sc .reasons li { padding: 2px 0; }
 .sc .reasons li.more { display: none; }
@@ -822,9 +843,9 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="cats.js?v=3"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=5"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
-<script src="app.js?v=58" defer></script>
+<script src="app.js?v=59" defer></script>
 <script type="module" src="searched.js?v=7"></script><!-- build2a hook -->
-<script type="module" src="delay.js?v=13"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
+<script type="module" src="delay.js?v=14"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="trips.js?v=22"></script><!-- trips hook -->
 <script type="module" src="nav.js?v=20"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
 <script type="module" src="movement.js?v=4"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->

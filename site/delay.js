@@ -357,6 +357,30 @@ export function whyBlock(a, now = refNow()) {
 }
 
 /**
+ * The sheet's headline outlook, shown inside the top Now card: the Traveler peak window's words ("Flight delays
+ * likely"), its time ("5–9 PM") and size ("typically 55–75 min"). Null when that window isn't notable or delays
+ * are happening now (the FAA program is the headline then). Never a percentage.
+ */
+export function outlookLead(a) {
+  injectStyle();
+  const w = cardWindow(a, false);
+  if (!w) return null;
+  const hr = a.hours[w.i];
+  const d = hr && hr.delay;
+  if (!d || d.p == null) return null;
+  const L = likelihood(d, { iata: a.iata, aviation: false });
+  if (!L || L.key === "now" || L.key === "unknown" || !notable(d, hr.level, L)) return null;
+  const start = Date.parse(a.hours[w.s].t), end = Date.parse(a.hours[w.e].t) + HOUR;
+  const when = w.s === 0 && w.e === a.hours.length - 1 ? "in the next 24 hours" : rangeLabel(start, end, tzOf(a), w.s === 0);
+  const notes = [];
+  if (d.modelCoverage === "pooled") notes.push("No airport-specific delay history; estimate uses other airports.");
+  if (globalThis.AWXApp?.state.data?.delayModel?.basis !== "model") notes.push(sourceLine().textContent);
+  if (/^possible_/.test(d.override || "")) notes.push("The FAA plans a possible " + (d.override === "possible_ground_stop" ? "ground stop" : "ground delay program") + ".");
+  return { t: hr.t, start, key: L.key, word: L.word.replace(/^Delays/, "Flight delays"), when, size: L.size || "", cue: L.cue || "",
+    cls: RANK[L.key] >= 3 ? "dl-hi" : RANK[L.key] === 2 ? "dl-mid" : "dl-lo", notes };
+}
+
+/**
  * Sheet card "Will it cause delays?" for hour i (null = the peak window): the words big, the size ("typically
  * 30–45 min") and timing. Quiet or active-delay Traveler views omit this duplicate card; Aviation mode also
  * shows the analog, calibration and source explanation as visible text. Always returns a node.
@@ -381,7 +405,7 @@ export function delayBlock(a, i, opts = {}) {
     when = w.s === 0 && w.e === a.hours.length - 1 ? "in the next 24 hours" : rangeLabel(start, end, tzOf(a), w.s === 0);
   } else when = idx === 0 ? "this hour" : "at " + dayPrefix(t0, tzOf(a)) + clock(t0, tzOf(a));
   const cls = L.key === "now" || RANK[L.key] >= 3 ? "dl-hi" : RANK[L.key] === 2 ? "dl-mid" : "dl-lo";
-  const covered = !aviation && opts.coveredHours?.includes(hr.t);
+  const covered = opts.coveredHours?.includes(hr.t);
   const kids = covered ? [] : [el("div", "dl-main", el("span", "dl-big " + cls, L.key === "now" ? L.word : L.word.replace(/^Delays/, "Flight delays")), when ? el("span", "dl-what", when) : null)];
   const sub = [L.cue, L.size ? "When disrupted: " + L.size : ""].filter(Boolean).join(" · ");
   if (sub) kids.push(el("div", "dl-usual-b", sub));
@@ -404,7 +428,7 @@ export function delayBlock(a, i, opts = {}) {
   return el("div", "dl-block", ...kids);
 }
 
-const api = { delayLine, delayBlock, likelihood, notable, calibrate, analogWords, analogAgrees, minutesRange, setReport, routineOutlook, outlookHour, whyBlock, dayPartPhrase };
+const api = { delayLine, delayBlock, outlookLead, likelihood, notable, calibrate, analogWords, analogAgrees, minutesRange, setReport, routineOutlook, outlookHour, whyBlock, dayPartPhrase };
 if (typeof window !== "undefined" && window.document) {
   window.AWXDelay = api;
   // Holdout sample support and explanations; probabilities are calibrated by the model.

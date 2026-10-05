@@ -1951,7 +1951,18 @@
     const shared = o.outlook;
     const status = shared ? shared.headline : normal ? o.normalNote || (o.kind === "hour" && o.past ? "No disruption reported" : o.kind === "peak" || o.kind === "hour" && !o.isNow ? "No disruption expected" : "Operating normally")
       : meaningful ? L.word : o.level > 0 ? o.level === 1 ? "Minor flight disruption possible" : "Disruption possible" : null;
-    const delay = status ? h("div", { class: "sc-delay" }, status) : null;
+    // the sheet's headline (o.big): the status in large level-coloured type; the delay outlook (o.lead) joins it
+    // when it says the same thing ("Flight delays likely" + "5–9 PM"), else follows as a "Later" line
+    const lead = o.lead;
+    const merged = lead && status === lead.word;
+    const hcls = o.big ? " sc-big lv" + Math.max(0, Math.min(4, (shared?.level ?? o.level) || 0)) : "";
+    const delay = status ? h("div", { class: "sc-head" + hcls }, h("span", { class: "sc-delay" }, status), merged && lead.when ? h("span", { class: "sc-hwhen" }, lead.when) : null) : null;
+    const leadSub = lead ? cap([lead.cue, lead.size ? "When disrupted: " + lead.size : ""].filter(Boolean).join(" · ")) : "";
+    const leadEl = lead ? h("div", { class: "sc-lead" },
+      merged ? null : h("div", { class: "sc-later" }, h("span", { class: "sc-lw " + lead.cls }, lead.word), lead.when ? h("span", { class: "sc-hwhen" }, lead.when) : null),
+      leadSub ? h("div", { class: "sc-lsub" }, leadSub) : null,
+      ...lead.notes.map((n) => h("div", { class: "sc-lsub small" }, n))) : null;
+    const rowsEl = o.rows && o.rows.length ? h("div", { class: "sc-rows" }, o.rows.map((r) => h("div", { class: "sc-row" }, h("b", {}, r.label), h("span", {}, r.value)))) : null;
     const primaryProgram = !aviation() && o.simple && shared?.programs.length === 1 && shared.programs[0].type !== "closure";
     const cause = primaryProgram ? plainCause(shared.programs[0]).toLowerCase() : "";
     const extraReasons = primaryProgram ? shortList(others, a).filter((r) => !cause || !r.toLowerCase().includes(cause) || /\d/.test(r)).slice(0, max) : [];
@@ -1972,6 +1983,8 @@
       !o.full && !o.simple && o.when ? h("div", { class: "sc-when" }, o.when) : null,
       delay,
       list,
+      leadEl,
+      rowsEl,
       progLine,
       o.simple ? null : o.facts);
   }
@@ -2081,15 +2094,15 @@
   }
   /** "FAA gives no end time" when an FAA program in force has none (its 3–5 hour hold in the hour levels isn't an end). */
   const NO_END = "FAA gives no end time";
-  function travelOutlook(a) {
+  /** The outlook's what-happens-next rows ({label, value}): direction impacts, scheduled end, FAA extension outlook, forecast improvement. */
+  function travelRows(a) {
     const o = outlook(a);
-    const covered = !aviation() && o.programs.length === 1 && o.programs[0].type !== "closure";
-    const rows = covered ? [] : o.impacts.map((r) => h("div", { class: "outlook-row" }, h("b", {}, r.label), h("span", {}, r.value)));
-    if (o.scheduledEnd && !covered) rows.push(h("div", { class: "outlook-row" }, h("b", {}, "Scheduled end"), h("span", {}, whenLabel(o.scheduledEnd, dispTz(a)) + " · may change")));
-    if (o.extension) rows.push(h("div", { class: "outlook-row" }, h("b", {}, "FAA extension outlook"), h("span", {}, cap(o.extension))));
-    if (o.recovery) rows.push(h("div", { class: "outlook-row" }, h("b", {}, "Forecast improvement"), h("span", {}, "Lower disruption risk forecast after " + whenLabel(o.recovery, dispTz(a)))));
-    if (!rows.length) return null;
-    return section("Travel impact", "plane", rows, null, { cls: "outlook-card", meta: covered && o.recovery && !o.extension ? "Forecast estimate" : o.basis });
+    const covered = !aviation() && o.programs.length === 1 && o.programs[0].type !== "closure"; // its end is already in the card's time line
+    const rows = covered ? [] : o.impacts.map((r) => ({ label: r.label, value: r.value }));
+    if (o.scheduledEnd && !covered) rows.push({ label: "Scheduled end", value: whenLabel(o.scheduledEnd, dispTz(a)) + " · may change" });
+    if (o.extension) rows.push({ label: "FAA extension outlook", value: cap(o.extension) });
+    if (o.recovery) rows.push({ label: "Forecast improvement", value: "Lower disruption risk forecast after " + whenLabel(o.recovery, dispTz(a)) });
+    return rows;
   }
 
   let sheetDay = 0; // 0 rolling window, 1 tomorrow
@@ -2118,6 +2131,9 @@
     // the current run: "through 3 PM, then Clear" — or, for an FAA program with no stated end, "— FAA gives no end time"
     const nowWhen = () => (sm.open ? "— " + NO_END : "through " + whenLabel(sm.nowEnd || lastMs, tz) + (sm.next != null ? ", then " + LEVELS[sm.next].label : ""));
 
+    // the headline: the delay outlook and what happens next sit in the top card, not in cards further down
+    const lead = window.AWXDelay && typeof AWXDelay.outlookLead === "function" ?safeCall(() => AWXDelay.outlookLead(a)) : null; // phase3 hook
+    const nextRows = safeCall(() => travelRows(a)) || [];
     // rest state: Now | Coming up, or one full-width "Now" / clear card
     const restCards = () => {
       if (layout === "split") {
@@ -2125,16 +2141,16 @@
         const pt = Date.parse(pk.t);
         const nowO = outlook(a);
         return h("div", { class: "two" },
-          stateCard({ a, kind: "now", simple: true, label: "Now", outlook: nowO, level: sm.nowLevel, when: nowO.kind === "unknown" ? nowO.quality || "Forecast unavailable" : sm.open ? NO_END : "through " + whenLabel(sm.nowEnd, tz), delay: v.hours[0].delay,
+          stateCard({ a, kind: "now", simple: true, big: true, label: "Now", outlook: nowO, level: sm.nowLevel, when: nowO.kind === "unknown" ? nowO.quality || "Forecast unavailable" : sm.open ? NO_END : "through " + whenLabel(sm.nowEnd, tz), delay: v.hours[0].delay,
             normalNote, reasons: shortList(((n) => hourReasons(a, n.x, sm.nowLevel, n.reasons))(nowHourOf(a, v, sm)), a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true), chips: cardSources(v.now.reasons, "now") }),
-          stateCard({ a, kind: "peak", simple: true, label: "Coming up", outlook: outlook(a, pt), level: sm.level, when: rangeText(sm.start, sm.end, tz), delay: pk.delay,
+          stateCard({ a, kind: "peak", simple: true, big: true, lead, rows: nextRows, label: "Coming up", outlook: outlook(a, pt), level: sm.level, when: rangeText(sm.start, sm.end, tz), delay: pk.delay,
             reasons: shortList(hourReasons(a, pk, sm.level), a), programs: programsAt(v, pt, false), impact: CATS.impact(pk.reasons, programsAt(v, pt, false)), facts: factsRow(pk, a, pt, false, true), chips: cardSources(pk.reasons, "fc") }));
       }
       const currentOutlook = outlook(a);
       let when = layout === "clear" ? "Clear through " + whenLabel(lastMs, tz) : nowWhen();
       if (currentOutlook.kind === "unknown") when = currentOutlook.quality || "Forecast unavailable";
       else if (layout === "clear" && currentOutlook.kind !== "normal") when = "This hour";
-      return stateCard({ a, layout, kind: "nowpeak", full: true, simple: true, label: "Now", outlook: currentOutlook, level: sm.nowLevel, when, delay: v.hours[0].delay,
+      return stateCard({ a, layout, kind: "nowpeak", full: true, simple: true, big: true, lead, rows: nextRows, label: "Now", outlook: currentOutlook, level: sm.nowLevel, when, delay: v.hours[0].delay,
         normalNote, reasons: shortList(((n) => hourReasons(a, n.x, sm.nowLevel, n.reasons))(nowHourOf(a, v, sm)), a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true),
         chips: cardSources(v.now.reasons, "now"), empty: null });
     };
@@ -2256,8 +2272,10 @@
     ], null, { meta: "NOAA", id: "flight-weather" }));
     // movement hook: "Traffic right now" (site/movement.js), its card body inside a build2b section card
     const mv = window.AWXMovement && typeof AWXMovement.card === "function" ? safeCall(() => AWXMovement.card(a)) : null;
-    // Show a meaningful delay outlook directly below the timeline.
-    const dl = window.AWXDelay && typeof AWXDelay.delayBlock === "function" ? safeCall(() => AWXDelay.delayBlock(a, null, { coveredHours: [v.hours[0].t, ...(layout === "split" && sm.peakHour ? [sm.peakHour.t] : [])] })) : null; // phase3 hook
+    // Aviation mode only: the delay outlook's reasoning below the timeline (its headline is in the top card)
+    const dl = aviation() && window.AWXDelay && typeof AWXDelay.delayBlock === "function" ? safeCall(() => AWXDelay.delayBlock(a, null, { coveredHours: lead ? [lead.t] : [] })) : null; // phase3 hook
+    // below the timeline: a short log of what already changed today (the full list opens from Today's changes)
+    const log = window.AWXBrief && typeof AWXBrief.todayEvents === "function" ? safeCall(() => logSection(a)) : null; // brief hook
     const hiddenNote = v.hiddenCats && v.hiddenCats.size
       ? h("p", { class: "hidnote" }, "Hidden by your settings: " + [...v.hiddenCats].map((k) => CATS.LABELS[k]).join(", ") + ". Ground stops and airport closures are always shown.")
       : null;
@@ -2283,8 +2301,8 @@
       h("section", { class: "sec tlsec" },
         h("div", { class: "sec-h" }, icon(ICONS.clock), h("h3", {}, tlTitle), h("span", { class: "rule", "aria-hidden": "true" }), dayBtn),
         tlHolder),
-      dlShown ? section("Delay outlook", "clock", [dl.nodeType ? dl : String(dl)], null, { cls: "dlcard" }) : null, // phase3 hook
-      travelOutlook(a),
+      dlShown ? section("Why this outlook", "clock", [dl.nodeType ? dl : String(dl)], null, { cls: "dlcard" }) : null, // phase3 hook
+      log,
       ...secs,
       section("Airport details", "plane", [h("div", { class: "ad-menu" },
         detailRow("Weather", "Current conditions and storm outlook", "weather", () => openDetails(a.iata, "weather")),
@@ -2302,6 +2320,19 @@
     if (focusedDetail) sheet.querySelector('[data-detail="' + focusedDetail + '"]')?.focus({ preventScroll: true });
     scheduleLenses();
     fillCrosswind(a);
+  }
+
+  /** "Today so far": the newest few of the airport's events today (site/brief.js), newest first; null when there are none. */
+  const LOG_MAX = 3;
+  function logSection(a) {
+    const list = AWXBrief.todayEvents(a);
+    if (!list.length) return null;
+    const tz = dispTz(a);
+    const shown = list.slice(0, LOG_MAX);
+    const more = list.length - shown.length;
+    return section("Today so far", "clock", [h("ul", { class: "sh-log" },
+      shown.map((e) => h("li", {}, h("span", { class: "lg-t" }, clock(Date.parse(e.t), tz)), h("span", { class: "lg-s" }, e.kind === "program_extend" && Date.parse(e.to) ? e.sentence.replace(/until .*$/, "until " + whenLabel(Date.parse(e.to), tz)) : e.sentence)))),
+      more > 0 ? h("div", { class: "lg-more" }, `+${more} earlier · see Today’s changes`) : null], null, { cls: "logcard" });
   }
 
   function safeCall(fn) {
