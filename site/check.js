@@ -5,7 +5,7 @@
 // Chrome (--dump-dom) and the uptime workflow can read it. Warnings don't fail the check.
 import { loadAirports, rank, decodeList } from "./search.js";
 import { navChecks } from "./navcheck.js?v=5"; // nav hook
-import { tripChecks } from "./check-trips.js?v=6"; // trips hook
+import { tripChecks } from "./check-trips.js?v=7"; // trips hook
 import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=8"; // scenarios hook; More details page helpers
 
 const P = new URLSearchParams(location.search);

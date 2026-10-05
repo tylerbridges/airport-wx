@@ -9,11 +9,11 @@
 //   - manual trips (stored only on this device, localStorage "awx-trips"), and the Trips settings sheet
 //     (flight calendar status and how to connect it).
 // Calendar trips come from data/trips.json (airports and times only); concerns from ./trip-risk.js.
-import { tripStatus, flightLine, rolesAt, clockText, whenText, rangeText, LEVEL_LABELS, STATUS, TRIP_KEEP_AFTER_ARRIVAL_MS } from "./trip-risk.js?v=7";
+import { tripStatus, flightLine, rolesAt, clockText, whenText, rangeText, LEVEL_LABELS, STATUS, TRIP_KEEP_AFTER_ARRIVAL_MS } from "./trip-risk.js?v=8";
 import { mountSearch, loadAirports, airportsLoaded, placeLine } from "./search.js";
 import { calendarDraft, nextScheduled, todayScheduled, itineraryImpacts, MAX_CALENDAR_BYTES, flightKey } from "./trip-import.js?v=4";
 
-import { CALENDAR_KEY, loadConnection, saveConnection, fetchCalendar } from "./calendar-link.js?v=3";
+import { CALENDAR_KEY, loadConnection, saveConnection, fetchCalendar } from "./calendar-link.js?v=4";
 
 const KEY = "awx-trips";
 const HOUR = 3600e3;
