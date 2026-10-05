@@ -4,9 +4,9 @@
 // Writes "CHECK PASS" or "CHECK FAIL n" plus one line per row into <pre id="result"> so headless
 // Chrome (--dump-dom) and the uptime workflow can read it. Warnings don't fail the check.
 import { loadAirports, rank, decodeList } from "./search.js";
-import { navChecks } from "./navcheck.js?v=3"; // nav hook
+import { navChecks } from "./navcheck.js?v=4"; // nav hook
 import { tripChecks } from "./check-trips.js?v=5"; // trips hook
-import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=5"; // scenarios hook; More details page helpers
+import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=6"; // scenarios hook; More details page helpers
 
 const P = new URLSearchParams(location.search);
 const MOCK = P.get("mock") === "1";
@@ -399,6 +399,7 @@ async function uiChecks(add, scenario) {
     set({});
     await withPage(url, async (w, doc) => {
       const A = w.AWXApp;
+      for (const card of doc.querySelectorAll("#list .card")) A.ensureCardTimeline?.(card);
       const wraps = [...doc.querySelectorAll("#list .tl-wrap")];
       const wrongWindow = wraps.filter((el) => {
         const T = el._tl;
@@ -423,6 +424,10 @@ async function uiChecks(add, scenario) {
       add(!undim.length ? "pass" : "fail", "Past hours are dimmed", undim.length ? `${undim.length} timelines with undimmed past hours` : "all past hours dimmed");
       if (A.placeLenses) A.placeLenses(); // (virtual-time runs may not have run the animation frame yet)
       const off = wraps.map((el) => {
+        const card = el.closest(".card");
+        card.style.contentVisibility = "visible";
+        card.scrollIntoView({ block: "center" });
+        A.placeLenses();
         const cur = el.querySelector(".tl .s.cur"), lens = el.querySelector(".lens");
         if (!cur || !lens || lens.hidden) return 99;
         const a = cur.getBoundingClientRect(), b = lens.getBoundingClientRect();

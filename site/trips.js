@@ -343,8 +343,9 @@ const calAgo = () => { const g = connectedDoc() && Date.parse(connectedDoc().gen
 /** Settings → Trips & flight calendar (site/settings.js through the nav shell), else this file's own Trips sheet. */
 function openTripSettings(focus) {
   if (window.AWXNav && typeof window.AWXNav.openSettings === "function") {
-    if (S.view) closeTrip();
-    window.AWXNav.openSettings("trips", focus ? { focus } : undefined);
+    const next = () => window.AWXNav.openSettings("trips", focus ? { focus } : undefined);
+    if (S.view && window.AWXSheet?.transfer) AWXSheet.transfer(closeTrip, next);
+    else { if (S.view) closeTrip(); next(); }
     return;
   }
   openSettings();
@@ -563,8 +564,12 @@ function tripView(trip) {
 
 async function openAirport(code) {
   const a = byIata(code);
+  if (a) {
+    if (window.AWXSheet?.transfer) AWXSheet.transfer(closeTrip, () => app().openSheet(code));
+    else { closeTrip(); app().openSheet(code); }
+    return;
+  }
   closeTrip();
-  if (a) { app().openSheet(code); return; }
   let list = airportsLoaded();
   if (!list) { try { list = await loadAirports(); } catch { list = []; } }
   const x = (list || []).find((y) => y.iata === code);

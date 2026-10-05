@@ -295,6 +295,12 @@ export async function pageAsserts(add, w, doc, asserts) {
       case "card": {
         await showAll();
         const c = doc.querySelector(`#list .card[data-iata="${x.iata}"]`);
+        if (c) {
+          c.scrollIntoView({ block: "center" });
+          c.style.contentVisibility = "visible"; // Hidden QA frames cannot trigger viewport rendering.
+          A.ensureCardTimeline?.(c);
+          await later(w, 30);
+        }
         const t = c ? c.innerText.replace(/\s+/g, " ") : "";
         ok = !!c && re(x.re).test(t);
         label = `${x.iata} card /${x.re}/`;
@@ -344,6 +350,12 @@ export async function pageAsserts(add, w, doc, asserts) {
         doc.querySelector('#sheet [data-detail="today"]')?.click();
         await later(w, 60);
         const c = doc.querySelector("#mdSheet .bf-today");
+        if (c) {
+          c.scrollIntoView({ block: "center" });
+          c.style.contentVisibility = "visible"; // Hidden QA frames cannot trigger viewport rendering.
+          A.ensureCardTimeline?.(c);
+          await later(w, 30);
+        }
         const t = c ? c.innerText.replace(/\s+/g, " ").trim() : "";
         closeSheet();
         ok = !!c && re(x.re).test(t);
@@ -446,6 +458,7 @@ export async function consistencyChecks(add, w, doc, where = "") {
   listEl.style.display = "none";
   let compared = 0, noPill = 0;
   for (const card of doc.querySelectorAll("#list .card[data-iata]")) {
+    A.ensureCardTimeline?.(card); // Exercise every lazy timeline, including off-screen airports.
     const iata = card.dataset.iata;
     const a = A.state.data.airports.find((x) => x.iata === iata);
     if (!a) continue;

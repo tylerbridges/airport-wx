@@ -24,6 +24,7 @@
   var lock = { n: 0, y: 0 };
   var useHistory = typeof window !== "undefined" && window === window.top && !!(window.history && history.pushState);
   var popping = false;
+  var transferring = false;
   var reduced = function () { return root.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches; };
 
   function scrollsWithin(target, boundary, dy) {
@@ -223,7 +224,7 @@
         clearInline();
         stack.push(entry);
         lockScroll();
-        if (useHistory) history.pushState(Object.assign({}, history.state || {}, { awxSheets: stack.length }), "");
+        if (useHistory && !transferring) history.pushState(Object.assign({}, history.state || {}, { awxSheets: stack.length }), "");
       },
       closed: function () {
         if (!entry.open) return;
@@ -235,7 +236,7 @@
         drag = null; hp = null; tp = null;
         var b = bd();
         if (b) { b.style.transition = ""; b.style.opacity = ""; }
-        if (useHistory && !popping && depth() === before) history.back();
+        if (useHistory && !popping && !transferring && depth() === before) history.back();
       },
       isOpen: function () { return entry.open; },
       dragging: function () { return !!drag; },
@@ -244,7 +245,16 @@
     return ctl;
   }
 
-  var api = { makeSheet: makeSheet, openCount: function () { return stack.length; } };
+  // Exchange sheets in the same history entry; an asynchronous history.back() must not close the new sheet.
+  function transfer(closeOld, openNew) {
+    transferring = true;
+    try { closeOld(); openNew(); }
+    finally {
+      transferring = false;
+      if (useHistory) history.replaceState(Object.assign({}, history.state || {}, { awxSheets: stack.length }), "");
+    }
+  }
+  var api = { transfer: transfer, makeSheet: makeSheet, openCount: function () { return stack.length; } };
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.AWXSheet = api;
 })(typeof window !== "undefined" ? window : globalThis);

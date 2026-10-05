@@ -132,8 +132,11 @@ export async function navChecks(add, url) {
 
     // the last card scrolls fully clear of the bar
     if (w) {
-      const all = [...d.querySelectorAll("#seg button")].find((b) => /^All/.test(b.textContent));
-      if (all) all.click();
+      const filters = [...d.querySelectorAll("#seg button")];
+      add(filters.length === 2 && filters.some(b => /^My airports/.test(b.textContent)) && filters.some(b => /^At risk/.test(b.textContent)) ? "pass" : "fail", "Airport filters: My airports and At risk", filters.map(b => b.textContent).join(", "));
+      const risk = filters.find((b) => /^At risk/.test(b.textContent));
+      if (risk) risk.click();
+      if (!d.querySelector("#list .card")) filters.find(b => /^My airports/.test(b.textContent))?.click();
       await sleep(150);
       const panel = d.getElementById("navAirports");
       panel.scrollTop = panel.scrollHeight;

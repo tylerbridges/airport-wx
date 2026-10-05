@@ -671,10 +671,9 @@
     const all = listed(); // trips hook
     const counts = {
       mine: all.filter((a) => state.favs.includes(a.iata)).length,
-      all: all.length,
       risk: all.filter((a) => levelOf(a) >= 2).length,
     };
-    const tabs = [["mine", "My airports"], ["all", "All"], ["risk", "At risk"]];
+    const tabs = [["mine", "My airports"], ["risk", "At risk"]];
     const seg = $("seg");
     seg.replaceChildren(
       ...tabs.map(([k, label]) =>
@@ -696,6 +695,7 @@
 
   function renderList() {
     const list = $("list");
+    timelineObserver?.disconnect();
     if (!state.data) {
       list.replaceChildren(
         h("div", { class: "empty" }, state.fetchError ? [state.fetchError + ".", h("br"), h("button", { type: "button", onclick: () => load(true) }, "Try again")] : "Loading airports…")
@@ -705,14 +705,17 @@
     const items = visibleAirports();
     if (!items.length) {
       const msg = state.filter === "mine"
-        ? "No saved airports yet. Open All and tap the star on an airport to add it here."
+        ? "No saved airports yet. Search for an airport and tap its star to save it here."
         : "No airports at risk right now.";
       list.replaceChildren(h("div", { class: "empty" }, msg));
       return;
     }
     list.classList.toggle("mine", state.filter === "mine");
     list.replaceChildren(...items.map((a, i) => card(a, i, items.length)));
-    requestAnimationFrame(placeLenses);
+    for (const slot of list.querySelectorAll(".tl-pending")) {
+      if (timelineObserver) timelineObserver.observe(slot.closest(".card")); else mountTimeline(slot);
+    }
+    scheduleLenses();
   }
 
   function renderNotes() {
@@ -936,6 +939,27 @@
     return wrap;
   }
 
+  // Read-only card timelines are built just ahead of scrolling, rather than for every airport at once.
+  function mountTimeline(slot) {
+    if (!slot?._airport || !slot.isConnected) return;
+    const a = slot._airport;
+    timelineObserver?.unobserve(slot.closest(".card"));
+    slot.replaceWith(timeline(a, {}));
+  }
+  function cardTimeline(a) {
+    const slot = h("div", { class: "tl-pending", "aria-hidden": "true" });
+    slot._airport = a;
+    return slot;
+  }
+  const timelineObserver = typeof IntersectionObserver === "function" ? new IntersectionObserver(entries => {
+    for (const e of entries) if (e.isIntersecting) mountTimeline(e.target.querySelector(".tl-pending"));
+    scheduleLenses();
+  }, { rootMargin: "600px 0px" }) : null;
+  function ensureCardTimeline(card) {
+    const slot = card?.querySelector(".tl-pending");
+    if (slot) mountTimeline(slot);
+  }
+
   function timelineLabel(a) {
     return `Past 12 hours and next 24 hours at ${codeOf(a)}: peak ${LEVELS[levelOf(a)].label}`;
   }
@@ -973,10 +997,47 @@
       wrap.setAttribute("aria-valuetext", slotText(T.slots[i], T.a));
     }
   }
+  // Batch reads before writes. A read after each label change used to reflow the entire list.
   function placeLenses() {
-    for (const w of document.querySelectorAll(".tl-wrap")) if (w._tl && !w.classList.contains("scrub")) placeLens(w._tl, w._tl.shown != null ? w._tl.shown : w._tl.rest, false);
+    const plans = [];
+    for (const w of document.querySelectorAll(".tl-wrap")) {
+      const T = w._tl;
+      if (!T || w.classList.contains("scrub")) continue;
+      const cardEl = w.closest(".card");
+      if (cardEl) {
+        if (state.openIata || document.body.dataset.tab && document.body.dataset.tab !== "airports") continue;
+        const r = cardEl.getBoundingClientRect();
+        if (r.bottom < 0 || r.top > innerHeight) continue;
+      }
+      const W = w.clientWidth, i = T.shown != null ? T.shown : T.rest, seg = T.segs[i];
+      if (!W) continue;
+      if (i == null || i < 0 || !seg) { plans.push({ T, hidden: true }); continue; }
+      const sw = seg.offsetWidth, cx = seg.offsetLeft + sw / 2;
+      plans.push({ T, W, i, seg, sw, cx });
+    }
+    for (const p of plans) {
+      const {T, i, seg, sw, cx} = p;
+      if (p.hidden) { T.lens.hidden = T.label.hidden = true; continue; }
+      T.lens.hidden = false;
+      T.lens.style.left = cx + "px";
+      T.lens.style.width = sw + (T.big ? 14 : 10) + "px";
+      T.lensSeg.className = "lens-seg " + (seg.classList.contains("nd") ? "nd" : lv(T.slots[i].level)) + (seg.classList.contains("past") ? " past" : "");
+      T.lensSeg.style.cssText = seg.style.cssText.replace(/(^|;)\s*width[^;]*/g, "") + ";width:" + sw + "px";
+      T.label.hidden = false;
+      T.label.textContent = i !== T.rest || T.slots[i].kind === "na" ? slotText(T.slots[i], T.a) : nowWords(T.a);
+      if (T.big) { T.wrap.setAttribute("aria-valuenow", String(i)); T.wrap.setAttribute("aria-valuetext", slotText(T.slots[i], T.a)); }
+    }
+    for (const p of plans) if (!p.hidden) p.lw = Math.min(p.W, p.T.label.offsetWidth);
+    for (const p of plans) if (!p.hidden) p.T.label.style.left = Math.max(0, Math.min(p.W - p.lw, p.cx - p.lw / 2)) + "px";
   }
-  addEventListener("resize", () => requestAnimationFrame(placeLenses));
+  let lensesPending = false;
+  function scheduleLenses() {
+    if (lensesPending) return;
+    lensesPending = true;
+    requestAnimationFrame(() => { lensesPending = false; placeLenses(); });
+  }
+  addEventListener("resize", scheduleLenses);
+  document.addEventListener("scroll", scheduleLenses, { capture: true, passive: true });
   /** Segment index under clientX. */
   function slotAt(T, x) {
     const r = T.tl.getBoundingClientRect();
@@ -1164,10 +1225,11 @@
       unknown ? null : safeCall(() => cardWhen(a, v, sm, progs)), // the level's window (the sheet's words); phase3 hook inside for routine days
       cascadeOnCard(v, sm) ? safeCall(() => cascadeLine(v, [reason], "sub hubline")) : null, // hubs hook: "ORD ground stop may delay flights to and from Chicago later today"
       progs.length ? h("div", { class: "badges" }, faaBadges(v)) : null,
-      timeline(a, {}),
+      cardTimeline(a),
       mine && count > 1 ? h("div", { class: "sr-move" },
         idx > 0 ? h("button", { type: "button", class: "sr", onclick: (e) => { e.stopPropagation(); moveMine(a.iata, -1, true); }, onkeydown: (e) => e.stopPropagation() }, `Move ${code} up`) : null,
         idx < count - 1 ? h("button", { type: "button", class: "sr", onclick: (e) => { e.stopPropagation(); moveMine(a.iata, 1, true); }, onkeydown: (e) => e.stopPropagation() }, `Move ${code} down`) : null) : null);
+    el.addEventListener("focusin", () => { ensureCardTimeline(el); scheduleLenses(); });
     if (mine) wireReorder(el);
     return el;
   }
@@ -1429,7 +1491,7 @@
     wrap.classList.add("open");
     const c = wrap.querySelector(".close");
     if (c) c.focus({ preventScroll: true });
-    requestAnimationFrame(placeLenses);
+    scheduleLenses();
   }
 
   function closeSheet() {
@@ -2057,7 +2119,7 @@
         dayBtn.setAttribute("aria-pressed", String(sheetDay === 1));
         tlTitle.textContent = sheetDay ? "Tomorrow" : "Next 24 hours";
         if (window.AWXTrips) window.AWXTrips.decorateSheet(sheet, a); // trips hook: plane markers on the shown day
-        requestAnimationFrame(placeLenses);
+        scheduleLenses();
       } }, sheetDay ? "‹ Now" : "Tomorrow ›");
     const tlTitle = h("span", {}, sheetDay ? "Tomorrow" : "Next 24 hours");
 
@@ -2166,7 +2228,7 @@
     if (window.AWXTerminals) safeCall(() => window.AWXTerminals.decorateSheet(sheet, a)); // terminals hook: "Terminal map" + "Lounges" cards (site/terminals.js)
     sheet.scrollTop = keepScroll ? top : 0; // a newly opened sheet starts at the top; live refreshes keep the place
     if (focusedDetail) sheet.querySelector('[data-detail="' + focusedDetail + '"]')?.focus({ preventScroll: true });
-    requestAnimationFrame(placeLenses);
+    scheduleLenses();
     fillCrosswind(a);
   }
 
@@ -2591,7 +2653,7 @@
     state, openSheet, closeSheet, toggleFav, render, // build2a hook: used by site/searched.js
     // build2b: for site/searched.js, the settings UI and check.js
     openDetails, closeDetails, detailRow, popupFocus, refreshDetails: () => { if (md.iata) renderDetails(true); }, // Airport details pages
-    prefs: PREFS, codeOf, view, outlook, summary, hourLevel, slotText, refNow, whenLabel, dispTz, zoneAbbr, clock, hourLabel, daySlots, openNational, closePanel, placeLenses,
+    ensureCardTimeline, prefs: PREFS, codeOf, view, outlook, summary, hourLevel, slotText, refNow, whenLabel, dispTz, zoneAbbr, clock, hourLabel, daySlots, openNational, closePanel, placeLenses,
     timeline: (a) => timeline(a, {}), // a status.json-shaped airport (searched.js builds one from a shard entry)
     version: APP_V,
   };

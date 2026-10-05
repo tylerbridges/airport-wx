@@ -8,7 +8,7 @@
 import { mountSearch } from "./search.js";
 import { mountMap } from "./map.js?v=7"; // map hook: Map tab (site/map.js)
 import { h, icon, prefs, reducedMotion, trapFocus, app } from "./navui.js";
-import { initSettings, openSettings, settingsOpen } from "./settings.js?v=5";
+import { initSettings, openSettings, settingsOpen } from "./settings.js?v=6";
 
 const TABS = [
   { id: "airports", label: "Airports", title: "Airports", icon: "terminal" },
@@ -210,16 +210,19 @@ function buildSearch() {
         h("h2", { id: "navSearchT" }, "Search"),
         h("button", { type: "button", class: "awx-txtbtn", onclick: () => closeSearch() }, "Cancel")),
       mount,
-      h("p", { class: "awx-srch-hint" }, "Any airport by code, city or name. Major U.S. airports include FAA delays and weather warnings.")));
+      h("p", { class: "awx-srch-hint" }, "Any airport by code, city or name. Monitored U.S. airports include FAA delays and weather warnings.")));
   document.body.append(srch);
   srchApi = mountSearch(mount, {
     onPick: (a) => {
       const o = srchOpts;
-      closeSearch(false);
-      if (o.onPick) { o.onPick(a); return; }
-      if (cur !== "airports") go("airports");
-      if (window.AWXExtra && window.AWXExtra.pick) window.AWXExtra.pick(a);
-      else if (app()) app().openSheet(a.code);
+      if (o.onPick) { closeSearch(false); o.onPick(a); return; }
+      const openResult = () => {
+        if (cur !== "airports") { history.replaceState(history.state, "", "#airports"); show("airports"); }
+        if (window.AWXExtra && window.AWXExtra.pick) window.AWXExtra.pick(a);
+        else if (app()) app().openSheet(a.code);
+      };
+      if (window.AWXSheet?.transfer) AWXSheet.transfer(() => closeSearch(false), openResult);
+      else { closeSearch(false); openResult(); }
     },
     getFavs: () => (app() && app().state.favs) || [],
     onToggleFav: (code) => { if (app()) app().toggleFav(code); if (srchOpts.onFavs) srchOpts.onFavs(); },

@@ -9,9 +9,10 @@ if (!globalThis.crypto) globalThis.crypto = webcrypto;
 const url = "https://p123-caldav.icloud.com/published/2/private-calendar-token";
 const airports = [{ iata: "MSP", tz: "America/Chicago" }, { iata: "LHR", tz: "Europe/London" }];
 const origin = "https://tylerbridges.github.io";
+const calendarAt = Date.now(); // Stable schedule across requests; personal fields alone should change.
 function calendar(summary = "Jane Doe DL 1234 · MSP → LHR", cancelled = false) {
-  const dep = new Date(Date.now() + 3600e3).toISOString().replace(/[-:]/g, "").replace(/\.\d+Z/, "Z");
-  const arr = new Date(Date.now() + 9 * 3600e3).toISOString().replace(/[-:]/g, "").replace(/\.\d+Z/, "Z");
+  const dep = new Date(calendarAt + 3600e3).toISOString().replace(/[-:]/g, "").replace(/\.\d+Z/, "Z");
+  const arr = new Date(calendarAt + 9 * 3600e3).toISOString().replace(/[-:]/g, "").replace(/\.\d+Z/, "Z");
   return `BEGIN:VCALENDAR\nBEGIN:VEVENT\nUID:private-person@example.com\nSUMMARY:${summary}\nDESCRIPTION:Confirmation SECRET123 Seat 2A\nDTSTART:${dep}\nDTEND:${arr}\n${cancelled ? 'STATUS:CANCELLED\n' : ''}END:VEVENT\nEND:VCALENDAR`;
 }
 const request = (link = url, options = {}) => new Request("https://relay.test/calendar", { method: "POST", headers: { "Content-Type": "application/json", Origin: origin }, body: JSON.stringify({ url: link }), ...options });

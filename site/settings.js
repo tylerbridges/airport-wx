@@ -320,6 +320,10 @@ function wireSwipe(list) {
 }
 
 // ----- Trips & flight calendar -----
+function leaveFor(openNext) {
+  if (window.AWXSheet?.transfer) AWXSheet.transfer(() => close(false), openNext);
+  else { close(false); openNext(); }
+}
 
 /** Upcoming flights in data/trips.json (Build 4); tolerant of the exact shape. */
 export function upcomingFlights(j, now = Date.now()) {
@@ -356,14 +360,14 @@ function buildTrips(body, page, opts) {
   const trips = manualTrips();
   const T = window.AWXTrips;
   const canAdd = !!T?.openAdd;
-  const addRow = navRow("plus", "Add a trip", null, () => { close(false); T?.openAdd(); }, { "data-act": "add", disabled: !canAdd });
-  const connectRow = navRow("calendar", "Connect flight calendar", T?.calStatus?.().connected ? "Connected" : null, () => { close(false); T?.openConnect(); }, { "data-act": "connect", disabled: !T?.openConnect });
-  const importRow = navRow("calendar", "Import a calendar file", null, () => { close(false); T?.openImport(); }, { "data-act": "import", disabled: !T?.openImport });
+  const addRow = navRow("plus", "Add a trip", null, () => leaveFor(() => T?.openAdd()), { "data-act": "add", disabled: !canAdd });
+  const connectRow = navRow("calendar", "Connect flight calendar", T?.calStatus?.().connected ? "Connected" : null, () => leaveFor(() => T?.openConnect()), { "data-act": "connect", disabled: !T?.openConnect });
+  const importRow = navRow("calendar", "Import a calendar file", null, () => leaveFor(() => T?.openImport()), { "data-act": "import", disabled: !T?.openImport });
   body.replaceChildren(
     group("Flights on this device", [addRow, connectRow, importRow], "Add scheduled times or choose a one-time .ics import. No account needed; imported files are never uploaded.", { id: "awx-addtrip" }),
     group("Saved trips", [
       ...trips.map((t, i) => { const l = tripLabel(t, i); return T?.openTrip && t.id
-        ? navRow("plane", h("span", {}, l.title, l.sub ? h("small", {}, l.sub) : null), null, () => { close(false); T.openTrip(t.id); })
+        ? navRow("plane", h("span", {}, l.title, l.sub ? h("small", {}, l.sub) : null), null, () => leaveFor(() => T.openTrip(t.id)))
         : h("div", { class: "awx-row" }, l.title); }),
       trips.length ? null : h("div", { class: "awx-row awx-off" }, "No trips saved on this device"),
     ].filter(Boolean), canAdd ? "Open a trip to edit or delete it. Calendar imports are snapshots and do not sync changes." : "Trip setup is still loading."),
@@ -373,7 +377,7 @@ function buildTrips(body, page, opts) {
 
 function buildCalendar(body) {
   const T = window.AWXTrips;
-  body.replaceChildren(group("Flight calendar", [navRow("calendar", "Connect flight calendar", null, () => { close(false); T?.openConnect(); })], "Paste a calendar subscription link to keep your scheduled flights up to date."));
+  body.replaceChildren(group("Flight calendar", [navRow("calendar", "Connect flight calendar", null, () => leaveFor(() => T?.openConnect()))], "Paste a calendar subscription link to keep your scheduled flights up to date."));
 }
 
 // ----- Data & checks -----

@@ -59,3 +59,5 @@ import "./airports.test.mjs";
 import "./nws-wide.test.mjs";
 
 import "../worker/calendar.test.mjs";
+
+import "../tools/sheet.test.mjs";

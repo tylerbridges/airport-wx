@@ -131,7 +131,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 800; letter-spa
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .seg {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px;
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px; padding: 2px;
   background: var(--card); border-radius: 12px; margin-bottom: 14px;
 }
 .seg button { padding: 8px 2px; border-radius: 10px; font-size: 14px; white-space: nowrap; font-weight: 600; color: var(--muted); }
@@ -149,6 +149,8 @@ h1 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 800; letter-spa
   background: var(--card); border-radius: 24px; padding: 16px 16px 14px; cursor: pointer;
   transition: transform .12s ease;
 }
+#list .card { content-visibility: auto; contain-intrinsic-size: auto 290px; }
+.tl-pending { margin-top: 10px; height: 71px; }
 .card:active { transform: scale(.985); }
 .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
 .code { font-size: 46px; line-height: .95; font-weight: 800; letter-spacing: -.035em; }
@@ -796,13 +798,13 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="offline.js?v=3"></script>
 <script src="outlook.js?v=9"></script>
 <script src="cats.js?v=3"></script><!-- build2b: disruption categories -->
-<script src="sheet.js?v=3"></script><!-- build2b: shared sheet drag / back / scroll lock -->
+<script src="sheet.js?v=4"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
-<script src="app.js?v=49" defer></script>
+<script src="app.js?v=50" defer></script>
 <script type="module" src="searched.js?v=7"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=11"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
-<script type="module" src="trips.js?v=16"></script><!-- trips hook -->
-<script type="module" src="nav.js?v=15"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
+<script type="module" src="trips.js?v=17"></script><!-- trips hook -->
+<script type="module" src="nav.js?v=16"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
 <script type="module" src="movement.js?v=4"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
 <script type="module" src="brief.js?v=5"></script><!-- brief hook: morning brief + airport "Today" card -->
 <script type="module" src="terminals.js?v=3"></script><!-- terminals hook: terminal map + lounges cards in the airport sheet -->
