@@ -1043,7 +1043,7 @@
       const T = w._tl;
       if (!T || w.classList.contains("scrub")) continue;
       const cardEl = w.closest(".card");
-      if (cardEl) {
+      if (cardEl && !w.closest(".sheet")) {
         if (state.openIata || document.body.dataset.tab && document.body.dataset.tab !== "airports") continue;
         const r = cardEl.getBoundingClientRect();
         if (r.bottom < 0 || r.top > innerHeight) continue;
@@ -1251,7 +1251,8 @@
     return aviation() ? [window.AWXDelay ? safeCall(() => AWXDelay.delayLine(a)) : null] : [];
   }
 
-  function card(a, idx, count) {
+  function card(a, idx, count, options = {}) {
+    const open = options.onOpen || (() => openSheet(a.iata));
     const v = view(a);
     const sm = summary(a);
     const health = AWXOutlook.health(a, outlookOpts(a, v));
@@ -1263,14 +1264,14 @@
     const rsn = (rs) => shortList((rs || []).filter((r) => !(progs.length && PROG_RE.test(r))), a);
     const reason = rsn(later && sm.peakHour ? hourReasons(a, sm.peakHour, sm.level) : ((n) => hourReasons(a, n.x, sm.nowLevel, n.reasons))(nowHourOf(a, v, sm)))[0] || (progs.length ? programCause(v.now.reasons) : null)
       || (sm.level ? (sm.words ? "Busier than usual" : "Minor weather conditions") : sm.current?.headline || "Operating normally");
-    const mine = state.filter === "mine";
+    const mine = !options.overview && state.filter === "mine";
     const code = codeOf(a);
     const el = h("div", {
       class: "card", role: "button", tabindex: "0", "data-iata": a.iata, "data-level": String(sm.level),
       "aria-label": `${code}, ${a.city}. ${unknown ? "Status unconfirmed" : (later ? "Upcoming " : "") + LEVELS[sm.level].label + " risk"}. ${reason}${health.quality ? ". " + health.quality : ""}`,
-      onclick: () => openSheet(a.iata),
+      onclick: open,
       onkeydown: (e) => {
-        if ((e.key === "Enter" || e.key === " ") && e.target === el) { e.preventDefault(); openSheet(a.iata); }
+        if ((e.key === "Enter" || e.key === " ") && e.target === el) { e.preventDefault(); open(); }
         if (mine && e.altKey && (e.key === "ArrowUp" || e.key === "ArrowDown") && e.target === el) { e.preventDefault(); moveMine(a.iata, e.key === "ArrowUp" ? -1 : 1, true); }
       },
     },
@@ -1279,7 +1280,7 @@
         h("div", { class: "right" },
           staleTag(),
           unknown ? h("span", { class: "pill off" }, "Unknown") : pill(sm.level, false, later ? "Upcoming · " : ""),
-          h("button", {
+          options.overview ? null : h("button", {
             type: "button", class: "star", "aria-pressed": String(fav), "aria-label": (fav ? "Remove " : "Add ") + code + (fav ? " from" : " to") + " my airports",
             onclick: (e) => { e.stopPropagation(); toggleFav(a.iata); },
             onkeydown: (e) => e.stopPropagation(),
@@ -2724,6 +2725,7 @@
     state, openSheet, closeSheet, toggleFav, render, // build2a hook: used by site/searched.js
     // build2b: for site/searched.js, the settings UI and check.js
     openDetails, closeDetails, detailRow, popupFocus, refreshDetails: () => { if (md.iata) renderDetails(true); }, // Airport details pages
+    airportCard: (a, onOpen) => card(a, 0, 1, { overview: true, onOpen }),
     ensureCardTimeline, prefs: PREFS, codeOf, view, outlook, summary, hourLevel, slotText, refNow, whenLabel, dispTz, zoneAbbr, clock, hourLabel, daySlots, openNational, closePanel, placeLenses,
     timeline: (a) => timeline(a, {}), // a status.json-shaped airport (searched.js builds one from a shard entry)
     version: APP_V,

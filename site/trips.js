@@ -3,8 +3,7 @@
 // ("// trips hook"): render() -> AWXTrips.render(), renderSheet() -> AWXTrips.decorateSheet(sheet, a),
 // liveQuery() -> AWXTrips.liveIds().
 //
-//   - "Your trips" at the top of the home list (only when there are trips): route, local departure,
-//     status pill, the most important concern and a departure-to-arrival mini timeline;
+//   - a compact departure-day flight button on the home list; full trips and timelines in the Trips tab;
 //   - a trip sheet with each leg, every concern, departure vs. arrival impact and links to the airports;
 //   - "Your flight" rows and plane markers in the airport sheets;
 //   - manual trips (stored only on this device, localStorage "awx-trips"), and the Trips settings sheet
@@ -12,7 +11,7 @@
 // Calendar trips come from data/trips.json (airports and times only); concerns from ./trip-risk.js.
 import { tripStatus, flightLine, rolesAt, clockText, whenText, rangeText, LEVEL_LABELS, STATUS, TRIP_KEEP_AFTER_ARRIVAL_MS } from "./trip-risk.js?v=7";
 import { mountSearch, loadAirports, airportsLoaded, placeLine } from "./search.js";
-import { calendarDraft, nextScheduled, MAX_CALENDAR_BYTES, flightKey } from "./trip-import.js?v=2";
+import { calendarDraft, nextScheduled, todayScheduled, MAX_CALENDAR_BYTES, flightKey } from "./trip-import.js?v=3";
 
 import { CALENDAR_KEY, loadConnection, saveConnection, fetchCalendar } from "./calendar-link.js?v=3";
 
@@ -279,6 +278,17 @@ function focusedTrip(focus) {
   card.append(h("div", { class: "tnext-action" }, r.level >= 2 || r.quality ? "Review trip outlook ›" : "View trip ›"));
   return card;
 }
+function homeFlight(focus) {
+  const { trip, leg } = focus;
+  const r = resultOf(trip);
+  const time = clockText(Date.parse(leg.dep), tzFor(leg.from, trip));
+  return h("button", { type: "button", class: "card thome", "data-trip": trip.id,
+    "aria-label": `Today's scheduled flight ${leg.from} to ${leg.to} at ${time}. ${r.label}. ${r.top}. View trip details`,
+    onclick: () => openTrip(trip.id) },
+    h("span", { class: "thome-heading" }, "Today's flight", h("span", { "aria-hidden": "true" }, "›")),
+    h("span", { class: "thome-main" }, h("b", {}, `${leg.from} → ${leg.to}`), h("span", {}, time), pillEl(r, true)),
+    h("span", { class: "thome-note" }, "Scheduled · actual flight status unconfirmed"));
+}
 function tripActions() {
   return h("div", { class: "trips-b" },
     h("button", { type: "button", class: "tadd", onclick: () => openEdit(null) }, "Add a trip"),
@@ -297,12 +307,8 @@ function render(container) {
   if (!box) { refreshOpen(); return; }
   const trips = allTrips();
   if (!trips.length) { box.replaceChildren(); renderFoot(); refreshOpen(); document.dispatchEvent(new CustomEvent("awx:trips")); const a = statusAirports().find((a) => a.iata === app()?.state.openIata); if (a) decorateSheet(document.getElementById("sheet"), a); return; }
-  const focus = nextScheduled(trips, nowMs());
-  box.replaceChildren(
-    h("div", { class: "trips-h" }, h("h2", {}, "Your trip"),
-      h("div", { class: "trips-b" }, h("button", { type: "button", class: "tadd", onclick: () => openEdit(null) }, "Add a trip"),
-        h("button", { type: "button", class: "tadd", onclick: () => window.AWXNav ? AWXNav.go("trips") : openTripSettings() }, "All trips ›"))),
-    focusedTrip(focus));
+  const focus = todayScheduled(trips, nowMs(), tzFor);
+  box.replaceChildren(...(focus ? [homeFlight(focus)] : []));
   renderFoot();
   refreshOpen();
   document.dispatchEvent(new CustomEvent("awx:trips"));
@@ -312,12 +318,18 @@ function render(container) {
   if (focusedId && focusedBox) [...(document.getElementById(focusedBox)?.querySelectorAll("[data-trip]") || [])].find(el => el.dataset.trip === focusedId)?.focus({ preventScroll: true });
 }
 
+function testBanner() {
+  if (!T.scenario && !T.name) return null;
+  return h("div", { class: "banner" }, h("b", {}, "Test scenario: " + (T.info?.title || T.scenario || T.name) + " "), "(not live) · ",
+    h("a", { href: T.exitUrl || "./", onclick: e => { e.preventDefault(); T.exit(); } }, "Exit"));
+}
+
 /** The Trips tab: every trip, "Add a trip", and the calendar line; an empty state when there are none. */
 function renderTab(box) {
   const trips = allTrips();
   const cs = calStatus();
   if (!trips.length) {
-    box.replaceChildren(h("div", { class: "awx-empty ttab-empty" },
+    box.replaceChildren(...[testBanner(), h("div", { class: "awx-empty ttab-empty" },
       h("div", { class: "awx-empty-ico" }, svg(PLANE, "tempty", 45)),
       h("h2", {}, "Your next trip starts here"),
       h("p", {}, "Add your flight times to see the airport outlook along your trip. Saved on this device."),
@@ -325,12 +337,13 @@ function renderTab(box) {
       h("button", { type: "button", class: "awx-btn", onclick: openConnect }, "Connect flight calendar"),
       h("button", { type: "button", class: "awx-btn", onclick: openImport }, "Import a calendar file"),
       h("p", { class: "timport-note" }, "One-time .ics import · no calendar sync or upload"),
-      cs.warn ? h("p", { class: "warn", role: "status" }, "Calendar update unavailable. Saved flight times may be outdated.") : cs.connected ? h("p", {}, "Your calendar has no recognized flights in the next 7 days.") : null));
+      cs.warn ? h("p", { class: "warn", role: "status" }, "Calendar update unavailable. Saved flight times may be outdated.") : cs.connected ? h("p", {}, "Your calendar has no recognized flights in the next 7 days.") : null)].filter(Boolean));
     return;
   }
   const focus = nextScheduled(trips, nowMs());
   const rest = trips.filter((t) => t.id !== focus.trip.id);
   box.replaceChildren(...[
+    testBanner(),
     h("div", { class: "trips-h ttab-h" }, tripActions(),
       h("button", { type: "button", class: "tgear", "aria-label": "Trips settings", onclick: () => openTripSettings() }, svg("M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7z", "gear"))),
     cs.warn ? h("div", { class: "tcal-line warn", role: "status" }, "Calendar update unavailable · saved times may be outdated") : null,
@@ -841,6 +854,12 @@ function settingsView() {
 const CSS = `
 #trips{margin-bottom:14px}
 #trips:empty{display:none}
+.thome{display:block;width:100%;padding:12px 14px;text-align:left;min-height:44px}
+.thome-heading{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);font-weight:600;margin-bottom:6px}
+.thome-main{display:flex;flex-wrap:wrap;align-items:center;gap:5px 10px;font-size:14px}
+.thome-main b{font-size:18px;letter-spacing:-.02em}
+.thome-note{display:block;font-size:11px;color:var(--muted);margin-top:5px}
+.thome:focus-visible{outline:2px solid var(--brand);outline-offset:3px}
 .trips-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 4px 8px}
 .trips-h h2{margin:0;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .trips-b{display:flex;align-items:center;gap:6px}

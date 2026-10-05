@@ -260,6 +260,27 @@ async function withPage(url, fn, size) {
   }
 }
 const frameSleep = (w, ms) => new Promise((r) => w.setTimeout(r, ms));
+// Brief uses the same airport cards and one accessible dialog, capped at three airports.
+async function briefViewChecks(add, w, doc) {
+  for (let n = 0; n < 30 && !w.AWXBrief; n++) await sleep(100);
+  const B = w.AWXBrief;
+  if (!B) { add("fail", "Brief module loads", "unavailable"); return; }
+  B.open();
+  const trigger = doc.querySelector("#brief .bf-open");
+  trigger?.focus(); trigger?.click();
+  const sheet = doc.getElementById("briefSheet");
+  const cards = [...(sheet?.querySelectorAll(".card") || [])];
+  const expected = B.model().airports;
+  add(cards.length === expected.length && cards.length > 0 && cards.length <= 3 ? "pass" : "fail", "Brief opens up to three relevant airport cards", cards.map(c => c.dataset.iata).join(", "));
+  add(cards.every((c, i) => c.dataset.iata === expected[i] && c.querySelector(".reason") && c.querySelector(".tl")) && !/\bnull\b/.test(sheet?.textContent || "") ? "pass" : "fail", "Brief reuses airport outlooks and timelines");
+  add(sheet?.getAttribute("role") === "dialog" && sheet.getAttribute("aria-modal") === "true" && sheet.contains(doc.activeElement) ? "pass" : "fail", "Brief dialog has focus and accessible labeling");
+  sheet?.dispatchEvent(new w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  add(doc.getElementById("briefWrap")?.hidden && doc.activeElement === trigger ? "pass" : "fail", "Escape closes brief and restores focus");
+  trigger?.click();
+  doc.querySelector("#briefWrap .backdrop")?.click();
+  add(doc.getElementById("briefWrap")?.hidden && doc.activeElement === trigger ? "pass" : "fail", "Backdrop closes brief and restores focus");
+}
+
 // Aviation codes that must not reach Traveler mode outside Pilot details: flight categories, coded weather groups,
 // TAF change groups, Zulu times, knots, and the report names.
 export const AVIATION_CODES = /\b(VFR|MVFR|IFR|LIFR|METAR|TAF|SIGMET|LAMP|TCF|CWA|TEMPO|PROB[34]0|BECMG|NOSIG|CLSD|(?:FEW|SCT|BKN|OVC)\d{3}|\d{4}Z|\d{3}°?\s?\d+G?\d*\s?kt|kt)\b/;
@@ -791,7 +812,7 @@ async function runMock() {
     try { await (await import("./brief.js")).checkRow(add, { url: `./data/scenarios/${sc.name}/changes.json`, shift: (d) => shift(d, delta), mock: true, data }); } catch (e) { add("fail", "Change log", "check failed: " + (e.message || e)); } // brief hook
     if (RENDER) {
       const expect = (sc.assert || []).filter((x) => x.t === "rendered");
-      const r = await renderPage(`./index.html?test=${sc.name}`, expect, async (w, doc) => { await pageAsserts(add, w, doc, sc.assert); await consistencyChecks(add, w, doc); }); // scenarios hook; one level, words = colours, no null/% everywhere
+      const r = await renderPage(`./index.html?test=${sc.name}${(sc.group === "trips" || sc.name === "hurricane-closure") ? "#trips" : ""}`, expect, async (w, doc) => { await pageAsserts(add, w, doc, sc.assert); await consistencyChecks(add, w, doc); if (["all-clear", "thunderstorm-ground-stop"].includes(sc.name)) await briefViewChecks(add, w, doc); }); // scenarios hook; one level, words = colours, no null/% everywhere
       add(r.ready && !r.errors.length ? "pass" : "fail", `Render ?test=${sc.name} at 390 px`, !r.ready ? "cards never appeared" : r.errors.length ? r.errors.join(" | ") : `${r.cards} cards, no errors`);
       for (const { x, ok } of r.results) add(ok ? "pass" : "fail", `Expect on page: ${x.selector ? `element ${x.selector}` : `text "${x.text}"`}`, ok ? "" : "not found");
     }

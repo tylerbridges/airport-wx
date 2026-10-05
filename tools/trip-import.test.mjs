@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { calendarDraft, nextScheduled, MAX_CALENDAR_BYTES } from "../site/trip-import.js";
+import { calendarDraft, nextScheduled, todayScheduled, MAX_CALENDAR_BYTES } from "../site/trip-import.js";
 const NOW = Date.parse("2026-10-04T12:00:00Z");
 const airports = [{ iata: "MSP", tz: "America/Chicago", city: "Minneapolis" }, { iata: "ORD", tz: "America/Chicago", city: "Chicago" }, { iata: "SEA", tz: "America/Los_Angeles", city: "Seattle" }];
 const cal = (...events) => ["BEGIN:VCALENDAR", ...events.map(e => ["BEGIN:VEVENT", ...e, "END:VEVENT"].join("\n")), "END:VCALENDAR"].join("\n");
@@ -49,4 +49,14 @@ test("next scheduled flight selects a future connection without claiming prior f
   const recent = nextScheduled([trip], Date.parse("2026-10-04T18:00:00Z"));
   assert.equal(recent.future, false); assert.equal(recent.trip.id, "conn");
   assert.equal(nextScheduled([], NOW), null);
+});
+
+test("main-page flight is departure-day only, including local midnight and passed schedules", () => {
+  const trip = { id: "today", tz: { MSP: "America/Chicago" }, legs: [{ from: "MSP", to: "ORD", dep: "2026-10-05T23:00:00Z", arr: "2026-10-06T00:30:00Z" }] };
+  const later = { id: "later", tz: trip.tz, legs: [{ ...trip.legs[0], dep: "2026-10-09T23:00:00Z", arr: "2026-10-10T00:30:00Z" }] };
+  assert.equal(todayScheduled([trip, later], Date.parse("2026-10-05T04:59:00Z")), null, "still yesterday in Chicago");
+  assert.equal(todayScheduled([trip, later], Date.parse("2026-10-05T05:00:00Z")).trip.id, "today");
+  assert.equal(todayScheduled([later], Date.parse("2026-10-05T18:00:00Z")), null);
+  assert.equal(todayScheduled([trip, later], Date.parse("2026-10-06T04:59:00Z")).future, false, "passed schedule remains on departure day without claiming arrival");
+  assert.equal(todayScheduled([trip, later], Date.parse("2026-10-06T05:00:00Z")), null);
 });

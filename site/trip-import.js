@@ -33,3 +33,18 @@ export function nextScheduled(trips, now = Date.now()) {
   const recent = [...trips].sort((a, b) => Date.parse(b.legs[b.legs.length - 1].arr) - Date.parse(a.legs[a.legs.length - 1].arr))[0];
   return recent ? { trip: recent, leg: recent.legs[recent.legs.length - 1], future: false } : null;
 }
+
+/** Main-page flights are eligible only on their scheduled departure date at the origin. */
+export function todayScheduled(trips, now = Date.now(), zoneOf = (code, trip) => trip.tz?.[code] || "UTC") {
+  const day = (ms, tz) => new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit" }).format(ms);
+  const eligible = trips.flatMap(trip => trip.legs.map(leg => ({ trip, leg }))).filter(({ trip, leg }) => {
+    const dep = Date.parse(leg.dep);
+    if (!Number.isFinite(dep)) return false;
+    const tz = zoneOf(leg.from, trip);
+    return day(dep, tz) === day(now, tz);
+  });
+  const future = eligible.filter(x => Date.parse(x.leg.dep) >= now).sort((a, b) => Date.parse(a.leg.dep) - Date.parse(b.leg.dep));
+  const recent = eligible.sort((a, b) => Date.parse(b.leg.dep) - Date.parse(a.leg.dep));
+  const pick = future[0] || recent[0];
+  return pick ? { ...pick, future: !!future.length } : null;
+}

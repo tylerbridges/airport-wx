@@ -268,7 +268,7 @@ export function briefModel() {
   const old = nowMs() - Date.parse(d.generated) > 30 * MIN;
   const hidden = Object.keys(hideMap()).length > 0;
   const note = [A.state.sample ? "Sample data" : old ? "Data may be outdated" : null, down ? "Some data unavailable" : null, hidden ? "Some disruption types hidden" : null].filter(Boolean).join(" · ") || null;
-  return { headline, lines, national, note, count: n, attention: attn.length };
+  return { headline, lines, national, note, count: n, attention: attn.length, airports: (attn.length ? attn : items).slice(0, 3).map(x => x.a.iata) };
 }
 
 const inWindow = () => { const hr = new Date().getHours(); return hr >= SHOW_FROM && hr < SHOW_TO; };
@@ -292,21 +292,79 @@ function render() {
   const b = box();
   if (!b) return;
   const m = isShown() ? briefModel() : null;
-  if (!m) { b.hidden = true; b.replaceChildren(); return; }
+  if (!m) { b.hidden = true; b.replaceChildren(); refreshOverview(); return; }
   b.className = "awx-brief glass";
   b.setAttribute("aria-label", "Today's brief");
   b.hidden = false;
-  const line = (x) => h("li", {},
-    h("button", { type: "button", class: "bf-l", onclick: () => (x.trip && window.AWXTrips ? window.AWXTrips.openTrip(x.trip) : x.iata ? A.openSheet(x.iata) : null) },
-      h("span", { class: "dot " + lv(x.level), "aria-hidden": "true" }), h("span", { class: "bf-lt" }, x.text)));
-  b.replaceChildren(...[
-    h("div", { class: "bf-h" },
-      h("span", { class: "bf-k" }, "Today's brief"),
+  const line = x => h("span", { class: "bf-l" }, h("span", { class: "dot " + lv(x.level), "aria-hidden": "true" }), h("span", { class: "bf-lt" }, x.text));
+  b.replaceChildren(
+    h("div", { class: "bf-h" }, h("span", { class: "bf-k" }, "Today's brief"),
       h("button", { type: "button", class: "bf-x", "aria-label": "Dismiss today's brief until tomorrow", onclick: dismiss }, "Dismiss")),
-    h("div", { class: "bf-head" }, m.headline),
-    m.lines.length ? h("ul", { class: "bf-lines" }, m.lines.map(line)) : null,
-    m.national ? h("div", { class: "bf-nat" }, m.national) : null,
-    m.note ? h("div", { class: "bf-note" }, m.note) : null].filter(Boolean));
+    h("button", { type: "button", class: "bf-open", "aria-label": "View today's brief airport cards", "aria-haspopup": "dialog", onclick: openOverview },
+      h("span", { class: "bf-head" }, m.headline),
+      h("span", { class: "bf-lines" }, m.lines.map(line)),
+      m.national ? h("span", { class: "bf-nat" }, m.national) : null,
+      m.note ? h("span", { class: "bf-note" }, m.note) : null,
+      h("span", { class: "bf-more" }, "View airport cards ›")));
+  refreshOverview();
+}
+
+let overviewCtl = null, overviewFocus = null;
+function overviewWrap() {
+  let wrap = document.getElementById("briefWrap");
+  if (wrap) return wrap;
+  wrap = h("div", { id: "briefWrap", class: "sheet-wrap bf-wrap", hidden: true },
+    h("div", { class: "backdrop", onclick: closeOverview }),
+    h("div", { id: "briefSheet", class: "sheet", role: "dialog", "aria-modal": "true", "aria-labelledby": "briefTitle" }));
+  document.body.append(wrap);
+  const sheet = wrap.querySelector(".sheet");
+  overviewCtl = W.AWXSheet.makeSheet(sheet, { onClose: closeOverview, header: ".grab, .sh-head", backdrop: wrap.querySelector(".backdrop"), noPull: ".tl" });
+  sheet.addEventListener("keydown", e => {
+    if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeOverview(); }
+    if (e.key !== "Tab") return;
+    const nodes = [...sheet.querySelectorAll('button, [tabindex="0"], a[href]')].filter(n => n.getClientRects().length);
+    const first = nodes[0], last = nodes[nodes.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
+  });
+  return wrap;
+}
+function refreshOverview() {
+  const wrap = document.getElementById("briefWrap");
+  if (!wrap || wrap.hidden) return;
+  const sheet = wrap.querySelector(".sheet"), top = sheet.scrollTop;
+  const focused = document.activeElement?.closest('[data-iata]')?.dataset.iata;
+  const A = app(), m = briefModel();
+  const airports = (m?.airports || []).map(code => A.state.data.airports.find(a => a.iata === code)).filter(Boolean);
+  const cards = airports.map(a => A.airportCard(a, () => W.AWXSheet.transfer(closeOverview, () => A.openSheet(a.iata))));
+  sheet.replaceChildren(...[h("div", { class: "grab", "aria-hidden": "true" }),
+    h("div", { class: "sh-head" }, h("h2", { id: "briefTitle" }, "Today's brief"), h("button", { type: "button", class: "close", onclick: closeOverview }, "Done")),
+    h("p", { class: "muted small" }, m?.note || "Airport outlooks for today"),
+    h("div", { class: "bf-cards" }, cards),
+    !cards.length ? h("p", {}, "Add your airports to see their outlooks here.") : null].filter(Boolean));
+  for (const card of cards) { card.style.contentVisibility = "visible"; A.ensureCardTimeline(card); }
+  A.placeLenses();
+  sheet.scrollTop = top;
+  const target = cards.find(c => c.dataset.iata === focused) || sheet.querySelector(".close");
+  target?.focus({ preventScroll: true });
+}
+function openOverview() {
+  const wrap = overviewWrap();
+  if (!wrap.hidden) return;
+  overviewFocus = document.activeElement;
+  wrap.hidden = false;
+  overviewCtl.opened();
+  refreshOverview();
+  void wrap.offsetHeight;
+  wrap.classList.add("open");
+}
+function closeOverview() {
+  const wrap = document.getElementById("briefWrap");
+  if (!wrap || wrap.hidden) return;
+  wrap.classList.remove("open"); wrap.hidden = true;
+  overviewCtl.closed();
+  const target = overviewFocus?.isConnected ? overviewFocus : document.querySelector("#brief .bf-open") || document.querySelector("#seg button[aria-selected='true']");
+  target?.focus({ preventScroll: true });
 }
 
 function dismiss() {
@@ -401,22 +459,29 @@ const CSS = `
 .bf-k { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--brand); }
 .bf-x { font: inherit; font-size: 13px; font-weight: 600; color: var(--muted); background: none; border: 0; padding: 10px 2px 10px 12px; margin: -10px 0; min-height: 44px; cursor: pointer; }
 .bf-x:focus-visible, .bf-l:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 8px; }
-.bf-head { font-size: 19px; font-weight: 800; letter-spacing: -.02em; line-height: 1.25; margin-top: 2px; }
-.bf-lines { list-style: none; margin: 6px 0 0; padding: 0; }
+.bf-open{display:block;width:100%;text-align:left;border:0;background:none;color:inherit;font:inherit;padding:0;min-height:44px;cursor:pointer}
+.bf-open:focus-visible{outline:2px solid var(--brand);outline-offset:4px;border-radius:8px}
+.bf-head { display:block; font-size: 19px; font-weight: 800; letter-spacing: -.02em; line-height: 1.25; margin-top: 2px; }
+.bf-lines { display:block; list-style: none; margin: 6px 0 0; padding: 0; }
 .bf-l { width: 100%; display: flex; align-items: baseline; gap: 9px; text-align: left; font: inherit; font-size: 14.5px; line-height: 1.35; color: var(--text); background: none; border: 0; padding: 5px 0; cursor: pointer; }
 .bf-l .dot { width: 8px; height: 8px; box-shadow: none; transform: translateY(-1px); }
 .bf-lt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.bf-nat { margin-top: 6px; padding-top: 7px; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--muted); line-height: 1.35; }
-.bf-note { margin-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+.bf-nat { display:block; margin-top: 6px; padding-top: 7px; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--muted); line-height: 1.35; }
+.bf-note { display:block; margin-top: 6px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
 .bf-evs { list-style: none; margin: 0; padding: 6px 0 0; }
 .bf-ev { display: flex; gap: 10px; padding: 5px 0; font-size: 14px; line-height: 1.35; border-bottom: 1px dashed var(--line); }
 .bf-ev:last-child { border-bottom: 0; }
 .bf-t { flex: none; min-width: 64px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .bf-s { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-.bf-more { padding-top: 4px; font-size: 13px; color: var(--muted); }
+.bf-more { display:block; padding-top: 4px; font-size: 13px; color: var(--muted); }
+.bf-wrap{z-index:11}
+.bf-wrap .sheet{top:0;bottom:0;max-height:none;border-radius:0;background:var(--bg);padding-top:calc(env(safe-area-inset-top) + 8px)}
+.bf-wrap h2{font-size:22px;margin:0}
+.bf-cards{display:grid;gap:12px}
+.bf-cards .card{margin:0}
 `;
 
-const api = { render, decorateSheet, todaySection, open, dismiss, isShown, model: briefModel, todayEvents, reload: () => { S.seen = -1; return load(); }, checkRow, changeProblems, _state: () => ({ data: S.data, failed: S.failed, forced: S.forced, dismissed: readDismissed() }) };
+const api = { render, openOverview, closeOverview, decorateSheet, todaySection, open, dismiss, isShown, model: briefModel, todayEvents, reload: () => { S.seen = -1; return load(); }, checkRow, changeProblems, _state: () => ({ data: S.data, failed: S.failed, forced: S.forced, dismissed: readDismissed() }) };
 // Only the main page shows the brief (check.html imports this module for checkRow).
 if (typeof document !== "undefined" && document.getElementById("list")) {
   if (!document.getElementById("awx-brief-css")) document.head.append(h("style", { id: "awx-brief-css" }, CSS));
