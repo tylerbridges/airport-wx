@@ -184,6 +184,8 @@ export function analogWords(an) {
 }
 
 /** {i (peak hour), s, e (window), p} over the 24 hours, or null without delay numbers. */
+/** Overnight hour (1–4 AM airport time, site/outlook.js quietHour): few flights, so it never leads a delay outlook. */
+const quiet = (h, a) => !!(globalThis.AWXOutlook && a && globalThis.AWXOutlook.quietHour(h.t, a.tz));
 function peakWindow(a, include = () => true) {
   const hs = a.hours || [];
   let i = -1;
@@ -202,7 +204,7 @@ function peakWindow(a, include = () => true) {
 /** Card line under the reason: plain words (no % in Traveler mode). Returns an element, or null when there are no delay numbers. */
 export function delayLine(a) {
   injectStyle();
-  const w = a && peakWindow(a);
+  const w = a && peakWindow(a, (h) => !quiet(h, a));
   if (!w) return null;
   const h0 = a.hours[0].delay;
   const L0 = h0 ? likelihood(h0, { iata: a.iata }) : null;
@@ -247,6 +249,7 @@ const isAviation = () => !!(globalThis.AWXPrefs && globalThis.AWXPrefs.getPrefs(
 /** The window the sheet's "Delay outlook" card shows (null = the card is left out): every hour in Aviation mode, else notable ones. */
 function cardWindow(a, aviation = isAviation()) {
   const include = (hr) => {
+    if (!aviation && quiet(hr, a)) return false;
     const L = likelihood(hr.delay, { iata: a.iata });
     return aviation || L?.key !== "now" && notable(hr.delay, hr.level, L);
   };
@@ -285,7 +288,7 @@ export function routineOutlook(a, now = refNow()) {
   if (!tz) return null;
   const today = dayKey(now, tz);
   const idx = [];
-  hs.forEach((h, i) => { const t = Date.parse(h.t); if (t + HOUR > now && dayKey(t, tz) === today && h.delay && h.delay.p != null) idx.push(i); });
+  hs.forEach((h, i) => { const t = Date.parse(h.t); if (t + HOUR > now && dayKey(t, tz) === today && h.delay && h.delay.p != null && !quiet(h, a)) idx.push(i); });
   if (!idx.length) return null;
   const Ls = idx.map((i) => likelihood(hs[i].delay, { iata: a.iata, aviation: false }));
   if (Ls.some((L) => !L || L.key === "now" || L.key === "unknown")) return null;

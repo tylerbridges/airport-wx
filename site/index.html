@@ -254,6 +254,11 @@ table.lt { border-collapse: collapse; font-size: 12px; }
 .tl .s.past { opacity: .5; }
 .tl .s.past.l0 { opacity: .24; }
 .tl .s.past.nd { opacity: .7; }
+/* Overnight hours (1–4 AM airport time): few flights, so they sit back */
+.tl .s.quiet:not(.past) { opacity: .45; }
+.tl .s.quiet.l0:not(.past) { opacity: .22; }
+.tl .s.quiet.past { opacity: .3; }
+.tl .s.quiet.past.l0 { opacity: .14; }
 .tl .s.tick { animation: segtick .18s ease-out; }
 .tl-cap { margin-top: 2px; font-size: 11.5px; line-height: 1.3; color: var(--muted); }
 .stale-tag { font-size: 11px; font-weight: 600; color: var(--muted); white-space: nowrap; }
@@ -843,13 +848,13 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 </div>
 <div class="sr" id="announce" aria-live="polite"></div>
 <script src="offline.js?v=3"></script>
-<script src="outlook.js?v=9"></script>
+<script src="outlook.js?v=10"></script>
 <script src="cats.js?v=3"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=5"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
-<script src="app.js?v=61" defer></script>
+<script src="app.js?v=62" defer></script>
 <script type="module" src="searched.js?v=7"></script><!-- build2a hook -->
-<script type="module" src="delay.js?v=14"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
+<script type="module" src="delay.js?v=15"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="trips.js?v=22"></script><!-- trips hook -->
 <script type="module" src="nav.js?v=20"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
 <script type="module" src="movement.js?v=4"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->

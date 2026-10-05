@@ -60,11 +60,23 @@
     if (L.key === "now") return PROG_LEVEL[h?.delay?.override] || 2;
     return RAISE[L.key] || 0;
   }
+  // Overnight hours (1:00–4:59 AM airport time) carry few scheduled flights, so a delay chance there is no headline:
+  // it never raises the hour's level. Weather, FAA restrictions and delays happening now still count (overnight snow
+  // or fog sets up the first morning departures).
+  const HFMT = new Map();
+  function quietHour(t, tz) {
+    if (!tz || !Number.isFinite(ms(t))) return false;
+    let f = HFMT.get(tz);
+    if (!f) { try { f = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", hourCycle: "h23" }); } catch { return false; } HFMT.set(tz, f); }
+    const hr = Number(f.format(ms(t))) % 24;
+    return hr >= 1 && hr <= 4;
+  }
   function score(h, opts) {
     const L = h?.delay && opts.words ? opts.words(h.delay) : null;
-    const raise = delayRaise(h, L);
+    const quiet = quietHour(h?.t, opts.tz);
+    const raise = quiet && L?.key !== "now" ? 0 : delayRaise(h, L);
     const level = Math.max(h?.level || 0, raise);
-    return { L, meaningful: raise > 0, level, raise, raised: raise > (h?.level || 0) };
+    return { L, meaningful: raise > 0, level, raise, raised: raise > (h?.level || 0), quiet };
   }
   function windowFor(a, opts, after) {
     const hs = a.hours || [];
@@ -202,5 +214,5 @@
     const start = ms(at), end = Number.isFinite(ms(until)) ? ms(until) : start + 1;
     return !!window && start < window.end && end > window.start;
   }
-  return { conditionHeadline, health, evaluate, summary, levelAt, score, restrictions, directionRows, windowFor, overlaps, PROG_LEVEL, RAISE };
+  return { conditionHeadline, quietHour, health, evaluate, summary, levelAt, score, restrictions, directionRows, windowFor, overlaps, PROG_LEVEL, RAISE };
 });

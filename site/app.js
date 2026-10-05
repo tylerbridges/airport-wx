@@ -902,7 +902,7 @@
     if (s.kind === "na") return when + " · Forecast not available yet";
     if (s.level === 0 && s.kind !== "obs" && AWXOutlook.health(a, outlookOpts(a, view(a))).quality) return when + " · Status unconfirmed";
     const top = plainList(s.reasons, a)[0];
-    return [s.kind === "now" ? "Now" : when, s.kind === "obs" ? (s.observed ? "Observed" : "Earlier forecast") : s.kind === "fc" ? "Forecast" : null, LEVELS[s.level].label, top].filter(Boolean).join(" · ");
+    return [s.kind === "now" ? "Now" : when, s.kind === "obs" ? (s.observed ? "Observed" : "Earlier forecast") : s.kind === "fc" ? "Forecast" : null, LEVELS[s.level].label, top, s.kind === "fc" && AWXOutlook.quietHour(s.t, a.tz) ? "Few flights" : null].filter(Boolean).join(" · ");
   }
 
   function conciseSlotText(s, a) {
@@ -910,7 +910,7 @@
     const when = s.kind === "now" ? "Now" : day + hourLabel(s.t, tz);
     if (s.kind === "none") return when + " · No report";
     if (s.kind === "na") return when + " · Forecast unavailable";
-    if (s.level === 0) return when + " · " + (AWXOutlook.health(a, outlookOpts(a, view(a))).quality ? "Status unconfirmed" : "Low risk");
+    if (s.level === 0) return when + " · " + (AWXOutlook.health(a, outlookOpts(a, view(a))).quality ? "Status unconfirmed" : s.kind === "fc" && AWXOutlook.quietHour(s.t, a.tz) ? "Few flights" : "Low risk");
     const r = (s.reasons || []).join(" ");
     const topic = (s.reasons || []).some(x => /^Airport closed\b/i.test(x)) ? "Airport closed" : (s.reasons || []).some(x => /^Ground stop\b/i.test(x)) ? "Ground Stop"
       : /Ground delay|Delay program|Delays|FAA reports/i.test(r) ? "Delays"
@@ -938,7 +938,7 @@
     const sm = safeCall(() => summary(a)) || {};
     const qualified = !!AWXOutlook.health(a, outlookOpts(a, view(a))).quality;
     const segs = slots.map((s) => h("span", {
-      class: "s " + (s.level == null || qualified && s.level === 0 && s.kind !== "obs" ? "nd" : lv(s.level)) + (s.kind === "obs" || s.kind === "none" ? " past" : "") + (s.i === day.cur ? " cur" : ""),
+      class: "s " + (s.level == null || qualified && s.level === 0 && s.kind !== "obs" ? "nd" : lv(s.level)) + (s.kind === "obs" || s.kind === "none" ? " past" : "") + (s.i === day.cur ? " cur" : "") + (AWXOutlook.quietHour(s.t, a.tz) ? " quiet" : ""),
       "data-i": s.i, "data-l": s.level == null ? null : String(s.level), "data-t": String(s.key),
     }));
     const lensSeg = h("span", { class: "lens-seg" });
@@ -2002,7 +2002,7 @@
       o.simple ? null : o.facts);
   }
 
-  const outlookOpts = (a, v) => ({ now: refNow(), generated: state.data?.generated, sources: state.data?.sources, sample: state.sample, offline: state.offline, noticesDown: noticesDown(),
+  const outlookOpts = (a, v) => ({ now: refNow(), tz: a.tz, generated: state.data?.generated, sources: state.data?.sources, sample: state.sample, offline: state.offline, noticesDown: noticesDown(),
     hidden: v.hiddenCats?.size, plain: (r) => plainReason(shortRaw(r), a),
     words: (d) => window.AWXDelay?.likelihood(d, { iata: a.iata, aviation: aviation() }), notable: window.AWXDelay?.notable });
   function outlook(a, at = refNow()) {
