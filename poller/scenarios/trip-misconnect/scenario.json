@@ -3,7 +3,7 @@
   "group": "trips",
   "at": "2026-10-02T14:00:00Z",
   "blurb": "A 45-minute ORD connection with delay programs at ORD and SFO.",
-  "description": "A calendar trip MSP→ORD→SFO with a 45-minute connection at ORD while ORD has a ground delay program (storms) and SFO a flow program for low clouds (ground delay program until 2 PM PT in the ops plan): flights to both are held, so the trip shows Delays likely with a missed-connection warning.",
+  "description": "A calendar trip MSP→ORD→SFO with a 45-minute connection at ORD while ORD has a ground delay program (storms) and SFO a flow program for low clouds (ground delay program until 2 PM PT in the ops plan): arrivals at both are held, so the trip shows Delays likely with a missed-connection warning.",
   "assert": [
     {
       "t": "faa",
@@ -26,7 +26,7 @@
       "t": "trip",
       "i": 0,
       "status": "Delays likely",
-      "re": "^ORD ground delay program: flights to ORD are held — your .+ MSP→ORD departure may wait ~1 hr 5 min\\.$"
+      "re": "^ORD ground delay program: ORD arrivals are held at their departure airports — your .+ MSP→ORD departure may wait ~1 hr 5 min\\.$"
     },
     {
       "t": "tripConcern",
@@ -36,7 +36,7 @@
     {
       "t": "tripConcern",
       "i": 0,
-      "re": "^SFO ground delay program: flights to SFO are held — your .+ ORD→SFO departure may wait ~58 min\\.$"
+      "re": "^SFO ground delay program: SFO arrivals are held at their departure airports — your .+ ORD→SFO departure may wait ~58 min\\.$"
     },
     {
       "t": "words",

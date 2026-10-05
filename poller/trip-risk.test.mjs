@@ -32,7 +32,7 @@ test("GDP at the destination: flights there are held at the origin", () => {
   const trip = { legs: [{ from: "MSP", to: "ORD", dep: at(2, 5), arr: at(3, 35) }] };
   const r = tripStatus(trip, by(ORD, MSP), { now: NOW });
   assert.equal(r.label, "Delays likely");
-  assert.equal(r.top, "ORD ground delay program: flights to ORD are held — your 6:05 PM MSP→ORD departure may wait ~45 min.");
+  assert.equal(r.top, "ORD ground delay program: ORD arrivals are held at their departure airports — your 6:05 PM MSP→ORD departure may wait ~45 min.");
   assert.equal(r.concerns[0].side, "dep", "the wait happens at the departure airport");
   assert.equal(r.sides.dep, 3);
   // the GDP isn't repeated as an ORD weather concern; the wind is, at its own (Moderate) level

@@ -422,10 +422,10 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
         const until = untilText(p, X.tz, now);
         if (p.kind === "gdp") {
           add({ level: 3, kind: "program", side: "dep", iata: leg.to, leg: i, key: `gdp-${leg.to}-${i}`, short: `${leg.to} ground delay program`,
-            text: `${leg.to} ground delay program: flights to ${leg.to} are held — your ${depClock} ${route} departure may wait${p.avg ? " ~" + minutesText(p.avg) : " at the gate"}.` });
+            text: `${leg.to} ground delay program: ${leg.to} arrivals are held at their departure airports — your ${depClock} ${route} departure may wait${p.avg ? " ~" + minutesText(p.avg) : " at the gate"}.` });
         } else if (p.kind === "gs") {
           add({ level: 4, kind: "program", side: "dep", iata: leg.to, leg: i, key: `gs-${leg.to}-${i}`, short: `${leg.to} ground stop`,
-            text: `${leg.to} ground stop${until}: flights to ${leg.to} are held at their departure airports — your ${depClock} ${route} departure may not leave until it lifts.` });
+            text: `${leg.to} ground stop${until}: ${leg.to} arrivals are held at their departure airports — your ${depClock} ${route} departure may not leave until it lifts.` });
         } else if (p.kind === "possible") {
           const m = /^FAA plans a possible (.+?)( until [^(]+)?\s*(\([^)]*\))?$/.exec(p.reason);
           add({ level: 2, kind: "program", side: "dep", iata: leg.to, leg: i, key: `possible-${leg.to}-${i}`, short: `possible ${m ? m[1] : "ground stop"} at ${leg.to}`,
