@@ -445,8 +445,9 @@ export function calibrate(cal, p) {
 export function typicalRate(fb, ap, mo, lh) {
   const row = fb?.climo?.[ap];
   if (Array.isArray(row) && row.length === 288 && row[(mo - 1) * 24 + lh] != null) return { p: row[(mo - 1) * 24 + lh], scope: "hour" };
-  const b = fb?.base?.[ap] ?? fb?.base?.all;
-  return b != null ? { p: b, scope: "airport" } : null;
+  const b = fb?.base?.[ap];
+  if (b != null) return { p: b, scope: "airport" };
+  return fb?.base?.all != null ? { p: fb.base.all, scope: "pooled" } : null;
 }
 
 /** Raw model probability (before calibration). */
@@ -662,6 +663,7 @@ export function scoreHours({
     const d = {
       p: r2(p), pTypical: typ ? r2(typ.p) : null, minutes: r5(minutes),
       analog: analogFor(analogs, iata, w, lp.h, lp.mo), basis: useModel ? "model" : "fallback", lead: b,
+      modelCoverage: (useModel ? model.airports?.includes(iata) || Object.hasOwn(model.w || {}, `ap:${iata}`) : typ && typ.scope !== "pooled") ? "airport" : "pooled",
     };
     if (typ && typ.scope !== "hour") d.typicalScope = typ.scope;
     const x = ov[i];

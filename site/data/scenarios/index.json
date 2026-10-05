@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-05T03:36:47.797Z",
+ "generated": "2026-10-05T04:26:00.669Z",
  "groups": {
   "delays": "Delays & programs",
   "weather": "Weather",
@@ -1674,6 +1674,36 @@
    ]
   },
   {
+   "name": "trip-origin-ground-stop",
+   "title": "Trip: arrival ground stop at departure airport",
+   "group": "trips",
+   "blurb": "MSP arrival ground stop alone does not ground your MSP→ATL departure.",
+   "description": "An inbound MSP ground stop is informational for an outbound MSP→ATL flight; scheduled times never establish actual flight progress.",
+   "file": "trip-origin-ground-stop.json",
+   "wx": "trip-origin-ground-stop/wx/",
+   "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
+   "assert": [
+    {
+     "t": "trips",
+     "count": 1,
+     "configured": true
+    },
+    {
+     "t": "trip",
+     "i": 0,
+     "status": "On track",
+     "re": "arrival ground stop"
+    },
+    {
+     "t": "rendered",
+     "text": "On track"
+    }
+   ]
+  },
+  {
    "name": "trip-tight-connection",
    "title": "Trip: tight connection at ORD (MSP→ORD→BZN)",
    "group": "trips",
@@ -1711,6 +1741,36 @@
     {
      "t": "rendered",
      "text": "Tight connection at ORD"
+    }
+   ]
+  },
+  {
+   "name": "trip-weather-concerns",
+   "title": "Trip: weather concern, low delay chance",
+   "group": "trips",
+   "blurb": "Low clouds with a low model delay chance: weather warning stays visible.",
+   "description": "MSP→ATL in 90 minutes. Low clouds are High weather risk; an explicitly overridden low delay score verifies that weather severity alone never says Delays likely.",
+   "file": "trip-weather-concerns.json",
+   "wx": "trip-weather-concerns/wx/",
+   "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": true,
+   "assert": [
+    {
+     "t": "trips",
+     "count": 1,
+     "configured": true
+    },
+    {
+     "t": "trip",
+     "i": 0,
+     "status": "Weather concerns",
+     "re": "Very low clouds at MSP"
+    },
+    {
+     "t": "rendered",
+     "text": "Weather concerns"
     }
    ]
   },

@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import {
-  btsIndex2, btsAdd2, truthFromAcc, sideReal, mergeAcc, accEntries, fitLogistic, predictRows, isotonicFit, brier, auc, reliability, gate,
+  btsIndex2, btsAdd2, scheduledArrivalDate, truthFromAcc, sideReal, mergeAcc, accEntries, fitLogistic, predictRows, isotonicFit, brier, auc, reliability, gate,
   timeSplit, programRates, lampFromIemCsv, lampLookup, climatology, airportRecords, buildRows, buildAnalogs, median,
   TOP_HUBS, programIndex, volumeTable, volumeFor, validationBlock, familyOf, calibrationSummary, groupOf, AIRPORT_GROUPS,
 } from "./train-lib.mjs";
@@ -59,6 +59,22 @@ test("BTS: late, weather/NAS-caused, cancellations B/C, next-day arrival", () =>
   const m = mergeAcc(new Map(), accEntries(acc));
   mergeAcc(m, accEntries(acc));
   assert.equal(m.get("ORD|2026-01-05|17").d[0], 10);
+});
+
+test("BTS arrival dates use elapsed time and both zones across westbound clocks, midnight and DST", async () => {
+  const ET = "America/New_York", CT = "America/Chicago", PT = "America/Los_Angeles";
+  assert.equal(scheduledArrivalDate("2026-10-04", 2330, 2315, 45, ET, CT), "2026-10-04");
+  assert.equal(scheduledArrivalDate("2026-10-04", 2230, 630, 300, PT, ET), "2026-10-05");
+  assert.equal(scheduledArrivalDate("2026-10-04", 2400, 130, 90, CT, CT), "2026-10-05");
+  assert.equal(scheduledArrivalDate("2026-10-04", 2230, 2400, 90, CT, CT), "2026-10-05");
+  assert.equal(scheduledArrivalDate("2026-03-08", 130, 330, 60, ET, ET), "2026-03-08");
+  assert.equal(scheduledArrivalDate("2026-10-04", 2330, 2300, null, ET, CT), "2026-10-04");
+  assert.equal(scheduledArrivalDate("2026-10-04", 2330, 2300, 90, null, CT), null);
+  const text = HEAD + ',"CRSElapsedTime"\n2026-10-04,DTW,ORD,2330,20,2315,20,0,,0,,0,20,45\n';
+  const got = await aggregateBts(linesOf(text), new Set(["ORD"]), { DTW: ET, ORD: CT });
+  assert.deepEqual(got.entries.map(x => x[0]), ["ORD|2026-10-04|23"]);
+  const missing = await aggregateBts(linesOf(text), new Set(["ORD"]), { ORD: CT });
+  assert.equal(missing.kept, 0, "unknown origin zone never invents an arrival date");
 });
 
 test("target: >= 25% late with weather/NAS cause or >= 5% weather/NAS cancellations; < 5 flights skipped", () => {

@@ -1,0 +1,33 @@
+{
+  "title": "Trip: weather concern, low delay chance",
+  "blurb": "Low clouds with a low model delay chance: weather warning stays visible.",
+  "description": "MSP\u2192ATL in 90 minutes. Low clouds are High weather risk; an explicitly overridden low delay score verifies that weather severity alone never says Delays likely.",
+  "group": "trips",
+  "at": "2026-10-04T18:00:00Z",
+  "delayOverride": [
+    {
+      "iata": "MSP",
+      "from": 0,
+      "to": 23,
+      "p": 0.1,
+      "why": "Negative control: high weather severity is not a calibrated high delay chance."
+    }
+  ],
+  "assert": [
+    {
+      "t": "trips",
+      "count": 1,
+      "configured": true
+    },
+    {
+      "t": "trip",
+      "i": 0,
+      "status": "Weather concerns",
+      "re": "Very low clouds at MSP"
+    },
+    {
+      "t": "rendered",
+      "text": "Weather concerns"
+    }
+  ]
+}

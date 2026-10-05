@@ -208,6 +208,16 @@ test("finalize: latest per airport+type decides; CNX and expired are inactive; n
   assert.equal(finalizeAtcscc([mk("f", { start: "2026-10-03T21:00:00Z", end: "2026-10-03T23:00:00Z" })], NOW)[0].active, false);
 });
 
+test("ATCSCC departure scope retains explicit airports and qualifies center-only coverage", () => {
+  const one = parseAdvisory(GS + "\nDEP AIRPORTS INCLUDED: KMSP JFK\n", { now: NOW });
+  assert.deepEqual(one.departureScope.airports, ["MSP", "JFK"]);
+  const centers = parseAdvisory(GS + "\nDEP FACILITIES INCLUDED: ZNY ZBW\n", { now: NOW });
+  assert.equal(centers.departureScope.airports, null);
+  assert.equal(centers.departureScope.all, false);
+  assert.equal(parseAdvisory(GS + "\nDEP AIRPORTS INCLUDED: ALL\n", { now: NOW }).departureScope.airports, null);
+  assert.equal(parseAdvisory(GS + "\nFLIGHTS INCLUDED: ALL FLIGHTS\n", { now: NOW }).departureScope.all, true);
+});
+
 test("collectAtcscc follows program links only, survives failing pages, reports counts", async () => {
   const list = `<a href="adv?advn=1">ATCSCC ADVZY 001 ORD/ZAU 10/03/2026 CDM GROUND STOP</a>
     <a href="adv?advn=2">ATCSCC ADVZY 002 DCC 10/03/2026 ROUTE RQD</a>

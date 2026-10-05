@@ -4,7 +4,7 @@
 //          emails), and that every trip airport is in status.json with full data.
 //   mock:  the same per scenario, plus the scenario's trip assertions:
 //          {t: "trips", count, configured}, {t: "trip", i, status, re}, {t: "tripAirport", iata}.
-import { tripStatus, privacyProblems } from "./trip-risk.js?v=6";
+import { tripStatus, privacyProblems } from "./trip-risk.js?v=7";
 
 const MIN = 60e3;
 const ago = (ms) => (ms < MIN ? "just now" : ms < 60 * MIN ? `${Math.round(ms / MIN)} min ago` : `${(ms / 3600e3).toFixed(1)} h ago`);

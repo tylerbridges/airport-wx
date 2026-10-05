@@ -37,7 +37,7 @@ export function quantile(arr, q) {
 export const BTS_REQUIRED = ["flightdate", "origin", "dest", "crsdeptime", "crsarrtime", "depdelay", "arrdelay", "cancelled", "cancellationcode", "weatherdelay", "nasdelay"];
 export function btsIndex2(header) {
   const idx = {};
-  for (const c of [...BTS_REQUIRED, "diverted"]) idx[c] = findCol(header, [c]);
+  for (const c of [...BTS_REQUIRED, "diverted", "crselapsedtime"]) idx[c] = findCol(header, [c]);
   return { idx, missing: BTS_REQUIRED.filter((c) => idx[c] < 0) };
 }
 
@@ -50,6 +50,47 @@ function btsDate(v) {
   return null;
 }
 const nextDate = (d) => new Date(Date.parse(d + "T00:00:00Z") + 24 * HOUR).toISOString().slice(0, 10);
+
+const departureHours = new Map();
+const arrivalDates = new Map();
+const dateFormatters = new Map();
+/** Resolve the arrival's local date from its schedule, not a comparison of clocks in different zones. */
+export function scheduledArrivalDate(date, dep, arr, elapsed, originZone, destZone) {
+  if (!originZone || !destZone || !Number.isInteger(dep) || !Number.isInteger(arr) || dep < 0 || arr < 0) return null;
+  const depHour = Math.floor(dep / 100), depMin = dep % 100;
+  const arrHour = Math.floor(arr / 100), arrMin = arr % 100;
+  if (depHour > 24 || arrHour > 24 || depMin > 59 || arrMin > 59 || depHour === 24 && depMin || arrHour === 24 && arrMin) return null;
+  const key = `${originZone}|${date}|${depHour}`;
+  let start = departureHours.get(key);
+  if (start == null) {
+    start = localToUtc(date, depHour, originZone);
+    if (departureHours.size > 20000) departureHours.clear();
+    departureHours.set(key, start);
+  }
+  start += depMin * 60000;
+  if (elapsed != null && elapsed > 0 && elapsed <= 24 * 60) {
+    const end = start + elapsed * 60000;
+    // US BTS airport zones have whole-hour offsets; cache by UTC hour, including DST transitions.
+    const dk = `${destZone}|${Math.floor(end / HOUR)}`;
+    let day = arrivalDates.get(dk);
+    if (!day) {
+      let fmt = dateFormatters.get(destZone);
+      if (!fmt) { fmt = new Intl.DateTimeFormat("en-US", { timeZone: destZone, year: "numeric", month: "2-digit", day: "2-digit" }); dateFormatters.set(destZone, fmt); }
+      const p = Object.fromEntries(fmt.formatToParts(end).map(x => [x.type, x.value]));
+      day = `${p.year}-${p.month}-${p.day}`;
+      if (arrivalDates.size > 20000) arrivalDates.clear();
+      arrivalDates.set(dk, day);
+    }
+    return day;
+  }
+  // Legacy/synthetic rows without elapsed time: find the next scheduled destination-local time.
+  for (let offset = -1; offset <= 2; offset++) {
+    const day = new Date(Date.parse(date + "T00:00:00Z") + offset * 24 * HOUR).toISOString().slice(0, 10);
+    const end = localToUtc(day, arrHour, destZone) + arrMin * 60000;
+    if (end > start && end - start <= 24 * HOUR) return arrHour === 24 ? nextDate(day) : day;
+  }
+  return null;
+}
 
 /** Side accumulator: [n, late15, late15WxNas, cancelledWxNas, sumDelay(>=0), operated, [late minutes]]. */
 const newSide = () => [0, 0, 0, 0, 0, 0, []];
@@ -69,9 +110,9 @@ function addSide(s, { cancelled, code, delay, wx, nas, diverted }) {
 /**
  * One BTS row into acc (Map "IATA|YYYY-MM-DD|localHour" -> {d: side|undefined, a: side|undefined}):
  * the departure at Origin by CRSDepTime and the arrival at Dest by CRSArrTime (next day when the
- * scheduled arrival clock is earlier than the departure clock). Returns the number of sides kept.
+ * schedule's elapsed time and both airport time zones). Returns the number of sides kept.
  */
-export function btsAdd2(acc, row, idx, wanted) {
+export function btsAdd2(acc, row, idx, wanted, zones = null) {
   const origin = String(row[idx.origin] ?? "").trim();
   const dest = String(row[idx.dest] ?? "").trim();
   const wo = wanted.has(origin);
@@ -93,11 +134,12 @@ export function btsAdd2(acc, row, idx, wanted) {
     addSide(e[side], f);
     kept++;
   };
-  if (wo) put(`${origin}|${date}|${Math.min(23, Math.floor(dep / 100) % 24)}`, "d", { cancelled, code, delay: num(row[idx.depdelay]), wx, nas, diverted: false });
+  if (wo) put(`${origin}|${dep === 2400 ? nextDate(date) : date}|${Math.min(23, Math.floor(dep / 100) % 24)}`, "d", { cancelled, code, delay: num(row[idx.depdelay]), wx, nas, diverted: false });
   const arr = num(row[idx.crsarrtime]);
   if (wd && arr != null) {
-    const aDate = arr < dep ? nextDate(date) : date;
-    put(`${dest}|${aDate}|${Math.min(23, Math.floor(arr / 100) % 24)}`, "a", { cancelled, code, delay: num(row[idx.arrdelay]), wx, nas, diverted });
+    const aDate = zones ? scheduledArrivalDate(date, dep, arr, num(row[idx.crselapsedtime]), zones[origin], zones[dest]) : arr < dep ? nextDate(date) : date;
+    // An unknown origin time zone cannot supply a trustworthy arrival date.
+    if (aDate) put(`${dest}|${aDate}|${Math.floor(arr / 100) % 24}`, "a", { cancelled, code, delay: num(row[idx.arrdelay]), wx, nas, diverted });
   }
   return kept;
 }

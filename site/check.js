@@ -5,8 +5,8 @@
 // Chrome (--dump-dom) and the uptime workflow can read it. Warnings don't fail the check.
 import { loadAirports, rank, decodeList } from "./search.js";
 import { navChecks } from "./navcheck.js?v=5"; // nav hook
-import { tripChecks } from "./check-trips.js?v=5"; // trips hook
-import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=6"; // scenarios hook; More details page helpers
+import { tripChecks } from "./check-trips.js?v=6"; // trips hook
+import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=7"; // scenarios hook; More details page helpers
 
 const P = new URLSearchParams(location.search);
 const MOCK = P.get("mock") === "1";
@@ -215,6 +215,9 @@ async function renderPage(url, expect = [], then = null) {
     if (list && list.querySelector(".card, .empty") && !/Loading airports/.test(list.textContent)) { ready = true; break; }
   }
   await sleep(600); // let searched.js and late errors land
+  const matches = x => doc && (x.selector ? !!doc.querySelector(x.selector) : x.text ? (doc.body.innerText || doc.body.textContent || "").includes(x.text) : false);
+  // Optional modules finish after the first cards; wait for requested visible content, bounded.
+  for (let n = 0; n < 20 && expect.some(x => !matches(x)); n++) await sleep(100);
   const errors = ((f.contentWindow && f.contentWindow.__awxErrors) || []).map((e) => `${e.kind}: ${e.msg}`);
   const results = expect.map((x) => {
     if (!doc) return { x, ok: false };

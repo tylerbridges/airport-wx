@@ -266,6 +266,14 @@ export function parseAdvisory(text, { title = "", href = "", now = new Date() } 
   if (!id) return null;
   return {
     id, type, cnx: isCnx(name) || isCnx(title), airport, ctl: ctl || null,
+    departureScope: (() => {
+      const airports = get("DEP AIRPORTS INCLUDED", "DEPARTURE AIRPORTS INCLUDED");
+      const text = airports || get("DEP FACILITIES INCLUDED", "FLIGHTS INCLUDED");
+      if (!text) return null;
+      const tokens = airports.toUpperCase().split(/[\s,]+/).filter(Boolean);
+      const list = tokens.length && tokens.every(x => /^K?[A-Z]{3}$/.test(x)) ? tokens.map(x => x.replace(/^K(?=[A-Z]{3}$)/, "")) : null;
+      return { text: text.slice(0, 500), airports: /^(ALL|ALL FLIGHTS|ALL AIRPORTS)$/i.test(text.trim()) ? null : list || null, all: /^(ALL|ALL FLIGHTS|ALL AIRPORTS)$/i.test(text.trim()) };
+    })(),
     issued: iso(issued), start: iso(period?.start ?? null), end: iso(period?.end ?? null),
     cause: classifyCause(causeText), causeText: causeText || null,
     extension: ({ LOW: "low", MEDIUM: "medium", MODERATE: "medium", HIGH: "high", NONE: "none", NIL: "none" })[/^(LOW|MEDIUM|MODERATE|HIGH|NONE|NIL)\b/i.exec(get("PROBABILITY OF EXTENSION"))?.[1]?.toUpperCase()] || null,

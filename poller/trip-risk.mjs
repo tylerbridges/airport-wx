@@ -37,6 +37,7 @@ export const STATUS = {
   possible: { label: "Possible delays", cls: "l2" },
   likely: { label: "Delays likely", cls: "l3" },
   disruption: { label: "Disruption", cls: "l4" },
+  weather: { label: "Weather concerns", cls: "l3" },
   unknown: { label: "Data incomplete", cls: "off" },
   early: { label: "Too early to tell", cls: "off" },
   scheduled: { label: "Flight status unconfirmed", cls: "off" },
@@ -255,10 +256,15 @@ export function programsAt(a, t) {
     const x = { kind: p.kind, level: p.level, reason: r, until: null, avg: null, detail: null };
     if (p.kind === "cascade") { out.push({ ...x, hub: p.hub, what: p.what }); continue; }
     const faaType = { gs: "ground_stop", gdp: "ground_delay", delay: "delay", closed: "closure" }[p.kind];
-    const f = (a.faa || []).find((f) => f.type === faaType);
-    const adv = (a.atcscc || []).find((v) => v.active && v.type === (p.kind === "gs" ? "GS" : p.kind === "gdp" ? "GDP" : ""));
+    const covers = v => !(toMs(v.start) > t) && !(toMs(v.end) != null && toMs(v.end) <= t);
+    const f = (a.faa || []).find((f) => f.type === faaType && f.active !== false && covers(f));
+    const adv = (a.atcscc || []).find((v) => v.active && v.type === (p.kind === "gs" ? "GS" : p.kind === "gdp" ? "GDP" : "") && covers(v));
     const item = ((a.opsplan && a.opsplan.items) || []).find((i) => i.text === r || (i.level > 0 && i.kind === "program" && r.startsWith(i.text)));
+    const listed = [...(a.faa || []).filter(v => v.type === faaType), ...(a.atcscc || []).filter(v => v.type === (p.kind === "gs" ? "GS" : p.kind === "gdp" ? "GDP" : ""))];
+    if (listed.length && !f && !adv && !item) continue;
     x.until = toMs((f && f.end) || (adv && adv.end) || (item && item.until)) ?? null;
+    if (x.until != null && t >= x.until) continue;
+    x.departureScope = adv?.departureScope || f?.departureScope || null;
     if (f) { x.detail = f.detail || null; x.avg = avgMinutes(f.detail); }
     out.push(x);
   }
@@ -304,6 +310,19 @@ export function delayWords(p) {
   return x < 0.12 ? "Delays unlikely" : x < 0.25 ? "Small chance of delays" : x < 0.45 ? "Delays possible" : "Delays likely";
 }
 
+function delayImpact(w, words, iata) {
+  const d = w?.delay;
+  if (!d || d.override) return 0;
+  const said = (words && words(d, iata)) || delayWords(d.p);
+  return /^Delays (very )?likely/i.test(said) ? 3 : /^Delays possible/i.test(said) ? 2 : 0;
+}
+/** Exclude only explicitly excluded origins. Center/airline scopes remain unverified. */
+export function programApplies(p, origin) {
+  const scope = p?.departureScope;
+  if (scope?.airports?.length) return scope.airports.includes(origin) ? true : false;
+  return scope?.all ? true : null;
+}
+
 export function tripStatus(trip, byIata, { now = Date.now(), words = null, health = null } = {}) {
   const legs = (trip.legs || []).map((l) => ({ from: l.from, to: l.to, dep: toMs(l.dep), arr: toMs(l.arr) })).sort((x, y) => x.dep - y.dep);
   const get = typeof byIata === "function" ? byIata : (c) => (byIata && byIata[c]) || null;
@@ -312,7 +331,8 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
   const missing = [];
   const qualifications = [];
   const qualify = (a, side, leg) => {
-    const quality = a && health ? health(a)?.quality || "" : "";
+    const pooled = a?.hours?.some(h => h.delay?.modelCoverage === "pooled");
+    const quality = (a && health ? health(a)?.quality || "" : "") || (pooled ? "Airport-specific delay accuracy has not been verified" : "");
     if (quality && !qualifications.some((q) => q.iata === a.iata && q.side === side)) qualifications.push({ iata: a.iata, quality, side, leg });
     return quality;
   };
@@ -396,6 +416,9 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
     { // A passed scheduled departure does not establish takeoff. Keep applicable programs.
       // at the arrival airport, at the departure time: flights to it are held at their origin
       if (X) for (const p of programsAt(X, leg.dep)) {
+        if (programApplies(p, leg.from) === false) continue;
+        if ((p.kind === "gs" || p.kind === "gdp") && programApplies(p, leg.from) == null) add({ level: 0, kind: "note", side: "dep", iata: leg.to, leg: i, key: `scope-${leg.to}-${i}`,
+          short: null, text: `${leg.to}: the FAA program's scope has not been verified for your flight. Check your airline for an assigned departure time.` });
         const until = untilText(p, X.tz, now);
         if (p.kind === "gdp") {
           add({ level: 3, kind: "program", side: "dep", iata: leg.to, leg: i, key: `gdp-${leg.to}-${i}`, short: `${leg.to} ground delay program`,
@@ -414,8 +437,8 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
         const until = untilText(p, F.tz, now);
         const side = connIn ? "conn" : "dep";
         if (p.kind === "gs") {
-          add({ level: 4, kind: "program", side, iata: leg.from, leg: i, key: `gsdep-${leg.from}-${i}`, short: `${leg.from} ground stop`,
-            text: `${leg.from} ground stop${until} — flights at ${leg.from} are disrupted and your ${depClock} departure may be delayed.` });
+          add({ level: 0, kind: "note", side, iata: leg.from, leg: i, key: `gsdep-${leg.from}-${i}`, short: null,
+            text: `${leg.from} has an arrival ground stop${until}. Check your airline for effects on outbound flights.` });
         } else if (p.kind === "closed") {
           add({ level: 4, kind: "program", side, iata: leg.from, leg: i, key: `closed-${leg.from}`, short: `${leg.from} closed`,
             text: `${leg.from} is closed${until} — your ${depClock} departure is likely delayed or cancelled.` });
@@ -466,14 +489,14 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
       const intl = isIntl(F) || isIntl(X) || isIntl(get(next.to));
       const tight = intl ? TIGHT_INTL_MIN : TIGHT_DOMESTIC_MIN;
       const w = windowAt(X, leg.arr);
-      const progs = [...programsAt(X, leg.dep), ...programsAt(X, leg.arr)].filter((p) => p.kind === "gs" || p.kind === "gdp" || p.kind === "delay" || p.kind === "closed");
+      const progs = [...programsAt(X, leg.dep), ...programsAt(X, leg.arr)].filter((p) => programApplies(p, leg.from) !== false && (p.kind === "gs" || p.kind === "gdp" || p.kind === "delay" || p.kind === "closed"));
       out.conn = { iata: leg.to, minutes: connMin, tight: connMin < tight, level: w ? w.level : null };
       const nextClock = whenText(next.dep, X.tz, now);
       if (connMin < tight && ((w && w.level >= 2) || progs.length)) {
         const p = progs.sort((x, y) => y.level - x.level)[0];
         const why = p ? `${leg.to} has ${p.kind === "delay" ? "delays" : p.kind === "closed" ? "a closure" : "a " + PROGRAM_NAME[p.kind]} in effect`
           : `${leg.to} is at ${LEVEL_LABELS[w.level]} risk around then${w.reasons[0] ? " (" + lower(w.reasons[0]) + ")" : ""}`;
-        const level = p && (p.kind === "gs" || p.kind === "closed") ? 4 : (p && p.kind === "gdp") || (w && w.level >= 3) ? 3 : 2;
+        const level = p && (p.kind === "gs" || p.kind === "closed") ? 4 : (p && p.kind === "gdp") || delayImpact(w, words, X.iata) >= 3 ? 3 : 2;
         add({ level, kind: "connection", side: "conn", iata: leg.to, leg: i, key: `conn-${i}`, short: `tight connection at ${leg.to}`,
           text: `Tight connection at ${leg.to}: ${connMin} min to make your ${nextClock} flight to ${next.to}, and ${why} — a late arrival could mean a missed connection.` });
       } else if (connMin < tight / 2 && connMin >= 0) {
@@ -489,9 +512,10 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
     if (w.wxLevel >= 1) {
       const reason = w.reasons[0] || (w.wxLevel ? "Minor weather" : "");
       add({ level: w.wxLevel, kind: "weather", side, iata: A.iata, leg: legIdx, key: `wx-${A.iata}-${side}-${legIdx}`, short: `${lower(reason)} at ${A.iata}`,
+        delayLevel: delayImpact(w, words, A.iata),
         text: `${cap(reason)} at ${A.iata} ${when}${said ? ` — ${said.charAt(0).toLowerCase() + said.slice(1)}` : ""}.` });
     } else if (d && d.p >= 0.35) {
-      add({ level: d.p >= 0.5 ? 2 : 1, kind: "weather", side, iata: A.iata, leg: legIdx, key: `wx-${A.iata}-${side}-${legIdx}`, short: `delays possible at ${A.iata}`,
+      add({ level: delayImpact(w, words, A.iata) || 1, delayLevel: delayImpact(w, words, A.iata), kind: "weather", side, iata: A.iata, leg: legIdx, key: `wx-${A.iata}-${side}-${legIdx}`, short: `delays possible at ${A.iata}`,
         text: `${said} at ${A.iata} ${when}.` });
     }
   }
@@ -527,6 +551,9 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
     : qualifications.length ? "Some airport data is unavailable" : missing.length ? "Some airports have no data yet" : unknown.length ? "Some flight times have no forecast yet" : "";
   const level = Math.max(0, ...concerns.map((c) => c.level));
   let key = level >= 4 ? "disruption" : level === 3 ? "likely" : level === 2 ? "possible" : "ok";
+  const impact = Math.max(0, ...concerns.map(c => c.kind === "weather" ? c.delayLevel || 0 : c.level));
+  if (level >= 3 && impact < 3) key = "weather";
+  else if (key === "disruption" && impact < 4) key = impact >= 3 ? "likely" : "possible";
   const expiredCoverage = unknown.some((u) => u.at <= now);
   if (past) key = "past";
   else if (level < 2 && (missing.length || qualifications.length || expiredCoverage)) key = "unknown";
@@ -540,13 +567,13 @@ export function tripStatus(trip, byIata, { now = Date.now(), words = null, healt
     : key === "scheduled" ? "The scheduled departure time has passed; actual flight progress is unconfirmed."
     : key === "early" ? `Airport forecasts cover the next 24 hours — check back after ${first ? whenText(first.dep - 24 * HOUR, tzOf(first.from), now) : "tomorrow"}.`
     : quality ? `${quality}. Check your airline for the latest flight status.`
-    : "No weather or FAA issues expected around your flight times.";
+    : concerns[0] ? concerns[0].text : "No weather or FAA issues expected around your flight times.";
   const side = (s) => {
     const level = Math.max(0, ...concerns.filter((c) => c.side === s).map((c) => c.level));
     return level || !(qualifications.some((q) => q.side === s) || unknown.some((u) => u.side === s) || missing.length) ? level : null;
   };
   return {
-    status: key, label: STATUS[key].label, cls: STATUS[key].cls, level, top,
+    status: key, label: STATUS[key].label, cls: key === "weather" ? `l${level}` : STATUS[key].cls, level, top,
     short: concerns[0] && concerns[0].level >= 1 ? concerns[0].short : null,
     concerns, legs: legOut, unknown, missing, quality, qualifications, scheduleNote,
     sides: { dep: side("dep"), arr: side("arr"), conn: legs.length > 1 ? side("conn") : null },

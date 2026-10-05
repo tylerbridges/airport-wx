@@ -50,6 +50,19 @@ test("delay words: low-skill airports are capped at 'Delays possible'", () => {
   assert.equal(W(0.18, {}, { iata: "SFO" }).word, "Small chance of delays", "lower words unchanged");
 });
 
+test("unvalidated airports never borrow calibrated confidence or a usual-airport comparison", () => {
+  for (const p of [0.05, 0.55, 0.8]) {
+    const L = W(p, { modelCoverage: "pooled", pTypical: 0.2 });
+    assert.equal(L.key, "unknown");
+    assert.equal(L.word, "Delay forecast uncertain");
+    assert.equal(L.cue, "");
+    assert.equal(L.size, "");
+  }
+  assert.equal(W(0.55, {}, { iata: "BZN" }).key, "unknown");
+  assert.equal(W(0.55, { typicalScope: "pooled", pTypical: 0.2 }).cue, "");
+  assert.equal(W(1, { override: "ground_stop", modelCoverage: "pooled" }).key, "now", "confirmed FAA programs remain visible");
+});
+
 test("delay words: an FAA program in effect wins, with the FAA average", () => {
   const L = D.likelihood({ p: 1, override: "ground_stop", minutes: 49, minutesFrom: "faa" }, { report: REPORT, aviation: false, iata: "SFO" });
   assert.equal(L.key, "now");

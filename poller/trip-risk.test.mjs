@@ -51,18 +51,51 @@ test("GDP at the destination: flights there are held at the origin", () => {
   assert.equal(scheduled.legs[0].departed, undefined);
 });
 
-test("ground stop at the origin", () => {
+test("an arrival ground stop at the origin does not establish an outbound restriction", () => {
   const MSP = ap("MSP", "America/Chicago", span(0, 3, [4, ["Ground stop — equipment outage, until 8 PM CT", "Rain"]]), {
     faa: [{ type: "ground_stop", reason: "equipment", detail: "until 8 PM CT", cause: "equipment", end: at(4) }],
   });
   const ATL = ap("ATL", "America/New_York");
   const r = tripStatus({ legs: [{ from: "MSP", to: "ATL", dep: at(1, 30), arr: at(4) }] }, by(MSP, ATL), { now: NOW });
-  assert.equal(r.label, "Disruption");
-  assert.equal(r.status, "disruption");
-  assert.equal(r.top, "MSP ground stop until 8 PM — flights at MSP are disrupted and your 5:30 PM departure may be delayed.");
+  assert.equal(r.label, "On track");
+  assert.equal(r.status, "ok");
+  assert.ok(r.concerns.some(c => c.level === 0 && /arrival ground stop/.test(c.text)));
+  assert.ok(!r.concerns.some(c => c.kind === "program" && c.side === "dep"));
   // the rain is its own, lower concern
   assert.ok(r.concerns.some((c) => c.kind === "weather" && c.level === 1 && /^Rain at MSP/.test(c.text)));
   assert.deepEqual(r.concerns.map((c) => c.level), [...r.concerns.map((c) => c.level)].sort((a, b) => b - a), "ordered by severity");
+});
+
+test("weather severity alone does not claim delays likely or confirmed disruption", () => {
+  const flight = { legs: [{ from: "MSP", to: "ATL", dep: at(2), arr: at(4) }] };
+  const ATL = ap("ATL", "America/New_York");
+  const low = ap("MSP", "America/Chicago", span(0, 4, [3, ["Ceiling 400 ft"], { p: 0.1 }]));
+  const r = tripStatus(flight, by(low, ATL), { now: NOW, words: () => "Delays unlikely" });
+  assert.equal(r.label, "Weather concerns");
+  assert.equal(r.level, 3, "retain weather severity");
+  assert.match(r.top, /Very low clouds/);
+  assert.equal(tripStatus(flight, by(low, ATL), { now: NOW }).label, "Weather concerns");
+  low.hours.forEach(h => { h.delay = { p: 0.7 }; });
+  assert.equal(tripStatus(flight, by(low, ATL), { now: NOW, words: () => "Delays likely" }).label, "Delays likely");
+  assert.equal(tripStatus(flight, by(low, ATL), { now: NOW, words: () => "Delays possible" }).label, "Weather concerns", "respect calibrated caps");
+});
+
+test("destination program scope and exact expiry constrain the affected trip", () => {
+  const flight = { legs: [{ from: "MSP", to: "ORD", dep: at(2, 30), arr: at(4) }] };
+  const MSP = ap("MSP", "America/Chicago");
+  const ORD = ap("ORD", "America/Chicago", span(0, 4, [4, ["Ground stop until 8 PM"]]), {
+    faa: [{ type: "ground_stop", end: at(4) }],
+    atcscc: [{ type: "GS", active: true, start: at(0), end: at(4), departureScope: { airports: ["JFK"], all: false } }],
+  });
+  let r = tripStatus(flight, by(MSP, ORD), { now: NOW });
+  assert.ok(!r.concerns.some(c => c.kind === "program" && c.iata === "ORD"));
+  ORD.atcscc[0].departureScope.airports.push("MSP");
+  assert.equal(tripStatus(flight, by(MSP, ORD), { now: NOW }).label, "Disruption");
+  ORD.atcscc[0].end = ORD.faa[0].end = at(2, 15);
+  assert.ok(!tripStatus(flight, by(MSP, ORD), { now: NOW }).concerns.some(c => c.kind === "program"), "expired mid-hour does not apply");
+  ORD.atcscc = []; ORD.faa[0].end = at(4);
+  r = tripStatus(flight, by(MSP, ORD), { now: NOW });
+  assert.ok(r.concerns.some(c => /scope has not been verified/.test(c.text)), "unknown facility/airline scope remains qualified");
 });
 
 test("tight connection at an airport with Moderate risk", () => {
@@ -214,8 +247,8 @@ test("shared airport health: observation gaps affect the relevant airport, not e
 });
 
 test("shared airport health: known disruption and weather survive stale/source qualifications", () => {
-  const airport = ap("MSP", "America/Chicago", span(0, 4, [4, ["Ground stop — equipment outage, until 8 PM CT", "Rain"]]), {
-    metar: { obsTime: at(0) }, taf: { issued: at(0) }, faa: [{ type: "ground_stop", detail: "until 8 PM CT", end: at(4) }],
+  const airport = ap("MSP", "America/Chicago", span(0, 4, [4, ["Airport closed until 8 PM CT", "Rain"]]), {
+    metar: { obsTime: at(0) }, taf: { issued: at(0) }, faa: [{ type: "closure", detail: "until 8 PM CT", end: at(4) }],
   });
   for (const opts of [{ generated: at(-1) }, { sources: { ...healthySources, taf: { ok: false } } }]) {
     const r = tripStatus(quietTrip, by(airport, healthyAirport("ATL")), { now: NOW, health: healthFor(opts) });
@@ -223,7 +256,7 @@ test("shared airport health: known disruption and weather survive stale/source q
     assert.equal(r.level, 4);
     assert.equal(r.sides.dep, 4);
     assert.equal(r.legs[0].depAt.level, 4);
-    assert.match(r.top, /ground stop/);
+    assert.match(r.top, /closed/);
     assert.ok(r.concerns.some((c) => c.kind === "weather"));
     assert.ok(r.concerns.some((c) => c.kind === "note" && c.quality));
   }
@@ -264,13 +297,13 @@ test("real source-outage and stale-data scenarios qualify Trips just like the ai
 });
 
 test("scheduled departure and arrival passing never confirms progress or suppresses covered disruption", () => {
-  const MSP = ap("MSP", "America/Chicago", span(0, 5, [4, ["Ground stop — equipment outage, until 9 PM CT"]]));
+  const MSP = ap("MSP", "America/Chicago", span(0, 5, [4, ["Airport closed until 9 PM CT"]]));
   const ATL = ap("ATL", "America/New_York");
   const trip = { legs: [{ from: "MSP", to: "ATL", dep: at(1), arr: at(3) }] };
   for (const h of [0, 1, 1.5, 3, 3.75, 6]) {
     const r = tripStatus(trip, by(MSP, ATL), { now: NOW + h * H });
     assert.equal(r.status, "disruption", `at schedule+${h}h`);
-    assert.match(r.top, /MSP ground stop/);
+    assert.match(r.top, /MSP is closed/);
     assert.equal(r.legs[0].scheduledDepPassed, h >= 1);
     assert.equal(r.legs[0].scheduledArrPassed, h >= 3);
     assert.equal(r.legs[0].landed, undefined);

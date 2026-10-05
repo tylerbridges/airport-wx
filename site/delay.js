@@ -136,6 +136,11 @@ export function likelihood(d, opts = {}) {
     return { key: "now", word: "Delays happening now", sentence: "Delays happening now" + (avg ? " · " + avg : ""), cue: "", rate: 1, size: avg };
   }
   const { rate, bin } = calibrate(Number(d.p), report);
+  const support = report && (report.displaySupport || report.test);
+  const ap = opts.iata && support && support.byAirport && support.byAirport[opts.iata];
+  if (d.modelCoverage === "pooled" || report && opts.iata && !ap) {
+    return { key: "unknown", word: "Delay forecast uncertain", sentence: "Delay forecast uncertain · no airport-specific accuracy history", cue: "", rate, size: "" };
+  }
   const typ = d.pTypical != null ? Number(d.pTypical) : null;
   let key;
   if (rate < 0.12) key = "unlikely";
@@ -146,18 +151,16 @@ export function likelihood(d, opts = {}) {
   const small = !!report && (!bin || !(bin.n >= MIN_BIN));
   if (key === "very" && !(bin && bin.rate >= 0.7 && bin.n >= MIN_BIN)) key = "likely"; // the one step down for this bin
   else if (small) key = STEP_DOWN[key];
-  const support = report && (report.displaySupport || report.test);
-  const ap = opts.iata && support && support.byAirport && support.byAirport[opts.iata];
   const skill = ap && ap.bss ? ap.bss.climo : null;
   if (skill != null && skill <= LOW_SKILL && RANK[key] > RANK.possible) key = "possible";
-  const cue = typ > 0 ? (rate >= 1.25 * typ ? "higher than usual" : rate <= 0.75 * typ ? "lower than usual" : "") : "";
+  const cue = typ > 0 && d.typicalScope !== "pooled" ? (rate >= 1.25 * typ ? "higher than usual" : rate <= 0.75 * typ ? "lower than usual" : "") : "";
   const word = WORD[key] + (aviation ? ` (${Math.round(rate * 100)}%)` : "");
   const size = key !== "unlikely" ? minutesRange(d.minutes) : "";
   return { key, word, sentence: word + (cue ? " · " + cue : ""), cue, rate, size };
 }
 /** Routine airport delay rates do not count as an operational disruption. */
 export function notable(d, level, L) {
-  if (!L || ["unlikely", "small", "usual"].includes(L.key)) return false;
+  if (!L || ["unknown", "unlikely", "small", "usual"].includes(L.key)) return false;
   return L.key === "now" || level > 0 || /^possible_/.test(d?.override || "") || L.cue === "higher than usual" && L.rate >= 0.45;
 }
 /** The band of an observed share (the same cut-offs as likelihood(), without calibration or caps). */
@@ -342,7 +345,7 @@ export function whyBlock(a, now = refNow()) {
         ? `Across airports, warnings like this were followed by delays ${inTen(bin.rate)} times.`
         : `Across airports, hours given this outlook had delays ${inTen(bin.rate)} times.`));
     }
-    if (d.pTypical != null && L.key !== "now") kids.push(el("div", "dl-analog", `On a typical day at this hour, delays happen ${inTen(d.pTypical)} times.`));
+    if (d.pTypical != null && d.typicalScope !== "pooled" && L.key !== "now") kids.push(el("div", "dl-analog", `On a typical day at this hour, delays happen ${inTen(d.pTypical)} times.`));
   }
   kids.push(sourceLine());
   const link = document.createElement("a");
@@ -393,9 +396,10 @@ export function delayBlock(a, i, opts = {}) {
   if (an && analogAgrees(d.analog, L)) why.push(el("div", "dl-analog", an));
   const { bin } = calibrate(Number(d.p));
   if (L.key !== "now" && bin && bin.rate != null && bin.n) why.push(el("div", "dl-analog", `Across airports, warnings like this were followed by delays ${inTen(bin.rate)} times.`));
-  if (d.pTypical != null && L.key !== "now") why.push(el("div", "dl-analog", `On a typical day at this hour, delays happen ${inTen(d.pTypical)} times.`));
+  if (d.pTypical != null && d.typicalScope !== "pooled" && L.key !== "now") why.push(el("div", "dl-analog", `On a typical day at this hour, delays happen ${inTen(d.pTypical)} times.`));
   why.push(sourceLine());
   kids.push(aviation ? el("div", "dl-why", ...why) : el("div", "dl-srcline", "Airport-wide weather and air traffic control risk · forecast estimate"));
+  if (d.modelCoverage === "pooled") kids.push(el("div", "dl-srcline", "No airport-specific delay accuracy history; estimate uses other airports."));
   if (!aviation && window.AWXApp?.state.data?.delayModel?.basis !== "model") kids.push(sourceLine());
   return el("div", "dl-block", ...kids);
 }

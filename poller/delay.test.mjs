@@ -70,7 +70,8 @@ test("bucketOf, localParts, typicalRate", () => {
   assert.equal(bucketOf(30), "12-24");
   assert.deepEqual(localParts(H0, "America/Chicago"), { y: 2026, mo: 7, d: 14, h: 16, dw: 2 });
   assert.deepEqual(typicalRate(FALLBACK, "ORD", 7, 16), { p: 0.22, scope: "hour" });
-  assert.deepEqual(typicalRate(FALLBACK, "MSP", 7, 16), { p: 0.18, scope: "airport" });
+  assert.deepEqual(typicalRate(FALLBACK, "MSP", 7, 16), { p: 0.18, scope: "pooled" });
+  assert.deepEqual(typicalRate({ base: { all: 0.2 } }, "BZN", 7, 16), { p: 0.2, scope: "pooled" });
 });
 
 test("calibrate: interpolates between knots, flat outside, monotone", () => {

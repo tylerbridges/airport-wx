@@ -1,0 +1,24 @@
+{
+  "title": "Trip: arrival ground stop at departure airport",
+  "blurb": "MSP arrival ground stop alone does not ground your MSP\u2192ATL departure.",
+  "description": "An inbound MSP ground stop is informational for an outbound MSP\u2192ATL flight; scheduled times never establish actual flight progress.",
+  "group": "trips",
+  "at": "2026-10-04T18:00:00Z",
+  "assert": [
+    {
+      "t": "trips",
+      "count": 1,
+      "configured": true
+    },
+    {
+      "t": "trip",
+      "i": 0,
+      "status": "On track",
+      "re": "arrival ground stop"
+    },
+    {
+      "t": "rendered",
+      "text": "On track"
+    }
+  ]
+}

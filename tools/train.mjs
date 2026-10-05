@@ -431,6 +431,7 @@ export async function train(opts) {
   const w = {};
   for (const [name, j] of rows.vocab) if (mask[j] && Math.abs(fit.w[j]) > 1e-6) w[name] = r4(fit.w[j]);
   const model = {
+    airports: aps,
     v: 1, spec: SPEC, trained: now.toISOString(), date, fixtures: !!fx, since, through, months: months.length,
     train: { from: split.train[0], to: split.train[split.train.length - 1] }, test: { from: split.test[0], to: split.test[split.test.length - 1] },
     calibratedOn: { from: vb.val[0], to: vb.val[vb.val.length - 1] },

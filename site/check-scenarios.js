@@ -294,12 +294,17 @@ export async function pageAsserts(add, w, doc, asserts) {
     switch (x.t) {
       case "card": {
         await showAll();
-        const c = doc.querySelector(`#list .card[data-iata="${x.iata}"]`);
+        let c = doc.querySelector(`#list .card[data-iata="${x.iata}"]`);
         if (c) {
           c.scrollIntoView({ block: "center" });
           c.style.contentVisibility = "visible"; // Hidden QA frames cannot trigger viewport rendering.
           A.ensureCardTimeline?.(c);
           await later(w, 30);
+        }
+        // Card modules (traffic, delay words) may finish after the initial airport render.
+        for (let n = 0; n < 15 && c && !re(x.re).test(c.innerText.replace(/\s+/g, " ")); n++) {
+          await later(w, 100);
+          c = doc.querySelector(`#list .card[data-iata="${x.iata}"]`);
         }
         const t = c ? c.innerText.replace(/\s+/g, " ") : "";
         ok = !!c && re(x.re).test(t);

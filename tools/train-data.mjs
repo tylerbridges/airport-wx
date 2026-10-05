@@ -42,7 +42,20 @@ const isoZ = (ms) => new Date(ms).toISOString().slice(0, 16) + "Z";
 // ---------- BTS step ----------
 
 /** Lines (async iterable) of one BTS month -> accumulator entries for the wanted airports. */
-export async function aggregateBts(lines, wanted) {
+let airportZones;
+async function loadAirportZones() {
+  if (!airportZones) airportZones = (async () => {
+    const curated = JSON.parse(await readFile(join(ROOT, "airports.json"), "utf8"));
+    const zones = Object.fromEntries(curated.map(a => [a.iata, a.tz]));
+    const catalog = JSON.parse(await readFile(join(ROOT, "site/data/airports-all.json"), "utf8"));
+    const f = Object.fromEntries(catalog.f.map((k, i) => [k, i]));
+    for (const r of catalog.a) if (r[f.iata] && r[f.tz] >= 0) zones[r[f.iata]] ||= catalog.tz[r[f.tz]];
+    return zones;
+  })();
+  return airportZones;
+}
+export async function aggregateBts(lines, wanted, zones = null) {
+  zones ||= await loadAirportZones();
   const acc = new Map();
   let idx = null;
   let header = null;
@@ -62,7 +75,7 @@ export async function aggregateBts(lines, wanted) {
     if (!line) continue;
     if (sample.length < 3) sample.push(line);
     rows++;
-    kept += btsAdd2(acc, parseCsvLine(line), idx, wanted);
+    kept += btsAdd2(acc, parseCsvLine(line), idx, wanted, zones);
   }
   if (!idx) throw new Error("BTS file is empty");
   return { entries: accEntries(acc), rows, kept, header, sample: sample.join("\n") + "\n" };
