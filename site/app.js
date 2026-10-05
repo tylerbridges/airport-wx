@@ -1757,8 +1757,8 @@
     if (f.type === "delay") text = delayText(f.detail) + (why ? ` (${why})` : "");
     else if (f.type === "ground_delay") {
       const avg = /avg ([^,]+)/.exec(f.detail || ""), max = /max ([^,]+)/.exec(f.detail || "");
-      text = "Flights to " + codeOf(a) + " are held before departure" + (avg ? `: about ${durTxt(avg[1])} on average` : "") + (max ? `, up to ${durTxt(max[1])}` : "") + (why ? ` (${why})` : "");
-    } else text = "Flights to " + codeOf(a) + " are held at their departure airports" + (why ? ` (${why})` : "");
+      text = "Arrivals are held at their departure airports" + (avg ? `: about ${durTxt(avg[1])} on average` : "") + (max ? `, up to ${durTxt(max[1])}` : "") + (why ? ` (${why})` : "");
+    } else text = "Arrivals are held at their departure airports" + (why ? ` (${why})` : "");
     if (compact && !current) text = text.replace("are held", "are scheduled to be held");
     const until = /until [^,]+$/.exec(f.detail || "");
     const end = f.end ? "until " + whenLabel(Date.parse(f.end), dispTz(a)) : until ? retime(until[0], a) : "until further notice";

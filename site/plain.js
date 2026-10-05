@@ -241,8 +241,8 @@ export function travelerImpact(level, conditions = {}) {
   const faa = Array.isArray(conditions?.faa) ? conditions.faa : [];
   const types = new Set(faa.filter((f) => !(f.type === "closure" && (f.scope === "limited" || f.scope === "runway" || f.active === false))).map((f) => f.type));
   if (types.has("closure")) return "The airport is closed — expect cancellations or diversions until it reopens";
-  if (types.has("ground_stop")) return "Flights to this airport are being held at their departure airports (ground stop) — delays likely";
-  if (types.has("ground_delay")) return "Flights to this airport are being delayed before departure (ground delay program) — delays likely";
+  if (types.has("ground_stop")) return "Arrivals are being held at their departure airports (ground stop) — delays likely";
+  if (types.has("ground_delay")) return "Arrivals are being delayed at their departure airports (ground delay program) — delays likely";
   const toks = wxTokens(c.wx);
   const has = (code, nearOk = false) => toks.some((t) => (nearOk || t.int !== "VC") && (t.desc.includes(code) || t.ph.includes(code)));
   if (has("TS") || has("FC")) return "Storms can pause departures and arrivals (ground stops) — expect delays";

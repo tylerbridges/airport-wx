@@ -37,7 +37,7 @@
       if (f.type === "closure") { add("Arrivals & departures", current ? "Airport closed to flights" : "Airport closure scheduled"); continue; }
       if (f.type === "ground_stop" || f.type === "ground_delay") {
         const avg = /avg ([^,;]+)/i.exec(f.detail || "")?.[1];
-        add("Flights to this airport", (current ? "Held before departure" : "Scheduled to be held before departure") + (avg ? " · FAA average " + avg.replace(/(\d+)h\s*(\d+)m/g, "$1 hr $2 min").replace(/(\d+)m\b/g, "$1 min").replace(/(\d+)h\b/g, "$1 hr") : ""));
+        add("Arrivals", (current ? "Held at their departure airports" : "Scheduled to be held at their departure airports") + (avg ? " · FAA average " + avg.replace(/(\d+)h\s*(\d+)m/g, "$1 hr $2 min").replace(/(\d+)m\b/g, "$1 min").replace(/(\d+)h\b/g, "$1 hr") : ""));
         continue;
       }
       for (const part of String(f.detail || "").split(/;\s*/)) {
@@ -147,7 +147,7 @@
       kind = current ? "active" : "forecast";
       headline = first.type === "closure" ? current ? "Airport closed" : "Airport closure scheduled"
         : first.type === "ground_stop" ? current ? "Ground Stop" : "Ground Stop scheduled"
-        : first.type === "ground_delay" ? current ? "Flights to " + a.iata + " delayed" : "Arrival delay program scheduled"
+        : first.type === "ground_delay" ? current ? "Arrivals delayed" : "Arrival delay program scheduled"
         : impacts.length === 1 ? impacts[0].label + (current ? " delayed" : " delays scheduled") : current ? "Flight delays in effect" : "Flight delays scheduled";
       level = Math.max(level, first.type === "closure" || first.type === "ground_stop" ? 4 : first.type === "ground_delay" ? 3 : 2);
     } else if (!h) { kind = "unknown"; headline = "Forecast unavailable for this time"; level = null; }
