@@ -217,8 +217,13 @@ export function parseOpsPlan(input) {
   const rules = lines.map((l, i) => (/^_{10,}$/.test(l) ? i : -1)).filter((i) => i >= 0);
   const remarks = rules.length >= 2 ? lines.slice(rules[0] + 1, rules[1]).filter(Boolean).join(" ").replace(/\s+/g, " ") : null;
   // narrative sentences about delays or deviations, with the 3-letter codes they name ("TPA AND MCO …")
-  const notes = (remarks || "").split(/(?<=\.)\s+/).filter((x) => /\bDELAY|\bDEVIAT/.test(x))
-    .map((x) => ({ text: x.trim(), codes: [...new Set(x.match(/\b[A-Z][A-Z0-9]{2}\b/g) || [])], continuing: /\bCONTINU|\bSOME TIME\b|\bLATER\b/.test(x), raw: x.trim() }));
+  const notes = (remarks || "").split(/(?<=\.)\s+/).filter((x) => {
+      if (!/\bDELAY|\bDEVIAT|\bHOLDING/.test(x)) return false;
+      const residual = /\bCONTINU|\bSTILL\b|\bREMAIN|\bONGOING|\bPOSSIBLE\b/.test(x);
+      const recovery = /\bNO LONGER\b|\bNOT (?:EXPECTED|ANTICIPATED)\b|\bNO ISSUES\b|\bNO (?:\w+ )?DELAYS\b|\b(?:REDUCED|ENDED|CLEARED|CANCELLED|CANCELED|RESOLVED)\b/.test(x);
+      return !recovery || residual;
+    })
+    .map((x) => ({ text: x.trim(), codes: [...new Set(x.match(/\b[A-Z][A-Z0-9]{2}\b/g) || [])], possible: /\bPOSSIBLE\b|\bMAY\b/.test(x), continuing: /\bCONTINU|\bSOME TIME\b|\bLATER\b/.test(x), raw: x.trim() }));
 
   const sections = {};
   let key = null;
@@ -307,7 +312,7 @@ export function opsPlanFor(plan, iata, now = new Date(), known = null) {
     programs: plan.programs.filter((x) => has(x) && x.program !== "other" && live(x, now)).map(strip),
     sirs: plan.sirs.filter((x) => has(x) && live(x, now)).map(strip),
     notes: (plan.notes || []).filter((n) => n.codes.includes(iata))
-      .map((n) => ({ text: n.text, airports: n.codes.filter((c) => codes.has(c) && !/^Z[A-Z]{2}$/.test(c)).sort(), continuing: n.continuing, raw: n.raw })),
+      .map((n) => ({ text: n.text, airports: n.codes.filter((c) => codes.has(c) && !/^Z[A-Z]{2}$/.test(c)).sort(), possible: !!n.possible, continuing: n.continuing, raw: n.raw })),
   };
   return out.staffing.length || out.constraints.length || out.programs.length || out.sirs.length || out.notes.length ? out : null;
 }

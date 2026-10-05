@@ -390,7 +390,7 @@ export function opsPlanItems(op, { faa = [], atcscc = [], tz = "UTC", now = new 
   const validEnd = toMs(op.plan?.validEnd);
   for (const n of op.notes || []) {
     const where = (n.airports || []).join("/");
-    const text = `FAA reports delays${where ? " at " + where : ""}${n.continuing ? " expected to continue" : ""}`;
+    const text = `FAA reports ${n.possible ? "possible delays" : "delays"}${where ? " at " + where : ""}${n.continuing ? " expected to continue" : ""}`;
     const to = validEnd != null && validEnd > +now ? validEnd : +now + 2 * HOUR;
     out.push({ kind: "note", level: 2, text, cause: classifyCause(n.raw), until: null, raw: n.raw, at: "span", from: -Infinity, to });
   }

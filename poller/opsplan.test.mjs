@@ -221,3 +221,17 @@ test("ops plan narrative (real page): delays at MCO/TPA expected to continue -> 
   assert.equal(opsPlanFor(p, "SEA", NOW).notes.length, 0);
   assert.equal(opsPlanFor(p, "ATL", NOW).notes.length, 0);
 });
+
+test("FAA narrative: recovery is not an active delay; residual and possible holding remain", async () => {
+  const html = await realPage();
+  const withNote = text => parseOpsPlan(html.replace(/ZJX REPORTS[\s\S]*?(?=_{10})/, text + "\n"));
+  for (const text of ["ZTL ANTICIPATES NO ISSUES WITH ATL, DEPARTURE DELAYS WERE REDUCED WITH GATES OPENING.", "ATL DELAYS HAVE ENDED.", "ATL DELAYS CANCELLED.", "ATL DELAYS ARE NO LONGER EXPECTED.", "ATL HAS NO DEPARTURE DELAYS."]) {
+    assert.equal(withNote(text).notes.length, 0, text);
+  }
+  for (const text of ["ATL DELAYS REDUCED BUT CONTINUE.", "ATL DELAYS CONTINUE.", "ATL POSSIBLE HOLDING."]) {
+    const op = opsPlanFor(withNote(text), "ATL", NOW);
+    const note = opsPlanItems(op, {now: NOW}).find(x => x.kind === "note");
+    assert.ok(note, text);
+    if (/POSSIBLE/.test(text)) assert.match(note.text, /possible delays/);
+  }
+});

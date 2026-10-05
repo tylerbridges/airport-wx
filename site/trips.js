@@ -10,11 +10,11 @@
 //   - manual trips (stored only on this device, localStorage "awx-trips"), and the Trips settings sheet
 //     (flight calendar status and how to connect it).
 // Calendar trips come from data/trips.json (airports and times only); concerns from ./trip-risk.js.
-import { tripStatus, flightLine, rolesAt, clockText, whenText, rangeText, LEVEL_LABELS, STATUS, TRIP_KEEP_AFTER_ARRIVAL_MS } from "./trip-risk.js?v=5";
+import { tripStatus, flightLine, rolesAt, clockText, whenText, rangeText, LEVEL_LABELS, STATUS, TRIP_KEEP_AFTER_ARRIVAL_MS } from "./trip-risk.js?v=6";
 import { mountSearch, loadAirports, airportsLoaded, placeLine } from "./search.js";
 import { calendarDraft, nextScheduled, MAX_CALENDAR_BYTES, flightKey } from "./trip-import.js?v=1";
 
-import { CALENDAR_KEY, loadConnection, saveConnection, fetchCalendar } from "./calendar-link.js?v=1";
+import { CALENDAR_KEY, loadConnection, saveConnection, fetchCalendar } from "./calendar-link.js?v=2";
 
 const KEY = "awx-trips";
 const HOUR = 3600e3;
@@ -786,12 +786,12 @@ function connectView() {
       h("button", { type: "submit", class: "tbtn primary", disabled: S.connectBusy }, S.connectBusy ? "Connecting…" : S.connection ? "Replace calendar" : "Connect calendar")),
     S.connectError ? h("p", { role: "alert", class: "terr" }, S.connectError) : null,
     h("details", { class: "sec" },
-      h("summary", { class: "tbtn", style: "min-height:44px;display:flex;align-items:center;cursor:pointer" }, "Get a link from Flighty"),
+      h("summary", { class: "tbtn", style: "min-height:44px;display:flex;align-items:center;cursor:pointer" }, "Connect Flighty through iCloud"),
       h("ol", { class: "muted", style: "padding-left:20px;line-height:1.4" },
-        h("li", {}, "Flighty → Settings → Calendar Sync → enable Calendar Export to a dedicated flight calendar."),
-        h("li", {}, "Apple Calendar → Calendars → info beside that calendar → Public Calendar → Share Link."),
-        h("li", {}, "Paste that link above. For Google Calendar, copy its iCal link from calendar settings.")),
-      h("p", { class: "muted small" }, "Anyone with a public calendar link can read it. Flight and friend share pages are not supported here. Sync updates scheduled times while Airports is open.")),
+        h("li", {}, "Export from Flighty: Settings → Calendar Sync → Calendar Export. Choose a dedicated calendar in iCloud for your flights."),
+        h("li", {}, "Share from iCloud: Apple Calendar → Calendars → info beside your flight calendar → enable Public Calendar → Share Link."),
+        h("li", {}, "Paste the iCloud link above to connect. Flighty maintains the calendar; Airports refreshes your flights while the app is open. For Google Calendar, use its iCal subscription link.")),
+      h("p", { class: "muted small" }, "Anyone with a public calendar link can read it. Keep this calendar limited to flights and keep its link private.")),
     h("button", { type: "button", class: "tbtn", onclick: openImport }, "Import a calendar file instead"),
   ];
 }

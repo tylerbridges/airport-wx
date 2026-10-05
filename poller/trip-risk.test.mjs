@@ -324,3 +324,7 @@ test("connection remains a schedule-based assessment after its planned arrival/d
   assert.match(line.text, /^Your scheduled connection/);
   assert.match(r.scheduleNote, /Actual flight status is unavailable/);
 });
+
+test("advisory-only storms do not claim an overhead observation", () => {
+ assert.equal(plainReason("Convective SIGMET over airport until 9 PM"), "Storms near the airport");
+});

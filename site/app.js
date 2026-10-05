@@ -333,7 +333,7 @@
     let s = String(r || "");
     if (/^Convective SIGMET over airport/.test(s)) {
       const ends = ((a && a.sigmets) || []).map((x) => Date.parse(x.validTo)).filter(Number.isFinite);
-      return "Thunderstorms over the airport" + (ends.length ? " until " + clock(Math.max(...ends), dispTz(a)) : "");
+      return "Storms near the airport" + (ends.length ? " until " + clock(Math.max(...ends), dispTz(a)) : "");
     }
     const c = /^(Chance of )?[Cc]eiling ([\d,]+) ft(.*)$/.exec(s);
     if (c) {
@@ -1108,7 +1108,7 @@
     const zt = zoneTag(a);
     const progWhen = !prog ? null : sm.open ? NO_END : cur.scheduledEnd ? (prog.type === "closure" ? "reopens " : "until ") + whenLabel(cur.scheduledEnd, tz) + zt : null;
     if (sm.later) {
-      const head = levelWords(sm.level, sm.words);
+      const head = levelWords(sm.level, sm.words, sm.peakHour);
       return [h("div", { class: cls(sm.level) }, head + " " + rangeText(sm.start, sm.end, tz) + zt, sm.words && sm.words.cue ? h("span", { class: "dl-usual" }, " · " + sm.words.cue) : null),
         h("div", { class: "sub" }, "Now: " + LEVELS[sm.nowLevel].label + (progWhen ? " — " + progWhen : ""))];
     }
@@ -1117,7 +1117,7 @@
       return [h("div", { class: cls(sm.level) }, (prog.type === "closure" ? "Airport closed" : "Delays happening now") + (progWhen ? (prog.type === "closure" ? " · " : " ") + progWhen : ""))];
     }
     if (sm.level >= 2) {
-      const head = levelWords(sm.level, sm.words);
+      const head = levelWords(sm.level, sm.words, sm.peakHour);
       return [h("div", { class: cls(sm.level) }, head + " " + rangeText(sm.start, sm.end, tz) + zt, sm.words && sm.words.cue ? h("span", { class: "dl-usual" }, " · " + sm.words.cue) : null)];
     }
     return aviation() ? [window.AWXDelay ? safeCall(() => AWXDelay.delayLine(a)) : null] : [];
@@ -1919,9 +1919,9 @@
     return why ? [why, ...rs.filter((r) => r !== why)] : rs;
   }
   /** Words for a level window, the same as the sheet's headline: "Flight delays likely", "Delays happening now". */
-  function levelWords(level, words) {
+  function levelWords(level, words, hour) {
     if (words) return words.key === "now" ? words.word : words.word.replace(/^Delays/, "Flight delays");
-    return level >= 3 ? "Flight delays likely" : level >= 2 ? "Flight delays possible" : level >= 1 ? "Minor flight disruption possible" : "";
+    return level > 0 ? AWXOutlook.conditionHeadline(hour) : "";
   }
   /** " EDT" when the airport's display zone isn't the device's, else "" (card and brief times). */
   function zoneTag(a, ms = refNow()) {

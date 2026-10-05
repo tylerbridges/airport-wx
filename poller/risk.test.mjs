@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  parseVisib, fmtVis, ceilingOf, flightCategory, parseWx, assessConditions, assessFaa, assessAlert, alertLevel,
+  opsPlanItems, parseVisib, fmtVis, ceilingOf, flightCategory, parseWx, assessConditions, assessFaa, assessAlert, alertLevel,
   spcLevel, spcText, assessAtcscc, assessCwa, cwaKind, lampThunderLevel, lampConvLevel, tcfLevel, uniqueItems, buildHours, summarize, tafHour, levelOf, nextUtcHour, fmtClock, fmtRange, tzAbbr, compareAirports, hoursOutput, observedHours, condOf,
 } from "./risk.mjs";
 
@@ -434,4 +434,9 @@ test("build2b: observedHours files METARs by hour, max level, latest conditions,
   assert.equal(h.wx, "TSRA", "latest report's conditions");
   assert.equal(obs[0].level, 0);
   assert.deepEqual(observedHours(null, NOW), []);
+});
+
+test("FAA possible narrative is qualified rather than presented as confirmed delays", () => {
+  const items = opsPlanItems({notes:[{airports:["ATL"],possible:true,raw:"ATL POSSIBLE HOLDING"}],plan:{}}, {now:new Date("2026-10-04T18:00:00Z")});
+  assert.equal(items[0].text,"FAA reports possible delays at ATL");
 });

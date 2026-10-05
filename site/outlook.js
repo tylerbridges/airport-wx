@@ -103,6 +103,17 @@
       observed: Number.isFinite(observed) ? observed : null, forecastIssued: Number.isFinite(forecastIssued) ? forecastIssued : null, missingWeather, missingForecast, weatherOnly };
 
   }
+  function conditionHeadline(h, current = false) {
+    const r = (h?.reasons || []).join(" ");
+    const suffix = current ? "" : " expected";
+    if (/Dense Fog|Visibility (?:0(?:\.\d+)?|1\/2|1\/4) sm/i.test(r)) return "Dense fog" + suffix;
+    if (/Fog/i.test(r)) return "Fog" + suffix;
+    if (/Thunder|Convective SIGMET/i.test(r)) return "Storms near the airport" + suffix;
+    if (/Snow|Freezing|Ice|Winter/i.test(r)) return "Winter weather" + suffix;
+    if (/Ceiling/i.test(r)) return "Low clouds" + suffix;
+    if (/Gust|Wind/i.test(r)) return "Strong winds" + suffix;
+    return current ? "Disruption possible" : "Disruption possible in forecast";
+  }
   function evaluate(a, opts = {}) {
     const now = opts.now ?? Date.now(), at = opts.at ?? now;
     const h = (a.hours || []).find((x) => ms(x.t) <= at && at < ms(x.t) + HOUR);
@@ -123,7 +134,7 @@
     } else if (!h) { kind = "unknown"; headline = "Forecast unavailable for this time"; level = null; }
     else if (s.meaningful || s.level > 0) {
       kind = "forecast";
-      headline = s.meaningful ? s.L.word.replace(/^Delays/, "Flight delays") : s.level >= 3 ? "Flight delays likely" : s.level >= 2 ? "Flight delays possible" : "Minor flight disruption possible";
+      headline = s.meaningful ? s.L.word.replace(/^Delays/, "Flight delays") : conditionHeadline(h, current);
     }
     if ((outdated || incomplete) && kind === "normal") { kind = "unknown"; headline = opts.offline ? "Offline · status unconfirmed" : outdated ? "Status may be outdated" : opts.noticesDown ? "No disruptions reported · flight restrictions unavailable" : "No disruptions reported · some data unavailable"; }
     else if (opts.hidden && kind === "normal") headline = "No issues in your selected categories";
@@ -191,5 +202,5 @@
     const start = ms(at), end = Number.isFinite(ms(until)) ? ms(until) : start + 1;
     return !!window && start < window.end && end > window.start;
   }
-  return { health, evaluate, summary, levelAt, score, restrictions, directionRows, windowFor, overlaps, PROG_LEVEL, RAISE };
+  return { conditionHeadline, health, evaluate, summary, levelAt, score, restrictions, directionRows, windowFor, overlaps, PROG_LEVEL, RAISE };
 });

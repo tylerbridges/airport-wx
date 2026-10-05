@@ -35,11 +35,12 @@ export function tfrItem(t, a, { tz = a.tz || "UTC", now = new Date(), nm = TFR_N
   if (end != null && end <= +now) return null;
   if (start > +now + 24 * HOUR) return null; // later than the forecast window
   const cur = near.windows.find((w) => (w[1] == null || w[1] > +now)) || near.windows[0];
-  const level = t.type === "VIP" ? 2 : t.type === "SPACE" ? 1 : 0;
+  const permanentVip = t.type === "VIP" && (t.permanent || /\d{10}\s*-\s*PERM\b/i.test(t.text || ""));
+  const level = permanentVip ? 0 : t.type === "VIP" ? 2 : t.type === "SPACE" ? 1 : 0;
   // long-standing information-only TFRs (no end, or 90+ days) add noise: keep only the ones that affect flights
-  if (!level && (end == null || end - (Number.isFinite(start) ? start : +now) > 90 * 24 * HOUR)) return null;
+  if (!level && !permanentVip && (end == null || end - (Number.isFinite(start) ? start : +now) > 90 * 24 * HOUR)) return null;
   const words = windowWords(cur[0], cur[1], tz, now);
-  const { reason, text } = (TFR_TEXT[t.type] || TFR_TEXT.SPECIAL)(words);
+  const { reason, text } = permanentVip ? { reason: null, text: "Permanent VIP protection restrictions nearby. No temporary movement window is reported." } : (TFR_TEXT[t.type] || TFR_TEXT.SPECIAL)(words);
   const iso = (ms) => (ms == null || !Number.isFinite(ms) ? null : new Date(ms).toISOString());
   return {
     id: "TFR " + (t.id || "?"), src: "tfr", kind: t.type.toLowerCase(), cat: TFR_CAT[t.type] || "vip", cause: TFR_CAUSE[t.type] || "other",

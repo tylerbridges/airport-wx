@@ -108,6 +108,7 @@ export function parseTfrDetail(xml, { typeText = "" } = {}) {
   const head = nb.replace(/<TfrNot\b[\s\S]*<\/TfrNot\s*>/, "");
   const from = tfrTime(textOf(head, "dateEffective"));
   const to = tfrTime(textOf(head, "dateExpire"));
+  const permanent = /\bPERM(?:ANENT)?\b/i.test(textOf(head, "dateExpire")) || /\d{10}\s*-\s*PERM\b/i.test(text);
   const areas = [];
   for (const g of elements(tfrNot, "TFRAreaGroup")) {
     const area = elements(g.body, "aseTFRArea")[0]?.body || "";
@@ -120,7 +121,7 @@ export function parseTfrDetail(xml, { typeText = "" } = {}) {
     areas.push({ name: textOf(area, "txtName") || null, from: tfrTime(textOf(sch, "dateEffective")) ?? from, to: tfrTime(textOf(sch, "dateExpire")) ?? to, ...(ring ? { ring } : {}), ...(circles.length ? { circles } : {}) });
   }
   if (!areas.length) return null;
-  return { id, type: tfrType(code, typeText, text), typeText: code || typeText || null, text: text.slice(0, 1500), from, to, areas };
+  return { id, type: tfrType(code, typeText, text), typeText: code || typeText || null, text: text.slice(0, 1500), from, to, permanent, areas };
 }
 
 /** Distance (nm) from a point to an area: 0 inside, else to the edge. */

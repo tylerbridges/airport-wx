@@ -54,3 +54,12 @@ test("trips: a VIP movement or runway closure at a trip airport during the leg a
   assert.deepEqual(noticeOf("Runway 4L/22R closed"), { kind: "runway", level: 1 });
   assert.equal(noticeOf("Rain"), null);
 });
+
+test("permanent VIP protection is context; open-ended temporary movement still warns", () => {
+ const vip = {id:"9/2934",type:"VIP",text:"2608141107-PERM",from:+NOW-H,to:null,areas:[{circles:[{lat:LGA.lat,lon:LGA.lon,nm:1}]}]};
+ const s = score(LGA, [], [], {tfrs:[vip]});
+ assert.equal(s.n.items[0].level,0); assert.equal(s.n.items[0].at,"none");
+ assert.match(s.n.items[0].text,/Permanent VIP protection/);
+ assert.ok(s.hs.every(h=>h.level===0));
+ assert.equal(tfrItem({...vip,text:"Temporary VIP movement"}, LGA,{now:NOW}).level,2);
+});

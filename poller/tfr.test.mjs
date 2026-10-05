@@ -76,3 +76,10 @@ test("poll --fixtures: notice sources, items at the airports and their hours (DC
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("TFR permanence is explicit, not inferred from a missing end", async () => {
+ const xml = await fx("tfr-detail-6_4321.xml");
+ const open = xml.replace(/<dateExpire>[^<]*<\/dateExpire>/g, "<dateExpire></dateExpire>");
+ assert.equal(parseTfrDetail(open).permanent,false);
+ assert.equal(parseTfrDetail(open.replace("<dateExpire></dateExpire>","<dateExpire>PERM</dateExpire>")).permanent,true);
+});

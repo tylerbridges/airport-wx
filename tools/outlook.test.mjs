@@ -154,3 +154,13 @@ test("airport health: missing, failed or stale NWS alerts qualify quiet airports
     const o=O.evaluate(a,opts);assert.equal(o.kind,"active");assert.equal(o.level,4);assert.ok(o.quality);
   }
 });
+
+test("severe weather with a low model chance does not imply likely delays", () => {
+  const a = base(); a.hours[2].level = 3; a.hours[2].reasons = ["Fog", "Ceiling 200 ft", "Visibility 1/2 sm"]; a.hours[2].delay = { p: .1 };
+  const opts = options({at: now + 2 * H, words: () => ({key:"unlikely", word:"Delays unlikely"})});
+  assert.equal(O.evaluate(a, opts).headline, "Dense fog expected");
+  assert.equal(O.evaluate(a, opts).level, 3);
+  a.hours[2].reasons = ["Gusts 35 kt"];
+  assert.equal(O.evaluate(a, opts).headline, "Strong winds expected");
+  assert.equal(O.evaluate(a, {...opts, words: () => ({key:"likely", word:"Delays likely"})}).headline, "Flight delays likely");
+});

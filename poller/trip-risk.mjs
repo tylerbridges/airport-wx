@@ -104,7 +104,7 @@ function visNum(v) {
 /** A coded risk reason in traveler words (same mapping as the page); null when not worth showing. */
 export function plainReason(r) {
   let s = String(r || "");
-  if (/^Convective SIGMET over airport/.test(s)) return "Thunderstorms over the airport";
+  if (/^Convective SIGMET over airport/.test(s)) return "Storms near the airport";
   const c = /^(Chance of )?[Cc]eiling ([\d,]+) ft(.*)$/.exec(s);
   if (c) {
     const ft = Number(c[2].replace(/,/g, ""));
