@@ -161,7 +161,6 @@ function shell(a, kids, { dismiss } = {}) {
       h("div", { class: "code" }, app() && app().prefs && app().prefs.getPrefs().codes === "icao" && a.icao ? a.icao : a.code), // build2b: Airport codes setting
       h("div", { class: "right" }, ...kids.right, starBtn(a.code),
         dismiss ? h("button", { type: "button", class: "star xclose", "aria-label": "Close " + a.code, onclick: (ev) => { ev.stopPropagation(); dismiss(); } }, "×") : null)),
-    a.name ? h("div", { class: "aname" }, a.name) : null,
     placeLine(a) ? h("div", { class: "where" }, placeLine(a)) : null,
     ...kids.body);
 }

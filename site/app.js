@@ -1332,7 +1332,6 @@
             onclick: (e) => { e.stopPropagation(); toggleFav(a.iata); },
             onkeydown: (e) => e.stopPropagation(),
           }, starSvg()))),
-      h("div", { class: "aname" }, a.name),
       h("div", { class: "where" }, `${a.city}, ${a.state}`),
       !fav && (window.AWXTrips?.todayAirportIds?.() || []).includes(a.iata) ? h("div", { class: "sub" }, "In your trip today") : null,
       h("div", { class: "reason" }, head),
