@@ -115,7 +115,7 @@ function todaySection(a) {
   const sec = h("section", { class: "sec bf-today" },
     h("div", { class: "sec-h" }, B.icon ? B.icon(B.ICONS.clock) : null, h("h3", {}, "Today"), h("span", { class: "rule", "aria-hidden": "true" })),
     h("div", { class: "scard" },
-      h("ul", { class: "bf-evs" }, list.map((e) => h("li", { class: "bf-ev" }, h("span", { class: "bf-t" }, A.clock(Date.parse(e.t), tz)), h("span", { class: "bf-s" }, eventText(e, a)))))));
+      h("ul", { class: "bf-evs" }, list.map((e) => h("li", { class: "bf-ev" }, h("span", { class: "bf-t" }, A.clock(Date.parse(e.t), tz, true)), h("span", { class: "bf-s" }, eventText(e, a)))))));
   return sec;
 }
 function decorateSheet(sheet, a) {
@@ -164,10 +164,6 @@ export async function checkRow(add, { url = "./data/changes.json", shift = (d) =
 // ---------- init ----------
 
 const CSS = `
-.bf-evs{list-style:none;margin:0;padding:6px 0 0}
-.bf-ev{display:flex;gap:10px;padding:5px 0;font-size:14px;line-height:1.35;border-bottom:1px dashed var(--line)}
-.bf-ev:last-child{border-bottom:0}
-.bf-t{flex:none;min-width:64px;color:var(--muted);font-variant-numeric:tabular-nums}
 .bf-s{flex:1;min-width:0;overflow-wrap:anywhere}
 .bf-more{padding-top:4px;font-size:13px;color:var(--muted)}
 `;

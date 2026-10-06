@@ -302,12 +302,12 @@ export async function pageAsserts(add, w, doc, asserts) {
           await later(w, 30);
         }
         // Card modules (traffic, delay words) may finish after the initial airport render.
-        for (let n = 0; n < 15 && c && !re(x.re).test(c.innerText.replace(/\s+/g, " ")); n++) {
+        for (let n = 0; n < 15 && c && !new RegExp(x.re, "i").test(c.innerText.replace(/\s+/g, " ")); n++) {
           await later(w, 100);
           c = doc.querySelector(`#list .card[data-iata="${x.iata}"]`);
         }
         const t = c ? c.innerText.replace(/\s+/g, " ") : "";
-        ok = !!c && re(x.re).test(t);
+        ok = !!c && new RegExp(x.re, "i").test(t);
         label = `${x.iata} card /${x.re}/`;
         got = c ? `card says "${t.slice(0, 200)}"` : "no card";
         break;
@@ -462,11 +462,12 @@ export async function consistencyChecks(add, w, doc, where = "") {
     const iata = card.dataset.iata;
     const a = A.state.data.airports.find((x) => x.iata === iata);
     if (!a) continue;
-    const pillEl = card.querySelector(".top .pill");
-    const cardLv = pillEl ? LV[pillEl.textContent.trim().replace(/^Upcoming · /, "")] : null;
-    // words and colours: the headline's hours on the card's timeline
+    const badgeLevels = [...card.querySelectorAll(".badge[data-level]")].map(el => Number(el.dataset.level));
+    const cardLv = badgeLevels.length ? Math.max(...badgeLevels) : null;
+    // Current and future labels consolidate severity and impact without losing the forecast window.
     const sm = A.summary(a);
-    if (pillEl && /^Upcoming · /.test(pillEl.textContent.trim()) !== !!sm.later) levels.push(`${iata}: upcoming label doesn't match the forecast window`);
+    const laterBadge = card.querySelector('.badge[data-phase="forecast"]');
+    if (sm.later && !laterBadge) levels.push(`${iata}: later risk is missing its consolidated forecast label`);
     const tl = card.querySelector(".tl-wrap");
     const T = tl && tl._tl;
     if (T && sm.level >= 1 && Number.isFinite(sm.end)) {

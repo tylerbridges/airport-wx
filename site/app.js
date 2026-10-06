@@ -172,9 +172,9 @@
   const tidy = (s) => s.replace(/[  ]/g, " ");
   /** Zone used to show an airport's times: its own, or the device's ("My time zone"). */
   const dispTz = (a) => (S.tz === "mine" ? USER_TZ : (a && a.tz) || "UTC");
-  function clock(ms, tz) {
+  function clock(ms, tz, full = false) {
     const s = tidy(fmt(tz, { hour: "numeric", minute: "2-digit" }, "hm").format(ms));
-    return S.clock === "24" ? s.replace(/^24:/, "00:") : s.replace(":00 ", " ");
+    return S.clock === "24" ? s.replace(/^24:/, "00:") : full ? s : s.replace(":00 ", " ");
   }
   function hourLabel(ms, tz) {
     if (S.clock === "24") return clock(ms, tz).replace(/:\d\d$/, ":00");
@@ -1279,7 +1279,7 @@
       const head = levelWords(sm.level, sm.words, sm.peakHour);
       const repeats = head.replace(/ expected$/i, "").toLowerCase() === String(headline || "").toLowerCase();
       return h("div", { class: "card-forecast" },
-        repeats ? null : h("div", { class: "badges" }, h("span", { class: "badge " + lv(sm.level) }, head)),
+        repeats && !sm.later ? null : h("div", { class: "badges" }, h("span", { class: "badge " + lv(sm.level), "data-level": sm.level, "data-phase": "forecast" }, LEVELS[sm.level].label + ": " + head)),
         h("div", { class: "sub card-context" }, h("b", {}, "Forecast " + rangeText(sm.start, sm.end, tz) + zt),
           sm.words?.cue ? " · " + sm.words.cue : null));
     };
@@ -1307,6 +1307,8 @@
     const badges = progs.length ? faaBadges(v) : [];
     const currentProgram = progs.length ? sm.current?.programs?.[0] : null;
     const badgeHeadline = !!currentProgram && badges.length > 0;
+    const headlineLevel = sm.current?.kind === "unknown" ? null : (sm.current?.level ?? sm.nowLevel);
+    const consolidatedHeadline = (headlineLevel == null ? "Unknown" : LEVELS[headlineLevel].label) + ": " + (badgeHeadline ? badges.map(b => b.textContent).join(" · ") : head);
     const programEnd = !currentProgram ? null : sm.open ? NO_END : sm.current.scheduledEnd
       ? (currentProgram.type === "closure" ? "Reopens " : "Until ") + faaUntil(sm.current.scheduledEnd, a) + zoneTag(a) : null;
     if (cond && cond.toLowerCase().startsWith(head.toLowerCase())) {
@@ -1331,7 +1333,6 @@
         h("div", { class: "code" }, code),
         h("div", { class: "right" },
           staleTag(),
-          unknown ? h("span", { class: "pill off" }, "Unknown") : pill(sm.level, false, later ? "Upcoming · " : ""),
           h("button", {
             type: "button", class: "star", "aria-pressed": String(fav), "aria-label": (fav ? "Remove " : "Add ") + code + (fav ? " from" : " to") + " my airports",
             onclick: (e) => { e.stopPropagation(); toggleFav(a.iata); },
@@ -1339,9 +1340,7 @@
           }, starSvg()))),
       h("div", { class: "where" }, `${a.city}, ${a.state}`),
       !fav && (window.AWXTrips?.todayAirportIds?.() || []).includes(a.iata) ? h("div", { class: "sub" }, "In your trip today") : null,
-      badgeHeadline ? h("div", { class: "badges card-headline" }, badges)
-        : sm.current?.level > 0 ? h("div", { class: "badges card-headline" }, h("span", { class: "badge " + lv(sm.current.level) }, head))
-        : h("div", { class: "reason" }, head),
+      h("div", { class: "badges card-headline" }, h("span", { class: "badge " + (headlineLevel == null ? "off" : lv(headlineLevel)), "data-level": headlineLevel, "data-phase": "current" }, consolidatedHeadline)),
       programEnd ? h("div", { class: "sub card-context" }, h("b", {}, programEnd), cond ? ": " + cond : "")
         : cond ? h("div", { class: "sub" }, cond) : null,
       health.quality ? h("div", { class: "muted small" }, health.quality) : null,
@@ -2463,7 +2462,7 @@
     const open = () => openDetails(a.iata, "today");
     return section("Today so far", "clock", [h("ul", { class: "sh-log" },
       shown.map((e) => h("li", {}, h("button", { type: "button", class: "lg-entry", "data-detail": "today", "aria-haspopup": "dialog", onclick: open },
-        h("span", { class: "lg-t" }, clock(Date.parse(e.t), tz)),
+        h("span", { class: "lg-t" }, clock(Date.parse(e.t), tz, true)),
         h("span", { class: "lg-s" }, e.kind === "program_extend" && Date.parse(e.to) ? e.sentence.replace(/until .*$/, "until " + faaUntil(Date.parse(e.to), a)) : e.sentence.replace(/\blow ceilings\b/g, "low clouds")),
         h("span", { class: "chev", "aria-hidden": "true" }, "›"))))),
       h("button", { type: "button", class: "lg-more", "data-detail": "today", "aria-haspopup": "dialog", onclick: open }, more > 0 ? `All changes · ${more} earlier ›` : "All changes ›")], null, { cls: "logcard" });
