@@ -3,11 +3,12 @@
 //   node worker/dev.mjs bench [--n 40]       CPU time of the /status handler on fixtures (4 and 12 airports)
 //   node worker/dev.mjs serve [--port 8787] [--site 8000]
 //       runs the worker's fetch handler on http://localhost:8787 with every upstream (AWC, FAA, NWS,
-//       the build's status.json and wx shards) answered from poller/fixtures, and serves site/ on
-//       http://localhost:8000 with data/config.json pointing at the relay and data/status.json built
-//       from the same fixtures. Open http://localhost:8000/ to see the page use the relay.
+//       the build's airport files and wx shards) answered from poller/fixtures, and serves site/ on
+//       http://localhost:8000 with data/config.json pointing at the relay and data/summary.json +
+//       data/airport/<IATA>.json built from the same fixtures. Open http://localhost:8000/ to see the page use the relay.
 // The fixture world (fixtureWorld/stubFetch) is shared with worker/worker.test.mjs.
 import { readFile, mkdtemp, rm } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve, extname, normalize } from "node:path";
@@ -19,6 +20,7 @@ import { runGlobal, parseMetarCsv, parseTafXml } from "../poller/global.mjs";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
 const FX = join(ROOT, "poller/fixtures");
+const { split } = createRequire(import.meta.url)("../site/split.js");
 export const BUILD_BASE = "https://build.test/airport-wx/data/";
 
 /** Everything the upstreams would serve, built from poller/fixtures for `now`. */
@@ -42,8 +44,12 @@ export async function fixtureWorld(now = new Date()) {
     await addModel("model.json");
     await addModel("fallback.json");
     for (const a of airports) await addModel(`analogs/${a.iata}.json`);
+    const statusText = JSON.stringify(status);
+    const parts = split(JSON.parse(statusText)); // what the build publishes: summary.json + airport/<IATA>.json
+    const files = { "summary.json": JSON.stringify(parts.summary) };
+    for (const [iata, d] of Object.entries(parts.details)) files[`airport/${iata}.json`] = JSON.stringify(d);
     return {
-      now, airports, status, statusText: JSON.stringify(status), shards, metars, tafs, modelFiles,
+      now, airports, status, statusText, files, shards, metars, tafs, modelFiles,
       sigmet: await read("airsigmet.json"), faa: await read("faa.xml"), nws: JSON.parse(await read("nws.json")),
     };
   } finally {
@@ -80,8 +86,9 @@ export function stubFetch(world, { fail = new Set(), log = null } = {}) {
       case "faa": return res(world.faa, 200, "application/xml");
       case "nws": return res(JSON.stringify(world.nws[byLatLon.get(url.searchParams.get("point"))] || { features: [] }));
       case "build": {
-        if (url.pathname.endsWith("/status.json")) return res(world.statusText);
-        const m = /\/data\/(model\/.+)$/.exec(url.pathname); // phase3: delay model files
+        const f = /\/data\/(summary\.json|airport\/[A-Z0-9]+\.json)$/.exec(url.pathname); // the build's page files (site/split.js)
+        if (f) return world.files[f[1]] != null ? res(world.files[f[1]]) : res("not found", 404, "text/plain");
+        const m = /\/data\/model\/(.+)$/.exec(url.pathname); // phase3: delay model files (keys are relative to data/model/)
         if (m && !fail.has("model") && world.modelFiles?.[m[1]] != null) return res(world.modelFiles[m[1]]);
         return res("not found", 404, "text/plain");
       }
@@ -185,7 +192,8 @@ async function serve(port, sitePort) {
   createServer(async (req, res) => {
     const path = decodeURIComponent(new URL(req.url, "http://x").pathname);
     if (path.endsWith("/data/config.json")) { res.writeHead(200, { "Content-Type": "application/json" }); res.end(JSON.stringify({ liveUrl: `http://localhost:${port}` })); return; }
-    if (path.endsWith("/data/status.json")) { res.writeHead(200, { "Content-Type": "application/json" }); res.end(world.statusText); return; }
+    const f = /\/data\/(summary\.json|airport\/[A-Z0-9]+\.json)$/.exec(path);
+    if (f) { const body = world.files[f[1]]; res.writeHead(body ? 200 : 404, { "Content-Type": "application/json" }); res.end(body || "not found"); return; }
     const m = /\/data\/wx\/([A-Z0-9_]+|index)\.json$/.exec(path);
     if (m) {
       const body = m[1] === "index" ? JSON.stringify({ generated: world.now.toISOString(), ok: true, letters: Object.keys(world.shards), sources: {} }) : world.shards[m[1]];

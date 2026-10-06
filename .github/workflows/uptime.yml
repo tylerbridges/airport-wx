@@ -3,9 +3,9 @@ name: Uptime monitor
 # Every 30 min: load the live check page with Playwright (playwright-core installed in this job
 # only, driving the runner's Chrome) and wait up to 120 s for #result to say CHECK PASS/FAIL;
 # "CHECK RUNNING" or a timeout is inconclusive, not a failure. On FAIL or inconclusive wait 120 s
-# and try once more. data/status.json freshness is checked independently with curl. Open one issue
+# and try once more. data/summary.json freshness is checked independently with curl. Open one issue
 # titled "Uptime: check failing" (or comment on the open one, at most every 6 h) only if both
-# attempts FAIL, or both are inconclusive and status.json is over 20 min old; when it passes
+# attempts FAIL, or both are inconclusive and summary.json is over 20 min old; when it passes
 # again, comment "Recovered at …" and close it. REST API via curl + GITHUB_TOKEN; the decision
 # logic is in tools/uptime-parse.mjs (unit-tested).
 on:
@@ -34,7 +34,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Load check page (Playwright, runner Chrome) and status.json
+      - name: Load check page (Playwright, runner Chrome) and summary.json
         run: |
           set -u
           # CI tooling only, not an app dependency; drives the runner's own Chrome.
@@ -74,8 +74,8 @@ jobs:
           writeFileSync("attempts.json", JSON.stringify(out));
           EOF
           node uptime-run.mjs || { echo "runner crashed: $?"; echo '[]' > attempts.json; }
-          curl -sS --max-time 30 -o status.json "$SITE/data/status.json?ts=$(date +%s)" || echo "curl failed"
-          node tools/uptime-parse.mjs verdict attempts.json status.json > result.json
+          curl -sS --max-time 30 --compressed -o summary.json "$SITE/data/summary.json?ts=$(date +%s)" || echo "curl failed"
+          node tools/uptime-parse.mjs verdict attempts.json summary.json > result.json
           cat result.json | head -c 2000; echo
       - name: Open, update or close the uptime issue
         run: |
@@ -131,6 +131,6 @@ jobs:
           esac
           case "$verdict" in
             pass) ;;
-            inconclusive) echo "::warning::Inconclusive (not a failure; status.json is fresh): $head" ;;
+            inconclusive) echo "::warning::Inconclusive (not a failure; summary.json is fresh): $head" ;;
             *) echo "::error::$head"; exit 1 ;;
           esac

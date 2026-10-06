@@ -533,8 +533,13 @@
     const L = live.data;
     state.liveWx = {};
     viewCache = new WeakMap();
+    det.gen = b ? b.generated : null; // airport details: the build whose detail files the sheets read
+    det.majors = new Set(((b && b.airports) || []).map((a) => a.iata));
+    det.live = new Set();
+    for (const [k, e] of det.by) if (e.gen !== det.gen) det.by.delete(k);
     if (!b || state.sample || state.offline || live.failed || !L || !(Date.parse(L.generated) >= Date.parse(b.generated))) { state.data = b; return; }
     const by = new Map(L.airports.map((a) => [a.iata, a]));
+    for (const a of L.airports) if (det.majors.has(a.iata)) det.live.add(a.iata); // the relay's airports carry everything but LAMP
     const airports = b.airports.map((a) => {
       const fresh = by.get(a.iata);
       return Object.assign({}, withoutLegacySpillover(fresh || a), { coverage: { generated: fresh ? L.generated : b.generated, sources: fresh ? Object.assign({}, b.sources, L.sources) : b.sources } });
@@ -544,6 +549,95 @@
     state.liveWx = L.wx || {};
     state.liveH0 = L.h0;
   }
+  // ---------- airport details (README "status.json": data/summary.json + data/airport/<IATA>.json) ----------
+  // The home list, map, strip, At risk and trips read the slim summary. An airport's sheet opens at once from it and
+  // its detail file (the same poll's full airport: hourly conditions, TAF text, LAMP, delay explanations) fills in the
+  // rest; until then those parts say they're loading, and a failed or mismatched detail is stated, never shown as
+  // normal. Full files (sample, test scenarios) are split in memory, so their details are ready at once.
+  const det = { gen: null, local: null, by: new Map(), majors: new Set(), live: new Set(), reloadFor: null, prefetched: null };
+  const detInfo = new WeakMap(); // airport object handed to the sheet -> {status, have, mismatch}
+  const HAVE_ALL = { cond: true, taf: true, lamp: true, why: true };
+  const HAVE_LAMP = { cond: true, taf: true, lamp: false, why: true }; // a live relay airport: everything but LAMP
+  const HAVE_NONE = { cond: false, taf: false, lamp: false, why: false };
+  /** The build to show: a summary as it is; a full file (sample, scenario) split, its details kept in memory. */
+  function adoptBuild(data) {
+    if (!window.AWXSplit || AWXSplit.isSummary(data)) { det.local = null; return data; }
+    const { summary, details } = AWXSplit.split(data);
+    det.local = details;
+    return summary;
+  }
+  /** null (the object is complete: a searched or weather-only airport), "all" (a summary airport) or "lamp" (live relay). */
+  function detailKind(a) {
+    if (!a || !window.AWXSplit || !det.majors.has(a.iata)) return null;
+    return det.live.has(a.iata) ? "lamp" : "all";
+  }
+  async function fetchDetail(iata, gen) {
+    const url = "./data/airport/" + encodeURIComponent(iata) + ".json";
+    const ok = (d) => !!(d && d.airport && d.airport.iata === iata);
+    let d = await getJson(url);
+    if (!ok(d)) throw new Error("bad airport details");
+    if (gen && d.generated !== gen) { // another poll than the summary in use: ask once more past any cache
+      try { const d2 = await getJson(url + "?g=" + encodeURIComponent(gen)); if (ok(d2)) d = d2; } catch { /* keep the first */ }
+    }
+    return d;
+  }
+  /** The detail entry for iata under the current build ({status: loading | ok | failed, airport, dGen, p}); starts a fetch when needed. */
+  function detailEntry(iata) {
+    const gen = det.gen;
+    if (det.local) {
+      const d = det.local[iata];
+      return d ? { status: "ok", airport: d.airport, dGen: d.generated, gen } : { status: "failed", gen };
+    }
+    const key = iata + "@" + gen; // one entry per airport and build: a refresh never mixes them
+    let e = det.by.get(key);
+    if (e && (e.status !== "failed" || Date.now() - e.at < 30e3)) return e;
+    e = { gen, status: "loading", airport: null, dGen: null, at: Date.now() };
+    det.by.set(key, e);
+    e.p = fetchDetail(iata, gen).then((d) => {
+      Object.assign(e, { status: "ok", airport: d.airport, dGen: d.generated, at: Date.now() });
+      // a newer poll than the summary: refresh the summary once (then they match); otherwise the sheet says so
+      if (d.generated !== gen && Date.parse(d.generated) > Date.parse(gen) && det.reloadFor !== d.generated && !testMode()) { det.reloadFor = d.generated; setTimeout(() => load(false), 0); }
+    }, () => { Object.assign(e, { status: "failed", at: Date.now() }); })
+      .then(() => {
+        if (e.gen === det.gen && state.openIata === iata) renderSheet(true);
+        if (e.gen === det.gen && md.iata === iata) renderDetails(true);
+        return e;
+      });
+    return e;
+  }
+  /** Resolves once iata's details have loaded or failed (check page). */
+  const detailReady = (iata) => { const e = detailEntry(iata); return e.p ? e.p.then(() => detailEntry(iata)) : Promise.resolve(e); };
+  const merged = new WeakMap(); // summary/live airport -> {src (detail airport), out}
+  /** {a, status, have, mismatch}: the airport with its details restored when they're here (site/split.js restore). */
+  function withDetail(a0) {
+    const kind = detailKind(a0);
+    if (!kind) { const r = { a: a0, status: "none", have: HAVE_ALL, mismatch: null }; detInfo.set(a0, r); return r; }
+    const e = detailEntry(a0.iata);
+    if (e.status !== "ok") { const r = { a: a0, status: e.status, have: kind === "lamp" ? HAVE_LAMP : HAVE_NONE, mismatch: null }; detInfo.set(a0, r); return r; }
+    let m = merged.get(a0);
+    if (!m || m.src !== e.airport) {
+      m = { src: e.airport, out: kind === "lamp" ? Object.assign({}, a0, { lamp: e.airport.lamp ?? null }) : AWXSplit.restore(a0, e.airport) };
+      merged.set(a0, m);
+    }
+    // a live airport's own data is the relay's; LAMP comes from the build either way
+    const r = { a: m.out, status: "ok", have: HAVE_ALL, mismatch: kind === "all" && e.dGen !== det.gen ? e.dGen : null };
+    detInfo.set(m.out, r);
+    return r;
+  }
+  const detailOf = (a) => (a && detInfo.get(a)) || { status: "none", have: HAVE_ALL, mismatch: null };
+  /** Neutral placeholder for a part that waits for the airport's details (or says they couldn't load). */
+  function detailWait(a, what) {
+    const failed = detailOf(a).status === "failed";
+    return h("p", { class: "muted det-wait" }, failed ? "Some details unavailable — " + what + " couldn't load right now." : "Loading " + what + "…");
+  }
+  /** Starred (and today's trip) airports' details, fetched when idle after a render so their sheets open complete. */
+  function prefetchMine() {
+    if (det.local || state.offline || !det.gen || det.prefetched === det.gen) return;
+    det.prefetched = det.gen;
+    const run = () => { for (const c of myAirportIds()) if (det.majors.has(c)) detailEntry(c); };
+    if (typeof requestIdleCallback === "function") requestIdleCallback(run, { timeout: 5000 }); else setTimeout(run, 1500);
+  }
+
   // self-update: reload when the deployed index.html points at a newer app.js
   let versionAt = 0;
   async function checkVersion() {
@@ -567,10 +661,11 @@
     $("refresh").classList.add("spin");
     if (manual) checkVersion(); // live relay
     const liveP = state.build ? loadLive() : null; // live relay: in parallel with the build once the airport list is known
+    let openP = null; // airport details: an open sheet's airport for a new build, fetched before the build is swapped in
     try {
       let data, sample = false;
       try {
-        data = window.AWXTest && AWXTest.name ? AWXTest.rebase(await getJson(AWXTest.url)) : await getJson("./data/status.json"); // build2a hook: ?test=<scenario> (site/testmode.js)
+        data = window.AWXTest && AWXTest.name ? AWXTest.rebase(await getJson(AWXTest.url)) : await getJson("./data/summary.json"); // build2a hook: ?test=<scenario> (site/testmode.js)
       } catch (e) {
         if (e.status !== 404) throw e;
         if (!testMode() && cachedStatus()) throw e;
@@ -578,6 +673,13 @@
         sample = true;
       }
       if (!data || !Array.isArray(data.airports)) throw new Error("bad data");
+      data = adoptBuild(data);
+      if (!det.local && data.generated !== det.gen && (state.openIata || md.iata)) {
+        const prev = det.gen, ids = [...new Set([state.openIata, md.iata].filter((c) => c && data.airports.some((x) => x.iata === c)))];
+        det.gen = data.generated;
+        openP = Promise.all(ids.map((c) => detailEntry(c).p)).catch(() => null);
+        det.gen = prev; // the entries are keyed to the new build; the old one stays in use until it's swapped in
+      }
       state.build = data; // live relay (merged into state.data below)
       state.sample = sample;
       state.offline = false;
@@ -588,17 +690,18 @@
       if (!testMode()) {
         const cached = cachedStatus();
         if (state.data && !state.sample) state.build = state.data;
-        else if (cached) { state.build = cached; state.sample = false; }
+        else if (cached) { state.build = cached; state.sample = false; det.local = null; }
         if (state.build && !state.sample) state.offline = true;
       }
     } finally {
-      await (liveP || loadLive()); // live relay: the refresh button waits for fresh data
+      await Promise.all([liveP || loadLive(), openP]); // live relay: the refresh button waits for fresh data
       mergeLive();
       if (!testMode() && !state.sample && !state.offline && state.data) saveStatus(state.data);
       loading = false;
       state.loaded = true;
       setTimeout(() => { if (!reloading) $("refresh").classList.remove("spin"); }, manual ? 500 : 0);
       render();
+      prefetchMine(); // airport details for starred airports, when idle
     }
   }
 
@@ -1963,6 +2066,9 @@
     if (state.offline) warn.unshift("Offline — last-known restrictions and weather; check your airline before travelling");
     if (quality?.missingWeather) warn.push("Recent weather observation unavailable for this airport");
     if (quality?.missingForecast) warn.push("Airport forecast unavailable or outdated");
+    const dt = detailOf(a); // airport details: a failed or other-poll detail file is said, never shown as complete
+    if (dt.status === "failed") warn.push(dt.have.cond ? "Some details unavailable — hourly storm chances couldn't load" : "Some details unavailable — hourly conditions, forecast text and delay explanations couldn't load");
+    else if (dt.mismatch) warn.push("Some details are from another update (" + ago(Math.max(0, refNow() - Date.parse(dt.mismatch))) + ") than the status above");
     if (quality?.advisoriesAge && !quality.incomplete) warn.push("FAA Command Center advisories last updated " + ago(quality.advisoriesAge) + " — planned programs may have changed; current FAA delays are live");
     const airportAge = quality?.checked != null ? ago(Math.max(0, refNow() - quality.checked)) : when;
     return h("div", { class: "checked" },
@@ -1985,9 +2091,11 @@
         a.metar.obsTime ? h("div", { class: "muted small", style: "margin:6px 4px 0" }, "Observed " + ago(Math.max(0, refNow() - Date.parse(a.metar.obsTime))) + " · " + zl(Date.parse(a.metar.obsTime))) : null,
         h("pre", { class: "raw", style: "margin-top:10px" }, a.metar.raw));
     }
-    if (a.taf) kids.push(tafForecast(a, { raw: true }));
-    const lt = a.lamp ? lampTable(a, opts.force) : null;
+    const have = detailOf(a).have; // airport details: TAF text and LAMP come with the detail file
+    if (a.taf) kids.push(have.taf ? tafForecast(a, { raw: true }) : detailWait(a, "the TAF"));
+    const lt = have.lamp && a.lamp ? lampTable(a, opts.force) : null;
     if (lt) kids.push(sub("LAMP guidance · issued " + zl(Date.parse(a.lamp.issued))), ...lt);
+    else if (!have.lamp) kids.push(detailWait(a, "LAMP guidance"));
     if (a.sigmets && a.sigmets.length) kids.push(sub("Convective SIGMETs"), ...a.sigmets.map((x) => h("pre", { class: "raw", style: "margin-top:6px" }, x.raw)));
     if (a.cwa && a.cwa.length) kids.push(sub("Center weather advisories"), ...a.cwa.map((x) => h("div", { class: "item" },
       h("b", {}, x.hazard ? "CWA · " + x.hazard : "CWA"),
@@ -2262,9 +2370,11 @@
 
   let sheetDay = 0; // 0 rolling window, 1 tomorrow
   function renderSheet(keepScroll) {
-    const a = state.data && state.data.airports.find((x) => x.iata === state.openIata);
+    const a0 = state.data && state.data.airports.find((x) => x.iata === state.openIata);
     const sheet = $("sheet");
-    if (!a) { closeSheet(); return; }
+    if (!a0) { closeSheet(); return; }
+    const D = withDetail(a0); // airport details: hour conditions wait for the detail file (never shown as "no weather")
+    const a = D.a;
     const top = sheet.scrollTop;
     const focusedDetail = keepScroll && sheet.contains(document.activeElement) ? document.activeElement.dataset.detail : null;
     const v = view(a);
@@ -2330,7 +2440,7 @@
     const hourCard = (s) => {
       const isNow = s.kind === "now";
       const past = s.kind === "obs" || s.kind === "none";
-      const c = s.h ? (isNow ? nowCond : s.h) : null;
+      const c = s.h ? (isNow ? nowCond : D.have.cond ? s.h : null) : null;
       const label = cap(whenLabel(s.t, tz));
       const zulu = aviation() ? " · " + new Date(s.t).toISOString().slice(11, 13) + "00Z" : "";
       const when = (s.kind === "obs" ? (s.observed ? "Observed" : "Earlier forecast") : s.kind === "none" ? "No report" : s.kind === "na" ? "No forecast" : isNow ? "Now" : "Forecast") + zulu;
@@ -2699,8 +2809,10 @@
   }
 
   function renderDetails(keepScroll) {
-    const a = state.data && md.iata && state.data.airports.find((x) => x.iata === md.iata);
-    if (!a) { if (md.iata) closeDetails(); return; }
+    const a0 = state.data && md.iata && state.data.airports.find((x) => x.iata === md.iata);
+    if (!a0) { if (md.iata) closeDetails(); return; }
+    const D = withDetail(a0);
+    const a = D.a;
     const sheet = mdWrap().querySelector(".sheet");
     const top = sheet.scrollTop;
     const focusedLabel = keepScroll && sheet.contains(document.activeElement) ? document.activeElement.getAttribute("aria-label") : null;
@@ -2709,7 +2821,7 @@
     const v = view(a);
     const code = codeOf(a);
     const mark = (sec, key) => { if (sec) sec.dataset.md = key; return sec; };
-    const why = window.AWXDelay && typeof AWXDelay.whyBlock === "function" ? safeCall(() => AWXDelay.whyBlock(a, refNow())) : null;
+    const why = !D.have.why ? detailWait(a, "the delay explanation") : window.AWXDelay && typeof AWXDelay.whyBlock === "function" ? safeCall(() => AWXDelay.whyBlock(a, refNow())) : null;
     const pd = pilotDetails(a, { force: true }) || section("Pilot details", "plane", [h("p", { class: "muted", style: "margin:0" }, "No reports for this airport right now.")], null, { cls: "pilot" });
     const hiddenNote = v.hiddenCats && v.hiddenCats.size
       ? h("p", { class: "hidnote" }, "Hidden by your settings: " + [...v.hiddenCats].map((k) => CATS.LABELS[k]).join(", ") + ".")
@@ -2722,8 +2834,8 @@
       const parts = [];
       if (a.metar) parts.push(currentWeather(a));
       parts.push(safeCall(() => window.AWXRadarCard?.section(a, section)));
-      if (a.taf) parts.push(tafForecast(a));
-      if (v.hours && v.hours.length) parts.push(safeCall(() => next12(a, v))); // Next 12 hours (filtered below)
+      if (a.taf) parts.push(D.have.taf ? tafForecast(a) : detailWait(a, "the airport forecast"));
+      if (v.hours && v.hours.length) parts.push(D.have.cond ? safeCall(() => next12(a, v)) : detailWait(a, "the hourly forecast")); // Next 12 hours (filtered below)
       if (v.spc || v.tcf?.length) parts.push(section("Storm outlook", "bolt", [
         v.spc ? h("p", { class: "muted" }, v.spc === "TSTM" ? "General thunderstorms possible in the area (no severe risk)" : (SPC_NAMES[v.spc] || "Elevated") + " risk of severe storms today") : null,
         ...(v.tcf || []).map((x) => h("div", { class: "item" }, "Thunderstorms, " + ({ high: "widespread", medium: "scattered", low: "isolated" }[x.coverage] || "some") + " coverage", x.valid ? h("span", { class: "muted" }, " · around " + whenLabel(Date.parse(x.valid), dispTz(a))) : null))
@@ -3032,6 +3144,7 @@
     openDetails, closeDetails, detailRow, popupFocus, refreshDetails: () => { if (md.iata) renderDetails(true); }, // Airport details pages
     ensureCardTimeline, prefs: PREFS, codeOf, view, outlook, summary, hourLevel, slotText, refNow, whenLabel, dispTz, zoneAbbr, clock, hourLabel, daySlots, openNational, closePanel, placeLenses, retime,
     timeline: (a) => timeline(a, {}), // a status.json-shaped airport (searched.js builds one from a shard entry)
+    fullAirport: (a) => withDetail(a).a, detailReady, // airport details (check.js)
     version: APP_V,
   };
   window.AWXApp.brief = { shortList, nationalSummary, programsAt, programLine, localMidnight, dayKey, refNow, whenLabel, LEVELS, icon, ICONS, rangeText, zoneTag, hourLevel, hourReasons }; // brief hook: helpers for site/brief.js

@@ -1,11 +1,11 @@
-// Check page. check.html            -> checks the live data (data/status.json, data/wx/, airport list)
+// Check page. check.html            -> checks the live data (data/summary.json + an airport detail file, data/wx/, airport list)
 //             check.html?mock=1     -> runs every test scenario (data/scenarios/index.json) instead
 //             &render=0             -> skip the render tests (hidden iframes)
 // Writes "CHECK PASS" or "CHECK FAIL n" plus one line per row into <pre id="result"> so headless
 // Chrome (--dump-dom) and the uptime workflow can read it. Warnings don't fail the check.
 import { loadAirports, rank, decodeList } from "./search.js";
 import { navChecks } from "./navcheck.js?v=6"; // nav hook
-import { tripChecks } from "./check-trips.js?v=8"; // trips hook
+import { tripChecks } from "./check-trips.js?v=9"; // trips hook
 import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=13"; // scenarios hook; More details page helpers
 
 const P = new URLSearchParams(location.search);
@@ -434,7 +434,9 @@ async function uiChecks(add, scenario) {
     for (const mode of ["traveler", "aviation"]) {
       set({ mode });
       await withPage(url, async (w, doc) => {
-        const A = w.AWXApp, a = A.state.data.airports.find(x => x.metar) || A.state.data.airports[0];
+        const A = w.AWXApp, a0 = A.state.data.airports.find(x => x.metar) || A.state.data.airports[0];
+        if (A.detailReady) await A.detailReady(a0.iata); // airport details: the forecast periods come with data/airport/<IATA>.json
+        const a = A.fullAirport ? A.fullAirport(a0) : a0;
         A.openSheet(a.iata);
         await frameSleep(w, 30);
         doc.querySelector('#sheet [data-detail="weather"]').click();
@@ -777,12 +779,18 @@ async function liveRelay(add) {
 async function runLive() {
   const add = group("Live data");
   const now = Date.now();
-  const st = await getJson("./data/status.json");
+  const st = await getJson("./data/summary.json");
   const { list, byIcao, error } = await airportList();
   if (!st.ok) {
-    add("fail", "status.json loads", st.status === 404 ? "404: the poller hasn't deployed data (the app shows sample data)" : `HTTP ${st.status || st.error}`);
+    add("fail", "summary.json loads", st.status === 404 ? "404: the poller hasn't deployed data (the app shows sample data)" : `HTTP ${st.status || st.error}`);
   } else {
-    add("pass", "status.json loads", `${(st.bytes / 1024).toFixed(0)} KB in ${Math.round(st.ms)} ms, ${st.data.airports?.length ?? 0} airports`);
+    add("pass", "summary.json loads", `${(st.bytes / 1024).toFixed(0)} KB in ${Math.round(st.ms)} ms, ${st.data.airports?.length ?? 0} airports`);
+    // airport details (README "status.json"): a sheet's detail file is from the same poll as the summary
+    const first = (st.data.monitoring?.baseline || [])[0] || st.data.airports?.[0]?.iata;
+    const dt = first ? await getJson(`./data/airport/${first}.json`) : { ok: false, error: "no airports" };
+    const same = dt.ok && dt.data?.airport?.iata === first && dt.data.generated === st.data.generated;
+    add(same ? "pass" : dt.ok ? "warn" : "fail", "Airport detail file loads (same poll as the summary)",
+      !dt.ok ? `${first}: HTTP ${dt.status || dt.error}` : `${first}: ${(dt.bytes / 1024).toFixed(1)} KB` + (same ? "" : ` · generated ${dt.data?.generated} vs summary ${st.data.generated}`));
     for (const c of await checkData(st.data, { now, byIcao, list, wxBase: "./data/wx/", wxShift: (d) => d, mock: false })) add(c.status, c.label, c.detail);
   }
   searchChecks(group("Search"), list, error);

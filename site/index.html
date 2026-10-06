@@ -16,7 +16,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Airports">
-<script src="testmode.js"></script>
+<script src="testmode.js?v=2"></script>
 <!-- /build2a hook -->
 <style>
 :root {
@@ -913,12 +913,13 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
   <div class="sheet" id="panel" role="dialog" aria-modal="true" aria-labelledby="panelTitle"></div>
 </div>
 <div class="sr" id="announce" aria-live="polite"></div>
-<script src="offline.js?v=3"></script>
+<script src="offline.js?v=4"></script>
 <script src="outlook.js?v=13"></script>
 <script src="cats.js?v=4"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=6"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
-<script src="app.js?v=84" defer></script>
+<script src="split.js?v=1"></script><!-- airport details: summary.json + data/airport/<IATA>.json -->
+<script src="app.js?v=85" defer></script>
 <script type="module" src="searched.js?v=12"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=18"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="flight-features.js?v=1"></script><!-- trips hook -->

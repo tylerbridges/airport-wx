@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Helpers for .github/workflows/uptime.yml (the HTTP calls are curl in the workflow).
-//   node tools/uptime-parse.mjs check <dom.html> <status.json> [nowISO]
+//   node tools/uptime-parse.mjs check <dom.html> <summary.json> [nowISO]
 //       -> prints JSON {ok, head, pageOk, freshOk, ageMin, report}; exit 0 either way
-//   node tools/uptime-parse.mjs verdict <attempts.json> <status.json> [nowISO]
+//   node tools/uptime-parse.mjs verdict <attempts.json> <summary.json> [nowISO]
 //       -> attempts.json = [{text, error?}, …] (the #result text from each Playwright attempt, null on timeout);
 //          prints JSON {verdict: pass|fail|inconclusive, ok, head, report, …}; exit 0 either way
 //   node tools/uptime-parse.mjs find-issue <issues.json>         -> open "Uptime: check failing" issue number, or ""
@@ -40,15 +40,15 @@ export function parsePage(dom) {
   return { ok: false, head: `check page did not finish (${head.slice(0, 60)})`, report: t };
 }
 
-/** Independent freshness check of data/status.json. */
+/** Independent freshness check of the published build, data/summary.json (README "status.json"). */
 export function freshness(statusText, now = Date.now()) {
   try {
     const gen = Date.parse(JSON.parse(statusText).generated);
-    if (!Number.isFinite(gen)) return { ok: false, ageMin: null, why: "status.json has no generated time" };
+    if (!Number.isFinite(gen)) return { ok: false, ageMin: null, why: "summary.json has no generated time" };
     const ageMin = Math.round((now - gen) / 6e4);
-    return { ok: ageMin <= FRESH_MAX_MIN, ageMin, why: `status.json generated ${ageMin} min ago` };
+    return { ok: ageMin <= FRESH_MAX_MIN, ageMin, why: `summary.json generated ${ageMin} min ago` };
   } catch {
-    return { ok: false, ageMin: null, why: "status.json missing or not JSON" };
+    return { ok: false, ageMin: null, why: "summary.json missing or not JSON" };
   }
 }
 
@@ -71,11 +71,11 @@ export function classifyAttempt(text, error) {
   return { state: "inconclusive", head: why, report: t };
 }
 
-/** Retry rule over the attempts (each {text, error?}) plus the independent status.json freshness.
- *  - any attempt PASS (and status.json fresh)        -> pass   (FAIL then PASS is recovered: no issue)
+/** Retry rule over the attempts (each {text, error?}) plus the independent summary.json freshness.
+ *  - any attempt PASS (and summary.json fresh)        -> pass   (FAIL then PASS is recovered: no issue)
  *  - every attempt FAIL                              -> fail   (issue)
- *  - otherwise (inconclusive, or FAIL + inconclusive) -> fail only when status.json is stale, else inconclusive (no issue)
- *  A PASS with stale status.json is a fail, as before. */
+ *  - otherwise (inconclusive, or FAIL + inconclusive) -> fail only when summary.json is stale, else inconclusive (no issue)
+ *  A PASS with stale summary.json is a fail, as before. */
 export function verdictOf(attempts, statusText, now = Date.now()) {
   const list = (Array.isArray(attempts) ? attempts : []).map((a) => classifyAttempt(a && a.text, a && a.error));
   const fr = freshness(statusText, now);

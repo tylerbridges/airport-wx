@@ -31,7 +31,7 @@ test("a page that never finished, or no page at all, fails", () => {
   assert.match(parsePage("<html><body>404</body></html>").head, /no #result/);
 });
 
-test("independent freshness of status.json", () => {
+test("independent freshness of summary.json", () => {
   assert.equal(freshness(status(5), NOW).ok, true);
   assert.equal(freshness(status(20), NOW).ok, true);
   assert.equal(freshness(status(21), NOW).ok, false);
@@ -39,7 +39,7 @@ test("independent freshness of status.json", () => {
   assert.equal(freshness("<html>", NOW).ok, false);
   const e = evaluate(dom("dom-pass.html"), status(35), NOW);
   assert.equal(e.ok, false);
-  assert.match(e.head, /FRESHNESS FAIL: status.json generated 35 min ago/);
+  assert.match(e.head, /FRESHNESS FAIL: summary.json generated 35 min ago/);
   assert.equal(evaluate(dom("dom-pass.html"), status(3), NOW).ok, true);
 });
 
@@ -107,10 +107,10 @@ test("retry rule: RUNNING, RUNNING with fresh data opens no issue and leaves an 
 test("retry rule: RUNNING, RUNNING with stale data opens an issue", () => {
   const v = verdictOf([RUNNING, RUNNING], status(35), NOW);
   assert.deepEqual([v.verdict, v.ok, issueFor(v)], ["fail", false, true]);
-  assert.match(v.head, /FRESHNESS FAIL: status.json generated 35 min ago/);
-  assert.equal(verdictOf([TIMEOUT, TIMEOUT], "", NOW).verdict, "fail"); // status.json unreadable counts as stale
+  assert.match(v.head, /FRESHNESS FAIL: summary.json generated 35 min ago/);
+  assert.equal(verdictOf([TIMEOUT, TIMEOUT], "", NOW).verdict, "fail"); // summary.json unreadable counts as stale
 });
 
-test("a PASS with stale status.json is still a failure", () => {
+test("a PASS with stale summary.json is still a failure", () => {
   assert.equal(verdictOf([PASS], status(35), NOW).verdict, "fail");
 });

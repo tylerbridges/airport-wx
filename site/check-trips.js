@@ -43,7 +43,7 @@ export async function tripChecks(add, { url, data, shift = (d) => d, asserts = [
     const by = new Map((data.airports || []).map((a) => [a.iata, a]));
     const codes = [...new Set(trips.flatMap((t) => t.legs.flatMap((l) => [l.from, l.to])))];
     const missing = codes.filter((c) => !by.has(c));
-    add(missing.length ? "fail" : "pass", "Trip airports have full data in status.json", missing.length ? `missing: ${missing.join(", ")}` : codes.join(", "));
+    add(missing.length ? "fail" : "pass", "Trip airports have full data in the build", missing.length ? `missing: ${missing.join(", ")}` : codes.join(", "));
     const noMetar = codes.filter((c) => by.has(c) && !(by.get(c).metar && Date.now() - Date.parse(by.get(c).metar.obsTime) < 2 * 3600e3));
     if (noMetar.length) add("warn", "Trip airports with a METAR under 2 h old", `no recent METAR: ${noMetar.join(", ")} (the trip uses the forecast only there)`);
   }

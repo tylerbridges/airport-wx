@@ -4,8 +4,13 @@
 //   node poller/poll.mjs --fixtures    read poller/fixtures/ instead, times shifted to "now"
 //   --out <path>                       output file (default site/data/status.json)
 //   --raw <dir>                        raw response samples (default .cache/raw; "--raw none" to skip)
+//   --split <status.json>              only write summary.json + airport/<IATA>.json next to an existing full file
+// The default (live) run also writes the page's files next to status.json: summary.json and airport/<IATA>.json
+// (site/split.js, README "status.json"). status.json itself stays the full build (history, change log); the
+// workflow keeps it out of the published site.
 // Exits 0 unless every source failed.
 import { readFile, writeFile, mkdir, rm } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseFaaXml, expandTemplate, pool } from "./lib.mjs";
@@ -21,6 +26,7 @@ import { fetchNotices } from "./notices-poll.mjs"; // restrictions hook: FAA TFR
 
 import { loadMonitoredAirports } from "./airports.mjs";
 import { mapNationalAlerts } from "./nws-wide.mjs";
+const { split: splitBuild } = createRequire(import.meta.url)("../site/split.js"); // summary + per-airport detail files
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(HERE, "..");
@@ -268,7 +274,24 @@ async function writeRaw(dir, raw, sources) {
   await writeFile(join(dir, "sources.json"), JSON.stringify(meta, null, 1) + "\n");
 }
 
-export async function run({ fixtures = false, out = join(ROOT, "site/data/status.json"), now = new Date(), rawDir = null } = {}) {
+/**
+ * The page's files for a full build, next to it in dir: airport/<IATA>.json first, then summary.json (so a summary
+ * never names a build whose detail files aren't written yet). Stale airport files are removed.
+ */
+export async function writeSplit(status, dir) {
+  const { summary, details } = splitBuild(status);
+  const adir = join(dir, "airport");
+  await rm(adir, { recursive: true, force: true });
+  await mkdir(adir, { recursive: true });
+  for (const [iata, d] of Object.entries(details)) {
+    if (!/^[A-Z0-9]{3,4}$/.test(iata)) continue;
+    await writeFile(join(adir, iata + ".json"), JSON.stringify(d) + "\n");
+  }
+  await writeFile(join(dir, "summary.json"), JSON.stringify(summary) + "\n");
+  return { summary, details };
+}
+
+export async function run({ fixtures = false, out = join(ROOT, "site/data/status.json"), now = new Date(), rawDir = null, split = false } = {}) {
   const trips = await prepareTrips({ fixtures, now }); // trips hook: reads the calendar (env FLIGHTY_ICS_URL), never throws
   const airports = await trips.addAirports(await loadAirports({ fixtures })); // trips hook: trip airports join the full pipeline for this run
   const raw = makeRaw();
@@ -319,6 +342,7 @@ export async function run({ fixtures = false, out = join(ROOT, "site/data/status
   trips.markAirports(status.airports); // trips hook: airports added for trips carry trip: true
   await mkdir(dirname(out), { recursive: true });
   await writeFile(out, JSON.stringify(status) + "\n");
+  if (split) await writeSplit(JSON.parse(JSON.stringify(status)), dirname(out)); // as served (undefined fields dropped)
   if (rawDir) {
     try { await writeRaw(rawDir, raw, { ...status.sources, ...status.noticeSources }); } catch (e) { console.error("raw samples not written: " + e.message); } // restrictions hook: TFR samples too
   }
@@ -329,6 +353,13 @@ export async function run({ fixtures = false, out = join(ROOT, "site/data/status
 
 async function main() {
   const args = process.argv.slice(2);
+  const si = args.indexOf("--split");
+  if (si >= 0) {
+    const file = resolve(args[si + 1] || join(ROOT, "site/data/status.json"));
+    const { summary } = await writeSplit(JSON.parse(await readFile(file, "utf8")), dirname(file));
+    console.log(`wrote ${join(dirname(file), "summary.json")} and ${summary.airports.length} airport files`);
+    return;
+  }
   const oi = args.indexOf("--out");
   const ri = args.indexOf("--raw");
   const rawArg = ri >= 0 ? args[ri + 1] : null;
@@ -336,6 +367,7 @@ async function main() {
   const { status, okCount, total, out, metars } = await run({
     fixtures: args.includes("--fixtures"),
     out: oi >= 0 ? resolve(args[oi + 1]) : undefined,
+    split: oi < 0, // the live run writes the page's summary + airport files; --out (sample, scenarios) doesn't
     rawDir: rawArg === "none" ? null : rawArg ? resolve(rawArg) : DEFAULT_RAW_DIR,
   });
   if (movement) await movement.finish({ metars }); // movement hook

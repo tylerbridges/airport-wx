@@ -1,12 +1,14 @@
 // Live relay: a Cloudflare Worker (ES module) that serves fresh per-airport status for a few airports.
 //   GET /health                              -> {ok, version, time}
 //   GET /status?ids=ORD,MSP,KFCM[&tz=KFCM:America/Chicago]   (IATA or ICAO, up to 12)
-//       -> status.json shape for those airports + {live: true, generated}; airports outside the
-//          curated list come back in `wx` (the data/wx/<letter>.json shard entry shape).
-// Fast, small sources are fetched live per request (AWC METAR/TAF for the ids only, AWC airsigmet,
-// FAA NAS status, NWS alerts per point); slow or heavy ones (LAMP, SPC, TCF, CWA, ATCSCC) come
-// from the latest GitHub Actions build (data/status.json). Levels are recomputed with the same
-// poller functions (poller/core.mjs -> risk.mjs), so results match the build except for being fresher.
+//       -> status.json shape for those airports (without LAMP: the page reads it from the build's airport
+//          file) + {live: true, generated}; airports outside the curated list come back in `wx` (the
+//          data/wx/<letter>.json shard entry shape).
+// Fast, small sources are fetched live per request (AWC METAR/TAF for the ids, plus TAFs of their delay-model
+// hubs, AWC airsigmet, FAA NAS status, NWS alerts per point); slow or heavy ones (LAMP, SPC, TCF, CWA, ATCSCC)
+// come from the latest GitHub Actions build: each requested airport's data/airport/<IATA>.json (site/split.js;
+// the full airport from that poll), never the whole build. Levels are recomputed with the same poller functions
+// (poller/core.mjs -> risk.mjs), so results match the build except for being fresher.
 // Every source is independent: a failed live source falls back to the build's value (`stale: true`).
 // Pure ES modules only (no node: imports); README "Live relay" has the architecture and limits.
 import airportCatalog from "./airport-catalog.mjs";
@@ -16,6 +18,7 @@ import { assemble, computeGlobal } from "../poller/core.mjs";
 import { parseFaaXml } from "../poller/lib.mjs";
 import { parseMetar, parseTaf } from "../poller/taf-parse.mjs";
 import { toMs } from "../poller/risk.mjs";
+import { HUBS } from "../poller/delay.mjs"; // phase3: the hubs whose TAFs the delay model reads (core.mjs hubTafs)
 
 export const UA = "airport-wx (github.com/tylerbridges/airport-wx)";
 export const AWC = "https://aviationweather.gov/api/data";
@@ -27,6 +30,9 @@ export const LIVE_SOURCES = ["metar", "taf", "sigmet", "faa", "nws"];
 export const BUILD_SOURCES = ["spc", "lamp", "atcscc", "tcf", "cwa", "isigmet"];
 const HOUR = 3600e3;
 const TIMEOUT = { live: 8e3, build: 8e3 };
+// Hub airport files fetched when the live TAF can't supply a hub's TAF: a cold 12-airport request makes at most
+// 4 live + 12 NWS + 12 airport files + 2 model + 12 analog files + these, inside the free plan's 50 subrequests.
+export const HUB_FALLBACK_MAX = 4;
 
 // ---------- request parsing ----------
 
@@ -214,12 +220,14 @@ function awcTafFromStatus(icao, t) {
  * Combine live sources with the build. Pure; all inputs already fetched/parsed.
  *   majors: [{iata, icao, name, city, state, tz, lat, lon}] requested curated airports
  *   others: [{icao, tz}] requested airports outside the curated list
- *   build: parsed status.json or null; shards: {letter: parsed shard} (only when a live METAR/TAF failed)
+ *   build: {generated, sources, airports} from the requested airports' build files (data/airport/<IATA>.json), or
+ *          null; shards: {letter: parsed shard} (only when a live METAR/TAF failed)
+ *   icaoOf: {IATA: ICAO} for every curated airport (hub TAFs are looked up by it), else from build + majors
  *   src: {metar, taf, sigmet, faa, nws}: each {ok, value, at, error} or undefined (not fetched);
  *        nws.value = {IATA: alerts GeoJSON | null (that point failed)}
  * Returns {sources, airports, wx, h0}.
  */
-export function overlay({ now = new Date(), majors = [], others = [], build = null, shards = {}, src = {}, delay = null }) {
+export function overlay({ now = new Date(), majors = [], others = [], build = null, shards = {}, src = {}, delay = null, icaoOf = null }) {
   const buildBy = new Map((build?.airports || []).map((a) => [a.iata, a]));
   const ok = (n) => !!src[n]?.ok;
   const bsrc = build?.sources || {};
@@ -270,9 +278,9 @@ export function overlay({ now = new Date(), majors = [], others = [], build = nu
       return o;
     };
     // phase3 hook: delay model; hubs not requested use the build's TAF
-    const icaoOf = Object.fromEntries([...(build?.airports || []), ...majors].map((a) => [a.iata, a.icao]));
+    const icaoMap = icaoOf || Object.fromEntries([...(build?.airports || []), ...majors].map((a) => [a.iata, a.icao]));
     const scoring = delay && (delay.model || delay.fallback)
-      ? { ...delay, icaoOf, hubTaf: (iata) => awcTafFromStatus(icaoOf[iata], buildBy.get(iata)?.taf) } : null;
+      ? { ...delay, icaoOf: icaoMap, hubTaf: (iata) => awcTafFromStatus(icaoMap[iata], buildBy.get(iata)?.taf) } : null;
     const out = assemble({
       airports: majors, now, metars, tafs, sigmets: ok("sigmet") ? src.sigmet.value : null, faaParsed,
       spc: null, nws: nwsMap, lamp: { stations }, atcscc: adv, tcf: null, cwa: null, over, delay: scoring,
@@ -282,6 +290,8 @@ export function overlay({ now = new Date(), majors = [], others = [], build = nu
     airports = out.map((a) => {
       const m = { ...(buildBy.get(a.iata) || {}), ...a };
       if (!a.cascade) delete m.cascade; // hubs hook: recomputed above; none now means none
+      delete m.lamp; // not shipped: unchanged from the build (the page reads it from data/airport/<IATA>.json)
+      delete m.hubResearch; // research only, never published
       return m;
     });
     if (!scoring) { // phase3: model files unavailable -> the build's delay numbers for the same hours
@@ -308,8 +318,11 @@ export function overlay({ now = new Date(), majors = [], others = [], build = nu
     if (s.ok) sources[n] = { ok: true, at: new Date(s.at).toISOString(), error: null, live: true };
     else sources[n] = staleMeta(n, s.error, n === "metar" && usedM ? `${usedM} from the build` : n === "taf" && usedT ? `${usedT} from the build` : null);
   }
-  for (const n of [...LIVE_SOURCES, ...BUILD_SOURCES]) {
-    if (!sources[n]) sources[n] = bsrc[n] ? { ...bsrc[n], from: "build" } : { ok: false, at: null, error: "build data unavailable", from: "build" };
+  // Only curated airports need the build: a request for other airports alone leaves the page's own build sources be.
+  if (build || majors.length) {
+    for (const n of [...LIVE_SOURCES, ...BUILD_SOURCES]) {
+      if (!sources[n]) sources[n] = bsrc[n] ? { ...bsrc[n], from: "build" } : { ok: false, at: null, error: "build data unavailable", from: "build" };
+    }
   }
   return { sources, airports, wx, h0: new Date(Math.floor(+now / HOUR) * HOUR).toISOString() };
 }
@@ -344,22 +357,38 @@ export function resolveIds(ids, list, tz = {}) {
   return { majors, others, unknown };
 }
 
+/** A build airport file (data/airport/<IATA>.json, site/split.js): {generated, sources, airport} or null. */
+const airportFile = (base, iata, env) => fromBuild(`${base}airport/${iata}.json`, env)
+  .then((r) => (r.ok && r.value && r.value.airport && r.value.airport.iata === iata ? r : { ok: false, error: r.ok ? "not an airport file" : r.error }));
+/** {generated (the oldest), sources (the newest file's), airports} from airport files, or null when none loaded. */
+export function buildFromFiles(files) {
+  const ok = files.filter(Boolean);
+  if (!ok.length) return null;
+  const by = (f) => Date.parse(f.generated) || 0;
+  const newest = ok.reduce((x, y) => (by(y) > by(x) ? y : x));
+  const oldest = ok.reduce((x, y) => (by(y) < by(x) ? y : x));
+  return { generated: oldest.generated ?? null, sources: newest.sources || {}, airports: ok.map((f) => f.airport) };
+}
+
 /** Fetch everything for one request and overlay it. Returns {body, allFailed}. */
 export async function liveStatus({ ids, tz = {}, env = {}, now = new Date() }) {
   const base = env.BUILD_BASE || BUILD_BASE;
-  const buildP = fromBuild(base + "status.json", env);
   let list = airportMeta(env, null);
-  let build = null;
-  if (!list.length) { build = await buildP; list = airportMeta(env, build.ok ? build.value : null); }
+  if (!list.length) { const s = await fromBuild(base + "summary.json", env); list = airportMeta(env, s.ok ? s.value : null); } // no AIRPORTS binding or catalog
   const { majors, others, unknown } = resolveIds(ids, list, tz);
+  const icaoOf = Object.fromEntries(list.map((a) => [a.iata, a.icao]));
   const icaos = [...new Set([...majors.map((a) => a.icao), ...others.map((a) => a.icao)])].sort();
+  // phase3: the delay model reads each airport's hub TAF; ask AWC for those too (no extra request)
+  const hubs = [...new Set(majors.flatMap((a) => HUBS[a.iata] || []))].filter((h) => icaoOf[h] && !majors.some((a) => a.iata === h));
+  const tafIds = [...new Set([...icaos, ...hubs.map((h) => icaoOf[h])])].sort();
+  const filesP = Promise.all(majors.map((a) => airportFile(base, a.iata, env))); // the build, for the requested airports only
 
   const src = {};
   const jobs = [];
   const run = (name, p) => jobs.push(p.then((r) => { src[name] = r; }));
   if (icaos.length) {
     run("metar", live(`${AWC}/metar?ids=${icaos.join(",")}&format=json`, jsonList, env));
-    run("taf", live(`${AWC}/taf?ids=${icaos.join(",")}&format=json`, jsonList, env));
+    run("taf", live(`${AWC}/taf?ids=${tafIds.join(",")}&format=json`, jsonList, env));
   }
   if (majors.length) {
     run("sigmet", live(`${AWC}/airsigmet?format=json`, jsonList, env));
@@ -377,8 +406,14 @@ export async function liveStatus({ ids, tz = {}, env = {}, now = new Date() }) {
   }
   const delayP = majors.length ? loadDelay(base, majors.map((a) => a.iata), env) : null; // phase3 hook
   await Promise.all(jobs);
-  if (!build) build = await buildP;
+  const files = await filesP;
   const delay = delayP ? await delayP : null;
+  // Hubs whose TAF the live request didn't return: their build files (a bounded number), for the build's TAF.
+  const liveTafs = new Set(src.taf?.ok ? src.taf.value.map((x) => x.icaoId) : []);
+  const missingHubs = delay && (delay.model || delay.fallback) ? hubs.filter((h) => !liveTafs.has(icaoOf[h])).slice(0, HUB_FALLBACK_MAX) : [];
+  const hubFiles = await Promise.all(missingHubs.map((h) => airportFile(base, h, env)));
+  const build = buildFromFiles([...files, ...hubFiles].map((r) => (r.ok ? r.value : null)));
+  const buildErr = (files.find((r) => !r.ok) || {}).error || "build data unavailable";
 
   // Shards only when a live METAR/TAF request failed for airports outside the curated list.
   const shards = {};
@@ -390,13 +425,13 @@ export async function liveStatus({ ids, tz = {}, env = {}, now = new Date() }) {
     }));
   }
 
-  const o = overlay({ now, majors, others, build: build.ok ? build.value : null, shards, src, delay });
+  const o = overlay({ now, majors, others, build, shards, src, delay, icaoOf });
   const fetched = Object.values(src);
-  const allFailed = !build.ok && fetched.every((r) => !r.ok);
+  const allFailed = !build && !Object.keys(shards).length && fetched.every((r) => !r.ok);
   const body = {
     live: true,
     generated: now.toISOString(),
-    build: build.ok ? { ok: true, generated: build.value.generated ?? null } : { ok: false, error: build.error },
+    build: build ? { ok: true, generated: build.generated } : majors.length ? { ok: false, error: buildErr } : { ok: true, generated: null }, // nothing needed from the build
     ids,
     unknown,
     sources: o.sources,

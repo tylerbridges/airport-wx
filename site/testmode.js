@@ -2,7 +2,8 @@
 // 1. Error capture for check.html's render test: window.__awxErrors collects uncaught errors,
 //    unhandled rejections and console.error calls from this page.
 // 2. Test scenarios: ?test=<name> makes app.js read data/scenarios/<name>.json instead of
-//    data/status.json (and searched.js read data/scenarios/<name>/wx/, trips.js <name>/trips.json).
+//    data/summary.json (and searched.js read data/scenarios/<name>/wx/, trips.js <name>/trips.json). A scenario
+//    file is a full build; app.js splits it in memory (site/split.js), so its airport details are ready at once.
 //    Scenario files are built once by tools/build-scenarios.mjs, so rebase() shifts every ISO time
 //    in them by the same amount to make the scenario look current (minus its lagMin, e.g. the
 //    stale-data scenario). While a scenario is open (scenarios hook):
@@ -14,7 +15,7 @@
 //    - the banner gets "· Exit" (back to live data), and says so when the scenario set any delay
 //      chances itself (scenario.json delayOverride);
 //    - LIVE_PATH scenarios run the app's normal live path instead of its test-mode shortcut (app.js
-//      never calls the relay in test mode): data/status.json, trips.json, wx/ and movement.json are
+//      never calls the relay in test mode): data/summary.json, trips.json, wx/ and movement.json are
 //      answered from the scenario (shifted the same way) and the relay named in its config is
 //      unreachable, so the page has to say so itself.
 // 3. The "Test scenarios" sheet (AWXTest.openPicker(), from the menu: site/nav.js "scenarios hook"):
@@ -228,7 +229,7 @@
         });
       }
       if (live) {
-        if (/\/data\/status\.json$/.test(p)) {
+        if (/\/data\/(?:status|summary)\.json$/.test(p)) { // the full scenario: app.js splits it in memory (site/split.js)
           return scenarioStatus().then(function (st) { T.info = st.scenario || null; scenarioLoaded(); var dd = deltaOf(st); return reply(shiftTexts(shift(st, dd), dd, st.scenario && Date.parse(st.scenario.builtAt))); });
         }
         var mm = /\/data\/(trips\.json|movement\.json|changes\.json|wx\/[A-Za-z0-9_.-]+\.json)$/.exec(p); // brief hook: changes.json

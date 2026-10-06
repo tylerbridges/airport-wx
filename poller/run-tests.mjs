@@ -22,6 +22,7 @@ import "../tools/cats.test.mjs";
 import "../tools/prefs.test.mjs";
 import "../tools/delay-words.test.mjs";
 import "../tools/outlook.test.mjs";
+import "../tools/split-equivalence.test.mjs"; // summary / detail split (README "status.json")
 // live relay
 import "../worker/worker.test.mjs";
 // phase3: delay model

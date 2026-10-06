@@ -98,7 +98,9 @@ test("same inputs as the build -> the build's airports exactly (levels, hours, r
     assert.deepEqual(a.now, b.now, a.iata + " now");
     assert.deepEqual(a.peak, b.peak, a.iata + " peak");
     assert.deepEqual(a.hours, b.hours, a.iata + " hours");
-    for (const k of ["metar", "taf", "faa", "atcscc", "alerts", "spc", "sigmets", "lamp", "tcf", "cwa", "opsplan"]) assert.deepEqual(a[k], b[k], `${a.iata} ${k}`);
+    for (const k of ["metar", "taf", "faa", "atcscc", "alerts", "spc", "sigmets", "tcf", "cwa", "opsplan", "observed"]) assert.deepEqual(a[k], b[k], `${a.iata} ${k}`);
+    assert.equal(a.lamp, undefined, a.iata + " LAMP isn't shipped (the page reads the build's airport file)");
+    assert.equal(a.hubResearch, undefined, a.iata + " research fields aren't published");
   }
   for (const n of W.LIVE_SOURCES) assert.equal(r.body.sources[n].live, true, n);
   for (const n of W.BUILD_SOURCES) assert.equal(r.body.sources[n].from, "build", n);
@@ -116,7 +118,7 @@ test("a newer live METAR changes the level; slow sources stay the build's", asyn
     assert.equal(a.metar.gust, 48);
     assert.equal(a.metar.raw, world.metars[0].rawOb);
     const b = buildAp("MSP");
-    assert.deepEqual(a.lamp, b.lamp);
+    assert.equal(a.lamp, undefined); // the build's, read by the page from data/airport/MSP.json
     assert.deepEqual(a.tcf, b.tcf);
     assert.equal(a.spc, b.spc);
   } finally {
@@ -215,8 +217,8 @@ test("cache: same ids in any order are served from cache; upstreams are reused f
   assert.equal(b.body.generated, a.body.generated);
   const c = await call("/status?ids=ORD,MSP,DEN", { keep: true });
   // new id set: METAR/TAF for the new list, DEN's alerts point and (phase3) DEN's analog file; SIGMETs, FAA,
-  // the build, the delay model files and ORD/MSP's points are reused
-  assert.deepEqual(c.log.map((u) => new URL(u).pathname).sort(), ["/airport-wx/data/model/analogs/DEN.json", "/alerts/active", "/api/data/metar", "/api/data/taf"]);
+  // ORD/MSP's build files, the delay model files and ORD/MSP's points are reused
+  assert.deepEqual(c.log.map((u) => new URL(u).pathname).sort(), ["/airport-wx/data/airport/DEN.json", "/airport-wx/data/model/analogs/DEN.json", "/alerts/active", "/api/data/metar", "/api/data/taf"]);
   assert.match(c.log.find((u) => u.includes("/metar")), /ids=KDEN,KMSP,KORD&/);
 });
 
@@ -230,7 +232,7 @@ test("cache: upstream text goes to the Cache API under the worker's origin; fail
     assert.ok(keys.every((k) => k.startsWith("https://relay.test/__cache/")));
     const raw = keys.map((k) => decodeURIComponent(k.slice("https://relay.test/__cache/".length)));
     assert.ok(raw.includes("https://aviationweather.gov/api/data/metar?ids=KMSP&format=json"));
-    assert.ok(raw.includes(BUILD_BASE + "status.json"));
+    assert.ok(raw.includes(BUILD_BASE + "airport/MSP.json"));
     assert.ok(raw.includes("/status?ids=MSP"));
     assert.ok(!raw.includes("https://nasstatus.faa.gov/api/airport-status-information"));
     assert.equal(store.get(W.upstreamKey("https://relay.test", "/status?ids=MSP")).headers.get("Cache-Control"), "max-age=30");
@@ -343,4 +345,33 @@ test("additional SIGMET build fallback retains altitude and removes expired advi
   const r = W.overlay({ now: NOW, majors: [world.airports.find((x) => x.iata === "ORD")], build: { ...world.status, airports: [b] }, src: {} });
   assert.deepEqual(r.airports[0].aviationAdvisories, [current]);
   assert.equal(r.sources.isigmet.from, "build");
+});
+
+// ---------- build files (README "status.json": data/airport/<IATA>.json) ----------
+
+test("build files: only the requested airports' files, never the whole build; hub TAFs ride on the live TAF request", async () => {
+  const r = await call("/status?ids=MSP,DEN");
+  const paths = r.log.map((u) => new URL(u));
+  assert.deepEqual(paths.filter((u) => u.href.startsWith(BUILD_BASE + "airport/")).map((u) => u.pathname.split("/").pop()).sort(), ["DEN.json", "MSP.json"]);
+  assert.ok(!paths.some((u) => /\/(status|summary)\.json$/.test(u.pathname)), "no whole-build download");
+  const taf = paths.find((u) => u.pathname.endsWith("/taf"));
+  assert.equal(taf.searchParams.get("ids"), "KDEN,KMSP,KORD", "MSP and DEN's hub ORD");
+  assert.equal(r.body.build.ok, true);
+  assert.equal(r.body.build.generated, built.generated);
+});
+
+test("build files: a cold 12-airport request with the live TAF down stays inside 50 subrequests", async () => {
+  const ids = ["MSP", "DFW", "DEN", "JFK", "LAS", "MCO", "SEA", "PHX", "CLT", "BOS", "IAH", "SAN"]; // many distinct hubs, none requested
+  const r = await call("/status?ids=" + ids.join(","), { fail: ["taf"] });
+  assert.equal(r.status, 200);
+  assert.ok(r.log.length <= 50, `${r.log.length} subrequests`);
+  const hubFiles = r.log.filter((u) => u.startsWith(BUILD_BASE + "airport/")).length - ids.length;
+  assert.ok(hubFiles > 0 && hubFiles <= W.HUB_FALLBACK_MAX, `${hubFiles} hub files`);
+});
+
+test("build files: a request for non-curated airports only leaves the page's build sources alone", async () => {
+  const r = await call("/status?ids=KFCM&tz=KFCM:America/Chicago");
+  assert.equal(r.status, 200);
+  for (const n of W.BUILD_SOURCES) assert.equal(r.body.sources[n], undefined, n);
+  assert.equal(r.body.sources.metar.live, true);
 });
