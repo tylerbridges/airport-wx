@@ -1,4 +1,4 @@
-// Radar popup opened from the airport details menu (radar hook). Legacy card renderer retained for probes. Loaded as a module by index.html; app.js calls it through
+// Radar preview in the Weather page and full-screen airport radar (radar hook). Loaded as a module by index.html; app.js calls it through
 // window.AWXRadarCard:
 //   section(a, section) -> the "Radar" section for the sheet (null for airports outside NOAA's U.S. radar grids)
 //   close()             -> the airport sheet closed: stop and tear the radar down
@@ -70,7 +70,7 @@ export function loadEngine() {
 const S = {
   a: null, R: null, mode: "card", shown: false, visible: false, zoom: 8, heading: null,
   box: null, host: null, msg: null, meta: null, io: null, info: null, note: "", snow: true, pal: null,
-  legs: [], notes: [], full: null,
+  legs: [], notes: [], full: null, generation: 0,
 };
 const loc = (a) => ({ lat: +a.lat, lon: +a.lon });
 function fmtTime(t) {
@@ -213,16 +213,16 @@ function onVis(v) {
   else if (S.R && S.shown) S.R.hide(); // off screen: pause the loop and the refresh timers
 }
 function start() {
-  const a = S.a;
+  const a = S.a, generation = S.generation;
   if (!a) return;
   S.shown = true; paintMeta();
   loadEngine().then((R) => {
-    if (S.a !== a || S.mode === "full" || !S.visible) return;
+    if (S.generation !== generation || !S.a || S.mode === "full" || !S.visible) return;
     S.R = R; S.pal = R.palettes(); updateLegends(); showMsg("");
     S.zoom = zoomFor(S.box.clientWidth, +a.lat);
     setRm();
     R.show(S.host, loc(a), engineOpts("card"));
-  }, () => { if (S.a === a) { S.info = { failed: true }; paintMeta(); paintNotes(); showMsg(FAIL); } });
+  }, () => { if (S.generation === generation && S.a) { S.info = { failed: true }; paintMeta(); paintNotes(); showMsg(FAIL); } });
 }
 
 /** The "Radar" section for airport a, built with app.js's section() helper (null when a has no U.S. radar). */
@@ -250,6 +250,9 @@ export function section(a, sectionFn) {
 /** The airport sheet closed (or switched airport): stop the loop, cancel downloads, free memory. */
 export function close() {
   if (S.full && S.full.open) closeFull(true);
+  S.generation++;
+  if (S.io) { S.io.disconnect(); S.io = null; }
+  S.visible = false; S.mode = "card";
   if (S.R) S.R.destroy();
   S.a = null; S.shown = false; S.info = null; S.note = ""; S.heading = null;
   showMsg(""); paintNotes();
@@ -289,12 +292,13 @@ function open(a) {
 }
 function openFull(standalone = false) {
   if (!S.a || (S.full && S.full.open)) return;
-  const F = S.full || buildFull(), a = S.a;
+  const F = S.full || buildFull(), a = S.a, generation = S.generation;
   F.open = true; F.standalone = standalone; F.last = document.activeElement; F.lastDetail = F.last && F.last.dataset.detail; S.mode = "full";
   F.map.prepend(S.host);
   S.host.classList.remove("awr-static");
   F.wrap.hidden = false;
-  if (standalone) document.getElementById("sheet").inert = true;
+  F.parent = standalone ? document.getElementById("sheet") : S.box.closest('[role="dialog"]');
+  if (F.parent) F.parent.inert = true;
   F.ctl.opened();
   void F.wrap.offsetHeight; // reflow so the transition runs
   F.wrap.classList.add("open");
@@ -303,17 +307,17 @@ function openFull(standalone = false) {
   F.close.focus({ preventScroll: true });
   S.shown = true;
   loadEngine().then((R) => {
-    if (S.a !== a || !F.open) return;
+    if (S.generation !== generation || !S.a || !F.open) return;
     S.R = R; S.pal = R.palettes(); updateLegends(); showMsg("");
     setRm();
     R.show(S.host, loc(a), engineOpts("full"));
-  }, () => { S.info = { failed: true }; paintMeta(); });
+  }, () => { if (S.generation === generation && F.open) { S.info = { failed: true }; paintMeta(); showMsg(FAIL); } });
 }
 function closeFull(noRestore) {
   const F = S.full;
   if (!F || !F.open) return;
   F.open = false; S.mode = "card";
-  if (F.standalone) document.getElementById("sheet").inert = false;
+  if (F.parent) F.parent.inert = false;
   window.removeEventListener("keydown", F.esc, true);
   F.wrap.classList.remove("open");
   F.sheet.style.transform = ""; F.sheet.style.transition = "";
@@ -448,8 +452,13 @@ async function probeCheck(add) {
     f.remove();
   }
 }
-/** Scenarios (no network needed): the sheet carries the Radar card, Traveler wording only, engine not loaded on the list. */
+/** Scenarios: lazy Weather preview and full-screen lifecycle with a network-free engine stub. */
 async function cardCheck(add) {
+  // IntersectionObserver correctly ignores the suite's off-screen iframe. Give this
+  // visibility test an on-screen footprint without showing or intercepting its UI.
+  const holder = document.getElementById("frames") || document.body;
+  const holderStyle = holder.getAttribute("style");
+  if (holder !== document.body) holder.style.cssText += ";position:fixed;left:0;top:0;opacity:0;pointer-events:none";
   const f = frame("./index.html?test=all-clear");
   try {
     const t0 = Date.now();
@@ -471,9 +480,27 @@ async function cardCheck(add) {
     const rows = [...doc.querySelectorAll("#sheet .ad-row")];
     const compact = rows.length >= 3 && rows.every((x) => x.getBoundingClientRect().height >= 44) && !doc.querySelector("#sheet .ln-sec, #sheet .tm-sec, #sheet .pilot, #sheet .bf-today");
     add(compact ? "pass" : "fail", "Airport details use navigation rows", compact ? "44 px targets; amenities and technical reports open on demand" : "Rows missing, undersized, or secondary cards inline");
+    const calls = { show: 0, hide: 0, destroy: 0 };
+    w.WXRadar = {
+      show: (host) => { calls.show++; if (!host.firstChild) host.append(doc.createElement("canvas")); },
+      hide: () => { calls.hide++; }, destroy: () => { calls.destroy++; },
+      palettes: () => ({ RAIN: [[15, 0, 180, 0, 1], [70, 255, 0, 0, 1]], SNOW: [[5, 240, 240, 255, 1], [42, 0, 0, 255, 1]] }),
+      repaint() {}, home() {},
+    };
     const weather = doc.querySelector('#sheet [data-detail="weather"]');
     if (weather) {
       weather.focus(); weather.click(); await sleep(60);
+      const preview = doc.querySelector("#mdSheet .awr-box");
+      add(preview && doc.querySelector("#mdSheet .awr-sec") ? "pass" : "fail", "Weather page includes airport radar", preview ? "Airport-centered preview with full-screen activation" : "Radar preview missing");
+      preview?.scrollIntoView({ block: "center" });
+      const visibleStart = Date.now();
+      while (!calls.show && Date.now() - visibleStart < 2500) await sleep(100);
+      add(calls.show > 0 ? "pass" : "fail", "Weather radar starts only when visible", "Engine show calls: " + calls.show);
+      preview?.click(); await sleep(60);
+      const full = doc.querySelector(".awr-fwrap"), parent = doc.getElementById("mdSheet");
+      add(full && !full.hidden && parent.inert ? "pass" : "fail", "Weather radar expands above its parent page", "Weather page is inert behind full-screen radar");
+      full?.querySelector('[aria-label="Close radar"]')?.click(); await sleep(60);
+      add(!parent.inert && doc.activeElement === preview && calls.destroy === 0 ? "pass" : "fail", "Radar returns to the Weather preview", "Restores focus and reuses the loaded engine");
       const page = doc.getElementById("mdSheet"), back = page?.querySelector('[aria-label="Back to airport"]');
       if (back) {
         back.focus(); page.scrollTop = 40;
@@ -482,6 +509,7 @@ async function cardCheck(add) {
         const refreshed = /weather/.test(page.getAttribute("aria-label") || "") && page.scrollTop === top && doc.activeElement?.getAttribute("aria-label") === "Back to airport";
         add(refreshed ? "pass" : "fail", "Airport popup keeps page, scroll and focus on refresh", refreshed ? "Weather page stays open at the same position" : "Live refresh reset the popup");
         page.querySelector('[aria-label="Back to airport"]').click();
+        add(calls.destroy === 1 && !w.AWXRadarCard._state().shown && !w.AWXRadarCard._state().visible ? "pass" : "fail", "Leaving Weather tears down radar", "Stops workers and disconnects visibility observation");
         const restored = doc.activeElement?.dataset.detail === "weather" && w.AWXApp.state.openIata === "MSP";
         add(restored ? "pass" : "fail", "Airport popup returns to its menu row", restored ? "Back keeps the airport open and restores focus after the row was replaced" : "Back lost airport or menu focus");
       } else add("fail", "Airport popup opens with Back", "Weather page or Back button missing");
@@ -489,6 +517,7 @@ async function cardCheck(add) {
     w.AWXApp.closeSheet();
   } finally {
     f.remove();
+    if (holderStyle == null) holder.removeAttribute("style"); else holder.setAttribute("style", holderStyle);
   }
 }
 export async function checkRow(add, { mock = false } = {}) {

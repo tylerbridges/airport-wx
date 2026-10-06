@@ -2492,7 +2492,7 @@
       h("div", { class: "sheet md-sheet", id: "mdSheet", role: "dialog", "aria-modal": "true", "aria-labelledby": "mdTitle" }));
     document.body.append(md.wrap);
     md.wrap.querySelector(".sheet").addEventListener("keydown", (ev) => popupFocus(md.wrap.querySelector(".sheet"), ev));
-    if (window.AWXSheet) md.ctl = AWXSheet.makeSheet(md.wrap.querySelector(".sheet"), { onClose: () => closeDetails(), header: ".grab, .sh-head", backdrop: md.wrap.querySelector(".backdrop"), noPull: ".lamp" });
+    if (window.AWXSheet) md.ctl = AWXSheet.makeSheet(md.wrap.querySelector(".sheet"), { onClose: () => closeDetails(), header: ".grab, .sh-head", backdrop: md.wrap.querySelector(".backdrop"), noPull: ".lamp, .awr-box" });
     return md.wrap;
   }
   function openDetails(iata, page = "technical") {
@@ -2514,6 +2514,7 @@
   }
   function closeDetails() {
     if (!md.iata) return;
+    if (md.page === "weather") window.AWXRadarCard?.close();
     md.iata = null;
     $("sheet").inert = false;
     const w = md.wrap;
@@ -2633,6 +2634,7 @@
       // The primary sheet retains warnings; this page carries the full conditions and outlook.
       const parts = [];
       if (a.metar) parts.push(currentWeather(a));
+      parts.push(safeCall(() => window.AWXRadarCard?.section(a, section)));
       if (v.hours && v.hours.length) parts.push(safeCall(() => next12(a, v))); // Next 12 hours (filtered below)
       if (v.spc || v.tcf?.length) parts.push(section("Storm outlook", "bolt", [
         v.spc ? h("p", { class: "muted" }, v.spc === "TSTM" ? "General thunderstorms possible in the area (no severe risk)" : (SPC_NAMES[v.spc] || "Elevated") + " risk of severe storms today") : null,
