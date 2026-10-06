@@ -9,7 +9,7 @@
 //   - manual trips (stored only on this device, localStorage "awx-trips"), and the Trips settings sheet
 //     (flight calendar status and how to connect it).
 // Calendar trips come from data/trips.json (airports and times only); concerns from ./trip-risk.js.
-import { tripStatus, flightLine, rolesAt, clockText, whenText, rangeText, LEVEL_LABELS, STATUS, TRIP_KEEP_AFTER_ARRIVAL_MS } from "./trip-risk.js?v=9";
+import { tripStatus, rolesAt, clockText, whenText, rangeText, LEVEL_LABELS, STATUS, TRIP_KEEP_AFTER_ARRIVAL_MS } from "./trip-risk.js?v=9";
 import { mountSearch, loadAirports, airportsLoaded, placeLine } from "./search.js";
 import { calendarDraft, nextScheduled, todayScheduled, itineraryImpacts, MAX_CALENDAR_BYTES, flightKey } from "./trip-import.js?v=4";
 
@@ -375,6 +375,19 @@ function renderFoot() {
   foot.prepend(h("button", { type: "button", class: "tfoot", onclick: () => openTripSettings() }, "Trips"), " · ");
 }
 
+/** Paired airport-local scheduled times; dates remain explicit across midnight and time zones. */
+function flightRoute(leg, trip) {
+  const endpoint = (code, time, label) => {
+    const ms = typeof time === "number" ? time : Date.parse(time), tz = tzFor(code, trip);
+    return h("span", { class: "tfendpoint" },
+      h("span", { class: "tfrole" }, label), h("b", { class: "tfcode" }, code),
+      h("span", { class: "tftime" }, `${clockText(ms, tz)} ${tzAbbr(ms, tz)}`),
+      h("span", { class: "tfday" }, fmt(ms, tz, { weekday: "short", month: "short", day: "numeric" })));
+  };
+  return h("span", { class: "tfroute" }, endpoint(leg.from, leg.dep, "Departure"),
+    h("span", { class: "tfpath", "aria-hidden": "true" }, svg(PLANE, "tfi", 90)), endpoint(leg.to, leg.arr, "Arrival"));
+}
+
 // ---------- airport sheet: "Your flight" + plane markers ----------
 
 // terminals hook: TODO (future) when a leg departs from an airport with terminal data, show its gate's concourse and the nearest lounge (AWXTerminals.gateInfo in site/terminals.js). Nothing yet.
@@ -382,31 +395,41 @@ function decorateSheet(sheet, a) {
   if (!sheet || !a) return;
   sheet.querySelectorAll(".tflight, .tplane").forEach((x) => x.remove());
   const now = nowMs();
-  const rows = [];
+  const groups = [];
   const marks = [];
   for (const trip of allTrips()) {
-    const roles = rolesAt(trip, a.iata);
+    const roles = rolesAt(trip, a.iata).filter(line =>
+      (line.until || line.at) >= now - TRIP_KEEP_AFTER_ARRIVAL_MS);
     if (!roles.length) continue;
     const r = resultOf(trip);
-    for (const line of flightLine(trip, r, a.iata, a.tz, now)) {
-      if (line.at < now - TRIP_KEEP_AFTER_ARRIVAL_MS && (line.role !== "conn" || line.until < now - TRIP_KEEP_AFTER_ARRIVAL_MS)) continue;
-      const sm = app()?.summary?.(a); // the card's level window (site/outlook.js summary)
-      const overlaps = !!sm && sm.level >= 2 && window.AWXOutlook?.overlaps({ start: sm.start, end: sm.end }, line.at, line.until);
-      const inRange = a.hours?.some((hr) => Date.parse(hr.t) <= line.at && line.at < Date.parse(hr.t) + HOUR);
-      const context = overlaps ? (line.role === "dep" ? "Your departure overlaps the highest-risk window here." : line.role === "arr" ? "Your arrival overlaps the highest-risk window here." : "Your connection overlaps the highest-risk window here.")
-        : !inRange ? (line.at < now ? "Forecast coverage for this scheduled time has expired. Check your airline for flight updates."
-          : r.status === "early" ? ((m) => (m ? "Forecast arrives about a day ahead — check back after " + m[1] + "." : null))(/check back after (.+?)\.?$/.exec(r.top || "")) // the label already says "too early to tell"
-          : "Airport forecast not available for this time yet.") : null;
-      // the "Your flight" label already says whose it is: "Thu 5:18 PM departure to SFO: too early to tell"
-      const text = line.text.replace(/^Your scheduled connection here/, "Connection here").replace(/^Your scheduled /, "").replace(/^./, (c) => c.toUpperCase());
-      rows.push(h("button", { type: "button", class: "tfrow " + r.cls, "aria-label": `Your flight. ${line.text}. Open the trip`, onclick: () => openTrip(trip.id) },
-        h("span", { class: "tfic" }, svg(PLANE, "tfi", line.role === "arr" ? 135 : line.role === "conn" ? 90 : 45)),
-        h("span", { class: "tft" }, h("span", { class: "tfl" }, "Your flight"), text, context ? h("span", { class: "tfcontext" }, context) : null)));
-      marks.push({ at: line.at, what: line.role === "dep" ? "departure" : line.role === "arr" ? "arrival" : "connection" });
-    }
+    const sm = app()?.summary?.(a);
+    const contexts = roles.filter(line => sm?.level >= 2 && window.AWXOutlook?.overlaps({ start: sm.start, end: sm.end }, line.at, line.until))
+      .map(line => `Your ${line.role === "dep" ? "departure" : line.role === "arr" ? "arrival" : "connection"} overlaps the highest-risk window here.`);
+    const rows = trip.legs.flatMap((leg, i) => {
+      const lr = resultOf({ ...trip, legs: [leg] });
+      const note = lr.status === "ok" ? null : lr.status === "early"
+        ? `Forecast from ${whenText(Date.parse(leg.dep) - 24 * HOUR, tzFor(leg.from, trip), now)}.` : lr.top;
+      const row = h("button", { type: "button", class: "tfrow " + lr.cls, "data-flight-leg": i + 1,
+        "aria-label": `Leg ${i + 1} of ${trip.legs.length}, ${leg.from} to ${leg.to}. ${dateLine(Date.parse(leg.dep), tzFor(leg.from, trip))}. ${lr.label}. Open the trip`, onclick: () => openTrip(trip.id) },
+        h("span", { class: "tfhead" }, h("span", { class: "tfl" }, trip.legs.length > 1 ? `Leg ${i + 1} of ${trip.legs.length}` : "Scheduled flight"), pillEl(lr, true)),
+        flightRoute(leg, trip),
+        note ? h("span", { class: "tfcontext" }, note) : null);
+      const conn = r.legs[i]?.conn;
+      return [row, conn ? h("div", { class: "tfconnection" + (conn.tight ? " tight" : "") },
+        `${conn.minutes} min connection · ${conn.iata}`, conn.tight ? h("span", { class: "badge l2" }, "Tight") : null,
+        ...r.concerns.filter(c => c.side === "conn" && c.leg === i).map(c => h("span", { class: "tfcontext" }, c.text))) : null];
+    }).filter(Boolean);
+    groups.push(h("div", { class: "tfgroup" },
+      h("div", { class: "tfdate" }, fmt(Date.parse(trip.legs[0].dep), tzFor(trip.legs[0].from, trip), { weekday: "short", month: "short", day: "numeric" })),
+      ...rows,
+      ...[...new Set(contexts)].map(text => h("p", { class: "tfcontext tfnotice" }, text)),
+      h("p", { class: "tfsource" }, r.scheduleNote),
+      calStatus().warn && trip.source !== "manual" ? h("p", { class: "tfcontext warn" }, "Calendar update unavailable · saved times may be outdated") : null));
+    for (const line of roles) marks.push({ at: line.at, what: line.role === "dep" ? "departure" : line.role === "arr" ? "arrival" : "connection" });
   }
-  if (!rows.length) return;
-  const box = h("div", { class: "tflight" }, rows);
+  if (!groups.length) return;
+  const box = h("section", { class: "tflight", "aria-label": "Your flights" },
+    h("h3", { class: "tfheading" }, "Your flights"), ...groups);
   // build2b hook: under the timeline (above it only the header, the Now/Peak card and the timeline)
   const anchor = sheet.querySelector(".tlsec") || sheet.querySelector(".sh-where") || sheet.querySelector(".sh-head");
   if (anchor) anchor.after(box); else sheet.prepend(box);
@@ -527,11 +550,11 @@ function tripView(trip) {
   const r = resultOf(trip);
   const first = trip.legs[0];
   const tzF = tzFor(first.from, trip);
-  const legsEls = r.legs.map((l) => {
+  const legsEls = r.legs.map((l, i) => {
     const tf = tzFor(l.from, trip), tt = tzFor(l.to, trip);
     return h("div", { class: "tleg" },
-      h("div", { class: "tleg-h" }, h("b", {}, `${l.from} → ${l.to}`),
-        h("span", { class: "muted" }, ` ${clockText(l.dep, tf)} ${tzAbbr(l.dep, tf)} → ${clockText(l.arr, tt)} ${tzAbbr(l.arr, tt)}`)),
+      h("div", { class: "tfhead tleg-h" }, h("span", { class: "tfl" }, `Leg ${i + 1} of ${trip.legs.length}`)),
+      flightRoute(l, trip),
       h("div", { class: "two" },
         levelBox(`Scheduled departure ${l.from}`, whenText(l.dep, tf, nowMs()), l.depAt, !l.depAt && l.scheduledDepPassed ? "Forecast coverage expired" : null),
         levelBox(`Scheduled arrival ${l.to}`, whenText(l.arr, tt, nowMs()), l.arrAt, !l.arrAt && l.scheduledArrPassed ? "Forecast coverage expired" : null)),
@@ -912,13 +935,33 @@ const CSS = `
 .tbtn{min-height:44px;padding:0 16px;border-radius:12px;background:var(--card-2);font-weight:600;font-size:15px}
 .tbtn.primary{background:var(--accent-btn,var(--brand));color:var(--brand-ink,#000)}
 .tbtn.danger{color:var(--crit)}
-.tflight{display:grid;gap:8px;margin:0 0 14px}
-.tfrow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--card-2);border-radius:16px;padding:10px 12px;min-height:44px}
+.tflight{display:grid;gap:10px;margin:0 0 16px}
+.tfheading{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 4px}
+.tfgroup{border-radius:18px;background:var(--card-2);overflow:hidden}
+.tfdate{padding:12px 14px 0;font-size:12px;font-weight:600;color:var(--muted)}
+.tfrow{display:block;width:100%;text-align:left;padding:12px 14px;min-height:44px;background:transparent}
 .tfrow.off{--c:var(--muted)}
-.tfrow .tfic{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--c) 20%,transparent)}
-.tfrow .tfi{width:20px;height:20px;fill:var(--c)}
-.tfrow .tft{flex:1;min-width:0;font-size:14px;font-weight:600;line-height:1.3}
-.tfrow .tfl{display:block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.tfrow:focus-visible{outline:2px solid var(--brand);outline-offset:-3px;border-radius:12px}
+.tfhead{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 10px;margin-bottom:10px}
+.tfl{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.tfhead .pill.sm{font-size:11px;padding:3px 8px}
+.tfroute{display:grid;grid-template-columns:minmax(0,1fr) 36px minmax(0,1fr);align-items:center;gap:8px}
+.tfendpoint{display:grid;gap:3px;min-width:0}
+.tfendpoint:last-child{text-align:right}
+.tfrole,.tfday{font-size:11px;color:var(--muted);line-height:1.3}
+.tfcode{font-size:28px;font-weight:800;letter-spacing:-.03em;line-height:1.05}
+.tftime{font-size:14px;font-weight:600;line-height:1.35}
+.tfpath{display:flex;justify-content:center;position:relative;color:var(--muted)}
+.tfpath::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px solid var(--line)}
+.tfpath .tfi{position:relative;width:18px;height:18px;fill:currentColor;background:var(--card-2)}
+.tfcontext{display:block;margin-top:9px;font-size:12px;font-weight:400;line-height:1.4;color:var(--muted)}
+.tfconnection{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:9px 14px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:12px;font-weight:600;color:var(--muted)}
+.tfconnection.tight{color:var(--l2)}
+.tfsource{padding:0 14px 12px;margin:0;font-size:11px;line-height:1.4;color:var(--muted)}
+.tfnotice{margin:0;padding:0 14px 10px}
+.tleg{padding:14px;border-radius:18px;background:var(--card-2)}
+.tleg>.tfroute{margin-bottom:12px}
+.tleg .box{background:var(--card);padding:10px}
 .tl.tplaned{margin-top:24px}
 .tl .tplane{position:absolute;top:-20px;width:16px;height:16px;margin-left:-8px;pointer-events:none;z-index:1}
 .tl .tplane svg{width:16px;height:16px;fill:var(--text)}

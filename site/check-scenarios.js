@@ -500,6 +500,20 @@ export async function consistencyChecks(add, w, doc, where = "") {
     A.closeSheet();
   }
   void now;
+  // A flight itinerary is additive: every leg is available alongside the standard airport sections.
+  const trip = w.AWXTrips?._state().trips[0];
+  if (trip) {
+    A.openSheet(trip.legs[0].from);
+    await later(w, 30);
+    const sh = doc.getElementById("sheet");
+    const rows = sh.querySelectorAll(".tflight [data-flight-leg]");
+    const complete = rows.length >= trip.legs.length && sh.querySelector(".tlsec")
+      && sh.querySelector('[data-detail="weather"]') && sh.querySelector('[data-detail="technical"]')
+      && [...rows].every(row => row.querySelectorAll(".tfendpoint").length === 2 && row.querySelectorAll(".tftime").length === 2);
+    add(complete ? "pass" : "fail", `Flights retain every leg and the standard airport view${where}`,
+      `${rows.length} leg rows; airport timeline, Weather and More details remain available`);
+    A.closeSheet();
+  }
   add(levels.length ? "fail" : "pass", `One level${where}: card pill = sheet headline`, levels.slice(0, 4).join("; ") || `${compared} airports compared${noPill ? `, ${noPill} sheets show no level (data unknown)` : ""}`);
   add(windows.length ? "fail" : "pass", `Words and colours agree${where}: the headline's hours are coloured at its level`, windows.slice(0, 4).join("; ") || "every headline window");
   add(unexplained.length ? "fail" : "pass", `Every coloured hour says why${where}`, unexplained.slice(0, 4).join("; ") || "no unexplained hours");
