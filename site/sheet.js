@@ -115,14 +115,14 @@
       var b = bd();
       if (b) { b.style.transition = ""; b.style.opacity = ""; }
     }
-    function sample(y) {
-      var t = Date.now();
+    function sample(y, t) {
+      if (t == null) t = Date.now();
       drag.samples.push([t, y]);
       while (drag.samples.length > 2 && t - drag.samples[0][0] > 100) drag.samples.shift();
     }
-    function begin(y) {
+    function begin(y, t) {
       drag = { y0: y, dy: 0, samples: [], on: true };
-      sample(y);
+      sample(y, t);
     }
     function moveTo(y) {
       drag.dy = Math.max(0, y - drag.y0);
@@ -191,7 +191,7 @@
       if (opts.header && t.closest && t.closest(opts.header)) return; // the pointer handler has it
       if (opts.noPull && t.closest && t.closest(opts.noPull)) return;
       var sc = (opts.scroller && opts.scroller(t)) || el;
-      tp = { y: e.touches[0].clientY, x: e.touches[0].clientX, sc: sc, on: false, top: sc.scrollTop <= TOP, from: null };
+      tp = { y: e.touches[0].clientY, x: e.touches[0].clientX, sc: sc, on: false, top: sc.scrollTop <= TOP, time: Date.now() };
     }, { passive: true });
     el.addEventListener("touchmove", function (e) {
       if (!tp) return;
@@ -205,10 +205,10 @@
           tp.y = y;
           return;
         }
-        if (dy <= 0) { if (tp.top) { tp = null; return; } tp.y = y; return; }       // up: scrolls normally; re-anchor
-        if (tp.sc.scrollTop > TOP) { tp.y = y; return; }                           // still scrolling back to the top
+        if (dy <= 0) { if (tp.top) { tp = null; return; } tp.y = y; tp.time = Date.now(); return; }       // up: scrolls normally; re-anchor
+        if (tp.sc.scrollTop > TOP) { tp.y = y; tp.time = Date.now(); return; }                           // still scrolling back to the top
         // at the top and moving down: start the close drag from here
-        tp.on = true; tp.y = y; begin(y);
+        tp.on = true; begin(tp.y, tp.time);
       }
       if (e.cancelable) e.preventDefault();
       moveTo(y);
@@ -216,7 +216,7 @@
     var tpEnd = function () {
       var was = tp && tp.on;
       tp = null;
-      if (was) release();
+      if (was) { swallow = Date.now() + 350; release(); }
     };
     el.addEventListener("touchend", tpEnd);
     el.addEventListener("touchcancel", tpEnd);

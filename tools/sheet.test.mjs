@@ -39,3 +39,23 @@ test("App sheet locking preserves the viewport and announces every visibility ch
   assert.equal(scrollCalls,0,"dismissal must not trigger viewport scrolling");
   assert.deepEqual(notices,["awx:sheet-change","awx:sheet-change"]);
 });
+
+test("A quick content flick includes its initial movement and suppresses the resulting click", () => {
+  const events = {}; let now = 1000, closes = 0, prevented = false;
+  const el = {style:{},scrollTop:0,offsetHeight:740,addEventListener(k,f){events[k]=f;},contains(){return true;}};
+  const document = {body:{style:{},getAttribute(){return null;},removeAttribute(){},classList:{contains(){return true;}}},documentElement:{classList:{add(){},remove(){}}},addEventListener(){},removeEventListener(){},dispatchEvent(){}};
+  const window = {document,addEventListener(){}}; window.top = {};
+  runInNewContext(readFileSync(new URL('../site/sheet.js', import.meta.url), 'utf8'),
+    {window,document,Date:{now:()=>now},Event:class{},setTimeout(){}});
+  const ctl=window.AWXSheet.makeSheet(el,{onClose(){closes++;}});
+  ctl.opened();
+  const target={closest(){return null;}};
+  events.touchstart({target,touches:[{clientX:100,clientY:350}]});
+  now+=40;
+  events.touchmove({target,touches:[{clientX:100,clientY:430}],cancelable:true,preventDefault(){}});
+  assert.equal(el.style.transform,'translateY(80px)');
+  events.touchend();
+  assert.equal(closes,1,"one fast move is sufficient to dismiss");
+  events.click({preventDefault(){prevented=true;},stopPropagation(){}});
+  assert.equal(prevented,true);
+});

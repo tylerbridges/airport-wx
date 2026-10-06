@@ -190,6 +190,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 800; letter-spa
   padding: 8px calc(env(safe-area-inset-right) + 16px) calc(env(safe-area-inset-bottom) + 16px) calc(env(safe-area-inset-left) + 16px);
   transform: translateY(100%); transition: transform .28s cubic-bezier(.2, .8, .2, 1);
 }
+#sheet { max-height: 88vh; max-height: 88dvh; }
 .sheet-wrap.open .backdrop { opacity: 1; }
 .sheet-wrap.open .sheet { transform: none; }
 .grab { position: relative; width: 100%; height: 24px; margin: -4px auto 2px; cursor: grab; }
@@ -887,9 +888,9 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="offline.js?v=3"></script>
 <script src="outlook.js?v=13"></script>
 <script src="cats.js?v=4"></script><!-- build2b: disruption categories -->
-<script src="sheet.js?v=5"></script><!-- build2b: shared sheet drag / back / scroll lock -->
+<script src="sheet.js?v=6"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
-<script src="app.js?v=73" defer></script>
+<script src="app.js?v=74" defer></script>
 <script type="module" src="searched.js?v=7"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=18"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="trips.js?v=27"></script><!-- trips hook -->

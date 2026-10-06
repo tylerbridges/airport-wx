@@ -1591,7 +1591,7 @@
   // build2b: drag to dismiss (header at any scroll position, content at the top), back gesture, scroll lock (site/sheet.js)
   const noSheet = { opened() {}, closed() {}, isOpen: () => false };
   const sheetCtl = window.AWXSheet ? AWXSheet.makeSheet($("sheet"), {
-    onClose: () => closeSheet(), header: ".grab, .sh-head", backdrop: $("backdrop"), noPull: ".tl.big, .tl-wrap, .lamp, .cw-bar",
+    onClose: () => closeSheet(), header: ".grab, .sh-head", backdrop: $("backdrop"), noPull: ".lamp, .cw-bar",
   }) : noSheet;
   const panelCtl = window.AWXSheet ? AWXSheet.makeSheet($("panel"), { onClose: () => closePanel(), header: ".pn-head", backdrop: $("panelBackdrop") }) : noSheet;
 
