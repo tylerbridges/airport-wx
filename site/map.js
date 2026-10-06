@@ -10,6 +10,10 @@
 //   Overlays: a ring around airports with a ground stop, delay program or closure at that hour; thin lines from a hub
 //             with a program to the airports its cascade note (status.json airports[].cascade) covers at that hour.
 //   Access:   the list under the map mirrors the dots (same filter, same hour); the stage pans with arrow keys.
+//   Speed:    opening the tab paints the map first; the airport states (outlook per airport and hour), the dots and then the
+//             list rows are built in time-sliced chunks (BUDGET ms each, between frames), states are cached per airport and
+//             hour until the data, settings or the minute change, and the slider re-targets a running job. flush() finishes
+//             everything synchronously for the check page.
 import { h, app } from "./navui.js";
 import { loadAirports } from "./search.js";
 import { makeRadar } from "./map/mrms.js?v=1"; // map hook: radar overlay
@@ -50,6 +54,11 @@ export function mountMap(container) {
   let all = [], shown = [], byCode = new Map(), dots = [], edges = [], labelBoxes = [];
   let index = [], land = null, us = null, VM = null, vmState = "loading", tileSeen = false, baseKind = "none";
   let baseDirty = true, baseAt = 0, frame = 0, gesturing = false, colors = null, pulsing = false;
+  let cand = null, order = [], layoutDirty = true, overDirty = true, boxCache = null, gen = 0, shardGen = 0, rangeKey = "", cacheKey = "", job = 0, cur = null, listS = null, listS_id = 0, listTimer = 0, listPending = false, lastInput = -1e9, pfTok = 0, first = true;
+  const stateCache = new Map(); // hour offset -> WeakMap(airport object -> { lv, programs, head, quality }); valid for cacheKey
+  let dsCache = new WeakMap(); // airport object -> timeline slots (A.daySlots), for the observed hours
+  const atBy = new Map(); // hour offset -> the instant it was computed for (fixed until cacheKey changes)
+  const rowCache = new Map(); // code -> { li, sig }
   const shardAirports = new Map(); // code -> status-shaped airport built from its shard entry (null: no entry)
   const shardSig = new Map();
   const shardChecks = new Map(); // code -> latest bounded refresh context; requests share searched.js shard TTL
@@ -60,7 +69,7 @@ export function mountMap(container) {
   const radar = makeRadar((tileArrived) => { // new tiles redraw the base at most every 150 ms; a new scan also updates the legend
     if (!tileArrived) legend();
     const t = performance.now();
-    if (t - radarAt > 150) { radarAt = t; draw(true); } else setTimeout(() => draw(true), 160);
+    if (t - radarAt > 150) { radarAt = t; draw(true, true); } else setTimeout(() => draw(true, true), 160);
   });
   // ---------- DOM ----------
   const base = h("canvas", { class: "mapx-base", "aria-hidden": "true" });
@@ -125,7 +134,7 @@ export function mountMap(container) {
       const sig = e ? [e.h, e.mt, e.ti, h0, s?.data?.generated, A.state.data?.live, !!s?.error, !!A.state.offline].join("|") : "none";
       if (shardSig.get(x.code) === sig) return;
       shardSig.set(x.code, sig);
-      if (!e || !Number.isFinite(h0)) { shardAirports.set(x.code, null); schedule(); return; }
+      if (!e || !Number.isFinite(h0)) { shardAirports.set(x.code, null); shardGen++; schedule(); return; }
       const pt = Date.parse(e.pt);
       const hours = String(e.h || "").split("").map((c, i) => ({ t: new Date(h0 + i * HOUR).toISOString(), level: c === "-" ? null : Number(c), reasons: h0 + i * HOUR === pt && e.r ? [e.r] : [] }))
         .filter((r) => r.level != null); // an hour no report covers stays unknown, never Clear
@@ -136,7 +145,7 @@ export function mountMap(container) {
         hours, observed: [], metar: e.mt ? { obsTime: e.mt } : null, taf: e.t ? { issued: e.ti } : null, faa: [], atcscc: [], alerts: [], cascade: [],
         now: { level: e.n || 0, reasons: [] }, peak: { level: e.p || 0, at: e.pt || hours[0].t, reasons: e.r ? [e.r] : [] },
       } : null);
-      schedule();
+      shardGen++; schedule();
     }).catch(() => { shardSig.delete(x.code); }).finally(() => { shardLoading.delete(x.code); });
   }
 
@@ -148,7 +157,7 @@ export function mountMap(container) {
     for (const r of safe(() => window.AWXTrips.routes(), []) || []) { trip.add(r.from); trip.add(r.to); }
     for (const a of data.airports) if (a.trip) trip.add(a.iata);
     const majors = new Set(data.airports.map((a) => a.iata));
-    all = data.airports.filter((a) => Number.isFinite(a.lat) && Number.isFinite(a.lon)).map((a) => ({ a, code: a.iata, major: true }));
+    const all = data.airports.filter((a) => Number.isFinite(a.lat) && Number.isFinite(a.lon)).map((a) => ({ a, code: a.iata, major: true }));
     for (const code of new Set([...favs, ...trip])) {
       if (majors.has(code)) continue;
       const x = index.find((y) => y.code === code);
@@ -159,33 +168,45 @@ export function mountMap(container) {
       all.push({ a: s || { iata: code, icao: x.icao, name: x.name, city: x.city, tz: x.tz || "UTC", lat: x.lat, lon: x.lon, hours: [], observed: [], metar: null, faa: [] }, code, major: false });
     }
     for (const e of all) { e.mine = favs.includes(e.code) || trip.has(e.code); e.wx = mx(e.a.lon); e.wy = my(e.a.lat); }
-    byCode = new Map(all.map((e) => [e.code, e]));
+    cand = { all, byCode: new Map(all.map((e) => [e.code, e])) };
     // slider range: the past 12 hours when observed history is there; forecast hours as far as any airport has them
-    const now = A.refNow();
-    minOff = data.airports.some((a) => (a.observed || []).length) ? -12 : 0;
-    maxOff = 0;
-    for (let k = 1; k <= 24; k++) {
-      const t = now + k * HOUR;
-      if (all.some((e) => (e.a.hours || []).some((x) => Date.parse(x.t) <= t && t < Date.parse(x.t) + HOUR))) maxOff = k;
+    // (recomputed only when the data, the minute or a shard changes: it scans every airport's hours)
+    const now = A.refNow(), rk = [gen, Math.floor(now / 60e3), data.generated, data.live, shardGen, all.length].join("|");
+    if (rk !== rangeKey) {
+      rangeKey = rk;
+      minOff = data.airports.some((a) => (a.observed || []).length) ? -12 : 0;
+      maxOff = 0;
+      for (const e of all) for (const x of e.a.hours || []) {
+        // the hour starting at s covers exactly one of now + k h; keep the latest k in 1..24
+        const k = Math.ceil((Date.parse(x.t) + HOUR - now) / HOUR) - 1;
+        if (k > maxOff && k <= 24) maxOff = k;
+      }
     }
     offset = Math.max(minOff, Math.min(maxOff, offset));
     return true;
   }
 
   /** Level (null = unknown), headline and FAA programs for one airport at the slider's hour. */
-  function stateOf(e) {
+  function stateOf(e, offset, at) {
     const A = app();
-    const v = safe(() => (e.a.hours && e.a.hours.length ? A.view(e.a) : e.a), e.a) || e.a;
-    const programs = safe(() => window.AWXOutlook.restrictions(v, at, A.refNow()), []) || [];
+    const programsOf = () => { // only when needed: the outlook evaluates the same restrictions itself
+      const v = safe(() => (e.a.hours && e.a.hours.length ? A.view(e.a) : e.a), e.a) || e.a;
+      return safe(() => window.AWXOutlook.restrictions(v, at, A.refNow()), []) || [];
+    };
     if (offset < 0) {
-      const ds = e.a.hours && e.a.hours.length ? safe(() => A.daySlots(e.a)) : null;
+      const programs = programsOf();
+      let ds = null;
+      if (e.a.hours && e.a.hours.length) { // the day's slots don't depend on the hour: one per airport until the cache resets
+        if (!dsCache.has(e.a)) dsCache.set(e.a, safe(() => A.daySlots(e.a)));
+        ds = dsCache.get(e.a);
+      }
       const s = ds && ds.cur >= 0 ? ds.slots[ds.cur + offset] : null;
       const lv = s && s.kind === "obs" && s.level != null ? s.level : null;
       return { lv, programs, head: lv == null ? "No report for this hour" : (s.observed ? "Observed: " : "Earlier forecast: ") + WORDS[lv] };
     }
     const o = safe(() => A.outlook(e.a, at));
-    if (!o) return { lv: null, programs, head: "Forecast unavailable for this time" };
-    return { lv: o.kind === "unknown" || o.level == null ? null : Math.max(0, Math.min(4, o.level)), programs: o.programs || programs, head: o.headline, quality: o.quality };
+    if (!o) return { lv: null, programs: programsOf(), head: "Forecast unavailable for this time" };
+    return { lv: o.kind === "unknown" || o.level == null ? null : Math.max(0, Math.min(4, o.level)), programs: o.programs || programsOf(), head: o.headline, quality: o.quality };
   }
   /** Cascade notes on this airport, from a hub with a program (not plain hub delays), in effect at the slider's hour. */
   function cascadesOf(e) {
@@ -194,20 +215,96 @@ export function mountMap(container) {
       show[safe(() => window.AWXCats.reason(c.text).cat)] !== false);
   }
 
+  // ---------- pipeline: states -> dots -> list rows, each in time-sliced chunks ----------
+  const BUDGET = 16; // ms of work per slice; one slice is one task, so none comes near the 50 ms long-task line even at 4x throttle
+  const chan = new MessageChannel(), queue = [];
+  chan.port1.onmessage = () => { const f = queue.shift(); if (f) f(); };
+  /** Run fn in a later task (not tied to frames, so it also runs in the check page's hidden frames). */
+  const later = (fn) => { queue.push(fn); chan.port2.postMessage(0); };
+  /** Run fn after the next frame has painted (a timer backs up frames that never come). */
+  function afterFrame(fn) {
+    let done = false, t = 0;
+    const go = () => { if (done) return; done = true; clearTimeout(t); fn(); };
+    requestAnimationFrame(() => setTimeout(go, 0));
+    t = setTimeout(go, 200);
+  }
+  /** Drop cached states when the data, settings or the minute change (gen is bumped by awx:render and prefs). */
+  function checkCache(A) {
+    const d = A.state.data || {};
+    const k = [gen, Math.floor(A.refNow() / 60e3), d.generated, d.live, !!A.state.offline, !!A.state.sample].join("|");
+    if (k === cacheKey) return;
+    cacheKey = k; stateCache.clear(); atBy.clear(); dsCache = new WeakMap();
+  }
+  const atFor = (A, off) => { if (!atBy.has(off)) atBy.set(off, A.refNow() + off * HOUR); return atBy.get(off); };
   function render() {
     const A = app();
     if (!A || !collect()) { count.textContent = "Loading airports…"; return; }
-    at = A.refNow() + offset * HOUR;
-    for (const e of all) Object.assign(e, stateOf(e));
-    shown = all.filter((e) => filter === "mine" ? e.mine : filter === "risk" ? e.lv == null || e.lv >= 2 || e.programs.some((p) => RING.has(p.type)) : true);
-    slider.min = String(minOff); slider.max = String(maxOff); slider.value = String(offset);
-    const w = whenWords();
+    checkCache(A);
+    const off = offset, atT = atFor(A, off);
+    if (!stateCache.has(off)) stateCache.set(off, new WeakMap());
+    slider.min = String(minOff); slider.max = String(maxOff); slider.value = String(off);
+    const w = whenWords(off, atT);
     whenB.textContent = w.main; whenS.textContent = w.sub;
     slider.setAttribute("aria-valuetext", w.main + ", " + w.sub);
-    legend();
-    renderList();
-    draw();
+    pfTok++; // a prefetch of neighbouring hours yields to this
+    cur = { id: ++job, off, at: atT, all: cand.all, byCode: cand.byCode, wm: stateCache.get(off), i: 0, done: false };
+    step(cur);
   }
+  /** Evaluate the airports of w that have no cached state, until the deadline; true when all have one. */
+  function compute(w, deadline) {
+    while (w.i < w.all.length) {
+      const e = w.all[w.i];
+      if (!w.wm.has(e.a)) w.wm.set(e.a, stateOf(e, w.off, w.at));
+      w.i++;
+      if ((w.i & 3) === 0 && performance.now() > deadline) return false;
+    }
+    return true;
+  }
+  function step(w) {
+    if (w.id !== job || w.done) return;
+    if (compute(w, performance.now() + BUDGET)) apply(w); else later(() => step(w));
+  }
+  /** The states of w are all there: show them (dots now, list rows in the following slices). */
+  function apply(w) {
+    w.done = true;
+    all = w.all; byCode = w.byCode; at = w.at;
+    for (const e of all) Object.assign(e, w.wm.get(e.a));
+    shown = all.filter((e) => filter === "mine" ? e.mine : filter === "risk" ? e.lv == null || e.lv >= 2 || e.programs.some((p) => RING.has(p.type)) : true);
+    order = sorted();
+    legend();
+    count.textContent = `${shown.length} airport${shown.length === 1 ? "" : "s"}`;
+    renderFoot();
+    layoutDirty = true; draw();
+    // the rows follow once the slider settles (scrubbing only moves the dots and the count), else right away
+    clearTimeout(listTimer); listS_id++; listS = null; listPending = true;
+    const go = () => { listPending = false; listStart(); };
+    if (performance.now() - lastInput < 250) listTimer = setTimeout(go, 250); else later(go);
+    later(() => prefetch(pfTok, w.off));
+  }
+  /** While idle, evaluate the neighbouring hours so the slider's next steps are instant. */
+  function prefetch(tok, off) {
+    const A = app();
+    if (!A || tok !== pfTok || container.hidden) return;
+    const targets = [off + 1, off - 1, off + 2, off - 2].filter((k) => k >= minOff && k <= maxOff);
+    let ti = 0, w = null;
+    const pump = () => {
+      if (tok !== pfTok || container.hidden || listPending || (listS && !listS.done)) { if (tok === pfTok && !container.hidden) setTimeout(pump, 120); return; }
+      const deadline = performance.now() + 10;
+      for (;;) {
+        if (!w) {
+          if (ti >= targets.length) return;
+          const k = targets[ti++];
+          if (!stateCache.has(k)) stateCache.set(k, new WeakMap());
+          w = { off: k, at: atFor(A, k), all, wm: stateCache.get(k), i: 0 };
+        }
+        if (!compute(w, deadline)) break;
+        w = null;
+      }
+      setTimeout(pump, 8);
+    };
+    setTimeout(pump, 250);
+  }
+
   function legend() {
     const items = WORDS.map((word, i) => h("span", {}, h("i", { class: "l" + i }), word));
     if (shown.some((e) => e.lv == null)) items.push(h("span", {}, h("i", { class: "nodata" }), "No data"));
@@ -234,7 +331,7 @@ export function mountMap(container) {
     return home ? { tz: home.tz, whose: (safe(() => A.codeOf(home), home.iata) || home.iata) + " time" } : { tz: USER_TZ, whose: "your time" };
   }
   /** "Now" / "Tonight 9 PM" / "Tomorrow 6 AM" / "Today 3 PM" in the slider's zone (sliderZone). */
-  function whenWords() {
+  function whenWords(offset, at) {
     const A = app(), now = A.refNow(), Z = sliderZone(), tz = Z.tz;
     const zone = safe(() => A.zoneAbbr(at, tz), "") || "";
     const sub = (offset < 0 ? "Observed" : offset === 0 ? "Current conditions" : "Forecast") + " · " + Z.whose + (zone ? " (" + zone + ")" : "");
@@ -258,27 +355,62 @@ export function mountMap(container) {
     const rank = (e) => (e.lv == null ? 1.5 : e.lv) + (hasRing(e) ? 0.5 : 0);
     return [...shown].sort((x, y) => rank(y) - rank(x) || (y.mine - x.mine) || x.code.localeCompare(y.code));
   }
-  function renderList() {
+  /** One list row's text and classes (the signature says whether the row's markup must be rebuilt). */
+  function rowInfo(e) {
     const A = app();
+    const code = safe(() => A.codeOf(e.a), e.code) || e.code;
+    const word = e.lv == null ? "No data" : WORDS[e.lv];
+    const status = e.lv == null || (e.head && e.head.toLowerCase().includes(word.toLowerCase())) ? e.head || word : e.head ? word + " · " + e.head : word;
+    const ring = hasRing(e) && !/held|program|closed|closure/i.test(status) ? ". FAA program in effect" : "";
+    const city = e.a.city || e.a.name || "", cls = "map-airport-row " + (e.lv == null ? "unknown" : "l" + e.lv);
+    const label = `${code}, ${city}. ${status}${ring}${e.quality ? ". " + e.quality : ""}${e.a.shard ? ". Weather only" : ""}. Open current airport status`;
+    return { code, city, status, cls, label, quality: e.quality, sig: [cls, label, code, city, status, e.quality || ""].join("\u0001") };
+  }
+  function rowFor(e) {
+    const info = rowInfo(e);
+    let r = rowCache.get(e.code);
+    if (!r) {
+      const li = h("li", {});
+      li.style.cssText = "content-visibility:auto;contain-intrinsic-size:auto 56px"; // rows off screen cost no layout or paint
+      rowCache.set(e.code, r = { li, sig: "" });
+    }
+    if (r.sig !== info.sig) {
+      const old = r.li.firstElementChild, had = old && old === document.activeElement, code = e.code;
+      const btn = h("button", { type: "button", class: info.cls, "data-code": code, "aria-label": info.label, onclick: () => { const x = byCode.get(code); if (x) openAirport(x); } },
+        h("b", { style: info.quality ? "grid-row:span 3" : null }, info.code), h("span", {}, info.city), h("span", { class: "map-row-status" }, h("i", { "aria-hidden": "true" }), info.status),
+        info.quality ? h("span", { class: "map-row-quality", style: "grid-column:2;font-size:12px;color:var(--muted)" }, info.quality) : null);
+      r.li.replaceChildren(btn); r.sig = info.sig;
+      if (had) btn.focus({ preventScroll: true });
+    }
+    return r.li;
+  }
+  /** Build or reorder the list to mirror `order`, a slice at a time (rows are reused by code; a new apply restarts it). */
+  function listStart() {
     const focused = list.contains(document.activeElement) ? document.activeElement.dataset.code : null;
-    const rows = sorted().map((e) => {
-      const code = safe(() => A.codeOf(e.a), e.code) || e.code;
-      const word = e.lv == null ? "No data" : WORDS[e.lv];
-      const status = e.lv == null || (e.head && e.head.toLowerCase().includes(word.toLowerCase())) ? e.head || word : e.head ? word + " · " + e.head : word;
-      const ring = hasRing(e) && !/held|program|closed|closure/i.test(status) ? ". FAA program in effect" : "";
-      return h("li", {}, h("button", { type: "button", class: "map-airport-row " + (e.lv == null ? "unknown" : "l" + e.lv), "data-code": e.code,
-        "aria-label": `${code}, ${e.a.city || e.a.name || ""}. ${status}${ring}${e.quality ? ". " + e.quality : ""}${e.a.shard ? ". Weather only" : ""}. Open current airport status`, onclick: () => openAirport(e) },
-      h("b", { style: e.quality ? "grid-row:span 3" : null }, code), h("span", {}, e.a.city || e.a.name || ""), h("span", { class: "map-row-status" }, h("i", { "aria-hidden": "true" }), status), e.quality ? h("span", { class: "map-row-quality", style: "grid-column:2;font-size:12px;color:var(--muted)" }, e.quality) : null));
-    });
-    if (!shown.length) rows.push(h("li", { class: "mapx-empty" }, filter === "mine" ? "Star an airport or add a trip to see it here." : "No airport is at risk at this hour."));
-    list.replaceChildren(...rows);
-    count.textContent = `${shown.length} airport${shown.length === 1 ? "" : "s"}`;
-    renderFoot();
-    if (focused) list.querySelector(`[data-code="${CSS.escape(focused)}"]`)?.focus({ preventScroll: true });
+    listS = { id: ++listS_id, i: 0, cursor: list.firstChild, done: false, focused, rows: order, empty: null };
+    later(() => listStep(listS, performance.now() + BUDGET));
+  }
+  function listStep(s, deadline) {
+    if (!s || s.id !== listS_id || s.done) return;
+    if (!s.rows.length) {
+      if (!s.empty) s.empty = h("li", { class: "mapx-empty" }, filter === "mine" ? "Star an airport or add a trip to see it here." : "No airport is at risk at this hour.");
+      list.replaceChildren(s.empty); s.cursor = null; s.i = 0;
+    } else {
+      while (s.i < s.rows.length) {
+        const li = rowFor(s.rows[s.i++]);
+        if (li === s.cursor) s.cursor = s.cursor.nextSibling; else list.insertBefore(li, s.cursor);
+        if ((s.i & 7) === 0 && performance.now() > deadline) { later(() => listStep(s, performance.now() + BUDGET)); return; }
+      }
+      while (s.cursor) { const n = s.cursor.nextSibling; s.cursor.remove(); s.cursor = n; }
+    }
+    s.done = true;
+    if (rowCache.size > s.rows.length + 80) { const keep = new Set(s.rows.map((e) => e.code)); for (const k of rowCache.keys()) if (!keep.has(k)) rowCache.delete(k); }
+    if (s.focused && !list.contains(document.activeElement)) list.querySelector(`[data-code="${CSS.escape(s.focused)}"]`)?.focus({ preventScroll: true });
   }
   function renderFoot() {
     const b = baseKind === "vector" ? "Map data © OpenStreetMap contributors, tiles by OpenFreeMap. " : baseKind === "outline" && vmState === "fail" ? "Simplified outlines (Natural Earth): the detailed base map couldn't load. " : "";
-    foot.textContent = b + "Colours show airport disruption risk at the selected hour. Tap an airport to open its current status. Starred and trip airports outside the major list use weather forecasts only.";
+    const t = b + "Colours show airport disruption risk at the selected hour. Tap an airport to open its current status. Starred and trip airports outside the major list use weather forecasts only.";
+    if (foot.textContent !== t) foot.textContent = t;
     attrib.hidden = baseKind !== "vector";
   }
   function openAirport(e) {
@@ -344,13 +476,16 @@ export function mountMap(container) {
       W = w; H = hh; dpr = d;
       for (const cv of [base, over]) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); cv.style.width = W + "px"; cv.style.height = H + "px"; }
       if (first) fit(); else { view.x = c[0]; view.y = c[1]; clamp(); }
-      baseDirty = true;
+      baseDirty = true; layoutDirty = overDirty = true; // resizing a canvas clears it
     }
     return true;
   }
   /** Request a frame; baseToo = the base map must be redrawn for the view (during gestures it follows by CSS). */
-  function draw(baseToo) {
+  function draw(baseToo, baseOnly) {
     if (baseToo) baseDirty = true;
+    // dots and labels are re-placed and re-drawn only for a frame that follows a change of the view or the states
+    // (not on pulse frames, and not when only the base map changed: new tiles, outlines, radar)
+    if (!baseOnly) layoutDirty = overDirty = true;
     if (frame || container.hidden) return;
     frame = requestAnimationFrame(paint);
   }
@@ -358,11 +493,11 @@ export function mountMap(container) {
     frame = 0;
     if (container.hidden || !resize() || !view) return;
     if (!colors) readColors();
-    layout();
+    if (layoutDirty) { layoutDirty = false; layout(); }
     const t = performance.now();
     if (baseDirty && (!gesturing || t - baseAt > 180)) { drawBase(); baseDirty = false; baseAt = t; renderFoot(); }
     placeBase();
-    drawOver(ts || t);
+    if (overDirty || pulsing) { overDirty = false; drawOver(ts || t); }
     pulsing = !reduced() && document.visibilityState === "visible" && dots.some((d) => d.on && d.e.lv === 4);
     if (pulsing || (gesturing && baseDirty)) frame = requestAnimationFrame(paint);
   }
@@ -434,7 +569,7 @@ export function mountMap(container) {
     ctx.font = "700 11.5px " + FONT;
     dots = []; edges = [];
     const { top, bottom } = insets();
-    for (const e of sorted()) {
+    for (const e of order) {
       const [sx, sy] = toScreen(e.wx, e.wy);
       const on = sx > -20 && sx < W + 20 && sy > -20 && sy < H + 20;
       dots.push({ e, sx, sy, r: e.mine ? 7 : 6, on });
@@ -448,7 +583,12 @@ export function mountMap(container) {
     const boxes = dots.filter((d) => d.on).map((d) => ({ x0: d.sx - d.r - 1, y0: d.sy - d.r - 1, x1: d.sx + d.r + 1, y1: d.sy + d.r + 1 }));
     const n = boxes.length;
     boxes.push(...controlBoxes()); // never under the floating controls
-    const hit = (b) => boxes.some((q) => b.x0 < q.x1 && b.x1 > q.x0 && b.y0 < q.y1 && b.y1 > q.y0);
+    // boxes are bucketed in a 32 px grid so each label test looks only at its neighbours
+    const grid = new Map(), CS = 32, gk = (i, j) => i * 4096 + j;
+    const cells = (b, fn) => { for (let i = Math.floor(b.x0 / CS); i <= Math.floor(b.x1 / CS); i++) for (let j = Math.floor(b.y0 / CS); j <= Math.floor(b.y1 / CS); j++) fn(gk(i, j)); };
+    const put = (b) => cells(b, (k) => { const c = grid.get(k); if (c) c.push(b); else grid.set(k, [b]); });
+    for (const b of boxes) put(b);
+    const hit = (b) => { let r = false; cells(b, (k) => { if (!r) { const c = grid.get(k); if (c && c.some((q) => b.x0 < q.x1 && b.x1 > q.x0 && b.y0 < q.y1 && b.y1 > q.y0)) r = true; } }); return r; };
     const placed = [];
     for (const d of dots) {
       d.label = null;
@@ -459,7 +599,7 @@ export function mountMap(container) {
       for (const [x0, y0] of [[d.sx + g, d.sy - th / 2], [d.sx - g - tw, d.sy - th / 2], [d.sx - tw / 2, d.sy - g - th], [d.sx - tw / 2, d.sy + g]]) {
         const b = { x0: x0 - 1, y0, x1: x0 + tw + 1, y1: y0 + th };
         if (b.x0 < 2 || b.x1 > W - 2 || hit(b)) continue;
-        boxes.push(b); placed.push(b); d.label = { code, x: x0, y: y0 + th / 2 }; break;
+        boxes.push(b); put(b); placed.push(b); d.label = { code, x: x0, y: y0 + th / 2 }; break;
       }
     }
     labelBoxes = boxes.slice(0, n).concat(placed);
@@ -612,16 +752,16 @@ export function mountMap(container) {
     else return;
     e.preventDefault(); clamp(); draw(true);
   });
-  slider.addEventListener("input", () => { const was = offset; offset = Number(slider.value) || 0; render(); if (showRadar && (was === 0) !== (offset === 0)) draw(true); });
+  slider.addEventListener("input", () => { lastInput = performance.now(); const was = offset; offset = Number(slider.value) || 0; render(); if (showRadar && (was === 0) !== (offset === 0)) draw(true); });
 
   // ---------- lifecycle ----------
   let pending = false;
-  function schedule() { if (pending || container.hidden) return; pending = true; requestAnimationFrame(() => { pending = false; render(); }); }
+  function schedule() { if (pending || container.hidden) return; pending = true; afterFrame(() => { if (pending) { pending = false; render(); } }); }
   const restyle = () => { colors = null; draw(true); };
   new ResizeObserver(() => draw(true)).observe(container);
-  document.addEventListener("awx:render", schedule);
+  document.addEventListener("awx:render", () => { gen++; schedule(); });
   document.addEventListener("awx:trips", schedule);
-  safe(() => window.AWXPrefs.onPrefs(() => { restyle(); textW.clear(); schedule(); }));
+  safe(() => window.AWXPrefs.onPrefs(() => { gen++; restyle(); textW.clear(); schedule(); }));
   safe(() => matchMedia("(prefers-color-scheme: dark)").addEventListener("change", restyle));
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") draw(); });
   setInterval(schedule, 60e3);
@@ -630,18 +770,21 @@ export function mountMap(container) {
     ring.forEach(([lon, lat], i) => { const x = mx(lon), y = my(lat); p[2 * i] = x; p[2 * i + 1] = y; b[0] = Math.min(b[0], x); b[1] = Math.min(b[1], y); b[2] = Math.max(b[2], x); b[3] = Math.max(b[3], y); });
     return { p, b };
   });
-  getJson("./map/us.json").then((g) => { us = toRings(g.features.flatMap((f) => f.geometry.coordinates.map((poly) => poly[0]))); draw(true); }).catch(() => {});
-  getJson("./data/map-land.json").then((d) => { land = toRings(d.rings || []); draw(true); }).catch(() => {});
+  getJson("./map/us.json").then((g) => { us = toRings(g.features.flatMap((f) => f.geometry.coordinates.map((poly) => poly[0]))); draw(true, true); }).catch(() => {});
+  getJson("./data/map-land.json").then((d) => { land = toRings(d.rings || []); draw(true, true); }).catch(() => {});
   loadAirports().then((l) => { index = l; schedule(); }).catch(() => {});
   loadVmap().then((M) => {
     VM = M;
-    if (!M) { vmState = "fail"; draw(true); return; }
-    M.init((ok) => { vmState = ok ? "ok" : "fail"; draw(true); }, () => { tileSeen = true; draw(true); });
+    if (!M) { vmState = "fail"; draw(true, true); return; }
+    M.init((ok) => { vmState = ok ? "ok" : "fail"; draw(true, true); }, () => { tileSeen = true; draw(true, true); });
   });
 
   /** Run a pending render and frame now (the check page's hidden frames may not get animation frames). */
   function flush() {
     if (pending) { pending = false; render(); }
+    if (cur && !cur.done) { compute(cur, Infinity); apply(cur); } // finish the states, the dots and every list row now
+    if (listPending) { clearTimeout(listTimer); listPending = false; listStart(); }
+    if (listS && !listS.done) listStep(listS, Infinity);
     if (frame) cancelAnimationFrame(frame);
     frame = 0; paint(performance.now());
   }
@@ -657,5 +800,8 @@ export function mountMap(container) {
     setFilter,
     fit: () => { fit(); draw(true); },
   };
-  return { render: () => { render(); draw(true); } };
+  return { render: () => {
+    if (first) { first = false; count.textContent = "Loading airports…"; schedule(); draw(true); return; } // map first, then the rest
+    render(); draw(true);
+  } };
 }
