@@ -174,7 +174,7 @@ function buildRoot(body) {
         body.querySelector('[data-key="flights"]')?.focus({ preventScroll: true });
       }),
       p.flights ? navRow("calendar", "Trips & flight calendar", null, () => push("trips"), { "data-page": "trips" }) : null,
-    ].filter(Boolean), "Opt in to Trips, your day-of flight brief and Flighty calendar setup. Turning this off pauses syncing and keeps saved trips and connections on this device."),
+    ].filter(Boolean), "Opt in to Trips, your day-of flight brief and calendar setup. Turning this off pauses syncing and keeps saved trips and connections on this device."),
     group("Show these disruptions", [
       ...keys.map((k) => switchRow(k, CAT_LABELS[k] || k[0].toUpperCase() + k.slice(1), show[k] !== false,
         (v) => { P().setPref("show", Object.assign({}, P().getPrefs().show, { [k]: v })); say((CAT_LABELS[k] || k) + (v ? " shown" : " hidden")); })),
