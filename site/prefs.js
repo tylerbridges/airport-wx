@@ -21,18 +21,19 @@
   var CATEGORIES = ["storms", "winter", "wind", "fog", "heat", "faa", "atc", "runways", "vip", "space", "tstm"];
   var showAll = {};
   CATEGORIES.forEach(function (k) { showAll[k] = true; });
-  var DEFAULTS = Object.freeze({ mode: "traveler", show: Object.freeze(showAll), theme: "auto", clock: 12, codes: "iata", timeRef: "airport" });
+  var DEFAULTS = Object.freeze({ mode: "traveler", show: Object.freeze(showAll), theme: "auto", clock: 12, codes: "iata", timeRef: "airport", flights: false });
   var ONE_OF = { mode: ["traveler", "aviation"], theme: ["auto", "light", "dark"], codes: ["iata", "icao"], timeRef: ["airport", "mine"] };
 
   function copyOf(p) {
     var show = {};
     for (var k in p.show) show[k] = p.show[k];
-    return { mode: p.mode, show: show, theme: p.theme, clock: p.clock, codes: p.codes, timeRef: p.timeRef };
+    return { mode: p.mode, show: show, theme: p.theme, clock: p.clock, codes: p.codes, timeRef: p.timeRef, flights: p.flights };
   }
   function clean(v, base) {
     var p = copyOf(base || DEFAULTS);
     if (!v || typeof v !== "object") return p;
     for (var k in ONE_OF) if (ONE_OF[k].indexOf(v[k]) >= 0) p[k] = v[k];
+    if (typeof v.flights === "boolean") p.flights = v.flights;
     if (Number(v.clock) === 12 || Number(v.clock) === 24) p.clock = Number(v.clock);
     if (v.show && typeof v.show === "object") CATEGORIES.forEach(function (c) { if (typeof v.show[c] === "boolean") p.show[c] = v.show[c]; });
     // settings saved by an early build2b page ({hide: {cat: true}, tz: "mine"})

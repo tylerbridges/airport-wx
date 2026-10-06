@@ -292,7 +292,7 @@ export const AVIATION_CODES = /\b(VFR|MVFR|IFR|LIFR|METAR|TAF|SIGMET|LAMP|TCF|CW
 // disruption type shown). main() pins them for the whole run and puts the user's settings back afterwards, so a
 // check never depends on what was left in this browser; checks that need another setting set it explicitly.
 const SETTINGS_KEY = "awx-settings";
-const BASELINE = Object.freeze({ mode: "traveler", timeRef: "airport", clock: 12, codes: "iata" });
+const BASELINE = Object.freeze({ mode: "traveler", timeRef: "airport", clock: 12, codes: "iata", flights: true });
 const baseline = (o = {}) => Object.assign({}, BASELINE, o);
 const dropTestOverlays = () => { // site/testmode.js keeps a scenario page's writes in sessionStorage ("awx-test:awx-…")
   try { for (const k of Object.keys(sessionStorage)) if (k.indexOf("awx-test:awx-settings") === 0) sessionStorage.removeItem(k); } catch { /* storage blocked */ }
@@ -800,7 +800,50 @@ async function runLive() {
   }
 }
 
+async function flightFeatureChecks(add) {
+  const saved = localStorage.getItem(SETTINGS_KEY);
+  const tripOverlay = sessionStorage.getItem("awx-test:awx-trips");
+  const check = (ok, label) => add(ok ? "pass" : "fail", label, "");
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(baseline({ flights: false })));
+    dropTestOverlays();
+    await withPage("./index.html?test=trip-all-clear#trips", async (w, doc) => {
+      check(!w.AWXPrefs.getPrefs().flights && !w.AWXTrips, "Flights default off: trip module stays unloaded");
+      check(!doc.getElementById("tab-trips") && w.AWXNav.tab() === "airports" && w.location.hash === "#airports", "Disabled Trips deep link returns to Airports");
+      const resources = () => w.performance.getEntriesByType("resource").filter(e => /\/(trips\.js|trip-risk\.js|trip-import\.js|calendar-link\.js|trips\.json)(?:[?]|$)/.test(e.name));
+      check(resources().length === 0, "No flight module or schedule requests while disabled");
+      w.AWXNav.openSettings();
+      const toggle = () => doc.querySelector('[data-key="flights"]');
+      check(toggle()?.getAttribute("aria-checked") === "false" && !doc.querySelector('[data-page="trips"]'), "Settings exposes opt-in without trip setup links");
+      toggle().click();
+      await w.AWXFlights.ready(); await w.AWXTrips.ready();
+      check(!!doc.getElementById("tab-trips") && !!doc.querySelector(".thome"), "Opt-in loads Trips and the day-of flight brief");
+      const trips = w.AWXTrips._state().trips.map(t => t.id).join(",");
+      const deviceTrip = { id: "optin-test", legs: [{ from: "MSP", to: "ORD", dep: new Date(Date.now() + 3600000).toISOString(), arr: new Date(Date.now() + 7200000).toISOString() }] };
+      w.localStorage.setItem("awx-trips", JSON.stringify([deviceTrip]));
+      w.AWXNav.go("trips");
+      toggle().click();
+      check(w.location.hash === "#airports" && !doc.getElementById("tab-trips") && !doc.querySelector(".thome, .tflight, .tplane") && w.AWXTrips.routes().length === 0 && w.AWXTrips.todayAirportIds().length === 0, "Opt-out removes all flight UI, routes and temporary airports");
+      w.AWXNav.go("trips"); w.AWXTrips.openAdd(); w.AWXTrips.openConnect();
+      check(w.AWXNav.tab() === "airports" && !doc.querySelector("#tripWrap.open"), "Disabled flight entry points cannot open Trips");
+      const count = resources().length;
+      await w.AWXTrips.ready(); w.AWXTrips.render();
+      check(count === resources().length, "Disabled renders do not restart flight reads");
+      toggle().click(); await w.AWXFlights.ready(); await w.AWXTrips.ready();
+      check(w.AWXTrips.list().some(t => t.id === deviceTrip.id) && trips.split(",").every(id => w.AWXTrips._state().trips.some(t => t.id === id)), "Reenable restores saved device and calendar trips");
+      toggle().click();
+      check(w.localStorage.getItem("awx-trips").includes(deviceTrip.id), "Opt-out retains device trips");
+      check(!(w.__awxErrors || []).length, "Flight opt-in cycle has no console errors");
+    }, [390, 844]);
+  } finally {
+    if (saved === null) localStorage.removeItem(SETTINGS_KEY); else localStorage.setItem(SETTINGS_KEY, saved);
+    if (tripOverlay === null) sessionStorage.removeItem("awx-test:awx-trips"); else sessionStorage.setItem("awx-test:awx-trips", tripOverlay);
+    dropTestOverlays();
+  }
+}
+
 async function runMock() {
+  if (RENDER) await flightFeatureChecks(group("Optional flight features (390 px)"));
   const now = Date.now();
   if (RENDER) await uiChecks(group("App: settings, modes, timeline (thunderstorm-ground-stop, 390 px)"), "thunderstorm-ground-stop"); // build2b
   const idx = await getJson("./data/scenarios/index.json");

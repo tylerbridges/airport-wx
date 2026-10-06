@@ -8,15 +8,16 @@
 import { mountSearch } from "./search.js";
 import { mountMap } from "./map.js?v=10"; // map hook: Map tab (site/map.js)
 import { h, icon, prefs, reducedMotion, trapFocus, app } from "./navui.js";
-import { initSettings, openSettings, settingsOpen } from "./settings.js?v=6";
+import { initSettings, openSettings, settingsOpen } from "./settings.js?v=7";
 
 const TABS = [
   { id: "airports", label: "Airports", title: "Airports", icon: "terminal" },
   { id: "trips", label: "Trips", title: "Trips", icon: "ticket" },
   { id: "map", label: "Map", title: "Map", icon: "foldmap" },
 ];
+const availableTabs = () => TABS.filter(t => t.id !== "trips" || prefs().getPrefs().flights);
 const $ = (id) => document.getElementById(id);
-export const tabFromHash = (hash) => { const k = String(hash || "").replace(/^#/, ""); return TABS.some((t) => t.id === k) ? k : "airports"; };
+export const tabFromHash = (hash) => { const k = String(hash || "").replace(/^#/, ""); return availableTabs().some((t) => t.id === k) ? k : "airports"; };
 
 let cur = null;
 const scrollBy = {}; // tab -> panel scrollTop, restored when coming back
@@ -52,31 +53,35 @@ function buildPanels() {
 }
 
 function buildBar() {
+  nav?.remove();
+  const tabs = availableTabs();
   bar = h("div", { class: "awx-tabbar glass", role: "tablist", "aria-label": "Sections" },
-    TABS.map((t) => h("button", {
+    tabs.map((t) => h("button", {
       type: "button", role: "tab", id: "tab-" + t.id, "data-tab": t.id, "aria-controls": "nav" + t.id[0].toUpperCase() + t.id.slice(1),
       "aria-selected": "false", tabindex: "-1",
       onclick: () => go(t.id),
     }, icon(t.icon), h("span", {}, t.label))));
   bar.addEventListener("keydown", (e) => {
-    const i = TABS.findIndex((t) => t.id === cur);
+    const i = tabs.findIndex((t) => t.id === cur);
     let j = null;
-    if (e.key === "ArrowRight") j = (i + 1) % TABS.length;
-    else if (e.key === "ArrowLeft") j = (i + TABS.length - 1) % TABS.length;
+    if (e.key === "ArrowRight") j = (i + 1) % tabs.length;
+    else if (e.key === "ArrowLeft") j = (i + tabs.length - 1) % tabs.length;
     else if (e.key === "Home") j = 0;
-    else if (e.key === "End") j = TABS.length - 1;
+    else if (e.key === "End") j = tabs.length - 1;
     if (j == null) return;
     e.preventDefault();
-    go(TABS[j].id);
-    $("tab-" + TABS[j].id).focus();
+    go(tabs[j].id);
+    $("tab-" + tabs[j].id).focus();
   });
   const sb = h("button", { type: "button", class: "awx-searchbtn glass", id: "navSearchBtn", "aria-label": "Search airports", onclick: () => openSearch() }, icon("wlens"));
   nav = h("nav", { class: "awx-nav", "aria-label": "Main" }, h("div", { class: "awx-navin" }, bar, sb));
+  bar.style.setProperty("--tab-count", tabs.length);
   document.body.append(nav);
 }
 
 /** Switch tab through the hash (adds a history entry, so Back returns to the previous tab). */
 function go(id) {
+  id = tabFromHash("#" + id);
   setCompact(false);
   if (id === cur) { panelFor(id).scrollTo({ top: 0, behavior: reducedMotion() ? "auto" : "smooth" }); return; }
   // Avoid native anchor scrolling to the Airports page's existing #trips section.
@@ -85,6 +90,8 @@ function go(id) {
 }
 
 function show(id) {
+  id = tabFromHash("#" + id);
+  if (location.hash === "#trips" && !prefs().getPrefs().flights) history.replaceState(null, "", "#airports");
   if (cur) scrollBy[cur] = panelFor(cur).scrollTop;
   const prev = cur;
   cur = id;
@@ -92,8 +99,7 @@ function show(id) {
   for (const t of TABS) {
     const sel = t.id === id;
     const b = $("tab-" + t.id);
-    b.setAttribute("aria-selected", String(sel));
-    b.tabIndex = sel ? 0 : -1;
+    if (b) { b.setAttribute("aria-selected", String(sel)); b.tabIndex = sel ? 0 : -1; }
     panelFor(t.id).hidden = !sel;
   }
   const h1 = document.querySelector(".wrap header h1");
@@ -144,14 +150,10 @@ function chromeScroll(e) {
 function renderTrips() {
   const box = $("navTrips");
   if (window.AWXTrips && typeof window.AWXTrips.render === "function") { window.AWXTrips.render(box); return; }
-  if (box.querySelector(".awx-empty")) return;
-  const add = () => (window.AWXTrips && typeof window.AWXTrips.openAdd === "function" ? window.AWXTrips.openAdd() : openSettings("trips", { focus: "add" }));
-  box.replaceChildren(h("div", { class: "awx-empty" },
-    h("div", { class: "awx-empty-ico" }, icon("case")),
-    h("h2", {}, "No trips yet"),
-    h("p", {}, "Add scheduled flight times to see the airport outlook along your trip. Saved on this device."),
-    h("button", { type: "button", class: "awx-btn primary", onclick: add }, "Add a trip"),
-    h("button", { type: "button", class: "awx-btn", onclick: () => window.AWXTrips?.openImport ? AWXTrips.openImport() : openSettings("trips") }, "Import a calendar file")));
+  const failed = window.AWXFlights?.failed();
+  box.replaceChildren(h("div", { class: "awx-empty" }, h("h2", {}, failed ? "Flight features couldn't load" : "Loading flight features…"),
+    failed ? h("button", { type: "button", class: "awx-btn", onclick: () => location.reload() }, "Try again") : null));
+
 }
 
 let mapApi;
@@ -179,7 +181,7 @@ function menuItems() {
   return [
     window.AWXTrips?.hasTodayFlight?.() ? row("sun", "Today's flight brief", { fn: () => window.AWXTrips.openTodayBrief() }) : null,
     row("star", "Your airports", { fn: () => openSettings("airports"), count: favs.length }),
-    row("calendar", "Trips & flight calendar", { fn: () => openSettings("trips") }),
+    prefs().getPrefs().flights ? row("calendar", "Trips & flight calendar", { fn: () => openSettings("trips") }) : null,
     row("gear", "Settings", { fn: () => openSettings() }),
     h("div", { class: "awx-msep", role: "separator" }),
     acc,
@@ -316,6 +318,15 @@ function init() {
   document.body.classList.add("awx-nav-on");
   buildPanels();
   buildBar();
+  P.onPrefs((p, key) => {
+    if (key !== "flights" && key !== null) return;
+    closeMenu(false);
+    buildBar();
+    show(cur || tabFromHash(location.hash));
+    syncBar();
+  });
+  document.addEventListener("awx:flights-ready", () => { if (cur === "trips") renderTrips(); });
+  document.addEventListener("awx:flights-error", () => { if (cur === "trips") renderTrips(); });
   for (const t of TABS) panelFor(t.id).addEventListener("scroll", chromeScroll, { passive: true });
   for (const type of ["touchstart", "touchmove", "wheel"]) document.addEventListener(type, chromeGesture, { passive: true });
   document.addEventListener("keydown", e => { if (["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End", " "].includes(e.key)) chromeGesture(); });

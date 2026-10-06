@@ -13,7 +13,7 @@ import { tripStatus, rolesAt, clockText, whenText, rangeText, LEVEL_LABELS, STAT
 import { mountSearch, loadAirports, airportsLoaded, placeLine } from "./search.js";
 import { calendarDraft, nextScheduled, todayScheduled, itineraryImpacts, MAX_CALENDAR_BYTES, flightKey } from "./trip-import.js?v=4";
 
-import { CALENDAR_KEY, loadConnection, saveConnection, fetchCalendar } from "./calendar-link.js?v=5";
+import { CALENDAR_KEY, loadConnection, saveConnection, fetchCalendar } from "./calendar-link.js?v=6";
 
 const KEY = "awx-trips";
 const HOUR = 3600e3;
@@ -22,15 +22,23 @@ const CAL_TTL = 60e3;
 const T = window.AWXTest || { name: null, rebase: (d) => d };
 const app = () => window.AWXApp;
 
+const enabled = () => window.AWXPrefs?.getPrefs().flights === true;
+const requests = new Set();
+let refreshTimer = null, active = false, calSeq = 0;
+async function requestCalendar(url) {
+  const ctl = new AbortController(); requests.add(ctl);
+  try { return await fetchCalendar(url, { signal: ctl.signal }); }
+  finally { requests.delete(ctl); }
+}
 const S = {
-  connection: T.name ? null : loadConnection(),
+  connection: enabled() && !T.name ? loadConnection() : null,
   connectionAt: 0, connectionLoading: null, connectionFailed: false,
   connectBusy: false, connectError: "", connectText: "", connectSeq: 0,
   cal: null, // data/trips.json
   calAt: 0,
   calFailed: false,
   loading: null,
-  manual: loadManual(),
+  manual: enabled() ? loadManual() : [],
   view: null, // trip sheet: {kind: "trip", id} | {kind: "edit", id|null} | {kind: "settings"}
   lastFocus: null,
   importDraft: null,
@@ -107,44 +115,50 @@ function saveManual() {
 function appReady() {
   return new Promise((res) => {
     const t0 = Date.now();
-    const tick = () => ((app() && app().state.loaded) || Date.now() - t0 > 8000 ? res() : setTimeout(tick, 50));
+    const tick = () => (!enabled() || (app() && app().state.loaded) || Date.now() - t0 > 8000 ? res() : setTimeout(tick, 50));
     tick();
   });
 }
 
 function loadCal(force) {
+  if (!enabled()) return Promise.resolve();
   if (S.loading) return S.loading;
   if (!force && S.calAt && Date.now() - S.calAt < CAL_TTL) return Promise.resolve();
+  const seq = ++calSeq, ctl = new AbortController(); requests.add(ctl);
   S.loading = (async () => {
-    await appReady(); // test mode: trips.json is shifted by the same amount as the scenario
-    const url = T.name ? `./data/scenarios/${T.name}/trips.json` : "./data/trips.json";
     try {
-      const r = await fetch(url, { cache: "no-store" });
-      if (r.ok) { const d = await r.json(); S.cal = T.name ? T.rebase(d) : d; S.calFailed = false; }
-      else if (r.status === 404) { S.cal = null; S.calFailed = false; }
+      await appReady();
+      if (!enabled() || seq !== calSeq) return;
+      const url = T.name ? `./data/scenarios/${T.name}/trips.json` : "./data/trips.json";
+      const r = await fetch(url, { cache: "no-store", signal: ctl.signal });
+      const d = r.ok ? await r.json() : null;
+      if (!enabled() || seq !== calSeq) return;
+      if (r.ok || r.status === 404) { S.cal = T.name && d ? T.rebase(d) : d; S.calFailed = false; }
       else S.calFailed = true;
-    } catch { S.calFailed = true; }
-    S.calAt = Date.now();
-    S.loading = null;
-    render();
+      S.calAt = Date.now();
+    } catch { if (enabled() && seq === calSeq) { S.calFailed = true; S.calAt = Date.now(); } }
+    finally {
+      requests.delete(ctl);
+      if (seq === calSeq) { S.loading = null; render(); }
+    }
   })();
   return S.loading;
 }
 
 function connectedDoc() { return S.connection?.doc || S.cal; }
 function refreshConnection(force = false) {
-  if (T.name || !S.connection || S.connectionLoading || (!force && Date.now() - S.connectionAt < 10 * MIN)) return S.connectionLoading || Promise.resolve();
+  if (!enabled() || T.name || !S.connection || S.connectionLoading || (!force && Date.now() - S.connectionAt < 10 * MIN)) return S.connectionLoading || Promise.resolve();
   const link = S.connection.url, seq = S.connectSeq;
   S.connectionAt = Date.now();
   S.connectionLoading = (async () => {
     try {
-      const [doc] = await Promise.all([fetchCalendar(link), loadAirports().catch(() => null)]);
-      if (seq !== S.connectSeq || S.connection?.url !== link) return;
+      const [doc] = await Promise.all([requestCalendar(link), loadAirports().catch(() => null)]);
+      if (!enabled() || seq !== S.connectSeq || S.connection?.url !== link) return;
       const value = { url: link, doc };
       S.connection = value; S.connectionFailed = false;
       if (!saveConnection(value)) S.connectionFailed = true;
     } catch { if (seq === S.connectSeq) S.connectionFailed = true; }
-    finally { S.connectionLoading = null; render(); }
+    finally { if (seq === S.connectSeq) { S.connectionLoading = null; render(); } }
   })();
   return S.connectionLoading;
 }
@@ -162,6 +176,7 @@ function tzFor(code, trip) {
 
 /** Calendar + manual trips retained until 24 h after scheduled arrival, soonest first. */
 function allTrips() {
+  if (!enabled()) return [];
   const now = nowMs();
   const cal = (connectedDoc()?.trips || []).map((t) => ({ ...t, source: "calendar" }));
   const man = S.manual.map((t) => ({ ...t, source: "manual" }));
@@ -316,6 +331,15 @@ function tripActions() {
 
 let tabBox = null; // the nav shell's Trips tab (site/nav.js calls render(container))
 function render(container) {
+  if (!enabled()) {
+    if (container?.nodeType) tabBox = container;
+    tabBox?.replaceChildren();
+    const home = document.getElementById("trips");
+    if (home) { home.replaceChildren(); home.hidden = true; }
+    document.querySelectorAll(".tflight, .tplane, .tfoot").forEach(el => el.remove());
+    document.dispatchEvent(new CustomEvent("awx:trips"));
+    return;
+  }
   const active = document.activeElement, focusedId = active?.dataset.trip;
   const focusedBox = active?.closest("#navTrips, #trips")?.id;
   if (container && container.nodeType) tabBox = container;
@@ -324,6 +348,7 @@ function render(container) {
   if (tabBox) renderTab(tabBox);
   const box = document.getElementById("trips");
   if (!box) { refreshOpen(); return; }
+  box.hidden = false;
   const trips = allTrips();
   if (!trips.length) { box.replaceChildren(); renderFoot(); refreshOpen(); document.dispatchEvent(new CustomEvent("awx:trips")); const a = statusAirports().find((a) => a.iata === app()?.state.openIata); if (a) decorateSheet(document.getElementById("sheet"), a); return; }
   const focus = todayFlight();
@@ -373,7 +398,7 @@ function renderTab(box) {
 const calAgo = () => { const g = connectedDoc() && Date.parse(connectedDoc().generated); return g ? " · updated " + ago(Math.max(0, nowMs() - g)) : ""; };
 
 /** Settings → Trips & flight calendar (site/settings.js through the nav shell), else this file's own Trips sheet. */
-function openTripSettings(focus) {
+function openTripSettings(focus) { if (!enabled()) return;
   if (window.AWXNav && typeof window.AWXNav.openSettings === "function") {
     const next = () => window.AWXNav.openSettings("trips", focus ? { focus } : undefined);
     if (S.view && window.AWXSheet?.transfer) AWXSheet.transfer(closeTrip, next);
@@ -521,11 +546,11 @@ const head = (title, ...right) => h("div", { class: "sh-head" },
   h("div", { class: "right", style: "gap:6px" }, ...right, h("button", { type: "button", class: "close", "aria-label": "Close", onclick: closeTrip }, svg(CLOSE, "x"))));
 const sec = (title, ...kids) => h("div", { class: "sec" }, h("h3", {}, title), ...kids);
 
-function openTrip(id) { S.view = { kind: "trip", id }; drawView(); show(); }
-function openEdit(id) { S.view = { kind: "edit", id }; drawView(); show(); }
-function openImport() { S.importDraft = null; S.importError = ""; S.importBusy = false; S.importSeq++; S.view = { kind: "import" }; drawView(); show(); }
-function openConnect() { S.connectError = ""; S.connectBusy = false; S.connectText = ""; S.view = { kind: "connect" }; drawView(); show(); }
-function openSettings() { S.view = { kind: "settings" }; drawView(); show(); }
+function openTrip(id) { if (!enabled()) return; S.view = { kind: "trip", id }; drawView(); show(); }
+function openEdit(id) { if (!enabled()) return; S.view = { kind: "edit", id }; drawView(); show(); }
+function openImport() { if (!enabled()) return; S.importDraft = null; S.importError = ""; S.importBusy = false; S.importSeq++; S.view = { kind: "import" }; drawView(); show(); }
+function openConnect() { if (!enabled()) return; S.connectError = ""; S.connectBusy = false; S.connectText = ""; S.view = { kind: "connect" }; drawView(); show(); }
+function openSettings() { if (!enabled()) return; S.view = { kind: "settings" }; drawView(); show(); }
 /** Redraw an open trip sheet when the data refreshes (not the editor: it would lose the typing). */
 function refreshOpen() { if (S.view && S.view.kind !== "edit" && S.view.kind !== "import" && S.view.kind !== "connect") drawView(true); }
 
@@ -813,14 +838,14 @@ function connectView() {
     const url = S.connectText.trim(), seq = ++S.connectSeq;
     S.connectBusy = true; S.connectError = ""; drawView(true);
     try {
-      const [doc] = await Promise.all([fetchCalendar(url), loadAirports().catch(() => null)]);
-      if (seq !== S.connectSeq || S.view?.kind !== "connect") return;
+      const [doc] = await Promise.all([requestCalendar(url), loadAirports().catch(() => null)]);
+      if (!enabled() || seq !== S.connectSeq || S.view?.kind !== "connect") return;
       const value = { url, doc };
       if (!saveConnection(value)) throw new Error("Device storage is unavailable. The calendar was not connected.");
       S.connection = value; S.connectionAt = Date.now(); S.connectionFailed = false; S.connectText = "";
       closeTrip(); window.AWXNav?.go("trips"); render();
     } catch (err) {
-      if (seq !== S.connectSeq || S.view?.kind !== "connect") return;
+      if (!enabled() || seq !== S.connectSeq || S.view?.kind !== "connect") return;
       S.connectError = err.name === "TypeError" || err.name === "AbortError" ? "Couldn't connect right now. Check your connection and try again." : err.message;
     } finally { if (seq === S.connectSeq) { S.connectBusy = false; if (S.view?.kind === "connect") drawView(true); } }
   };
@@ -1018,6 +1043,25 @@ const CSS = `
 @media (max-width:380px){.troute .tc{font-size:34px}.troute.big .tc{font-size:38px}}
 `;
 
+function setEnabled(on) {
+  on = on === true && enabled();
+  if (on === active) return;
+  active = on;
+  if (on) {
+    S.manual = loadManual(); S.connection = T.name ? null : loadConnection();
+    S.connectionAt = 0;
+    refreshTimer = setInterval(() => { if (!document.hidden) refreshConnection(); }, MIN);
+    render();
+  } else {
+    clearInterval(refreshTimer); refreshTimer = null;
+    ++S.connectSeq; ++S.importSeq; ++calSeq;
+    for (const ctl of requests) ctl.abort();
+    requests.clear(); S.loading = null; S.connectionLoading = null; S.calAt = 0;
+    if (S.view) closeTrip();
+    S.importDraft = null; S.connectText = ""; S.connectBusy = false; S.importBusy = false;
+    render();
+  }
+}
 function init() {
   if (!document.getElementById("awx-trips-css")) document.head.append(h("style", { id: "awx-trips-css" }, CSS));
   document.addEventListener("keydown", (e) => {
@@ -1026,22 +1070,20 @@ function init() {
     e.stopImmediatePropagation(); // the airport sheet underneath stays open
     closeTrip();
   }, true);
-  window.addEventListener("storage", (e) => { if (e.key === CALENDAR_KEY) { S.connection = T.name ? null : loadConnection(); S.connectSeq++; S.connectionAt = 0; S.connectionFailed = false; render(); } if (e.key === KEY) { S.manual = loadManual(); render(); } });
+  window.addEventListener("storage", (e) => { if (!enabled()) return; if (e.key === CALENDAR_KEY) { S.connection = T.name ? null : loadConnection(); S.connectSeq++; S.connectionAt = 0; S.connectionFailed = false; render(); } if (e.key === KEY) { S.manual = loadManual(); render(); } });
   window.AWXTrips = {
     hasTodayFlight: () => !!todayFlight(), openTodayBrief,
-    render, decorateSheet, liveIds, todayAirportIds, openTrip, openEdit, openSettings: openTripSettings,
+    setEnabled, render, decorateSheet, liveIds, todayAirportIds, openTrip, openEdit, openSettings: openTripSettings,
     // site/settings.js (Settings → Trips & flight calendar) and site/nav.js (Trips tab)
     openAdd: () => openEdit(null), openImport, openConnect,
     calStatus,
     ready: () => (S.loading || (S.calAt ? Promise.resolve() : loadCal(true))),
-    list: () => S.manual.map((t) => ({ id: t.id, from: t.legs[0].from, to: t.legs[t.legs.length - 1].to, dep: t.legs[0].dep, name: t.legs.length > 1 ? "via " + t.legs.slice(1).map((l) => l.from).join(", ") : "" })),
+    list: () => (enabled() ? S.manual : []).map((t) => ({ id: t.id, from: t.legs[0].from, to: t.legs[t.legs.length - 1].to, dep: t.legs[0].dep, name: t.legs.length > 1 ? "via " + t.legs.slice(1).map((l) => l.from).join(", ") : "" })),
     routes: () => allTrips().flatMap((t) => t.legs.map((l) => ({ from: l.from, to: l.to }))),
     _state: () => ({ cal: S.cal, manual: S.manual, trips: allTrips().map((t) => ({ id: t.id, source: t.source, ...resultOf(t) })) }),
   };
   document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshConnection(); });
-  setInterval(() => { if (!document.hidden) refreshConnection(); }, MIN);
-  render();
-  loadCal(true);
+  setEnabled(enabled());
 }
 
 init();

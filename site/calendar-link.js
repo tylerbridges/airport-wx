@@ -12,10 +12,14 @@ export function saveConnection(value, storage = localStorage) {
   try { if (value) storage.setItem(CALENDAR_KEY, JSON.stringify(value)); else storage.removeItem(CALENDAR_KEY); return true; }
   catch { return false; }
 }
-export async function fetchCalendar(url, { fetcher = fetch } = {}) {
+export async function fetchCalendar(url, { fetcher = fetch, signal } = {}) {
   const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 20000);
+  const cancel = () => ctl.abort();
+  signal?.addEventListener("abort", cancel, { once: true });
+  if (signal?.aborted) cancel();
   try {
     const cfg = await fetcher("./data/config.json", { cache: "no-store", signal: ctl.signal }).then(r => r.ok ? r.json() : null);
+    if (ctl.signal.aborted) throw new DOMException("Calendar sync cancelled", "AbortError");
     if (!cfg?.liveUrl || !/^https:\/\//.test(cfg.liveUrl)) throw new Error("Calendar connection is temporarily unavailable. You can still import a calendar file.");
     const r = await fetcher(cfg.liveUrl.replace(/\/+$/, "") + "/calendar", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }),
@@ -25,5 +29,5 @@ export async function fetchCalendar(url, { fetcher = fetch } = {}) {
     if (!r.ok) throw new Error(typeof doc?.error === "string" && doc.error.length < 400 ? doc.error : "Calendar connection is temporarily unavailable. Try again later.");
     if (!doc?.ok || !Array.isArray(doc.trips) || privacyProblems(doc).length) throw new Error("Couldn't read a valid flight schedule from this calendar.");
     return doc;
-  } finally { clearTimeout(timer); }
+  } finally { clearTimeout(timer); signal?.removeEventListener("abort", cancel); }
 }

@@ -2,6 +2,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+import fs from "node:fs";
+import vm from "node:vm";
 import { createRequire } from "node:module";
 
 const store = {};
@@ -32,4 +34,20 @@ test("prefs: defaults, validation, persistence, notifications", () => {
   p.show.storms = false; // copies only
   assert.equal(P.getPrefs().show.storms, true);
   assert.ok(!("ground_stop" in P.DEFAULTS.show) && !P.CATEGORIES.includes("always"), "ground stops are not a category");
+});
+
+test("prefs: flights require explicit boolean opt-in and persist opt-out", () => {
+  assert.equal(P.DEFAULTS.flights, false);
+  for (const value of ["true", 1, null, {}]) { P.setPref("flights", value); assert.equal(P.getPrefs().flights, false); }
+  P.setPref("flights", true);
+  assert.equal(JSON.parse(localStorage.getItem(P.KEY)).flights, true);
+  P.setPref("flights", false);
+  assert.equal(JSON.parse(localStorage.getItem(P.KEY)).flights, false);
+});
+
+ test("prefs: an existing installation with no opt-in stays disabled", () => {
+  const sandbox = { localStorage: { getItem: () => JSON.stringify({ mode: "aviation", theme: "dark" }) }, module: { exports: {} } };
+  vm.runInNewContext(fs.readFileSync(new URL("../site/prefs.js", import.meta.url), "utf8"), sandbox);
+  assert.equal(sandbox.module.exports.getPrefs().flights, false);
+  assert.equal(sandbox.module.exports.getPrefs().mode, "aviation");
 });

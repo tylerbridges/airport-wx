@@ -626,7 +626,7 @@ b.la-lv0 { color: var(--l0); } b.la-lv1 { color: var(--l1); } b.la-lv2 { color: 
 
 </style>
 <!-- nav hook: settings storage, theme before first paint, tab bar / menu / search / settings styles (site/nav.js, site/settings.js) -->
-<script src="prefs.js?v=2"></script>
+<script src="prefs.js?v=3"></script>
 <script>try { document.documentElement.setAttribute("data-theme", AWXPrefs.getPrefs().theme); } catch (e) { /* prefs.js missing */ }</script>
 <style id="nav-css">
 :root {
@@ -703,7 +703,7 @@ html.lock .awx-panel, html.awx-sheet-lock .awx-panel { overflow-y: hidden; }
 }
 .awx-nav.hide { visibility: hidden; }
 .awx-navin { position: relative; max-width: 560px; margin: 0 auto; display: flex; gap: 10px; align-items: center; pointer-events: auto; }
-.awx-tabbar { position: relative; flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; height: 64px; padding: 5px; border-radius: 32px; }
+.awx-tabbar { position: relative; flex: 1; min-width: 0; display: grid; grid-template-columns: repeat(var(--tab-count, 2), minmax(0, 1fr)); gap: 2px; height: 64px; padding: 5px; border-radius: 32px; }
 .awx-tabbar [role="tab"] {
   min-width: 0; min-height: 44px; border-radius: 26px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
   color: var(--tab-off); font-size: 11px; font-weight: 600; letter-spacing: .01em; transition: background .2s ease, color .2s ease;
@@ -868,7 +868,7 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
     </button>
   </header>
   <div id="search"></div><!-- build2a hook: search (site/searched.js) -->
-  <section id="trips" aria-label="Your trips"></section><!-- trips hook: "Your trips" (site/trips.js) -->
+  <section id="trips" aria-label="Your trips" hidden></section><!-- trips hook: "Your trips" (site/trips.js) -->
   <div class="seg" id="seg" role="tablist" aria-label="Filter airports"></div>
   <div id="banner"></div>
   <div class="national" id="national" hidden></div><!-- build2b: national summary strip -->
@@ -894,11 +894,11 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="cats.js?v=4"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=6"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
-<script src="app.js?v=78" defer></script>
+<script src="app.js?v=79" defer></script>
 <script type="module" src="searched.js?v=10"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=18"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
-<script type="module" src="trips.js?v=27"></script><!-- trips hook -->
-<script type="module" src="nav.js?v=23"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
+<script type="module" src="flight-features.js?v=1"></script><!-- trips hook -->
+<script type="module" src="nav.js?v=24"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
 <script type="module" src="movement.js?v=4"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
 <script type="module" src="brief.js?v=9"></script><!-- brief hook: airport Today’s changes -->
 <script type="module" src="terminals.js?v=3"></script><!-- terminals hook: terminal map + lounges cards in the airport sheet -->

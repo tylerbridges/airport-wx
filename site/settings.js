@@ -33,7 +33,19 @@ let ctx = { openSearch: null, onToggle: () => {} };
 let wrap, sheet, live, untrap = null, returnTo = null, isOpen = false;
 const stack = []; // [{name, el, refresh}]
 
-export function initSettings(c) { ctx = Object.assign(ctx, c || {}); }
+export function initSettings(c) {
+  ctx = Object.assign(ctx, c || {});
+  const refresh = () => { if (isOpen) stack.at(-1)?.refresh(); };
+  P().onPrefs((p, key) => {
+    if (key !== "flights" && key !== null) return;
+    if (!p.flights && ["trips", "calendar"].includes(stack.at(-1)?.name)) {
+      while (stack.length > 1) stack.pop().el.remove();
+      const root = stack[0]?.el; root?.removeAttribute("inert"); root?.classList.remove("left");
+    }
+    refresh();
+  });
+  document.addEventListener("awx:flights-ready", () => { if (["trips", "calendar"].includes(stack.at(-1)?.name)) refresh(); });
+}
 export const settingsOpen = () => isOpen;
 
 // ---------- controls ----------
@@ -155,8 +167,14 @@ function buildRoot(body) {
         h("span", {}, "Adds METAR, TAF, codes"))),
     group(null, [
       navRow("star", "Your airports", String(favs.length), () => push("airports"), { "data-page": "airports" }),
-      navRow("calendar", "Trips & flight calendar", null, () => push("trips"), { "data-page": "trips" }),
     ]),
+    group("Flights", [
+      switchRow("flights", "Enable flight features", p.flights, v => {
+        P().setPref("flights", v);
+        body.querySelector('[data-key="flights"]')?.focus({ preventScroll: true });
+      }),
+      p.flights ? navRow("calendar", "Trips & flight calendar", null, () => push("trips"), { "data-page": "trips" }) : null,
+    ].filter(Boolean), "Opt in to Trips, your day-of flight brief and Flighty calendar setup. Turning this off pauses syncing and keeps saved trips and connections on this device."),
     group("Show these disruptions", [
       ...keys.map((k) => switchRow(k, CAT_LABELS[k] || k[0].toUpperCase() + k.slice(1), show[k] !== false,
         (v) => { P().setPref("show", Object.assign({}, P().getPrefs().show, { [k]: v })); say((CAT_LABELS[k] || k) + (v ? " shown" : " hidden")); })),
@@ -457,6 +475,7 @@ function makePage(name, opts) {
 }
 
 function push(name, opts, animate = true) {
+  if (["trips", "calendar"].includes(name) && !P().getPrefs().flights) name = "root";
   const page = makePage(name, opts);
   const prev = stack[stack.length - 1];
   stack.push(page);
@@ -488,6 +507,7 @@ function pop() {
 
 /** Opens Settings (root), or straight onto a page with Settings under it so Back leads there. */
 export function openSettings(page, opts) {
+  if (["trips", "calendar"].includes(page) && !P().getPrefs().flights) page = "root";
   if (!wrap) build();
   if (isOpen) { if (page && PAGES[page]) push(page, opts); return; }
   returnTo = document.activeElement;
