@@ -6,7 +6,7 @@
 import { loadAirports, rank, decodeList } from "./search.js";
 import { navChecks } from "./navcheck.js?v=6"; // nav hook
 import { tripChecks } from "./check-trips.js?v=8"; // trips hook
-import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=12"; // scenarios hook; More details page helpers
+import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=13"; // scenarios hook; More details page helpers
 
 const P = new URLSearchParams(location.search);
 const MOCK = P.get("mock") === "1";
@@ -554,14 +554,14 @@ async function uiChecks(add, scenario) {
         const want = w.AWXCats.restLayout(sm.nowLevel, sm.level, sm.later);
         const rest = doc.querySelector('#sheet .bx-layer[data-layer="rest"]');
         const lay = rest.querySelector(".sc").dataset.layout;
-        const got = lay === "split" && rest.querySelector(".sc-ahead .la-i") ? "split" : lay === "clear" ? "clear" : "single";
+        const got = lay === "split" && doc.querySelector("#lookingAhead .lg-entry") ? "split" : lay === "clear" ? "clear" : "single";
         counts[got]++;
         expandable += doc.querySelectorAll("#sheet details, #sheet .morebtn, #sheet [aria-expanded]").length;
         if (got !== want) wrong.push(`${x.iata} ${got} (want ${want})`);
       }
       add(expandable ? "fail" : "pass", "Airport details have no expandable cards", `${expandable} expanders`);
       A.closeSheet();
-      add(wrong.length ? "fail" : "pass", "Sheet shows one Now card (a later, higher risk under Looking ahead) or a normal status as the levels say", wrong.join("; ") || `split ${counts.split}, single ${counts.single}, clear ${counts.clear}`);
+      add(wrong.length ? "fail" : "pass", "Sheet shows one Now card (a later, higher risk below the timeline under Looking ahead) or a normal status as the levels say", wrong.join("; ") || `split ${counts.split}, single ${counts.single}, clear ${counts.clear}`);
     });
 
     // iPhone first screen: at 390×700 in Traveler mode the sheet's timeline is visible without scrolling (busy + quiet airport)

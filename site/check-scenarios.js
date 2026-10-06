@@ -464,10 +464,13 @@ export async function consistencyChecks(add, w, doc, where = "") {
     if (!a) continue;
     const badgeLevels = [...card.querySelectorAll(".badge[data-level]")].map(el => Number(el.dataset.level));
     const cardLv = badgeLevels.length ? Math.max(...badgeLevels) : null;
-    // Current and future labels consolidate severity and impact without losing the forecast window.
+    // The home summary is current-only; the forecast remains in details and hourly timelines.
     const sm = A.summary(a);
     const laterBadge = card.querySelector('.badge[data-phase="forecast"]');
-    if (sm.later && !laterBadge) levels.push(`${iata}: later risk is missing its consolidated forecast label`);
+    const currentLevel = sm.current?.kind === "unknown" ? null : (sm.current?.level ?? sm.nowLevel);
+    if (laterBadge || card.querySelector(".card-forecast")) levels.push(`${iata}: future risk leaked onto the home summary`);
+    if (cardLv !== currentLevel || card.dataset.level !== (currentLevel == null ? "unknown" : String(currentLevel))) levels.push(`${iata}: card ${cardLv}, current outlook ${currentLevel}`);
+    if (/Upcoming /.test(card.getAttribute("aria-label"))) levels.push(`${iata}: card accessibility label announces a future risk`);
     const tl = card.querySelector(".tl-wrap");
     const T = tl && tl._tl;
     if (T && sm.level >= 1 && Number.isFinite(sm.end)) {
@@ -478,14 +481,18 @@ export async function consistencyChecks(add, w, doc, where = "") {
     if (T && A.slotText) for (const s of T.slots) {
       if ((s.kind === "now" || s.kind === "fc") && s.level > 0 && A.slotText(s, a).split(" · ").length < 3) unexplained.push(`${iata} ${new Date(s.key).toISOString().slice(11, 16)}Z level ${s.level}`);
     }
-    // one level: card pill vs the sheet headline
+    // The main card matches Now; Looking ahead may have a higher level.
     A.openSheet(iata);
     await later(w, 10);
     const sh = doc.getElementById("sheet");
-    const pills = [...sh.querySelectorAll('.bx-layer[data-layer="rest"] .sc-head[data-level], .bx-layer[data-layer="rest"] .la-i b[data-level]')].map(p => Number(p.dataset.level));
+    if (sm.later && !sh.querySelector(`#lookingAhead [data-level="${sm.level}"]`)) levels.push(`${iata}: later risk is missing from detail Looking ahead`);
+    const ahead = sh.querySelector("#lookingAhead"), timeline = sh.querySelector(".tlsec"), log = sh.querySelector(".logcard:not(.ahead-card)");
+    if (sh.querySelector(".boxwrap .sc-ahead")) levels.push(`${iata}: future outlook remains above the timeline`);
+    if (ahead && (!timeline || !(timeline.compareDocumentPosition(ahead) & w.Node.DOCUMENT_POSITION_FOLLOWING) || log && !(ahead.compareDocumentPosition(log.parentElement) & w.Node.DOCUMENT_POSITION_FOLLOWING))) levels.push(`${iata}: Looking ahead is not between timeline and log`);
+    const pills = [...sh.querySelectorAll('.bx-layer[data-layer="rest"] .sc-head[data-level]')].map(p => Number(p.dataset.level));
     if (pills.length) {
       compared++;
-      const top = Math.max(...pills);
+      const top = pills[0];
       if (top !== cardLv) levels.push(`${iata}: card ${cardLv}, sheet ${top}`);
     } else noPill++;
     const c = sh.cloneNode(true);
@@ -515,7 +522,7 @@ export async function consistencyChecks(add, w, doc, where = "") {
       `${rows.length} leg rows; airport timeline, Weather and More details remain available`);
     A.closeSheet();
   }
-  add(levels.length ? "fail" : "pass", `One level${where}: card badge = coloured detail headlines`, levels.slice(0, 4).join("; ") || `${compared} airports compared${noPill ? `, ${noPill} sheets show no level (data unknown)` : ""}`);
+  add(levels.length ? "fail" : "pass", `One level${where}: card badge = current detail headline`, levels.slice(0, 4).join("; ") || `${compared} airports compared${noPill ? `, ${noPill} sheets show no level (data unknown)` : ""}`);
   add(windows.length ? "fail" : "pass", `Words and colours agree${where}: the headline's hours are coloured at its level`, windows.slice(0, 4).join("; ") || "every headline window");
   add(unexplained.length ? "fail" : "pass", `Every coloured hour says why${where}`, unexplained.slice(0, 4).join("; ") || "no unexplained hours");
   add(nulls.length ? "fail" : "pass", `No "null" / "undefined" / "NaN" in visible text${where}`, nulls.slice(0, 4).join("; ") || "home, sheets, national panel, More details");

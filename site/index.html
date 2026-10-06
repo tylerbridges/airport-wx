@@ -487,6 +487,9 @@ b.la-lv0 { color: var(--l0); } b.la-lv1 { color: var(--l1); } b.la-lv2 { color: 
 /* Compact rows all open the same history page; extend their touch area without adding visual spacing. */
 .lg-entry::before { content: ""; position: absolute; left: 0; top: 50%; width: 100%; height: max(44px, 100%); transform: translateY(-50%); }
 .lg-entry .chev { color: var(--muted); }
+.ahead-card .lg-s { flex: 1; min-width: 0; }
+.ahead-card .lg-t { font-size: 12px; line-height: 1.4; }
+.ahead-card .lg-entry::before { content: none; }
 .lg-entry:focus-visible, .lg-more:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .sh-log li:last-child, .bf-ev:last-child { border-bottom: 0; }
 .lg-t, .bf-t { flex: none; width: 72px; min-width: 72px; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -894,8 +897,8 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="cats.js?v=4"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=6"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
-<script src="app.js?v=79" defer></script>
-<script type="module" src="searched.js?v=10"></script><!-- build2a hook -->
+<script src="app.js?v=80" defer></script>
+<script type="module" src="searched.js?v=11"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=18"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="flight-features.js?v=1"></script><!-- trips hook -->
 <script type="module" src="nav.js?v=24"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->

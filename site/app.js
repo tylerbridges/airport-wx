@@ -1257,57 +1257,23 @@
     }
     return null;
   }
-  /** hubs hook: the cascade note shows on a card only when the airport's own outlook is at least possible delays, or the note set its level. */
-  function cascadeOnCard(v, sm) {
-    if (sm.level >= 2) return true;
-    if (sm.level < 1 || !(v.cascade || []).length) return false;
-    const isNote = (r) => (v.cascade || []).some((c) => String(r || "").indexOf(c.hub + " ") === 0);
-    const now = refNow();
-    return !v.hours.some((x) => Date.parse(x.t) + HOUR > now && (x.reasons || []).some((r) => !isNote(r) && (CATS.reason(r).level || 0) >= sm.level));
-  }
-  /**
-   * The card's one time line for its level (the sheet's words and window): "Flight delays likely 5–10 PM",
-   * "Delays happening now until 6 PM", "High — FAA gives no end time"; routine days keep site/delay.js's line.
-   * progs: the badges shown (their program isn't named again).
-   */
-  function cardWhen(a, v, sm, progs, headline) {
-    const tz = dispTz(a);
-    const cur = sm.current || {};
-    const prog = progs.length ? (cur.programs || [])[0] : null;
-    const zt = zoneTag(a);
-    const forecast = () => {
-      const head = levelWords(sm.level, sm.words, sm.peakHour);
-      const repeats = head.replace(/ expected$/i, "").toLowerCase() === String(headline || "").toLowerCase();
-      return h("div", { class: "card-forecast" },
-        repeats && !sm.later ? null : h("div", { class: "badges" }, h("span", { class: "badge " + lv(sm.level), "data-level": sm.level, "data-phase": "forecast" }, LEVELS[sm.level].label + ": " + head)),
-        h("div", { class: "sub card-context" }, h("b", {}, "Forecast " + rangeText(sm.start, sm.end, tz) + zt),
-          sm.words?.cue ? " · " + sm.words.cue : null));
-    };
-    if (sm.later) return [forecast()];
-    if (prog) return []; // FAA timing is consolidated with the cause beneath its badge.
-    if (sm.level >= 2) return [forecast()];
-    return aviation() ? [window.AWXDelay ? safeCall(() => AWXDelay.delayLine(a)) : null] : [];
-  }
-
   function card(a, idx, count) {
     const open = () => openSheet(a.iata);
     const v = view(a);
     const sm = summary(a);
     const health = AWXOutlook.health(a, outlookOpts(a, v));
-    const unknown = sm.level === 0 && !!health.quality;
+    const headlineLevel = sm.current?.kind === "unknown" ? null : (sm.current?.level ?? sm.nowLevel);
+    const unknown = headlineLevel == null;
     const fav = state.favs.includes(a.iata);
-    const later = sm.later;
-    const progs = cardPrograms(v);
+    const progs = cardPrograms({ faa: sm.current?.programs || [] });
     // Active programs lead with their badge; the cause and FAA timing share one context line.
     const rsn = (rs) => shortList((rs || []).filter((r) => !(progs.length && PROG_RE.test(r))), a);
     // the sheet's Now card headline leads (the same outlook() evaluation, so they can't drift); the weather condition is the secondary line
     const head = ((x) => (/^(No disruptions reported) · /.exec(x) || [null, x])[1])(sm.current?.headline || "Operating normally");
-    let cond = rsn(later && sm.peakHour ? hourReasons(a, sm.peakHour, sm.level) : ((n) => hourReasons(a, n.x, sm.nowLevel, n.reasons))(nowHourOf(a, v, sm)))[0] || (progs.length ? programCause(v.now.reasons) : null)
-      || (sm.level ? (sm.words ? "Busier than usual" : "Minor weather conditions") : null);
-    const badges = progs.length ? faaBadges(v) : [];
-    const currentProgram = progs.length ? sm.current?.programs?.[0] : null;
+    let cond = headlineLevel > 0 ? rsn(((n) => hourReasons(a, n.x, headlineLevel, n.reasons))(nowHourOf(a, v, sm)))[0] || (progs.length ? programCause(v.now.reasons) : null) : null;
+    const badges = progs.length ? faaBadges({ faa: progs }) : [];
+    const currentProgram = progs[0] || null;
     const badgeHeadline = !!currentProgram && badges.length > 0;
-    const headlineLevel = sm.current?.kind === "unknown" ? null : (sm.current?.level ?? sm.nowLevel);
     const consolidatedHeadline = (headlineLevel == null ? "Unknown" : LEVELS[headlineLevel].label) + ": " + (badgeHeadline ? badges.map(b => b.textContent).join(" · ") : head);
     const programEnd = !currentProgram ? null : sm.open ? NO_END : sm.current.scheduledEnd
       ? (currentProgram.type === "closure" ? "Reopens " : "Until ") + faaUntil(sm.current.scheduledEnd, a) + zoneTag(a) : null;
@@ -1321,8 +1287,8 @@
     if (mine) { const saved = visibleAirports().filter(x => state.favs.includes(x.iata)); idx = saved.findIndex(x => x.iata === a.iata); count = saved.length; }
     const code = codeOf(a);
     const el = h("div", {
-      class: "card", role: "button", tabindex: "0", "data-iata": a.iata, "data-level": String(sm.level),
-      "aria-label": `${code}, ${a.city}. ${unknown ? "Status unconfirmed" : (later ? "Upcoming " : "") + LEVELS[sm.level].label + " risk"}. ${reason}${health.quality ? ". " + health.quality : ""}`,
+      class: "card", role: "button", tabindex: "0", "data-iata": a.iata, "data-level": headlineLevel == null ? "unknown" : String(headlineLevel),
+      "aria-label": `${code}, ${a.city}. ${unknown ? "Status unconfirmed" : LEVELS[headlineLevel].label + " risk"}. ${reason}${health.quality ? ". " + health.quality : ""}`,
       onclick: open,
       onkeydown: (e) => {
         if ((e.key === "Enter" || e.key === " ") && e.target === el) { e.preventDefault(); open(); }
@@ -1345,8 +1311,6 @@
         : cond ? h("div", { class: "sub" }, cond) : null,
       health.quality ? h("div", { class: "muted small" }, health.quality) : null,
       window.AWXMovement ? safeCall(() => AWXMovement.line(a)) : null, // movement hook: "Departures far below normal" (site/movement.js)
-      unknown ? null : safeCall(() => cardWhen(a, v, sm, progs, head)), // the level's window (the sheet's words); phase3 hook inside for routine days
-      cascadeOnCard(v, sm) ? safeCall(() => cascadeLine(v, [reason], "sub hubline")) : null, // hubs hook: "ORD ground stop may delay flights to and from Chicago later today"
       !badgeHeadline && badges.length ? h("div", { class: "badges" }, badges) : null,
       cardTimeline(a),
       mine && count > 1 ? h("div", { class: "sr-move" },
@@ -2022,11 +1986,12 @@
     // the sheet's headline (o.big): the status in large level-coloured type; the delay outlook (o.lead) joins it
     // when it says the same thing ("Flight delays likely" + "5–9 PM"), else follows as a "Later" line
     const lead = o.lead;
+    const separateAhead = o.detachAhead === true;
     const bare = (x) => String(x || "").replace(/ \(\d+%\)$/, ""); // Aviation words carry the chance: "Flight delays likely (62%)"
     const merged = lead && bare(status) === lead.word;
     const headLevel = shared?.kind === "unknown" ? null : shared?.level ?? o.level;
     const hcls = (o.big ? " sc-big" : "") + (headLevel != null ? " lv" + Math.max(0, Math.min(4, headLevel)) : "");
-    const delay = status ? h("div", { class: "sc-head" + hcls, "data-level": headLevel }, h("span", { class: "sc-delay" }, status), merged && lead.when ? h("span", { class: "sc-hwhen" }, lead.when) : null) : null;
+    const delay = status ? h("div", { class: "sc-head" + hcls, "data-level": headLevel }, h("span", { class: "sc-delay" }, status), !separateAhead && merged && lead.when ? h("span", { class: "sc-hwhen" }, lead.when) : null) : null;
     const leadSub = lead ? cap([lead.cue, lead.size ? "When disrupted: " + lead.size : ""].filter(Boolean).join(" · ")) : "";
     // "Looking ahead": one compact list under the current status — the delay outlook (when it isn't already the
     // headline), then improvements, scheduled ends and FAA extension outlooks; each bullet's dot carries its colour
@@ -2035,16 +2000,16 @@
     // a later, higher risk window (o.peak) comes first; the delay outlook joins it when they say the same thing
     const pk = o.peak;
     const pkMerged = pk && lead && !merged && bare(pk.headline) === lead.word;
-    if (pk) ahead.push(h("li", { class: "la-i" }, h("span", { class: "la-dot la-lv" + pk.level, "aria-hidden": "true" }),
-      h("span", {}, h("b", { class: "la-lv" + pk.level, "data-level": pk.level }, pk.headline), pk.when ? " " + pk.when : "",
+    if (pk) ahead.push(h("li", { class: "la-i", "data-when": pk.when || "Forecast" }, h("span", { class: "la-dot la-lv" + pk.level, "aria-hidden": "true" }),
+      h("span", {}, h("b", { class: "la-lv" + pk.level, "data-level": pk.level }, pk.headline), !separateAhead && pk.when ? " " + pk.when : "",
         pk.reasons.length ? h("span", { class: "la-sub" }, pk.reasons.join(" · ")) : null,
         ...(pkMerged ? leadNotes : []).map((n) => h("span", { class: "la-sub" }, n)))));
-    if (lead && !merged && !pkMerged) ahead.push(h("li", { class: "la-i" }, h("span", { class: "la-dot " + lead.cls, "aria-hidden": "true" }),
-      h("span", {}, h("b", { class: lead.cls }, lead.word), lead.when ? " " + lead.when : "", ...leadNotes.map((n) => h("span", { class: "la-sub" }, n)))));
+    if (lead && (separateAhead || !merged) && !pkMerged) ahead.push(h("li", { class: "la-i", "data-when": lead.when || "Forecast" }, h("span", { class: "la-dot " + lead.cls, "aria-hidden": "true" }),
+      h("span", {}, h("b", { class: lead.cls }, lead.word), !separateAhead && lead.when ? " " + lead.when : "", ...leadNotes.map((n) => h("span", { class: "la-sub" }, n)))));
     const AHEAD = { "Forecast improvement": (v) => v, "Scheduled end": (v) => "FAA scheduled end " + v, "FAA extension outlook": (v) => "FAA extension outlook: " + v };
-    for (const r of o.rows || []) ahead.push(h("li", { class: "la-i" }, h("span", { class: "la-dot" + (r.label === "Forecast improvement" ? " la-good" : ""), "aria-hidden": "true" }),
+    for (const r of o.rows || []) ahead.push(h("li", { class: "la-i", "data-when": ({ "Forecast improvement": "Forecast", "Scheduled end": "FAA end", "FAA extension outlook": "Outlook" })[r.label] || r.label }, h("span", { class: "la-dot" + (r.label === "Forecast improvement" ? " la-good" : ""), "aria-hidden": "true" }),
       h("span", {}, (AHEAD[r.label] || ((v) => r.label + ": " + v))(r.value))));
-    const leadEl = merged && leadNotes.length ? h("div", { class: "sc-lead" }, leadNotes.map((n) => h("div", { class: "sc-lsub" }, n))) : null;
+    const leadEl = !separateAhead && merged && leadNotes.length ? h("div", { class: "sc-lead" }, leadNotes.map((n) => h("div", { class: "sc-lsub" }, n))) : null;
     const aheadEl = ahead.length ? h("div", { class: "sc-ahead" }, h("div", { class: "la-h" }, "Looking ahead"), h("ul", { class: "la-list" }, ahead)) : null;
     const primaryProgram = !aviation() && o.simple && shared?.programs.length === 1 && shared.programs[0].type !== "closure";
     const cause = primaryProgram ? plainCause(shared.programs[0]).toLowerCase() : "";
@@ -2062,7 +2027,7 @@
     const low = (x) => (/^[A-Z][a-z]/.test(x) ? x.charAt(0).toLowerCase() + x.slice(1) : x);
     const qualWhen = qual ? cap(uniq([low(String(o.when || "").replace(/^Nearby flight/, "flight")), low(qual[2])].filter(Boolean)).join(" · ")) : null;
     const when = primaryProgram ? startText + (shared.scheduledEnd ? "Until " + faaUntil(shared.scheduledEnd, a) + " · may change" : NO_END) : qualWhen || o.when;
-    return h("div", { class: "box sc" + (o.full ? " full" : ""), "data-kind": o.kind, "data-layout": o.layout },
+    const card = h("div", { class: "box sc" + (o.full ? " full" : ""), "data-kind": o.kind, "data-layout": o.layout },
       o.big ? o.cur : null, // current conditions lead the card, above the Now risk
       h("div", { class: "sc-h" },
         h("h4", {}, h("span", { class: "sc-label" }, o.label), (o.full || o.simple) && when ? h("span", { class: "sc-when in" }, when) : null)),
@@ -2070,9 +2035,23 @@
       delay,
       list,
       leadEl,
-      aheadEl,
+      separateAhead ? null : aheadEl,
       progLine,
       o.simple ? null : o.facts);
+    if (separateAhead && ahead.length) {
+      const rows = ahead.map(row => {
+        const dot = row.firstElementChild, content = row.lastElementChild;
+        if (dot.classList.contains("la-good")) content.style.color = "var(--l0)";
+        dot.remove();
+        row.classList.remove("la-i");
+        row.replaceChildren(h("div", { class: "lg-entry" },
+          h("span", { class: "lg-t" }, row.dataset.when),
+          h("span", { class: "lg-s" }, content)));
+        return row;
+      });
+      card._aheadSection = section("Looking ahead", "clock", [h("ul", { class: "sh-log" }, rows)], null, { id: "lookingAhead", cls: "logcard ahead-card" });
+    }
+    return card;
   }
 
   const outlookOpts = (a, v) => ({ now: refNow(), tz: a.tz, generated: state.data?.generated, sources: state.data?.sources, sample: state.sample, offline: state.offline, noticesDown: noticesDown(),
@@ -2234,6 +2213,12 @@
       return planTexts.has(s.replace(/\.$/, ""));
     };
     const notOwn = (rs) => (rs || []).filter((r) => !ownCard(r));
+    let lookingAhead = null;
+    const restCard = options => {
+      const card = stateCard({ ...options, detachAhead: true });
+      lookingAhead = card._aheadSection || null;
+      return card;
+    };
     // rest state: one full-width "Now" card; a later, higher risk ("split" in CATS.restLayout) leads its Looking ahead list
     const restCards = () => {
       if (layout === "split") {
@@ -2243,7 +2228,7 @@
         const pkO = outlook(a, pt);
         const peak = { headline: pkO.headline, level: sm.level, when: rangeText(sm.start, sm.end, tz),
           reasons: shortList(notOwn(hourReasons(a, pk, sm.level)), a).filter((r) => r !== pkO.headline && !/^(Ground stop|Ground delay program|Delays\b|Airport closed)/.test(r)).slice(0, 2) };
-        return stateCard({ a, layout, kind: "nowpeak", full: true, simple: true, big: true, cur: safeCall(() => currentLine(a)), lead, peak, rows: nextRows, label: "Now", outlook: nowO, level: sm.nowLevel,
+        return restCard({ a, layout, kind: "nowpeak", full: true, simple: true, big: true, cur: safeCall(() => currentLine(a)), lead, peak, rows: nextRows, label: "Now", outlook: nowO, level: sm.nowLevel,
           when: nowO.kind === "unknown" ? nowO.quality || "Forecast unavailable" : sm.open ? NO_END : "through " + whenLabel(hourFloor(sm.nowEnd, tz), tz), delay: v.hours[0].delay,
           normalNote, reasons: shortList(notOwn(((n) => hourReasons(a, n.x, sm.nowLevel, n.reasons))(nowHourOf(a, v, sm))), a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true),
           chips: cardSources(v.now.reasons, "now"), empty: null });
@@ -2252,7 +2237,7 @@
       let when = layout === "clear" ? "Clear through " + whenLabel(hourFloor(lastMs, tz), tz) : nowWhen();
       if (currentOutlook.kind === "unknown") when = currentOutlook.quality || "Forecast unavailable";
       else if (layout === "clear" && currentOutlook.kind !== "normal") when = "This hour";
-      return stateCard({ a, layout, kind: "nowpeak", full: true, simple: true, big: true, cur: safeCall(() => currentLine(a)), lead, rows: nextRows, label: "Now", outlook: currentOutlook, level: sm.nowLevel, when, delay: v.hours[0].delay,
+      return restCard({ a, layout, kind: "nowpeak", full: true, simple: true, big: true, cur: safeCall(() => currentLine(a)), lead, rows: nextRows, label: "Now", outlook: currentOutlook, level: sm.nowLevel, when, delay: v.hours[0].delay,
         normalNote, reasons: shortList(notOwn(((n) => hourReasons(a, n.x, sm.nowLevel, n.reasons))(nowHourOf(a, v, sm))), a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true),
         chips: cardSources(v.now.reasons, "now"), empty: null });
     };
@@ -2425,11 +2410,11 @@
       isStale() ? h("p", { class: "stale-line" }, "Last updated " + ago(dataAge()) + " — may be outdated") : null,
       // above the timeline: only the header, the Now / Peak (or single) card and the timeline itself
       boxWrap,
-      routine, // phase3 hook: routine baseline detail in Aviation mode only
-      safeCall(() => cascadeLine(v, [...shortList(v.now.reasons, a).slice(0, 3), ...shortList((sm.peakHour || v.peak).reasons, a).slice(0, 3)], "sh-hub")), // hubs hook
       h("section", { class: "sec tlsec" },
         h("div", { class: "sec-h" }, icon(ICONS.clock), h("h3", {}, tlTitle), h("span", { class: "rule", "aria-hidden": "true" }), dayBtn),
         tlHolder),
+      lookingAhead,
+      routine, // Aviation baseline detail follows the timeline.
       log,
       ...secs,
       aviation() ? pilotDetails(a, { title: "Aviation details" }) : null,

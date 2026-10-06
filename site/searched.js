@@ -190,10 +190,11 @@ function card(a, shard, opts) {
     coverage: { generated: Number.isFinite(genMs) ? new Date(genMs).toISOString() : null, weatherOnly: true,
       sources: { metar: lw ? app().state.data.sources.metar : shard.sources?.metars, taf: lw ? app().state.data.sources.taf : shard.sources?.tafs } },
   }, { offline: app().state.offline });
-  const unknown = !e.p && !!health.quality;
+  const unknown = !e.n && !!health.quality;
   const expanded = open.has(a.code);
-  const reason = e.r || e.pl || (e.p ? "Elevated risk" : "No significant weather");
+  const reason = e.pl || (e.n ? e.im || "Elevated weather risk" : "No significant weather");
   const details = expanded ? h("div", { class: "xdet" },
+    e.p > e.n ? h("div", {}, h("b", {}, "Looking ahead: "), h("span", { class: "badge " + lv(e.p) }, (LEVELS[e.p] || "Clear") + ": " + (e.r || "Elevated weather risk"))) : null,
     e.pl ? h("div", {}, h("b", {}, "Now: "), e.pl) : h("div", { class: "muted" }, "No recent observation (METAR)"),
     e.im ? h("div", {}, h("b", {}, "What it means: "), e.im) : null,
     e.mt ? h("div", { class: "muted small" }, "Observed " + ago(Math.max(0, Date.now() - Date.parse(e.mt))) + " · " + clock(Date.parse(e.mt), tz) + " " + (app() && app().zoneAbbr ? app().zoneAbbr(Date.parse(e.mt), tz) : tzName(Date.parse(e.mt), tz))) : null,
@@ -201,9 +202,8 @@ function card(a, shard, opts) {
     e.t ? h("pre", { class: "raw" }, e.t) : h("div", { class: "muted small" }, "No TAF (forecast) issued for this airport"),
   ) : null;
   return shell(a, { right: [], body: [
-    h("div", { class: "badges card-headline" }, h("span", { class: "badge " + (unknown ? "off" : lv(e.p)) }, (unknown ? "Unknown" : LEVELS[e.p] || "Clear") + ": " + (unknown ? "Weather status unconfirmed" : reason))),
+    h("div", { class: "badges card-headline" }, h("span", { class: "badge " + (unknown ? "off" : lv(e.n)) }, (unknown ? "Unknown" : LEVELS[e.n] || "Clear") + ": " + (unknown ? "Weather status unconfirmed" : reason))),
     health.quality && !health.quality.startsWith("Weather only") ? h("div", { class: "sub crit" }, health.quality) : null,
-    e.n !== e.p ? h("div", { class: "sub" }, "Now: " + (!e.n && health.quality ? "Unconfirmed" : LEVELS[e.n] || "Clear")) : null,
     timeline(e, (lw && app().state.liveH0) || shard.data.h0 || e.pt, tz, a.code),
     h("div", { class: "sub xnote" }, scopeNote(a)),
     stale ? h("div", { class: "sub crit" }, "Weather data updated " + ago(Date.now() - genMs)) : null,
