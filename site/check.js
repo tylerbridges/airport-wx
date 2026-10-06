@@ -1,6 +1,7 @@
 // Check page. check.html            -> checks the live data (data/summary.json + an airport detail file, data/wx/, airport list)
 //             check.html?mock=1     -> runs every test scenario (data/scenarios/index.json) instead
 //             &render=0             -> skip the render tests (hidden iframes)
+//             &nosw=1               -> don't register the service worker (the check page itself always bypasses it)
 // Writes "CHECK PASS" or "CHECK FAIL n" plus one line per row into <pre id="result"> so headless
 // Chrome (--dump-dom) and the uptime workflow can read it. Warnings don't fail the check.
 import { loadAirports, rank, decodeList } from "./search.js";
@@ -776,6 +777,64 @@ async function liveRelay(add) {
     !m ? "no metar source in the reply" : m.stale ? `live METAR failed (${m.liveError}); showing the build's` : `fetched ${age == null ? "?" : ago(age)}${ap && ap.metar ? `, observed ${ap.metar.obsTime}` : ", no METAR for MSP"} · ${Math.round(s.ms)} ms`);
 }
 
+// ---------- service worker (site/sw.js, README "Service worker") ----------
+
+/** Registers ./sw.js like index.html does (the check page itself always bypasses it); null when skipped. */
+function swRegister() {
+  if (!("serviceWorker" in navigator) || P.get("nosw") === "1" || P.has("ts")) return null;
+  return navigator.serviceWorker.register("./sw.js", { scope: "./", updateViaCache: "none" }).then((reg) => ({ reg }), (e) => ({ error: String(e && e.message || e) }));
+}
+const LATE = Symbol("late");
+const within = (p, ms) => Promise.race([p, sleep(ms).then(() => LATE)]);
+async function swChecks(add, swP) {
+  if (!("serviceWorker" in navigator)) { add("info", "Service worker", "not supported in this browser: the page works without it"); return; }
+  // headless Chrome with --virtual-time-budget (AGENTS checks, uptime monitor) never settles register(): warn, don't hang
+  const got = swP ? await within(swP, 5000) : null;
+  if (!swP) { add("info", "Service worker", P.has("ts") ? "skipped for the uptime monitor" : "skipped (?nosw=1)"); }
+  else if (got === LATE) add("warn", "Service worker registers (./sw.js)", "registration didn't finish within 5 s (headless --virtual-time-budget never finishes it)");
+  else if (await within(swRows(add, got), 20000) === LATE) add("warn", "Service worker checks", "didn't finish within 20 s");
+  if (!RENDER) return;
+  if (P.has("ts")) { add("info", "Page works with the service worker bypassed (?nosw=1)", "skipped for the uptime monitor"); return; }
+  const r = await renderPage("./index.html?nosw=1");
+  add(r.ready && !r.errors.length ? "pass" : "fail", "Page works with the service worker bypassed (?nosw=1)", !r.ready ? "cards never appeared" : r.errors.length ? r.errors.join(" | ") : `${r.cards} cards, no errors`);
+}
+async function swRows(add, { reg, error }) {
+  {
+    const scope = new URL("./", location.href).href;
+    if (!reg) add("fail", "Service worker registers (./sw.js)", error);
+    else {
+      add(reg.scope === scope ? "pass" : "fail", "Service worker registers with scope ./", reg.scope);
+      const t0 = Date.now(), wait = P.has("ts") ? 3000 : 10000; // the uptime monitor runs under a 30 s budget
+      while (!reg.active && Date.now() - t0 < wait) await sleep(200);
+      if (!reg.active) add("warn", "Service worker active", "still installing after " + wait / 1000 + " s");
+      else add("pass", "Service worker active", reg.active.scriptURL.replace(location.origin, ""));
+    }
+    const src = await fetch("./sw.js", { cache: "no-store" }).then((r) => (r.ok ? r.text() : ""), () => "");
+    const v = (/^const VERSION = "([^"]+)"/m.exec(src) || [])[1];
+    let keys = [];
+    try { keys = await caches.keys(); } catch (e) { /* no Cache API */ }
+    const ours = keys.filter((k) => /^awx-(?:shell|data)-/.test(k));
+    const want = v ? ["awx-shell-" + v, "awx-data-" + v] : [];
+    const odd = ours.filter((k) => !want.includes(k));
+    add(v && !odd.length ? (ours.includes("awx-shell-" + v) ? "pass" : "warn") : "fail", "Service worker caches: awx-shell-/awx-data- prefix, current version only",
+      !v ? "sw.js has no VERSION" : odd.length ? "old or unknown: " + odd.join(", ") : (ours.join(", ") || "none yet") + (ours.includes("awx-shell-" + v) ? "" : " (shell not saved yet)"));
+    if (v && ours.includes("awx-shell-" + v)) {
+      const shell = await caches.open("awx-shell-" + v);
+      const saved = await shell.match(new URL("index.html", scope).href);
+      const live = await fetch("./index.html", { cache: "no-store" }).then((r) => (r.ok ? r.text() : null), () => null);
+      const text = saved ? await saved.text() : null;
+      const scripts = text ? [...text.matchAll(/<script\b[^>]*\ssrc="([^"]+)"/g)].map((m) => new URL(m[1], scope).href) : [];
+      const missing = [];
+      for (const u of scripts) if (!(await shell.match(u))) missing.push(u.replace(scope, ""));
+      add(!text ? "warn" : missing.length ? "fail" : text === live ? "pass" : "warn", "Saved page and its scripts (offline start)",
+        !text ? "page not saved yet" : missing.length ? "missing: " + missing.join(", ") : text === live ? `${scripts.length} scripts saved with the deployed index.html` : "saved page differs from the deployed one (updates on the next visit)");
+    }
+    const data = ours.find((k) => k.startsWith("awx-data-"));
+    const bad = data ? (await (await caches.open(data)).keys()).map((q) => q.url).filter((u) => /\/data\/(?:scenarios\/|trips\.json|status\.json|movement\.json|changes\.json)/.test(u)) : [];
+    add(bad.length ? "fail" : "pass", "No test-scenario, trip or transitional files in the data cache", bad.slice(0, 3).join(", ") || (data ? "checked " + data : "no data cache yet"));
+  }
+}
+
 async function runLive() {
   const add = group("Live data");
   const now = Date.now();
@@ -817,12 +876,13 @@ async function runLive() {
   if (RENDER) {
     const rr = group("Render test (390 px, hidden frame)");
     const idx = await getJson("./data/scenarios/index.json");
-    const pages = [["index.html", "./index.html"], ...((idx.ok && idx.data.scenarios) || []).map((s) => [`?test=${s.name}`, `./index.html?test=${s.name}`])];
+    const LIVE_PAGE = P.has("ts") ? "./index.html?nosw=1" : "./index.html"; // the uptime monitor never installs the service worker (30 s budget)
+    const pages = [["index.html", LIVE_PAGE], ...((idx.ok && idx.data.scenarios) || []).map((s) => [`?test=${s.name}`, `./index.html?test=${s.name}`])];
     for (const [label, url] of pages) {
       const r = await renderPage(url, [], label === "index.html" ? (w, doc) => consistencyChecks(rr, w, doc, " (live data)") : null);
       rr(r.ready && !r.errors.length ? "pass" : "fail", `Render ${label}`, !r.ready ? "cards never appeared" : r.errors.length ? r.errors.join(" | ") : `${r.cards} cards, no errors`);
     }
-    await navChecks(group("Navigation (390 px, hidden frame)"), "./index.html"); // nav hook
+    await navChecks(group("Navigation (390 px, hidden frame)"), LIVE_PAGE); // nav hook
     // build2b: the app UI checks run in mock mode; live only with &ui=1 (they double the run time, and the uptime
     // monitor dumps this page under a 30 s virtual-time budget)
     if (P.get("ui") === "1") await uiChecks(group("App: settings, modes, timeline (390 px, hidden frame)"), null);
@@ -966,8 +1026,10 @@ async function main() {
   const tg = document.getElementById("toggle");
   tg.textContent = MOCK ? "Check live data" : "Run scenarios";
   tg.href = MOCK ? "check.html" : "check.html?mock=1";
+  const swP = swRegister(); // installs while the other checks run; verified at the end
   try {
     if (MOCK) await runMock(); else await runLive();
+    await swChecks(group("Service worker"), swP);
   } catch (e) {
     group("Check page")("fail", "Check page ran to the end", String(e && e.stack || e));
   } finally {

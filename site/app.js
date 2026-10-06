@@ -457,9 +457,10 @@
 
   // ---------- data ----------
 
-  async function getJson(url) {
+  async function getJson(url, meta) {
     const res = await fetch(url, { cache: "no-cache" }); // revalidate (ETag -> 304 when unchanged) instead of re-downloading status.json every open/refresh
     if (!res.ok) { const e = new Error("HTTP " + res.status); e.status = res.status; throw e; }
+    if (meta) meta.fallback = res.headers.get("X-AWX-SW") === "fallback"; // sw.js: the network failed, this is the device's saved copy
     return res.json();
   }
 
@@ -672,8 +673,9 @@
     let openP = null; // airport details: an open sheet's airport for a new build, fetched before the build is swapped in
     try {
       let data, sample = false;
+      const meta = {}; // sw.js: was the summary the device's saved copy (network failed)?
       try {
-        data = window.AWXTest && AWXTest.name ? AWXTest.rebase(await getJson(AWXTest.url)) : await getJson("./data/summary.json"); // build2a hook: ?test=<scenario> (site/testmode.js)
+        data = window.AWXTest && AWXTest.name ? AWXTest.rebase(await getJson(AWXTest.url)) : await getJson("./data/summary.json", meta); // build2a hook: ?test=<scenario> (site/testmode.js)
       } catch (e) {
         if (e.status !== 404) throw e;
         if (!testMode() && cachedStatus()) throw e;
@@ -690,7 +692,7 @@
       }
       state.build = data; // live relay (merged into state.data below)
       state.sample = sample;
-      state.offline = false;
+      state.offline = !!meta.fallback && !testMode(); // a saved copy reads "Offline · last checked …" with its age, like the snapshot
       state.fetchError = null;
       state.fetchedAt = Date.now();
     } catch (e) {

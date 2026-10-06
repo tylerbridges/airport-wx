@@ -919,7 +919,7 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="sheet.js?v=6"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
 <script src="split.js?v=1"></script><!-- airport details: summary.json + data/airport/<IATA>.json -->
-<script src="app.js?v=86" defer></script>
+<script src="app.js?v=87" defer></script>
 <script type="module" src="searched.js?v=14"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=18"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="flight-features.js?v=1"></script><!-- trips hook -->
@@ -928,5 +928,7 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script type="module" src="brief.js?v=9"></script><!-- brief hook: airport Today’s changes -->
 <script type="module" src="terminals.js?v=5"></script><!-- terminals hook: terminal map + lounges cards in the airport sheet -->
 <script type="module" src="radar/card.js?v=5"></script><!-- radar hook: radar loop card in the airport sheet (engine loads on demand) -->
+<script>/* service worker (site/sw.js, README "Service worker"): the installed app opens from this device's copy, then reads fresh data. ?nosw=1 and test scenarios skip it. */
+if ("serviceWorker" in navigator && !/[?&](?:nosw=1|test=)/.test(location.search)) addEventListener("load", () => { navigator.serviceWorker.register("./sw.js", { scope: "./", updateViaCache: "none" }).catch(() => {}); });</script>
 </body>
 </html>
