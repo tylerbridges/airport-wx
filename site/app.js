@@ -2047,13 +2047,13 @@
     const qualWhen = qual ? cap(uniq([low(String(o.when || "").replace(/^Nearby flight/, "flight")), low(qual[2])].filter(Boolean)).join(" · ")) : null;
     const when = primaryProgram ? startText + (shared.scheduledEnd ? "Until " + faaUntil(shared.scheduledEnd, a) + " · may change" : NO_END) : qualWhen || o.when;
     return h("div", { class: "box sc" + (o.full ? " full" : ""), "data-kind": o.kind, "data-layout": o.layout },
+      o.big ? o.cur : null, // current conditions lead the card, above the Now risk
       h("div", { class: "sc-h" },
         h("h4", {}, h("span", { class: "sc-label" }, o.label), shared?.kind === "unknown" ? null : (shared?.level ?? o.level) != null ? pill(shared?.level ?? o.level, true) : null, (o.full || o.simple) && when ? h("span", { class: "sc-when in" }, when) : null)),
       !o.full && !o.simple && o.when ? h("div", { class: "sc-when" }, o.when) : null,
       delay,
       list,
       leadEl,
-      o.big ? o.cur : null,
       aheadEl,
       progLine,
       o.simple ? null : o.facts);
