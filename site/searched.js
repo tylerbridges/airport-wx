@@ -80,7 +80,7 @@ const isMajor = (code) => majorCodes().has(code);
 const byCode = (code) => (airportsLoaded() || []).find((a) => a.code === code) || null;
 
 async function getJson(url) {
-  const r = await fetch(url, { cache: "no-store" });
+  const r = await fetch(url, { cache: "no-cache" }); // revalidate; the shard index/files change at most every poll
   if (!r.ok) { const e = new Error("HTTP " + r.status); e.status = r.status; throw e; }
   return r.json();
 }
@@ -217,6 +217,13 @@ function card(a, shard, opts) {
 // ---------- render ----------
 
 let renderSeq = 0;
+let idleSet = false;
+function idlePrefetch() {
+  if (idleSet || airportsLoaded()) return;
+  idleSet = true;
+  const go = () => loadAirports().catch(() => {});
+  setTimeout(() => (window.requestIdleCallback ? requestIdleCallback(go, { timeout: 3000 }) : go()), 1500);
+}
 async function render() {
   const box = document.getElementById("extra");
   if (!box || !app()) return;
@@ -227,7 +234,15 @@ async function render() {
   if (picked && !majors.has(picked)) codes.push(picked);
   if (st.filter === "mine") for (const c of favs) if (!codes.includes(c)) codes.push(c);
   const seq = ++renderSeq;
-  if (!codes.length) { box.replaceChildren(); fixEmpty(false); return; }
+  // Before the first status load the majors aren't known, so every star would look non-major: wait for app.js's render().
+  if (!st.loaded) return;
+  if (!codes.length) {
+    box.replaceChildren(); fixEmpty(false);
+    // The airport list (240 KB gz) loads now only when a starred/picked non-major airport needs it (names, zones, live relay);
+    // otherwise it waits for idle time, and the first search / crosswind line awaits the same request.
+    if (!(picked && !majors.has(picked)) && !favs.length) idlePrefetch(); else loadAirports().catch(() => {});
+    return;
+  }
   let list = airportsLoaded();
   if (!list) { try { list = await loadAirports(); } catch { list = []; } }
   const items = await Promise.all(codes.map(async (c) => {

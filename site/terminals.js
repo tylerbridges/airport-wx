@@ -140,13 +140,13 @@ async function getJson(url) {
   return r.json();
 }
 function loadBase() {
-  if (!S.loading) {
-    S.loading = Promise.all([
-      getJson("./data/terminals/index.json").then((d) => { S.index = d; }).catch(() => { S.index = { airports: {} }; }),
-      getJson("./data/lounges.json").then((d) => { S.lounges = loungeProblems(d).length ? { airports: {} } : d; }).catch(() => { S.lounges = { airports: {} }; }),
-    ]);
-  }
+  if (!S.loading) S.loading = getJson("./data/terminals/index.json").then((d) => { S.index = d; }).catch(() => { S.index = { airports: {} }; });
   return S.loading;
+}
+/** lounges.json (61 KB) isn't needed to draw the home page: it loads the first time an airport sheet opens (or its map link is needed). */
+function loadLounges() {
+  if (!S.loadingL) S.loadingL = getJson("./data/lounges.json").then((d) => { S.lounges = loungeProblems(d).length ? { airports: {} } : d; }).catch(() => { S.lounges = { airports: {} }; });
+  return S.loadingL;
 }
 function loadFile(iata) {
   if (S.files.has(iata)) return Promise.resolve(S.files.get(iata));
@@ -255,11 +255,12 @@ function decorateSheet(sheet, a) {
   if (!sheet || !a) return;
   const menu = sheet.querySelector(".ad-menu"), A = W.AWXApp;
   if (!menu || !A?.detailRow) return;
-  if (!S.index || !S.lounges) { loadBase().then(() => redecorate(a.iata)); return; }
+  if (!S.index) { loadBase().then(() => redecorate(a.iata)); return; }
+  if (!S.lounges) loadLounges().then(() => redecorate(a.iata)); // the Lounges row appears when its list arrives
   const anchor = menu.querySelector('[data-detail="technical"]');
   if (hasMap(a.iata) && !menu.querySelector('[data-detail="terminal"]')) {
     const row = A.detailRow("Terminal map", "Find a gate or concourse", "terminal", async () => {
-      const t = S.files.get(a.iata) || await loadFile(a.iata);
+      const [t] = await Promise.all([S.files.get(a.iata) || loadFile(a.iata), loadLounges()]); // lounges.json carries the airport's official-map link
       // An airport change while loading must not open the previous airport's map.
       if (A.state.openIata !== a.iata || !document.querySelector('#sheet [data-detail="terminal"]') || document.getElementById("sheet").inert) return;
       if (!row.isConnected) document.querySelector('#sheet [data-detail="terminal"]').focus({ preventScroll: true });
@@ -268,7 +269,7 @@ function decorateSheet(sheet, a) {
     });
     anchor.before(row);
   }
-  const L = S.lounges.airports && S.lounges.airports[a.iata];
+  const L = S.lounges && S.lounges.airports && S.lounges.airports[a.iata];
   if (L && L.lounges?.length && !menu.querySelector('[data-detail="lounges"]')) anchor.before(A.detailRow("Lounges", "Locations and access rules", "lounges", () => A.openDetails(a.iata, "lounges")));
   A.refreshDetails?.();
 }
