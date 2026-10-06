@@ -130,7 +130,7 @@ Airport NOTAM fetching, credentials, cache, parsing, scoring and monitoring were
                       minutesFrom?: "faa", rateFrom?: history|default}}],
     observed: [{t, level, reasons[], fltCat, cig?, vis?, wdir?, wspd?, wgst?, wx?, temp?}] (past hours with a METAR, up to 24 before the current hour; absent if the history request failed),
     metar: {raw, obsTime, fltCat, wind: {dir, spd}, gust, visib, ceiling, wx, temp, dewp} | null,
-    taf: {raw, issued} | null,
+    taf: {raw, issued, periods: [{from, to, kind, probability?, cond}]} | null,
     faa: [{type: ground_stop|ground_delay|delay|closure, reason, detail, badge, cause, causeLabel,
            (programs:) end (ISO, or null = until further notice), trend: increasing|steady|decreasing|null,
            (closures:) scope: full|runway|limited, active, plain, runways[], start, end (ISO or null: NOTAM times, else the Reopen time as end), perm? (true)}],
@@ -506,3 +506,9 @@ My airports also includes scheduled trip airports temporarily on their airport-l
 Airport overview status and Looking ahead headlines carry their severity color without a duplicate category badge. Main-page airport cards retain the category badge. Touch timelines share the same 240 ms hold/horizontal-drag activation in all views, with vertical swipes reserved for scrolling.
 
 Navigation keeps a fixed 52 px footprint on refresh. Startup/layout-driven scroll cannot compact it; sizing animations start with user scrolling. Compact controls have a 40 px visual height and 44 px touch areas, inside a narrower 300 px bar.
+
+## Decoded airport forecasts
+
+Weather and Pilot details show a period-by-period TAF breakdown from NOAA’s structured forecast groups. `poller/taf-periods.mjs` uses the same prevailing-condition helper as risk scoring; display periods preserve exact change times, inherited temporary conditions, probability groups and gradual-change windows. This is display-only and does not change scoring or the delay model. Global weather shards carry the same periods as `tp`. Forecast periods that have ended are omitted; missing decoding stays explicitly unavailable. Wind is shown in mph, ceilings in feet above the airport, and visibility keeps “more than” limits. Traveler probability labels use words; Aviation keeps percentages and flight categories.
+
+The information buttons explain METAR observations and TAF forecasts using [NOAA Aviation Weather Center definitions](https://aviationweather.gov/help/data/). Raw reports remain in Pilot details; the existing METAR breakdown and LAMP guidance table are preserved.

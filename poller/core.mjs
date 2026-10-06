@@ -15,6 +15,8 @@ import { cascades, TOP_ROUTES, sameTracon } from "./hubs.mjs"; // hubs hook: hub
 import { sigmetAdvisoriesAt } from "./aviation-advisories.mjs";
 import { noticesFor, applyNotices } from "./notices.mjs"; // restrictions hook: FAA TFRs (README "Notices")
 
+import { tafPeriods } from "./taf-periods.mjs";
+
 const HOUR = 3600e3;
 const ADV_KEYS = ["id", "type", "airport", "issued", "cause", "causeText", "title", "active", "cnx", "start", "end"];
 
@@ -113,7 +115,7 @@ export function assemble({ airports, now, metars, tafs, sigmets, isigmets = null
             dewp: m.dewp ?? null,
           }
         : null,
-      taf: t ? { raw: t.rawTAF || "", issued: toMs(t.issueTime) != null ? new Date(toMs(t.issueTime)).toISOString() : null } : null,
+      taf: t ? { periods: tafPeriods(t), raw: t.rawTAF || "", issued: toMs(t.issueTime) != null ? new Date(toMs(t.issueTime)).toISOString() : null } : null,
       faa,
       atcscc: adv,
       alerts: alertsFull.slice(0, 10).map(({ event, severity, headline, onset, ends }) => ({ event, severity, headline, onset, ends })),
@@ -216,6 +218,7 @@ export function computeGlobal({ airports, metars, tafs, now = new Date() }) {
     }
     if (t) {
       e.t = t.rawTAF;
+      e.tp = tafPeriods(t);
       e.ti = toMs(t.issueTime) != null ? new Date(toMs(t.issueTime)).toISOString() : null;
     }
     out.set(a.icao, e);

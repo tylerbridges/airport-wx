@@ -233,6 +233,17 @@ table.lt { border-collapse: collapse; font-size: 12px; }
 .lt td.hot { color: var(--c); font-weight: 800; }
 .fcd { display: inline-block; width: 18px; height: 18px; line-height: 18px; border-radius: 5px; color: #fff; font-weight: 800; font-size: 11px; }
 .fcd.VFR { background: #1f9d43; } .fcd.MVFR { background: #2867d6; } .fcd.IFR { background: #d63a14; } .fcd.LIFR { background: #b02bd1; }
+.report-info { border:0; background:transparent; color:var(--muted); min-width:44px; min-height:44px; padding:0; font-size:20px; cursor:pointer; flex-shrink:0; }
+.report-title { display:flex; align-items:center; gap:6px; }
+.report-title .pd-h { margin:0; }
+.report-help { line-height:1.5; margin:0 4px 10px; }
+.report-heading { margin:8px 0 4px; }
+.taf-period { padding:12px 0; border-top:1px solid var(--edge); }
+.taf-period .kv2 { margin-bottom:0; }
+.taf-time { font-weight:700; margin-bottom:4px; }
+.taf-period > b { font-size:13px; color:var(--muted); }
+.taf-note { margin:0 0 8px; }
+.pilot .taf-forecast { padding:0; }
 .pd-h { margin: 14px 0 6px; font-size: 13px; font-weight: 700; color: var(--muted); }
 .pd-h:first-child { margin-top: 0; }
 .checked { margin-top: 24px; font-size: 12.5px; }
@@ -897,8 +908,8 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="cats.js?v=4"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=6"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
-<script src="app.js?v=81" defer></script>
-<script type="module" src="searched.js?v=11"></script><!-- build2a hook -->
+<script src="app.js?v=82" defer></script>
+<script type="module" src="searched.js?v=12"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=18"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="flight-features.js?v=1"></script><!-- trips hook -->
 <script type="module" src="nav.js?v=24"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->

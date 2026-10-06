@@ -443,6 +443,23 @@ async function uiChecks(add, scenario) {
         const back = page.querySelector(".ad-back");
         const clear = title?.textContent === "Weather" && back?.textContent.includes("overview")
           && doc.getElementById("mdTitle")?.textContent === a.iata && !doc.getElementById("mdWrap").hidden;
+        const forecast = page.querySelector(".taf-forecast");
+        const expected = (a.taf?.periods || []).filter(p => Date.parse(p.to) > Date.now()).length;
+        const rows = forecast?.querySelectorAll(".taf-period").length || 0;
+        const texts = forecast?.innerText || "";
+        add(expected > 0 && rows === expected && /Wind/.test(texts) && /Visibility/.test(texts) && (mode !== "traveler" || !/%/.test(texts)) ? "pass" : "fail",
+          `Decoded airport forecast preserves periods and traveler units (${mode})`, `${rows} of ${expected} forecast periods; mph, visibility and cloud ceiling`);
+        let helpOK = true;
+        for (const type of ["METAR", "TAF"]) {
+          const button = page.querySelector(`[aria-label="About ${type}"]`);
+          const body = button && doc.getElementById(button.getAttribute("aria-controls"));
+          if (!button || !body || !body.hidden) { helpOK = false; continue; }
+          button.click();
+          helpOK = helpOK && !body.hidden && button.getAttribute("aria-expanded") === "true" && body.textContent.includes(type);
+          button.click();
+          helpOK = helpOK && body.hidden && button.getAttribute("aria-expanded") === "false";
+        }
+        add(helpOK ? "pass" : "fail", `Weather report explanations open and close accessibly (${mode})`, "Observation and forecast information buttons toggle their linked explanations");
         back?.click();
         add(clear && !doc.getElementById("sheetWrap").hidden ? "pass" : "fail",
           `Weather has a distinct page title and overview navigation (${mode})`, `${a.iata}: prominent Weather heading, airport identity and Back to overview`);

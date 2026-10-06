@@ -199,6 +199,7 @@ function card(a, shard, opts) {
     e.im ? h("div", {}, h("b", {}, "What it means: "), e.im) : null,
     e.mt ? h("div", { class: "muted small" }, "Observed " + ago(Math.max(0, Date.now() - Date.parse(e.mt))) + " · " + clock(Date.parse(e.mt), tz) + " " + (app() && app().zoneAbbr ? app().zoneAbbr(Date.parse(e.mt), tz) : tzName(Date.parse(e.mt), tz))) : null,
     e.m ? h("pre", { class: "raw" }, e.m) : null,
+    e.tp?.length && app()?.tafForecast ? app().tafForecast({ ...a, tz, taf: { periods: e.tp, issued: e.ti } }) : null,
     e.t ? h("pre", { class: "raw" }, e.t) : h("div", { class: "muted small" }, "No TAF (forecast) issued for this airport"),
   ) : null;
   return shell(a, { right: [], body: [

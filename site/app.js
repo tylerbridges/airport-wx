@@ -1606,6 +1606,7 @@
 
   function decodeWx(wx) {
     if (!wx) return "None";
+    if (wx.trim() === "NSW") return "No significant weather";
     const W = { TS: "thunderstorm", RA: "rain", SN: "snow", DZ: "drizzle", FZ: "freezing", SH: "showers", BR: "mist", FG: "fog", HZ: "haze", PL: "ice pellets", GR: "hail", GS: "small hail", SG: "snow grains", IC: "ice crystals", UP: "unknown precip", BL: "blowing", DR: "drifting", FU: "smoke", DU: "dust", SA: "sand", SQ: "squalls", FC: "funnel cloud", VA: "volcanic ash", PY: "spray", MI: "shallow", BC: "patchy", PR: "partial" };
     return wx.trim().split(/\s+/).map((tok) => {
       const m = /^(\+|-|VC)?([A-Z]+)$/.exec(tok);
@@ -1664,11 +1665,59 @@
    * A detail section (build2b, weather-site pattern): small uppercase header row (icon, title, dotted rule, meta on
    * the right) over one rounded card holding the content, ending with the monospace source line.
    */
+  const REPORT_HELP = {
+    METAR: "METAR is the airport’s weather observation: wind, visibility, clouds and temperature measured at the report time. It describes observed conditions, not a forecast.",
+    TAF: "TAF is the airport’s aviation weather forecast. Each period describes expected wind, visibility, clouds and weather. Temporary changes come and go within their window; chance groups describe possible conditions. These weather chances are separate from the chance of a flight delay."
+  };
+  let reportHelpId = 0;
+  function reportHelp(type) {
+    const id = "report-help-" + (++reportHelpId);
+    const body = h("p", { id, class: "report-help muted small", hidden: true }, REPORT_HELP[type]);
+    const button = h("button", { type: "button", class: "report-info", "aria-label": "About " + type, "aria-expanded": "false", "aria-controls": id,
+      onclick: () => { body.hidden = !body.hidden; button.setAttribute("aria-expanded", String(!body.hidden)); } }, h("span", { "aria-hidden": "true" }, "ⓘ"));
+    return { button, body };
+  }
+  function reportHeading(text, type) {
+    const help = reportHelp(type);
+    return h("div", { class: "report-heading" }, h("div", { class: "report-title" }, h("h4", { class: "pd-h" }, text), help.button), help.body);
+  }
+  function tafForecast(a, opts = {}) {
+    if (!a.taf) return null;
+    const tz = dispTz(a), now = refNow();
+    const periods = (a.taf.periods || []).filter(p => Date.parse(p.to) > now);
+    const rows = periods.map(p => {
+      const c = p.cond || {}, wind = c.wind || {};
+      const label = p.kind === "TEMPO" ? "Temporary changes" : p.kind === "BECMG" ? "Gradually changing to" : p.kind === "PROB" ?
+        (Number.isFinite(p.probability) && p.probability > 0 ? (aviation() ? p.probability + "% chance" : p.probability / 10 + " in 10 chance") : "Possible conditions") : "Expected conditions";
+      const span = whenLabel(Date.parse(p.from), tz) + " – " + whenLabel(Date.parse(p.to), tz);
+      const kv = [
+        ["Wind", wind.spd == null ? "Not specified" : wind.spd === 0 ? "Calm" : (wind.dir == null || wind.dir === "VRB" ? "Variable" : "From " + compass(wind.dir)) + " " + mph1(wind.spd) + " mph"],
+        ["Gusts", c.gust == null ? "None forecast" : mph1(c.gust) + " mph"],
+        ["Visibility", c.visib == null ? "Not specified" : c.visibilityAbove ? "More than " + c.visib + " miles" : visWords(c.visib)],
+        ["Cloud ceiling", c.ceiling == null ? "No ceiling specified" : c.ceiling.toLocaleString("en-US") + " ft above the airport"],
+        ["Weather", c.wx ? decodeWx(c.wx) : "No significant weather forecast"]
+      ];
+      if (aviation() && c.fltCat) kv.unshift(["Flight category", fcChip(c.fltCat)]);
+      return h("div", { class: "taf-period", "data-kind": p.kind }, h("div", { class: "taf-time" }, span), h("b", {}, label),
+        h("dl", { class: "kv2" }, kv.map(([k,val]) => h("div", {}, h("dt", {}, k), h("dd", {}, val)))));
+    });
+    const issued = a.taf.issued ? "Issued " + whenLabel(Date.parse(a.taf.issued), tz) : "";
+    const old = a.taf.issued && now - Date.parse(a.taf.issued) > 12 * HOUR;
+    return section(aviation() ? "TAF forecast" : "Airport forecast", "sun", [
+      old ? h("p", { class: "warn" }, "This forecast may be outdated.") : null,
+      h("p", { class: "muted small taf-note" }, "Forecast weather, separate from current observations. All times " + zoneAbbr(now, tz) + "."),
+      ...rows,
+      !rows.length ? h("p", { class: "muted" }, "Decoded forecast periods are unavailable right now.") : null,
+      opts.raw && a.taf.raw ? h("pre", { class: "raw" }, a.taf.raw) : null
+    ], null, { cls: "taf-forecast", meta: issued, help: "TAF" });
+  }
   function section(title, ico, kids, src, opts = {}) {
+    const help = opts.help ? reportHelp(opts.help) : null;
     const s = src && state.data && state.data.sources && state.data.sources[src.key];
     const meta = opts.meta || (src ? (SEC_META[src.key] || "") + (s && s.at ? " · " + ago(Math.max(0, refNow() - Date.parse(s.at))).replace(" ago", "") : "") : "");
     return h("section", { class: "sec", id: opts.id || null },
-      h("div", { class: "sec-h" }, ico ? icon(ICONS[ico]) : null, h("h3", {}, title), h("span", { class: "rule", "aria-hidden": "true" }), meta ? h("span", { class: "meta" }, meta) : null),
+      h("div", { class: "sec-h" }, ico ? icon(ICONS[ico]) : null, h("h3", {}, title), help?.button, h("span", { class: "rule", "aria-hidden": "true" }), meta ? h("span", { class: "meta" }, meta) : null),
+      help?.body,
       h("div", { class: "scard" + (opts.cls ? " " + opts.cls : "") }, ...kids, src ? srcLine(src.key, src.raw) : null));
   }
   function rawToggle(text) {
@@ -1894,12 +1943,12 @@
     const zl = (ms) => clock(ms, tz) + " " + zoneAbbr(ms, tz);
     const sub = (t) => h("h4", { class: "pd-h" }, t);
     if (a.metar) {
-      kids.push(sub("Current METAR"),
+      kids.push(reportHeading("Current METAR", "METAR"),
         h("div", { class: "box" }, h("dl", { class: "kv", style: "margin:0" }, metarRows(a.metar))),
         a.metar.obsTime ? h("div", { class: "muted small", style: "margin:6px 4px 0" }, "Observed " + ago(Math.max(0, refNow() - Date.parse(a.metar.obsTime))) + " · " + zl(Date.parse(a.metar.obsTime))) : null,
         h("pre", { class: "raw", style: "margin-top:10px" }, a.metar.raw));
     }
-    if (a.taf) kids.push(sub("TAF" + (a.taf.issued ? " · issued " + zl(Date.parse(a.taf.issued)) : "")), h("pre", { class: "raw" }, a.taf.raw));
+    if (a.taf) kids.push(tafForecast(a, { raw: true }));
     const lt = a.lamp ? lampTable(a, opts.force) : null;
     if (lt) kids.push(sub("LAMP guidance · issued " + zl(Date.parse(a.lamp.issued))), ...lt);
     if (a.sigmets && a.sigmets.length) kids.push(sub("Convective SIGMETs"), ...a.sigmets.map((x) => h("pre", { class: "raw", style: "margin-top:6px" }, x.raw)));
@@ -2635,6 +2684,7 @@
       const parts = [];
       if (a.metar) parts.push(currentWeather(a));
       parts.push(safeCall(() => window.AWXRadarCard?.section(a, section)));
+      if (a.taf) parts.push(tafForecast(a));
       if (v.hours && v.hours.length) parts.push(safeCall(() => next12(a, v))); // Next 12 hours (filtered below)
       if (v.spc || v.tcf?.length) parts.push(section("Storm outlook", "bolt", [
         v.spc ? h("p", { class: "muted" }, v.spc === "TSTM" ? "General thunderstorms possible in the area (no severe risk)" : (SPC_NAMES[v.spc] || "Elevated") + " risk of severe storms today") : null,
@@ -2750,7 +2800,7 @@
     const obs = m.obsTime ? "Observed " + ago(Math.max(0, refNow() - Date.parse(m.obsTime))) : "";
     if (!aviation()) {
       const rows = kv.filter(([k]) => k !== "Temperature" && (k !== "Gusts" || m.gust != null));
-      return section("Current weather", "sun", [head, h("dl", { class: "kv2" }, rows.map(([k, val]) => h("div", {}, h("dt", {}, k), h("dd", {}, val))))], null, { cls: "cw", meta: obs });
+      return section("Current weather", "sun", [head, h("dl", { class: "kv2" }, rows.map(([k, val]) => h("div", {}, h("dt", {}, k), h("dd", {}, val))))], null, { cls: "cw", meta: obs, help: "METAR" });
     }
     const age = m.obsTime ? agoShort(refNow() - Date.parse(m.obsTime)) : "";
     const maxW = Math.max(40, Math.ceil(((m.gust || 0) + 5) / 10) * 10);
@@ -2763,7 +2813,7 @@
       tickBar("Gusts", m.gust, maxW, "gust"),
       h("div", { class: "cw-xw", "data-icao": a.icao }, "Crosswind: checking runways…"),
       h("div", { class: "srcl metar" }, "METAR · REPORTED " + age,
-        h("pre", { class: "raw" }, metarMarked(m.raw)))], null, { cls: "cw av", meta: obs });
+        h("pre", { class: "raw" }, metarMarked(m.raw)))], null, { cls: "cw av", meta: obs, help: "METAR" });
   }
   const compass = (d) => ["north", "northeast", "east", "southeast", "south", "southwest", "west", "northwest"][Math.round(((Number(d) % 360) + 360) % 360 / 45) % 8];
   const compassAbbr = (d) => ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][Math.round(((Number(d) % 360) + 360) % 360 / 45) % 8];
@@ -2939,7 +2989,7 @@
   setInterval(() => { if (document.visibilityState === "visible") checkVersion(); }, 10 * 60e3); // live relay: self-update
 
   window.AWXApp = {
-    state, openSheet, closeSheet, toggleFav, render, // build2a hook: used by site/searched.js
+    state, openSheet, closeSheet, toggleFav, render, tafForecast, // build2a hook: used by site/searched.js
     // build2b: for site/searched.js, the settings UI and check.js
     openDetails, closeDetails, detailRow, popupFocus, refreshDetails: () => { if (md.iata) renderDetails(true); }, // Airport details pages
     ensureCardTimeline, prefs: PREFS, codeOf, view, outlook, summary, hourLevel, slotText, refNow, whenLabel, dispTz, zoneAbbr, clock, hourLabel, daySlots, openNational, closePanel, placeLenses, retime,

@@ -54,6 +54,10 @@ airport-wx is the Airports app: a static page showing major-weather and delay ri
 - Delay chances reach Traveler users only as words from `site/delay.js` `likelihood()`; never print a raw % outside Aviation mode and the accuracy page.
 - The app is "Airports"; its identity (runway mark, `--brand` amber, own tab glyphs) is ours: no "Flighty" in UI labels (setup steps may name it).
 
+## Decoded forecasts
+
+- `poller/taf-periods.mjs` builds display-only forecast periods from the existing TAF interpretation; it never changes risk or delay scoring. `taf.periods` and global shard `tp` feed the Weather page and Pilot details. Preserve exact change windows, inherited temporary conditions, probability qualification, stale/missing decoding and visibility upper limits. METAR and TAF information buttons explain the report names to travelers; raw reports and flight categories stay in the existing technical areas.
+
 ## Checks before publishing
 
 1. `node poller/run-tests.mjs` — all pass.

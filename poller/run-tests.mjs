@@ -63,3 +63,5 @@ import "../worker/calendar.test.mjs";
 import "../tools/sheet.test.mjs";
 import "../tools/calendar-link.test.mjs";
 import "../tools/recover-poll.test.mjs";
+
+import "./taf-periods.test.mjs";
