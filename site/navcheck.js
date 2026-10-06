@@ -33,6 +33,31 @@ export async function navChecks(add, url) {
     if (!w) { add("fail", "Nav shell loads", "the tab bar never initialised (window.AWXNav missing)"); return; }
     let d = f.contentDocument;
 
+    const initialBar = d.querySelector(".awx-nav"), initialBottom = initialBar.getBoundingClientRect().bottom;
+    const startup = [];
+    for (let i = 0; i < 10; i++) {
+      startup.push(Math.abs(initialBar.getBoundingClientRect().bottom - initialBottom) < 1
+        && w.getComputedStyle(initialBar).transform === "none" && !d.body.classList.contains("awx-compact"));
+      await sleep(20);
+    }
+    add(startup.every(Boolean) ? "pass" : "fail", "Navigation starts fixed without a slide or automatic compaction", "Initial bottom position remains constant before user scrolling");
+
+    if (await until(() => w.AWXTrips?.todayAirportIds, 3000)) {
+      const A = w.AWXApp, api = w.AWXTrips, original = api.todayAirportIds;
+      const saved = JSON.stringify(A.state.favs), storage = w.localStorage.getItem("awx-favs");
+      const airport = A.state.data.airports.find(a => !A.state.favs.includes(a.iata));
+      if (airport) {
+        api.todayAirportIds = () => [airport.iata];
+        d.dispatchEvent(new w.Event("awx:trips"));
+        const temporary = d.querySelector(`#list .card[data-iata="${airport.iata}"]`);
+        const added = !!temporary && temporary.querySelector(".star").getAttribute("aria-pressed") === "false";
+        api.todayAirportIds = original;
+        d.dispatchEvent(new w.Event("awx:trips"));
+        add(added && saved === JSON.stringify(A.state.favs) && storage === w.localStorage.getItem("awx-favs") ? "pass" : "fail",
+          "Day-of trip airports appear without saving a favorite", "Temporary airport visible, star off, saved favorites and storage unchanged");
+      }
+    }
+
     // tab bar
     const bar = d.querySelector(".awx-tabbar[role=tablist]");
     const tabs = bar ? [...bar.querySelectorAll("[role=tab]")] : [];

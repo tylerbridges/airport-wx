@@ -106,7 +106,11 @@ function show(id) {
 }
 
 // Ignore scroll anchoring caused by the header resize, so it cannot flip the bars back.
-let chromeLast = 0, chromeAcc = 0, chromeQuiet = 0, chromeFrame = false;
+let chromeLast = 0, chromeAcc = 0, chromeQuiet = 0, chromeFrame = false, chromeGestureUntil = 0;
+function chromeGesture() {
+  chromeGestureUntil = performance.now() + 1000;
+  document.body.classList.add("awx-chrome-animated");
+}
 function setCompact(small) {
   if (document.body.classList.contains("awx-compact") === small) return;
   document.body.classList.toggle("awx-compact", small);
@@ -125,6 +129,7 @@ function chromeScroll(e) {
     chromeFrame = false;
     const y = panelFor(cur).scrollTop, d = y - chromeLast;
     chromeLast = y;
+    if (performance.now() > chromeGestureUntil) { chromeAcc = 0; return; }
     if (performance.now() < chromeQuiet || nav.classList.contains("hide")) return;
     if (y < 60) { chromeAcc = 0; setCompact(false); return; }
     if (!d) return;
@@ -312,6 +317,8 @@ function init() {
   buildPanels();
   buildBar();
   for (const t of TABS) panelFor(t.id).addEventListener("scroll", chromeScroll, { passive: true });
+  for (const type of ["touchstart", "touchmove", "wheel"]) document.addEventListener(type, chromeGesture, { passive: true });
+  document.addEventListener("keydown", e => { if (["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End", " "].includes(e.key)) chromeGesture(); });
   buildMenu();
   initSettings({ openSearch, onToggle: () => syncBar() });
   document.addEventListener("awx:sheet-change", syncBar);

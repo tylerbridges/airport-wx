@@ -4,9 +4,9 @@
 // Writes "CHECK PASS" or "CHECK FAIL n" plus one line per row into <pre id="result"> so headless
 // Chrome (--dump-dom) and the uptime workflow can read it. Warnings don't fail the check.
 import { loadAirports, rank, decodeList } from "./search.js";
-import { navChecks } from "./navcheck.js?v=5"; // nav hook
+import { navChecks } from "./navcheck.js?v=6"; // nav hook
 import { tripChecks } from "./check-trips.js?v=8"; // trips hook
-import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=9"; // scenarios hook; More details page helpers
+import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=10"; // scenarios hook; More details page helpers
 
 const P = new URLSearchParams(location.search);
 const MOCK = P.get("mock") === "1";
@@ -422,11 +422,33 @@ async function uiChecks(add, scenario) {
       A.openSheet(a.iata);
       await frameSleep(w, 50);
       const fc = [...doc.querySelectorAll("#sheet .boxwrap .fc, #sheet .cw .fc")].map((e) => e.textContent).filter((t) => /^(VFR|MVFR|IFR|LIFR)$/.test(t));
+      const inline = doc.querySelector("#sheet .pilot .pd");
+      add(inline && [...doc.querySelectorAll("#sheet h3")].some(h => h.textContent === "Aviation details") ? "pass" : "fail",
+        "Aviation details are visible in the airport overview", inline ? "Decoded observations and reports shown without opening another page" : "missing subsection");
       A.openDetails(a.iata);
       await frameSleep(w, 50);
       const pilotVisible = !!doc.querySelector("#mdSheet .pilot .pd");
       add(fc.length && pilotVisible ? "pass" : "fail", "Aviation mode shows flight categories and opens technical details", `${a.iata}: ${fc.slice(0, 3).join(", ") || "none"}; Pilot details ${pilotVisible ? "available in More details" : "missing"}`);
     });
+
+    for (const mode of ["traveler", "aviation"]) {
+      set({ mode });
+      await withPage(url, async (w, doc) => {
+        const A = w.AWXApp, a = A.state.data.airports.find(x => x.metar) || A.state.data.airports[0];
+        A.openSheet(a.iata);
+        await frameSleep(w, 30);
+        doc.querySelector('#sheet [data-detail="weather"]').click();
+        await frameSleep(w, 30);
+        const page = doc.getElementById("mdSheet"), title = page.querySelector("h1#mdPageTitle");
+        const back = page.querySelector(".ad-back");
+        const clear = title?.textContent === "Weather" && back?.textContent.includes("overview")
+          && doc.getElementById("mdTitle")?.textContent === a.iata && !doc.getElementById("mdWrap").hidden;
+        back?.click();
+        add(clear && !doc.getElementById("sheetWrap").hidden ? "pass" : "fail",
+          `Weather has a distinct page title and overview navigation (${mode})`, `${a.iata}: prominent Weather heading, airport identity and Back to overview`);
+        A.closeSheet();
+      });
+    }
 
     // Timeline: 12 past + 24 forecast hours, dimmed history, lens on now, stable sheet layout
     set({});

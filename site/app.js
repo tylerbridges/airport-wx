@@ -704,12 +704,18 @@
 
   /** My airports in the favourites' order; All / At risk sorted by level under the current settings. */
   /** Airports for the lists and counts: trip-only airports stay off unless starred (trips hook). */
-  const listed = () => ((state.data && state.data.airports) || []).filter((a) => !a.trip || state.favs.includes(a.iata));
+  const myAirportIds = () => [...new Set([...state.favs, ...(window.AWXTrips?.todayAirportIds?.() || [])])];
+  let tripDayKey = "";
+  document.addEventListener("awx:trips", () => {
+    const key = (window.AWXTrips?.todayAirportIds?.() || []).join(",");
+    if (key !== tripDayKey && state.data) { tripDayKey = key; renderSeg(); renderList(); }
+  });
+  const listed = () => { const mine = new Set(myAirportIds()); return ((state.data && state.data.airports) || []).filter((a) => !a.trip || mine.has(a.iata)); };
   function visibleAirports() {
     const all = listed();
     if (state.filter === "mine") {
       const by = new Map(all.map((a) => [a.iata, a]));
-      return state.favs.map((c) => by.get(c)).filter(Boolean);
+      return myAirportIds().map((c) => by.get(c)).filter(Boolean);
     }
     const sorted = all.slice().sort((x, y) => levelOf(y) - levelOf(x) || summary(y).nowLevel - summary(x).nowLevel || x.iata.localeCompare(y.iata));
     if (state.filter === "risk") return sorted.filter((a) => levelOf(a) >= 2);
@@ -719,7 +725,7 @@
   function renderSeg() {
     const all = listed(); // trips hook
     const counts = {
-      mine: all.filter((a) => state.favs.includes(a.iata)).length,
+      mine: all.filter((a) => myAirportIds().includes(a.iata)).length,
       risk: all.filter((a) => levelOf(a) >= 2).length,
     };
     const tabs = [["mine", "My airports"], ["risk", "At risk"]];
@@ -960,7 +966,7 @@
   }
 
   /**
-   * Timeline element. Card previews require a brief hold; detail previews start immediately.
+   * Timeline element. Touch previews share a brief hold everywhere; vertical gestures scroll.
    * The lens sits on the current hour at rest.
    */
   function timeline(a, opts = {}) {
@@ -1172,12 +1178,12 @@
       if (e.button > 0 || g) return;
       heldKeys.clear();
       g = { id: e.pointerId, x: e.clientX, y: e.clientY, startX: e.clientX, active: false };
-      if (T.big) { activate(); e.preventDefault(); }
+      if (e.pointerType === "mouse" && T.big) { activate(); e.preventDefault(); }
       else holdTimer = setTimeout(activate, 240);
     });
     bar.addEventListener("pointermove", (e) => {
       if (!g || e.pointerId !== g.id) return;
-      if (!T.big) {
+      if (e.pointerType !== "mouse" || !T.big) {
         const dx = Math.abs(e.clientX - g.startX), dy = Math.abs(e.clientY - g.y);
         if (g.cancelled) return;
         if (dx > 8 && dx > dy) {
@@ -1304,7 +1310,8 @@
       || (sm.level ? (sm.words ? "Busier than usual" : "Minor weather conditions") : null);
     const reason = head + (cond && cond.toLowerCase() !== head.toLowerCase() ? ". " + cond : "");
     const badges = progs.length ? faaBadges(v).filter((b) => b.textContent.toLowerCase() !== head.toLowerCase() && !(b.textContent === "Closed" && /closed/i.test(head))) : []; // no badge that only repeats the headline
-    const mine = state.filter === "mine";
+    const mine = state.filter === "mine" && fav;
+    if (mine) { const saved = visibleAirports().filter(x => state.favs.includes(x.iata)); idx = saved.findIndex(x => x.iata === a.iata); count = saved.length; }
     const code = codeOf(a);
     const el = h("div", {
       class: "card", role: "button", tabindex: "0", "data-iata": a.iata, "data-level": String(sm.level),
@@ -1327,6 +1334,7 @@
           }, starSvg()))),
       h("div", { class: "aname" }, a.name),
       h("div", { class: "where" }, `${a.city}, ${a.state}`),
+      !fav && (window.AWXTrips?.todayAirportIds?.() || []).includes(a.iata) ? h("div", { class: "sub" }, "In your trip today") : null,
       h("div", { class: "reason" }, head),
       cond && cond.toLowerCase() !== head.toLowerCase() ? h("div", { class: "sub" }, cond) : null,
       health.quality ? h("div", { class: "muted small" }, health.quality) : null,
@@ -1345,7 +1353,7 @@
 
   /** Move a major airport one place up/down among the cards shown on My airports (non-majors keep their slots). */
   function moveMine(iata, dir, refocus) {
-    const shown = visibleAirports().map((a) => a.iata);
+    const shown = visibleAirports().filter(a => state.favs.includes(a.iata)).map((a) => a.iata);
     const i = shown.indexOf(iata);
     const j = i + dir;
     if (i < 0 || j < 0 || j >= shown.length) return;
@@ -1359,6 +1367,7 @@
   }
   /** New order of the majors shown on My airports -> favourites, with other entries left in their slots. */
   function setMineOrder(order) {
+    order = order.filter(c => state.favs.includes(c));
     const set = new Set(order);
     let k = 0;
     state.favs = state.favs.map((c) => (set.has(c) ? order[k++] : c));
@@ -1377,7 +1386,7 @@
    */
   function wireReorder(el) {
     let g = null;
-    const cards = () => [...$("list").querySelectorAll(":scope > .card")];
+    const cards = () => [...$("list").querySelectorAll(":scope > .card")].filter(c => state.favs.includes(c.dataset.iata));
     const lift = () => {
       const list = cards();
       const rects = list.map((c) => c.getBoundingClientRect());
@@ -1932,7 +1941,7 @@
       h("b", {}, cap(x.coverageRaw || x.coverage || "Unknown") + " coverage"),
       h("span", { class: "muted" }, [x.valid && " · valid " + whenLabel(Date.parse(x.valid), tz), x.confidence && " · confidence " + String(x.confidence).toLowerCase(), x.tops && " · tops " + x.tops].filter(Boolean).join("")))));
     if (!kids.length) return null;
-    return section("Pilot details", "plane", [h("div", { class: "pd" }, ...kids)], null, { cls: "pilot" });
+    return section(opts.title || "Pilot details", "plane", [h("div", { class: "pd" }, ...kids)], null, { cls: "pilot" });
   }
 
   // ---------- Now / Peak / Hour cards (one structure, build2b) ----------
@@ -2009,8 +2018,9 @@
     const lead = o.lead;
     const bare = (x) => String(x || "").replace(/ \(\d+%\)$/, ""); // Aviation words carry the chance: "Flight delays likely (62%)"
     const merged = lead && bare(status) === lead.word;
-    const hcls = o.big ? " sc-big lv" + Math.max(0, Math.min(4, (shared?.level ?? o.level) || 0)) : "";
-    const delay = status ? h("div", { class: "sc-head" + hcls }, h("span", { class: "sc-delay" }, status), merged && lead.when ? h("span", { class: "sc-hwhen" }, lead.when) : null) : null;
+    const headLevel = shared?.kind === "unknown" ? null : shared?.level ?? o.level;
+    const hcls = (o.big ? " sc-big" : "") + (headLevel != null ? " lv" + Math.max(0, Math.min(4, headLevel)) : "");
+    const delay = status ? h("div", { class: "sc-head" + hcls, "data-level": headLevel }, h("span", { class: "sc-delay" }, status), merged && lead.when ? h("span", { class: "sc-hwhen" }, lead.when) : null) : null;
     const leadSub = lead ? cap([lead.cue, lead.size ? "When disrupted: " + lead.size : ""].filter(Boolean).join(" · ")) : "";
     // "Looking ahead": one compact list under the current status — the delay outlook (when it isn't already the
     // headline), then improvements, scheduled ends and FAA extension outlooks; each bullet's dot carries its colour
@@ -2020,7 +2030,7 @@
     const pk = o.peak;
     const pkMerged = pk && lead && !merged && bare(pk.headline) === lead.word;
     if (pk) ahead.push(h("li", { class: "la-i" }, h("span", { class: "la-dot la-lv" + pk.level, "aria-hidden": "true" }),
-      h("span", {}, h("b", { class: "la-lv" + pk.level }, pk.headline), pk.when ? " " + pk.when + " " : " ", pill(pk.level, true),
+      h("span", {}, h("b", { class: "la-lv" + pk.level, "data-level": pk.level }, pk.headline), pk.when ? " " + pk.when : "",
         pk.reasons.length ? h("span", { class: "la-sub" }, pk.reasons.join(" · ")) : null,
         ...(pkMerged ? leadNotes : []).map((n) => h("span", { class: "la-sub" }, n)))));
     if (lead && !merged && !pkMerged) ahead.push(h("li", { class: "la-i" }, h("span", { class: "la-dot " + lead.cls, "aria-hidden": "true" }),
@@ -2049,7 +2059,7 @@
     return h("div", { class: "box sc" + (o.full ? " full" : ""), "data-kind": o.kind, "data-layout": o.layout },
       o.big ? o.cur : null, // current conditions lead the card, above the Now risk
       h("div", { class: "sc-h" },
-        h("h4", {}, h("span", { class: "sc-label" }, o.label), shared?.kind === "unknown" ? null : (shared?.level ?? o.level) != null ? pill(shared?.level ?? o.level, true) : null, (o.full || o.simple) && when ? h("span", { class: "sc-when in" }, when) : null)),
+        h("h4", {}, h("span", { class: "sc-label" }, o.label), (o.full || o.simple) && when ? h("span", { class: "sc-when in" }, when) : null)),
       !o.full && !o.simple && o.when ? h("div", { class: "sc-when" }, o.when) : null,
       delay,
       list,
@@ -2416,6 +2426,7 @@
         tlHolder),
       log,
       ...secs,
+      aviation() ? pilotDetails(a, { title: "Aviation details" }) : null,
       section("Airport details", "plane", [h("div", { class: "ad-menu" },
         detailRow("Weather", "Current conditions and storm outlook", "weather", () => openDetails(a.iata, "weather")),
         window.AWXRadarCard && AWXRadarCard.covered(a) ? detailRow("Radar", "Live rain and snow", "radar", () => AWXRadarCard.open(a)) : null,
@@ -2442,9 +2453,13 @@
     const tz = dispTz(a);
     const shown = list.slice(0, LOG_MAX);
     const more = list.length - shown.length;
+    const open = () => openDetails(a.iata, "today");
     return section("Today so far", "clock", [h("ul", { class: "sh-log" },
-      shown.map((e) => h("li", {}, h("span", { class: "lg-t" }, clock(Date.parse(e.t), tz)), h("span", { class: "lg-s" }, e.kind === "program_extend" && Date.parse(e.to) ? e.sentence.replace(/until .*$/, "until " + faaUntil(Date.parse(e.to), a)) : e.sentence.replace(/\blow ceilings\b/g, "low clouds"))))),
-      more > 0 ? h("div", { class: "lg-more" }, `+${more} earlier · see Today’s changes`) : null], null, { cls: "logcard" });
+      shown.map((e) => h("li", {}, h("button", { type: "button", class: "lg-entry", "data-detail": "today", "aria-haspopup": "dialog", onclick: open },
+        h("span", { class: "lg-t" }, clock(Date.parse(e.t), tz)),
+        h("span", { class: "lg-s" }, e.kind === "program_extend" && Date.parse(e.to) ? e.sentence.replace(/until .*$/, "until " + faaUntil(Date.parse(e.to), a)) : e.sentence.replace(/\blow ceilings\b/g, "low clouds")),
+        h("span", { class: "chev", "aria-hidden": "true" }, "›"))))),
+      h("button", { type: "button", class: "lg-more", "data-detail": "today", "aria-haspopup": "dialog", onclick: open }, more > 0 ? `All changes · ${more} earlier ›` : "All changes ›")], null, { cls: "logcard" });
   }
 
   function safeCall(fn) {
@@ -2647,12 +2662,12 @@
     sheet.setAttribute("aria-labelledby", "mdTitle mdPageTitle");
     sheet.replaceChildren(...[
       h("div", { class: "grab", "aria-hidden": "true" }),
-      h("div", { class: "sh-head" },
-        h("div", { class: "sh-code", id: "mdTitle" }, code),
-        h("div", { class: "right", style: "gap:6px" },
-          h("button", { type: "button", class: "ad-back", "aria-label": "Back to airport", onclick: () => closeDetails() }, "‹ Back"),
-          h("button", { type: "button", class: "close", "aria-label": "Close " + title.toLowerCase(), onclick: () => closeDetails() }, closeSvg()))),
-      h("div", { class: "sh-where" }, h("b", { class: "sh-aname" }, a.name), h("span", { class: "muted" }, " · ", h("span", { id: "mdPageTitle" }, title))),
+      h("div", { class: "sh-head md-page-head" },
+        h("div", { class: "md-nav" },
+          h("button", { type: "button", class: "ad-back", "aria-label": "Back to airport", onclick: () => closeDetails() }, `‹ ${code} overview`),
+          h("button", { type: "button", class: "close", "aria-label": "Close " + title.toLowerCase(), onclick: () => closeDetails() }, closeSvg())),
+        h("h1", { class: "md-page-title", id: "mdPageTitle" }, title)),
+      h("div", { class: "sh-where" }, h("b", { id: "mdTitle" }, code), " · ", h("span", { class: "sh-aname" }, a.name)),
       ...content,
       hiddenNote,
       checkedLine(a),
@@ -2782,37 +2797,43 @@
       "aria-label": "Current weather: " + parts.join(", ") + ". Open weather details.", onclick: () => openDetails(a.iata, "weather") },
       h("span", { class: "cl-t" }, parts.join(" · ")), h("span", { class: "chev", "aria-hidden": "true" }, "›"));
   }
-  /**
-   * "Next 12 hours" on the Weather page: four 3-hour blocks from the next full hour, from the airport's hourly forecast
-   * (v.hours). Each block shows its most disruptive hour's weather, the strongest wind and gust, and low clouds; hours with
-   * no forecast say "No forecast" (never a quiet block). Aviation mode adds the block's worst flight category.
-   */
+  /** Group the next day by local day/night; keep changed weather and missing coverage explicit. */
   function next12(a, v) {
-    const tz = dispTz(a);
-    const t0 = Math.floor(refNow() / HOUR) * HOUR + HOUR;
+    const tz = dispTz(a), now = refNow();
+    const today = dayKey(now, tz), tomorrow = dayKey(localMidnight(now, tz, 1), tz);
+    const t0 = Math.floor(now / HOUR) * HOUR + HOUR;
+    const localHour = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", hourCycle: "h23" });
     const FC = ["LIFR", "IFR", "MVFR", "VFR"];
-    const rows = [];
-    for (let b = 0; b < 4; b++) {
-      const s = t0 + b * 3 * HOUR, e = s + 3 * HOUR;
-      const hrs = (v.hours || []).filter((x) => { const t = Date.parse(x.t); return t >= s && t < e && x.level != null; }); // hours no forecast covers stay "No forecast"
-      let text = "No forecast", cat = null;
-      if (hrs.length) {
-        const key = (x) => (x.level || 0) * 1e6 + (x.wgst || 0) * 1e3 + (x.wspd || 0);
-        const rep = hrs.reduce((best, x) => (key(x) > key(best) ? x : best), hrs[0]);
-        let wx = shortCond({ wx: rep.wx, wgst: rep.wgst, vis: rep.vis });
-        wx = wx.replace(/^No significant weather, gusty$/, "Gusty");
-        const spd = hrs.reduce((best, x) => (x.wspd != null && (!best || x.wspd > best.wspd) ? x : best), null);
-        const gust = Math.max(...hrs.map((x) => (x.wgst != null ? x.wgst : -1)));
-        const cig = Math.min(...hrs.map((x) => (x.cig != null ? x.cig : Infinity)));
-        text = [wx, spd ? windShort(spd.wdir, spd.wspd, gust >= 0 ? gust : null) : "", cig < 500 ? "Very low clouds" : cig < 1000 ? "Low clouds" : ""].filter(Boolean).join(" · ");
-        cat = hrs.reduce((best, x) => (FC.indexOf(x.fltCat) >= 0 && (best == null || FC.indexOf(x.fltCat) < FC.indexOf(best)) ? x.fltCat : best), null);
-      }
-      rows.push(h("li", { class: "nx-i" }, h("span", { class: "nx-t" }, rangeText(s, e, tz)),
-        h("span", { class: "nx-s" }, text, aviation() && cat ? [" ", fcChip(cat)] : null)));
+    const groups = [];
+    for (let i = 0; i < 24; i++) {
+      const at = t0 + i * HOUR, date = dayKey(at, tz);
+      const hour = Number(localHour.format(at));
+      const label = date === today ? hour < 6 ? "This morning" : hour < 18 ? "Today" : "Tonight"
+        : date === tomorrow ? hour < 6 ? "Tonight" : hour < 18 ? "Tomorrow" : "Tomorrow night"
+        : hour < 6 ? "Tomorrow night" : fmt(tz, { weekday: "long" }, "daypart-day").format(at);
+      const hr = (v.hours || []).find(x => Date.parse(x.t) <= at && at < Date.parse(x.t) + HOUR && x.level != null);
+      const wx = hr ? shortCond({ wx: hr.wx, wgst: hr.wgst, vis: hr.vis }).replace(/^No significant weather, gusty$/, "Gusty") : "Forecast unavailable";
+      const cloud = hr?.cig != null && hr.cig < 500 ? "Very low clouds" : hr?.cig != null && hr.cig < 1000 ? "Low clouds" : "";
+      const key = hr ? [wx, cloud, Math.floor((hr.wspd || 0) / 10), Math.floor((hr.wgst || 0) / 10), aviation() ? hr.fltCat : ""].join("|") : "missing";
+      let group = groups[groups.length - 1];
+      if (!group || group.label !== label) { group = { label, runs: [] }; groups.push(group); }
+      let run = group.runs[group.runs.length - 1];
+      if (!run || run.key !== key) { run = { at, key, wx, cloud, hours: [] }; group.runs.push(run); }
+      if (hr) run.hours.push(hr);
     }
+    const rows = groups.map(group => h("li", { class: "nx-period" },
+      h("h4", {}, group.label),
+      h("ul", { class: "nx-bullets" }, group.runs.map((run, i) => {
+        const spd = run.hours.reduce((best, x) => x.wspd != null && (!best || x.wspd > best.wspd) ? x : best, null);
+        const gust = Math.max(...run.hours.map(x => x.wgst ?? -1));
+        const cat = run.hours.reduce((best, x) => FC.indexOf(x.fltCat) >= 0 && (best == null || FC.indexOf(x.fltCat) < FC.indexOf(best)) ? x.fltCat : best, null);
+        const text = [run.wx, spd ? windShort(spd.wdir, spd.wspd, gust >= 0 ? gust : null) : "", run.cloud].filter(Boolean).join(" · ");
+        return h("li", { class: "nx-s" }, i > 0 ? h("b", {}, `From ${hourLabel(run.at, tz)}: `) : null,
+          text, aviation() && cat ? [" ", fcChip(cat)] : null);
+      }))));
     const hs = AWXOutlook.health(a, outlookOpts(a, v));
-    return section("Next 12 hours", "clock", [h("ul", { class: "nx-list" }, rows),
-      hs.missingForecast ? h("p", { class: "muted small nx-note" }, "The airport forecast may be outdated or unavailable.") : null], null, { cls: "nx12", meta: zoneAbbr(refNow(), tz) });
+    return section("Weather outlook", "clock", [h("ul", { class: "nx-list" }, rows),
+      hs.missingForecast ? h("p", { class: "muted small nx-note" }, "The airport forecast may be outdated or unavailable.") : null], null, { cls: "nx12", meta: zoneAbbr(now, tz) });
   }
   /** Crosswind/headwind for the best-aligned runway (headings from data/airports-all.json via site/searched.js). */
   async function fillCrosswind(a) {

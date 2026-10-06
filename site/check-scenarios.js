@@ -481,7 +481,7 @@ export async function consistencyChecks(add, w, doc, where = "") {
     A.openSheet(iata);
     await later(w, 10);
     const sh = doc.getElementById("sheet");
-    const pills = [...sh.querySelectorAll('.bx-layer[data-layer="rest"] .pill')].map((p) => LV[p.textContent.trim()]).filter((x) => x != null);
+    const pills = [...sh.querySelectorAll('.bx-layer[data-layer="rest"] .sc-head[data-level], .bx-layer[data-layer="rest"] .la-i b[data-level]')].map(p => Number(p.dataset.level));
     if (pills.length) {
       compared++;
       const top = Math.max(...pills);
@@ -514,7 +514,7 @@ export async function consistencyChecks(add, w, doc, where = "") {
       `${rows.length} leg rows; airport timeline, Weather and More details remain available`);
     A.closeSheet();
   }
-  add(levels.length ? "fail" : "pass", `One level${where}: card pill = sheet headline`, levels.slice(0, 4).join("; ") || `${compared} airports compared${noPill ? `, ${noPill} sheets show no level (data unknown)` : ""}`);
+  add(levels.length ? "fail" : "pass", `One level${where}: card badge = coloured detail headlines`, levels.slice(0, 4).join("; ") || `${compared} airports compared${noPill ? `, ${noPill} sheets show no level (data unknown)` : ""}`);
   add(windows.length ? "fail" : "pass", `Words and colours agree${where}: the headline's hours are coloured at its level`, windows.slice(0, 4).join("; ") || "every headline window");
   add(unexplained.length ? "fail" : "pass", `Every coloured hour says why${where}`, unexplained.slice(0, 4).join("; ") || "no unexplained hours");
   add(nulls.length ? "fail" : "pass", `No "null" / "undefined" / "NaN" in visible text${where}`, nulls.slice(0, 4).join("; ") || "home, sheets, national panel, More details");

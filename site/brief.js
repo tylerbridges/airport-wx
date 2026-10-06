@@ -1,7 +1,6 @@
 // Per-airport Today’s changes, refreshed with app data. The day-of flight brief lives in trips.js.
 const HOUR = 3600e3;
 const MIN = 60e3;
-const TODAY_MAX = 6;
 const W = typeof window !== "undefined" ? window : {}; // require-free in Node (tools/brief.test.mjs)
 const T = W.AWXTest || { name: null };
 const app = () => W.AWXApp;
@@ -112,14 +111,11 @@ function todaySection(a) {
   const list = todayEvents(a);
   if (!list.length) return null;
   const tz = A.dispTz(a);
-  const shown = list.slice(0, TODAY_MAX);
-  const more = list.length - shown.length;
   const B = A.brief;
   const sec = h("section", { class: "sec bf-today" },
     h("div", { class: "sec-h" }, B.icon ? B.icon(B.ICONS.clock) : null, h("h3", {}, "Today"), h("span", { class: "rule", "aria-hidden": "true" })),
     h("div", { class: "scard" },
-      h("ul", { class: "bf-evs" }, shown.map((e) => h("li", { class: "bf-ev" }, h("span", { class: "bf-t" }, A.clock(Date.parse(e.t), tz)), h("span", { class: "bf-s" }, eventText(e, a))))),
-      more > 0 ? h("div", { class: "bf-more" }, `+${more} earlier`) : null));
+      h("ul", { class: "bf-evs" }, list.map((e) => h("li", { class: "bf-ev" }, h("span", { class: "bf-t" }, A.clock(Date.parse(e.t), tz)), h("span", { class: "bf-s" }, eventText(e, a)))))));
   return sec;
 }
 function decorateSheet(sheet, a) {

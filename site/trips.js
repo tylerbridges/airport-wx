@@ -171,6 +171,21 @@ function allTrips() {
     .filter((t) => Date.parse(t.legs[t.legs.length - 1].arr) >= now - TRIP_KEEP_AFTER_ARRIVAL_MS)
     .sort((a, b) => Date.parse(a.legs[0].dep) - Date.parse(b.legs[0].dep));
 }
+let todayAirportsCache = { key: "", codes: [] };
+function todayAirportIds() {
+  const now = nowMs(), trips = allTrips();
+  const key = Math.floor(now / MIN) + "|" + trips.map(t => t.legs.map(l => flightKey(l) + tzFor(l.from, t) + tzFor(l.to, t)).join(",")).join(";");
+  if (todayAirportsCache.key === key) return todayAirportsCache.codes;
+  const codes = new Set();
+  for (const trip of trips) for (const leg of trip.legs) {
+    for (const [code, time] of [[leg.from, leg.dep], [leg.to, leg.arr]]) {
+      const tz = tzFor(code, trip), opts = { year: "numeric", month: "numeric", day: "numeric" };
+      if (fmt(Date.parse(time), tz, opts) === fmt(now, tz, opts)) codes.add(code);
+    }
+  }
+  todayAirportsCache = { key, codes: [...codes] };
+  return todayAirportsCache.codes;
+}
 // build2b hook: delay chances in plain, calibrated words (site/delay.js likelihood), never a percentage
 const delayWordsFor = (d, iata) => { const L = window.AWXDelay && window.AWXDelay.likelihood ? window.AWXDelay.likelihood(d, { iata }) : null; return L ? L.word : null; };
 // Trips use all known disruption categories, including those hidden on the airport list.
@@ -376,15 +391,15 @@ function renderFoot() {
 }
 
 /** Paired airport-local scheduled times; dates remain explicit across midnight and time zones. */
-function flightRoute(leg, trip) {
+function flightRoute(leg, trip, compact = false) {
   const endpoint = (code, time, label) => {
     const ms = typeof time === "number" ? time : Date.parse(time), tz = tzFor(code, trip);
     return h("span", { class: "tfendpoint" },
-      h("span", { class: "tfrole" }, label), h("b", { class: "tfcode" }, code),
+      compact ? null : h("span", { class: "tfrole" }, label), h("b", { class: "tfcode" }, code),
       h("span", { class: "tftime" }, `${clockText(ms, tz)} ${tzAbbr(ms, tz)}`),
       h("span", { class: "tfday" }, fmt(ms, tz, { weekday: "short", month: "short", day: "numeric" })));
   };
-  return h("span", { class: "tfroute" }, endpoint(leg.from, leg.dep, "Departure"),
+  return h("span", { class: "tfroute" + (compact ? " compact" : "") }, endpoint(leg.from, leg.dep, "Departure"),
     h("span", { class: "tfpath", "aria-hidden": "true" }, svg(PLANE, "tfi", 90)), endpoint(leg.to, leg.arr, "Arrival"));
 }
 
@@ -404,23 +419,23 @@ function decorateSheet(sheet, a) {
     const r = resultOf(trip);
     const sm = app()?.summary?.(a);
     const contexts = roles.filter(line => sm?.level >= 2 && window.AWXOutlook?.overlaps({ start: sm.start, end: sm.end }, line.at, line.until))
-      .map(line => `Your ${line.role === "dep" ? "departure" : line.role === "arr" ? "arrival" : "connection"} overlaps the highest-risk window here.`);
+      .map(line => `${a.iata} ${line.role === "dep" ? "departure" : line.role === "arr" ? "arrival" : "connection"} overlaps peak airport risk.`);
     const rows = trip.legs.flatMap((leg, i) => {
       const lr = resultOf({ ...trip, legs: [leg] });
-      const note = lr.status === "ok" ? null : lr.status === "early"
-        ? `Forecast from ${whenText(Date.parse(leg.dep) - 24 * HOUR, tzFor(leg.from, trip), now)}.` : lr.top;
+      const note = lr.status === "early" ? `Forecast from ${whenText(Date.parse(leg.dep) - 24 * HOUR, tzFor(leg.from, trip), now)}.`
+        : lr.status === "unknown" ? "Forecast coverage unavailable" : lr.concerns.find(c => c.level > 0)?.short || null;
+      const display = { ...lr, label: lr.status === "ok" ? "Low airport risk" : lr.label };
       const row = h("button", { type: "button", class: "tfrow " + lr.cls, "data-flight-leg": i + 1,
         "aria-label": `Leg ${i + 1} of ${trip.legs.length}, ${leg.from} to ${leg.to}. ${dateLine(Date.parse(leg.dep), tzFor(leg.from, trip))}. ${lr.label}. Open the trip`, onclick: () => openTrip(trip.id) },
-        h("span", { class: "tfhead" }, h("span", { class: "tfl" }, trip.legs.length > 1 ? `Leg ${i + 1} of ${trip.legs.length}` : "Scheduled flight"), pillEl(lr, true)),
-        flightRoute(leg, trip),
+        h("span", { class: "tfhead" }, h("span", { class: "tfl" }, trip.legs.length > 1 ? `Leg ${i + 1} of ${trip.legs.length}` : "Scheduled flight"), pillEl(display, true)),
+        flightRoute(leg, trip, true),
         note ? h("span", { class: "tfcontext" }, note) : null);
       const conn = r.legs[i]?.conn;
       return [row, conn ? h("div", { class: "tfconnection" + (conn.tight ? " tight" : "") },
         `${conn.minutes} min connection · ${conn.iata}`, conn.tight ? h("span", { class: "badge l2" }, "Tight") : null,
-        ...r.concerns.filter(c => c.side === "conn" && c.leg === i).map(c => h("span", { class: "tfcontext" }, c.text))) : null];
+        r.concerns.some(c => c.side === "conn" && c.leg === i && c.level >= 2) ? h("span", { class: "tfconn-risk" }, "Missed connection possible") : null) : null];
     }).filter(Boolean);
     groups.push(h("div", { class: "tfgroup" },
-      h("div", { class: "tfdate" }, fmt(Date.parse(trip.legs[0].dep), tzFor(trip.legs[0].from, trip), { weekday: "short", month: "short", day: "numeric" })),
       ...rows,
       ...[...new Set(contexts)].map(text => h("p", { class: "tfcontext tfnotice" }, text)),
       h("p", { class: "tfsource" }, r.scheduleNote),
@@ -939,10 +954,10 @@ const CSS = `
 .tfheading{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 4px}
 .tfgroup{border-radius:18px;background:var(--card-2);overflow:hidden}
 .tfdate{padding:12px 14px 0;font-size:12px;font-weight:600;color:var(--muted)}
-.tfrow{display:block;width:100%;text-align:left;padding:12px 14px;min-height:44px;background:transparent}
+.tfrow{display:block;width:100%;text-align:left;padding:8px 12px;min-height:44px;background:transparent}
 .tfrow.off{--c:var(--muted)}
 .tfrow:focus-visible{outline:2px solid var(--brand);outline-offset:-3px;border-radius:12px}
-.tfhead{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 10px;margin-bottom:10px}
+.tfhead{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 10px;margin-bottom:5px}
 .tfl{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
 .tfhead .pill.sm{font-size:11px;padding:3px 8px}
 .tfroute{display:grid;grid-template-columns:minmax(0,1fr) 36px minmax(0,1fr);align-items:center;gap:8px}
@@ -954,11 +969,16 @@ const CSS = `
 .tfpath{display:flex;justify-content:center;position:relative;color:var(--muted)}
 .tfpath::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px solid var(--line)}
 .tfpath .tfi{position:relative;width:18px;height:18px;fill:currentColor;background:var(--card-2)}
-.tfcontext{display:block;margin-top:9px;font-size:12px;font-weight:400;line-height:1.4;color:var(--muted)}
-.tfconnection{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:9px 14px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:12px;font-weight:600;color:var(--muted)}
+.tfcontext{display:block;margin-top:5px;font-size:11px;font-weight:400;line-height:1.4;color:var(--muted)}
+.tfconnection{display:flex;align-items:center;flex-wrap:wrap;gap:5px 8px;padding:6px 12px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font-size:12px;font-weight:600;color:var(--muted)}
 .tfconnection.tight{color:var(--l2)}
-.tfsource{padding:0 14px 12px;margin:0;font-size:11px;line-height:1.4;color:var(--muted)}
-.tfnotice{margin:0;padding:0 14px 10px}
+.tfsource{padding:0 12px 8px;margin:0;font-size:11px;line-height:1.4;color:var(--muted)}
+.tfnotice{margin:0;padding:0 12px 5px}
+.tfroute.compact{grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr);gap:6px}
+.compact .tfcode{font-size:22px}
+.compact .tftime{font-size:12px}
+.compact .tfday{font-size:10px}
+.tfconn-risk{font-size:11px;font-weight:400}
 .tleg{padding:14px;border-radius:18px;background:var(--card-2)}
 .tleg>.tfroute{margin-bottom:12px}
 .tleg .box{background:var(--card);padding:10px}
@@ -1009,7 +1029,7 @@ function init() {
   window.addEventListener("storage", (e) => { if (e.key === CALENDAR_KEY) { S.connection = T.name ? null : loadConnection(); S.connectSeq++; S.connectionAt = 0; S.connectionFailed = false; render(); } if (e.key === KEY) { S.manual = loadManual(); render(); } });
   window.AWXTrips = {
     hasTodayFlight: () => !!todayFlight(), openTodayBrief,
-    render, decorateSheet, liveIds, openTrip, openEdit, openSettings: openTripSettings,
+    render, decorateSheet, liveIds, todayAirportIds, openTrip, openEdit, openSettings: openTripSettings,
     // site/settings.js (Settings → Trips & flight calendar) and site/nav.js (Trips tab)
     openAdd: () => openEdit(null), openImport, openConnect,
     calStatus,
