@@ -109,6 +109,10 @@ body {
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
 }
+/* Status bar: a solid strip in the page colour pinned to the top edge. iOS (home-screen app and Safari 26) colours the
+   status bar from a fixed element at the top; without one it shows a translucent, blurred band over the page. Under sheets'
+   scrims (z-index 10+) so an open sheet still dims it. */
+body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: max(env(safe-area-inset-top), 1px); background: var(--bg); z-index: 8; pointer-events: none; }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
 button:focus-visible, .card:focus-visible { outline: 2px solid var(--brand, #ffb020); outline-offset: 2px; }
 
@@ -914,7 +918,7 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="cats.js?v=4"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=6"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
-<script src="app.js?v=83" defer></script>
+<script src="app.js?v=84" defer></script>
 <script type="module" src="searched.js?v=12"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=18"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="flight-features.js?v=1"></script><!-- trips hook -->
