@@ -153,7 +153,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 800; letter-spa
   background: var(--card); border-radius: 24px; padding: 16px 16px 14px; cursor: pointer;
   transition: transform .12s ease;
 }
-#list .card { content-visibility: auto; contain-intrinsic-size: auto 290px; }
+#list .card { content-visibility: auto; contain-intrinsic-size: auto 256px; }
 .tl-pending { margin-top: 10px; height: 71px; }
 .card:active { transform: scale(.985); }
 .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
@@ -914,18 +914,18 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 </div>
 <div class="sr" id="announce" aria-live="polite"></div>
 <script src="offline.js?v=3"></script>
-<script src="outlook.js?v=13"></script>
+<script src="outlook.js?v=14"></script>
 <script src="cats.js?v=4"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=6"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
-<script src="app.js?v=84" defer></script>
-<script type="module" src="searched.js?v=12"></script><!-- build2a hook -->
+<script src="app.js?v=85" defer></script>
+<script type="module" src="searched.js?v=14"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=18"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="flight-features.js?v=1"></script><!-- trips hook -->
 <script type="module" src="nav.js?v=25"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
 <script type="module" src="movement.js?v=4"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
 <script type="module" src="brief.js?v=9"></script><!-- brief hook: airport Today’s changes -->
-<script type="module" src="terminals.js?v=3"></script><!-- terminals hook: terminal map + lounges cards in the airport sheet -->
+<script type="module" src="terminals.js?v=5"></script><!-- terminals hook: terminal map + lounges cards in the airport sheet -->
 <script type="module" src="radar/card.js?v=5"></script><!-- radar hook: radar loop card in the airport sheet (engine loads on demand) -->
 </body>
 </html>

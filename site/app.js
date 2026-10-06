@@ -458,7 +458,7 @@
   // ---------- data ----------
 
   async function getJson(url) {
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetch(url, { cache: "no-cache" }); // revalidate (ETag -> 304 when unchanged) instead of re-downloading status.json every open/refresh
     if (!res.ok) { const e = new Error("HTTP " + res.status); e.status = res.status; throw e; }
     return res.json();
   }
@@ -557,7 +557,15 @@
   }
 
   function cachedStatus() { try { return window.AWXOffline?.load(localStorage) || null; } catch { return null; } }
-  function saveStatus(data) { try { window.AWXOffline?.save(localStorage, data); } catch { /* storage blocked */ } }
+  // Offline snapshot: cleaned + serialised off the load path (idle, else ~1 s timer); always saves the newest data.
+  let saveQueued = false;
+  function saveStatus(data) {
+    saveStatus.latest = data;
+    if (saveQueued) return;
+    saveQueued = true;
+    const run = () => { saveQueued = false; try { window.AWXOffline?.save(localStorage, saveStatus.latest); } catch { /* storage blocked */ } };
+    if (window.requestIdleCallback) requestIdleCallback(run, { timeout: 4000 }); else setTimeout(run, 1000);
+  }
 
   let loading = false;
   let reloading = false; // the refresh button is reloading the page: keep the spinner

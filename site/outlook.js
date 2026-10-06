@@ -6,7 +6,15 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
   const HOUR = 3600000;
-  const ms = (x) => Number.isFinite(x) ? x : Date.parse(x);
+  // Strings are immutable, so a string -> epoch memo can never go stale when data is replaced; bounded so it can't grow forever.
+  const TMEMO = new Map();
+  const ms = (x) => {
+    if (Number.isFinite(x)) return x;
+    if (typeof x !== "string") return Date.parse(x);
+    let v = TMEMO.get(x);
+    if (v === undefined) { v = Date.parse(x); if (TMEMO.size >= 20000) TMEMO.clear(); TMEMO.set(x, v); }
+    return v;
+  };
   const uniq = (xs) => [...new Set(xs.filter(Boolean))];
   function restrictions(a, at, now) {
     const current = at < Math.floor(now / HOUR) * HOUR + HOUR;
@@ -64,12 +72,21 @@
   // it never raises the hour's level. Weather, FAA restrictions and delays happening now still count (overnight snow
   // or fog sets up the first morning departures).
   const HFMT = new Map();
+  const QMEMO = new Map(); // tz -> Map(epoch ms -> boolean); a pure function of (tz, instant), bounded
+  let qSize = 0;
   function quietHour(t, tz) {
-    if (!tz || !Number.isFinite(ms(t))) return false;
+    const e = ms(t);
+    if (!tz || !Number.isFinite(e)) return false;
+    let m = QMEMO.get(tz);
+    if (m) { const c = m.get(e); if (c !== undefined) return c; }
     let f = HFMT.get(tz);
     if (!f) { try { f = new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", hourCycle: "h23" }); } catch { return false; } HFMT.set(tz, f); }
-    const hr = Number(f.format(ms(t))) % 24;
-    return hr >= 1 && hr <= 4;
+    const hr = Number(f.format(e)) % 24;
+    const q = hr >= 1 && hr <= 4;
+    if (qSize >= 20000) { QMEMO.clear(); qSize = 0; m = null; }
+    if (!m) { m = new Map(); QMEMO.set(tz, m); }
+    m.set(e, q); qSize++;
+    return q;
   }
   function score(h, opts) {
     const L = h?.delay && opts.words ? opts.words(h.delay) : null;
