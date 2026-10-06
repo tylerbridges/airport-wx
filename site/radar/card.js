@@ -16,7 +16,7 @@
 // dBZ ticks and labels the rings in nm.
 import { covered, zoomFor, ringLabel, RINGS_NM, NM } from "./geo.js";
 
-const ENGINE_V = "1"; // bump with wx-radar.js / wx-vmap.js changes
+const ENGINE_V = "3"; // bump with wx-radar.js / wx-vmap.js changes
 const BASE = new URL("./", import.meta.url);
 const app = () => window.AWXApp;
 const aviation = () => !!(window.AWXPrefs && window.AWXPrefs.getPrefs().mode === "aviation");
@@ -73,8 +73,17 @@ const S = {
   legs: [], notes: [], full: null, generation: 0,
 };
 const loc = (a) => ({ lat: +a.lat, lon: +a.lon });
+const FMT = new Map(); // the engine asks for the same few scan times every frame: format each once per airport/zone
 function fmtTime(t) {
   const A = app(), a = S.a;
+  const key = t + "|" + (a ? a.iata : "") + "|" + (A && A.dispTz && a ? A.dispTz(a) : "");
+  if (FMT.has(key)) return FMT.get(key);
+  if (FMT.size > 200) FMT.clear();
+  const out = fmtRaw(t, A, a);
+  FMT.set(key, out);
+  return out;
+}
+function fmtRaw(t, A, a) {
   try { if (A && A.clock && a) return A.clock(t, A.dispTz(a)); } catch (e) { /* fall through */ }
   return new Date(t).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
@@ -405,7 +414,7 @@ function init() {
   if (inited || typeof document === "undefined" || !document.getElementById("sheet")) return;
   inited = true;
   document.head.append(h("style", { id: "awr-css" }, CSS));
-  if (window.AWXPrefs) window.AWXPrefs.onPrefs(() => requestAnimationFrame(() => { updateLegends(); if (S.R && S.shown) S.R.repaint(); }));
+  if (window.AWXPrefs) window.AWXPrefs.onPrefs(() => requestAnimationFrame(() => { FMT.clear(); updateLegends(); if (S.R && S.shown) S.R.repaint(); }));
   if (window.matchMedia) matchMedia("(prefers-reduced-motion: reduce)").addEventListener("change", setRm);
   window.AWXRadarCard = { section, close, open, covered, _state: () => ({ a: S.a && S.a.iata, mode: S.mode, shown: S.shown, visible: S.visible, zoom: S.zoom, info: S.info, engine: !!window.WXRadar }) };
 }
