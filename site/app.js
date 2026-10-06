@@ -1270,25 +1270,20 @@
    * "Delays happening now until 6 PM", "High — FAA gives no end time"; routine days keep site/delay.js's line.
    * progs: the badges shown (their program isn't named again).
    */
-  function cardWhen(a, v, sm, progs) {
+  function cardWhen(a, v, sm, progs, headline) {
     const tz = dispTz(a);
     const cur = sm.current || {};
     const prog = progs.length ? (cur.programs || [])[0] : null;
     const cls = (l) => "dl-line " + (l >= 3 ? "dl-hi" : l >= 2 ? "dl-mid" : "dl-lo");
     const zt = zoneTag(a);
-    const progWhen = !prog ? null : sm.open ? NO_END : cur.scheduledEnd ? (prog.type === "closure" ? "reopens " : "until ") + faaUntil(cur.scheduledEnd, a) + zt : null;
     if (sm.later) {
       const head = levelWords(sm.level, sm.words, sm.peakHour);
-      return [h("div", { class: cls(sm.level) }, head + " " + rangeText(sm.start, sm.end, tz) + zt, sm.words && sm.words.cue ? h("span", { class: "dl-usual" }, " · " + sm.words.cue) : null),
-        progWhen ? h("div", { class: "sub" }, cap(progWhen)) : null]; // the headline above already says the current status (and names its program)
+      return [h("div", { class: cls(sm.level) }, head + " " + rangeText(sm.start, sm.end, tz) + zt, sm.words && sm.words.cue ? h("span", { class: "dl-usual" }, " · " + sm.words.cue) : null)]; // the headline above already says the current status (and names its program)
     }
-    if (prog) { // the headline above names the program: this line gives its end, as the FAA gives it
-      if (sm.open) return [h("div", { class: cls(sm.level) }, NO_END)];
-      return progWhen ? [h("div", { class: cls(sm.level) }, cap(progWhen))] : [];
-    }
+    if (prog) return []; // FAA timing is consolidated with the cause beneath its badge.
     if (sm.level >= 2) {
       const head = levelWords(sm.level, sm.words, sm.peakHour);
-      return [h("div", { class: cls(sm.level) }, head + " " + rangeText(sm.start, sm.end, tz) + zt, sm.words && sm.words.cue ? h("span", { class: "dl-usual" }, " · " + sm.words.cue) : null)];
+      return [h("div", { class: cls(sm.level) }, (head.replace(/ expected$/i, "").toLowerCase() === String(headline || "").toLowerCase() ? "Forecast" : head) + " " + rangeText(sm.start, sm.end, tz) + zt, sm.words && sm.words.cue ? h("span", { class: "dl-usual" }, " · " + sm.words.cue) : null)];
     }
     return aviation() ? [window.AWXDelay ? safeCall(() => AWXDelay.delayLine(a)) : null] : [];
   }
@@ -1302,14 +1297,23 @@
     const fav = state.favs.includes(a.iata);
     const later = sm.later;
     const progs = cardPrograms(v);
-    // a program shows once: its badge and one sentence (cardWhen); reasons that only repeat it are left out
+    // Active programs lead with their badge; the cause and FAA timing share one context line.
     const rsn = (rs) => shortList((rs || []).filter((r) => !(progs.length && PROG_RE.test(r))), a);
     // the sheet's Now card headline leads (the same outlook() evaluation, so they can't drift); the weather condition is the secondary line
     const head = ((x) => (/^(No disruptions reported) · /.exec(x) || [null, x])[1])(sm.current?.headline || "Operating normally");
-    const cond = rsn(later && sm.peakHour ? hourReasons(a, sm.peakHour, sm.level) : ((n) => hourReasons(a, n.x, sm.nowLevel, n.reasons))(nowHourOf(a, v, sm)))[0] || (progs.length ? programCause(v.now.reasons) : null)
+    let cond = rsn(later && sm.peakHour ? hourReasons(a, sm.peakHour, sm.level) : ((n) => hourReasons(a, n.x, sm.nowLevel, n.reasons))(nowHourOf(a, v, sm)))[0] || (progs.length ? programCause(v.now.reasons) : null)
       || (sm.level ? (sm.words ? "Busier than usual" : "Minor weather conditions") : null);
-    const reason = head + (cond && cond.toLowerCase() !== head.toLowerCase() ? ". " + cond : "");
-    const badges = progs.length ? faaBadges(v).filter((b) => b.textContent.toLowerCase() !== head.toLowerCase() && !(b.textContent === "Closed" && /closed/i.test(head))) : []; // no badge that only repeats the headline
+    const badges = progs.length ? faaBadges(v) : [];
+    const currentProgram = progs.length ? sm.current?.programs?.[0] : null;
+    const badgeHeadline = !!currentProgram && badges.length > 0;
+    const programEnd = !currentProgram ? null : sm.open ? NO_END : sm.current.scheduledEnd
+      ? (currentProgram.type === "closure" ? "Reopens " : "Until ") + faaUntil(sm.current.scheduledEnd, a) + zoneTag(a) : null;
+    if (cond && cond.toLowerCase().startsWith(head.toLowerCase())) {
+      const rest = cond.slice(head.length).trim();
+      if (!rest || /^(until|through|from|expected)\b/i.test(rest)) cond = cap(rest) || null;
+    }
+
+    const reason = (badgeHeadline ? badges.map(b => b.textContent).join(". ") : head) + (programEnd ? ". " + programEnd : "") + (cond ? ". " + cond : "");
     const mine = state.filter === "mine" && fav;
     if (mine) { const saved = visibleAirports().filter(x => state.favs.includes(x.iata)); idx = saved.findIndex(x => x.iata === a.iata); count = saved.length; }
     const code = codeOf(a);
@@ -1334,13 +1338,14 @@
           }, starSvg()))),
       h("div", { class: "where" }, `${a.city}, ${a.state}`),
       !fav && (window.AWXTrips?.todayAirportIds?.() || []).includes(a.iata) ? h("div", { class: "sub" }, "In your trip today") : null,
-      h("div", { class: "reason" }, head),
-      cond && cond.toLowerCase() !== head.toLowerCase() ? h("div", { class: "sub" }, cond) : null,
+      badgeHeadline ? h("div", { class: "badges card-headline" }, badges) : h("div", { class: "reason" }, head),
+      programEnd ? h("div", { class: "sub card-context" }, h("b", {}, programEnd), cond ? ": " + cond : "")
+        : cond ? h("div", { class: "sub" }, cond) : null,
       health.quality ? h("div", { class: "muted small" }, health.quality) : null,
       window.AWXMovement ? safeCall(() => AWXMovement.line(a)) : null, // movement hook: "Departures far below normal" (site/movement.js)
-      unknown ? null : safeCall(() => cardWhen(a, v, sm, progs)), // the level's window (the sheet's words); phase3 hook inside for routine days
+      unknown ? null : safeCall(() => cardWhen(a, v, sm, progs, head)), // the level's window (the sheet's words); phase3 hook inside for routine days
       cascadeOnCard(v, sm) ? safeCall(() => cascadeLine(v, [reason], "sub hubline")) : null, // hubs hook: "ORD ground stop may delay flights to and from Chicago later today"
-      badges.length ? h("div", { class: "badges" }, badges) : null,
+      !badgeHeadline && badges.length ? h("div", { class: "badges" }, badges) : null,
       cardTimeline(a),
       mine && count > 1 ? h("div", { class: "sr-move" },
         idx > 0 ? h("button", { type: "button", class: "sr", onclick: (e) => { e.stopPropagation(); moveMine(a.iata, -1, true); }, onkeydown: (e) => e.stopPropagation() }, `Move ${code} up`) : null,
