@@ -14,7 +14,7 @@
 <meta http-equiv="Content-Language" content="EN-US">
 <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
 
-<title>The Most Recent ATCSCC Advisory</title>
+<title>Database Results</title>
 
 	<!-- 	<meta http-equiv="refresh" content="300"> -->
 	<script>
@@ -147,81 +147,266 @@
 	
 
 
+<TABLE border="1" cellpadding="3" cellspacing="0">
+ 
+ 
+    
 
-
-
-<table id="Table1" border="1" cellpadding="3" cellspacing="0">
-	<tr>
-		<th align="center" class="caption">The Most Recent ATCSCC Advisory</th>
-	</tr>
-	<tr>
-		<td valign="top">
-
-			<TABLE id="Table2" BORDER=0 CELLSPACING=0 CELLPADDING=0>
-				<TR VALIGN="top" ALIGN="left">
-					<TD align="left">
-						<TABLE id="Table3" BORDER=0 CELLSPACING=2 CELLPADDING=1>
-							
-								
-									<TR VALIGN="top" ALIGN="left">
-										<TH class=warning align="center" colspan=1>
-											<p>No ADVISORY Available for today.</p>
-										</TH>
-									</TR>
-								
-								
-							
-						</TABLE>
-					</TD>
-				</TR>
-				<TR>
-					<TD>
-						<BR>
-					</td>
+		
+			<tr valign="top">
+				<th class=caption colspan='5'>AIRSPACE FLOW PROGRAMS</th>
+			</tr>
+			<tr valign="top">
+				<th class=header>NUMBER</th>
+				<th class=header>CONTROL<BR>ELEMENT
+				</th>
+				<th class=header>DATE</th>
+				<th class=header>BRIEF TITLE</th>
+				<th class=header>SEND TIME</th>
+			</tr>
+			
+			
+				<tr>
+					<th colspan=5 class=warning>NO ADVISORIES MATCH YOUR SELECTION
+						CRITERIA!</th>
 				</tr>
-			</table>
+			
+		
+			<tr valign="top">
+				<th class=caption colspan='5'>GROUND STOPS</th>
+			</tr>
+			<tr valign="top">
+				<th class=header>NUMBER</th>
+				<th class=header>CONTROL<BR>ELEMENT
+				</th>
+				<th class=header>DATE</th>
+				<th class=header>BRIEF TITLE</th>
+				<th class=header>SEND TIME</th>
+			</tr>
+			
+			
+				<tr>
+					<th colspan=5 class=warning>NO ADVISORIES MATCH YOUR SELECTION
+						CRITERIA!</th>
+				</tr>
+			
+		
+			<tr valign="top">
+				<th class=caption colspan='5'>GROUND DELAY PROGRAMS</th>
+			</tr>
+			<tr valign="top">
+				<th class=header>NUMBER</th>
+				<th class=header>CONTROL<BR>ELEMENT
+				</th>
+				<th class=header>DATE</th>
+				<th class=header>BRIEF TITLE</th>
+				<th class=header>SEND TIME</th>
+			</tr>
+			
+			
+				<tr>
+					<th colspan=5 class=warning>NO ADVISORIES MATCH YOUR SELECTION
+						CRITERIA!</th>
+				</tr>
+			
+		
+
+	<BR>
+
+
+	</TABLE>
+	
+<TABLE BORDER=0 CELLSPACING=0 CELLPADDING=0>
+	<TR VALIGN="top" ALIGN="left">
+		<TD WIDTH=100 HEIGHT=6>
+			<IMG SRC="/adv/images/clearpixel.gif"
+				WIDTH=100 HEIGHT=1 BORDER=0 ALT="blank space">
+		</TD>
+
+	</TR>
+	<TR>
+		<TD>
+			<input type="button" value=" &lt; Back to Search Form "
+				onClick="window.location='/adv/advAdvisoryForm';">
+			&nbsp;&nbsp;
+			<input type="button" value=" &lt;&lt; Back to Most Recent Advisory "
+				onClick="window.location='/adv/advADB';">
 		</td>
 	</tr>
-</table>
-
-<!-- advADB Footer Message -->
-
-<TABLE BORDER=0 CELLSPACING=0 CELLPADDING=0 width=850>
-	<TR VALIGN="top" ALIGN="left">
-		<TD WIDTH=65 HEIGHT=13>
-			<IMG SRC="/adv/images/clearpixel.gif"
-				WIDTH=65 HEIGHT=1 BORDER=0 ALT="blank space">
-		</TD>
-	</TR>
-
-	<TR VALIGN="top" ALIGN="left">
-		<TD>
-			
-				
-					<FONT face=Arial size=-1>(Note: This page will refresh every
-						5 minutes.) </FONT>
-				
-				
-			
-		</td>
-	</TR>
-
-	<TR VALIGN="top" ALIGN="left">
-		<TD WIDTH=65 HEIGHT=13>
-			<IMG SRC="/adv/images/clearpixel.gif"
-				WIDTH=65 HEIGHT=1 BORDER=0 ALT="blank space">
-		</TD>
-	</TR>
-
-	<TR VALIGN="top" ALIGN="left">
-		<TD>
-			By using our <a
-				href="/adv/advAdvisoryForm">Advisories
-				Database Selection Form</a>, you can choose to see ATCSCC and/or
-			Canadian advisories from among those sent within the past 15 days.
-		</td>
-	</TR>
 </TABLE>
+<div style="display: none;">
+	<form:form ID="AdvisoryForm" name="AdvisoryForm"
+	ACTION="/adv/adv_list" METHOD="GET"
+	modelAttribute="advisoryForm">
+	<TABLE>
+		<TR VALIGN="top" ALIGN="left">
+			<TD>
+				<P ALIGN="CENTER">
+					<B>Select items from the Advisories Database</B>
+				</P>
+				<BR>
+				<P>You can choose to see ATCSCC Advisories, Canadian Advisories
+					or both. Choose which types of advisories you�d like to see and select a
+					day. Then press the "Show Selected Advisories" button.</P>
+				<BR>
+			</TD>
+		</TR>
+		<TR VALIGN="top" ALIGN="left">
+			<TD HEIGHT=7></TD>
+		</TR>
+		<TR VALIGN="top" ALIGN="left">
+			<TD>
+				<TABLE id="Table1">
+					<TR VALIGN="top" ALIGN="left">
+						<TD WIDTH=22>
+							<P ALIGN="CENTER">
+								<form:radiobutton id="WhichAdvisoriesATCSCCButton"
+									path="whichAdvisories" value="ATCSCC" />
+								&nbsp;
+						</TD>
+						<TD>
+							<P>ATCSCC Advisories only
+						</TD>
+						<TD WIDTH=22>
+							<P ALIGN="CENTER">
+								<form:radiobutton value="All" path="advisoryCategory"
+									onClick="checkAll(document.forms[0],true);" />
+								&nbsp;
+						</TD>
+						<TD>
+							<P>Show all advisories in sequential order
+						</TD>
+					</TR>
+					<TR VALIGN="top" ALIGN="left">
+						<TD WIDTH=22>
+							<P ALIGN="CENTER">
+								<form:radiobutton path="whichAdvisories" value="Canadian" />
+								&nbsp;
+						</TD>
+						<TD>
+							<P>Canadian Advisories only
+						</TD>
+						<TD WIDTH=22>
+							<P ALIGN="CENTER">
+								<form:radiobutton path="advisoryCategory" value="NotAll"
+									onClick="checkGdelay(document.forms[0]);" />
+								&nbsp;
+						</TD>
+						<TD>
+							<P>Show selected advisory types by category...
+						</TD>
+					</TR>
+					<TR VALIGN="top" ALIGN="left">
+						<TD WIDTH=22>
+							<P ALIGN="CENTER">
+								<form:radiobutton path="whichAdvisories" value="Both" />
+								&nbsp;
+						</TD>
+						<TD>
+							<P>ATCSCC and Canadian Advisories
+						</TD>
+						<TD WIDTH=22>&nbsp;</TD>
+						<TD>
+							<P>
+								Use the checkboxes below to specify your advisory category
+								selection (<b>the checkboxes apply only to ATCSCC advisories</b>).
+
+
+
+							
+						</TD>
+					</TR>
+					<TR VALIGN="top" ALIGN="left">
+						<TD WIDTH=22>&nbsp;</TD>
+						<TD>
+							<P ALIGN="CENTER">
+ 								<form:input type="date" path="date" min="1980-01-01" max=""/>	 
+						</TD>
+						<TD WIDTH=22>&nbsp;</TD>
+						<TD>
+							<P ALIGN="LEFT">
+								<form:checkbox path="airflow" />
+								<form:label path="airflow">Airspace Flow Programs</form:label>
+						</TD>
+					</TR>
+					<TR VALIGN="top" ALIGN="left">
+						<TD WIDTH=22>&nbsp;</TD>
+						<TD>&nbsp;</TD>
+						<TD WIDTH=22>&nbsp;</TD>
+						<TD>
+							<P ALIGN="LEFT">
+								<form:checkbox path="ctop" />
+								<form:label path="ctop">CTOP Programs</form:label>
+						</TD>
+					</TR>
+					<TR VALIGN="top" ALIGN="left">
+						<TD WIDTH=22>&nbsp;</TD>
+						<TD>&nbsp;</TD>
+						<TD WIDTH=22>&nbsp;</TD>
+						<TD>
+							<P ALIGN="LEFT">
+								<form:checkbox path="gStop" />
+								<form:label path="gStop">Ground Stops</form:label>
+						</TD>
+					</TR>
+					<TR VALIGN="top" ALIGN="left">
+						<TD WIDTH=22>&nbsp;</TD>
+						<TD>&nbsp;</TD>
+						<TD WIDTH=22>&nbsp;</TD>
+						<TD>
+							<P ALIGN="LEFT">
+								<form:checkbox path="gDelay" id="Gdelay" />
+								<form:label path="gDelay">Ground Delay Programs</form:label>
+						</TD>
+					</TR>
+					<TR VALIGN="top" ALIGN="left">
+						<TD WIDTH=22>&nbsp;</TD>
+						<TD>&nbsp;</TD>
+						<TD WIDTH=22>&nbsp;</TD>
+						<TD>
+							<P ALIGN="LEFT">
+								<form:checkbox path="route" />
+								<form:label path="route">Route advisories</form:label>
+						</TD>
+					</TR>
+					<TR VALIGN="top" ALIGN="left">
+						<TD WIDTH=22>&nbsp;</TD>
+						<TD>&nbsp;</TD>
+						<TD WIDTH=22>&nbsp;</TD>
+						<TD>
+							<P ALIGN="LEFT">
+								<form:checkbox path="other" />
+								<form:label path="other">Other kinds of advisories</form:label>
+						</TD>
+					</TR>
+					<TR>
+						<TD>
+							<BR>
+						</TD>
+					</TR>
+					<TR VALIGN="top" ALIGN="left">
+						<TD WIDTH=22>&nbsp;</TD>
+						<TD>
+							<P>
+							<DIV ALIGN=CENTER>
+								<INPUT TYPE="submit" value="Show Selected Advisories"
+									id="FormsSubmit">
+							</DIV>
+							&nbsp;
+						</TD>
+						<TD WIDTH=29>&nbsp;</TD>
+						<TD>
+							<input type="button" name="ShowAdvisory"
+								value="< Back to Most Recent Advisory" id="ShowAdvisory"
+								onClick="window.location='/adv/advADB';">
+						</TD>
+					</TR>
+				</TABLE>
+			</TD>
+		</TR>
+	</TABLE>
+</form:form>
+</div>
 <!-- Footer Link -->
 
 	
@@ -302,5 +487,3 @@
 
 	
 	
-
-
