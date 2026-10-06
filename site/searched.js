@@ -218,6 +218,7 @@ function card(a, shard, opts) {
 
 let renderSeq = 0;
 let idleSet = false;
+const NM_HINT = "awx-nonmajor-fav"; // set when the last load found a starred non-major airport, so the list starts loading before status.json arrives
 function idlePrefetch() {
   if (idleSet || airportsLoaded()) return;
   idleSet = true;
@@ -236,6 +237,7 @@ async function render() {
   const seq = ++renderSeq;
   // Before the first status load the majors aren't known, so every star would look non-major: wait for app.js's render().
   if (!st.loaded) return;
+  try { if (favs.length) localStorage.setItem(NM_HINT, "1"); else localStorage.removeItem(NM_HINT); } catch { /* storage blocked */ }
   if (!codes.length) {
     box.replaceChildren(); fixEmpty(false);
     // The airport list (240 KB gz) loads now only when a starred/picked non-major airport needs it (names, zones, live relay);
@@ -310,6 +312,9 @@ function init() {
     return a ? a.runways : null;
   };
   window.AWXExtra = { render: () => { render(); }, pick, _shardFor: shardFor, liveIds, runways };
+  let hint = false;
+  try { hint = localStorage.getItem(NM_HINT) === "1"; } catch { /* storage blocked */ }
+  if (picked || hint) loadAirports().catch(() => {}); // a starred/picked non-major airport needs the list at startup (names, zones, live relay)
   render();
 }
 

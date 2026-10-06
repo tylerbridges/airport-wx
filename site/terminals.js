@@ -597,5 +597,8 @@ if (typeof document !== "undefined" && document.getElementById("list")) {
     const A = W.AWXApp;
     if (A && A.state && A.state.openIata) redecorate(A.state.openIata);
   });
+  // lounges.json (61 KB) is fetched in idle time after the first render (not at startup), so the Lounges row is normally
+  // there when a sheet opens; a sheet opened before that fetches it itself (decorateSheet).
+  document.addEventListener("awx:render", () => setTimeout(() => (W.requestIdleCallback ? W.requestIdleCallback(loadLounges, { timeout: 4000 }) : loadLounges()), 1500), { once: true });
 }
 export default api;
