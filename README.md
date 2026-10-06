@@ -18,6 +18,8 @@ aviationweather.gov does not send CORS headers, so a browser can't call it. Inst
 4. After the deploy, `poller/record.mjs` appends to a checkout of the `history` branch and `poller/history.sh` commits and pushes it (see "History"). Those steps are `continue-on-error`, run after the deploy, and can't fail the job.
 5. The page (`site/index.html`, `site/app.js`) only reads `./data/status.json` (re-fetched every 2 minutes and when the tab becomes visible). If it 404s it falls back to the committed `site/data/sample.json` and shows a "Sample data" banner.
 
+The Live ticker dispatches a poll every five minutes. Before dispatching, `tools/recover-poll.mjs` cancels main-branch polls waiting at an unprotected `github-pages` environment gate for at least 20 minutes, freeing the Pages concurrency slot. Gates with reviewers, a wait timer, another environment or unknown reviewer metadata are left alone. Active poll jobs also have a 20-minute timeout.
+
 The poller exits 0 unless every source failed, so a partial outage still deploys; the page lists failed sources ("FAA delay info unavailable").
 
 A Cloudflare Worker ("Live relay" below) can add fresher data on top: when `data/config.json` names it, the page asks it for its starred and visible airports on every open, refresh and every 2 minutes.

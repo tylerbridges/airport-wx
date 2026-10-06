@@ -22,6 +22,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 355
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
       - name: Dispatch Poll and deploy every 5 minutes
         env:
           GH_TOKEN: ${{ github.token }}
@@ -30,6 +34,9 @@ jobs:
           api="https://api.github.com/repos/$REPO/actions/workflows"
           end=$(( $(date +%s) + 350*60 ))
           while [ "$(date +%s)" -lt "$end" ]; do
+            # A stuck environment gate holds the pages concurrency slot indefinitely.
+            # Cancel only old gates with no reviewers or intentional wait timer.
+            node tools/recover-poll.mjs || echo "::warning::Could not check stalled Pages runs"
             code=$(curl -s -o /dev/null -w '%{http_code}' -X POST \
               -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" \
               "$api/poll.yml/dispatches" -d '{"ref":"main"}')
