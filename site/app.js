@@ -1587,6 +1587,7 @@
   }
 
   function closeSheet() {
+    closeReportInfo();
     if (!state.openIata) return;
     closeDetails();
     if (window.AWXRadarCard) safeCall(() => window.AWXRadarCard.close()); // radar hook: stop the radar, free its workers
@@ -1669,17 +1670,55 @@
     METAR: "METAR is the airport’s weather observation: wind, visibility, clouds and temperature measured at the report time. It describes observed conditions, not a forecast.",
     TAF: "TAF is the airport’s aviation weather forecast. Each period describes expected wind, visibility, clouds and weather. Temporary changes come and go within their window; chance groups describe possible conditions. These weather chances are separate from the chance of a flight delay."
   };
-  let reportHelpId = 0;
+  const reportPopup = { wrap: null, ctl: null, type: null, last: null, parent: null };
+  function closeReportInfo() {
+    if (!reportPopup.type) return;
+    const { wrap, last, parent } = reportPopup;
+    const type = reportPopup.type;
+    reportPopup.type = null;
+    wrap.classList.remove("open");
+    wrap.hidden = true;
+    reportPopup.ctl?.closed();
+    if (parent) parent.inert = false;
+    const target = last?.isConnected ? last : parent?.querySelector(`[aria-label="About ${type}"]`);
+    target?.focus({ preventScroll: true });
+  }
+  function openReportInfo(type, button) {
+    if (reportPopup.type) closeReportInfo();
+    if (!reportPopup.wrap) {
+      const card = h("div", { class: "sheet report-info-card", id: "reportInfoCard", role: "dialog", "aria-modal": "true", "aria-labelledby": "reportInfoTitle" });
+      const backdrop = h("div", { class: "backdrop", onclick: closeReportInfo });
+      reportPopup.wrap = h("div", { class: "sheet-wrap report-info-wrap", hidden: true }, backdrop, card);
+      document.body.append(reportPopup.wrap);
+      card.addEventListener("keydown", ev => {
+        if (ev.key === "Escape") { ev.preventDefault(); ev.stopPropagation(); closeReportInfo(); }
+        else popupFocus(card, ev);
+      });
+      reportPopup.ctl = window.AWXSheet?.makeSheet(card, { onClose: closeReportInfo, header: ".report-info-head", backdrop });
+    }
+    reportPopup.type = type;
+    reportPopup.last = button;
+    reportPopup.parent = button.closest('[role="dialog"]');
+    const card = reportPopup.wrap.querySelector(".report-info-card");
+    card.replaceChildren(
+      h("div", { class: "report-info-head" }, h("h2", { id: "reportInfoTitle" }, "About " + type),
+        h("button", { type: "button", class: "close", "aria-label": "Close report information", onclick: closeReportInfo }, closeSvg())),
+      h("p", { class: "report-info-copy" }, REPORT_HELP[type]));
+    reportPopup.wrap.hidden = false;
+    if (reportPopup.parent) reportPopup.parent.inert = true;
+    reportPopup.ctl?.opened();
+    void card.offsetHeight;
+    reportPopup.wrap.classList.add("open");
+    card.querySelector(".close").focus({ preventScroll: true });
+  }
   function reportHelp(type) {
-    const id = "report-help-" + (++reportHelpId);
-    const body = h("p", { id, class: "report-help muted small", hidden: true }, REPORT_HELP[type]);
-    const button = h("button", { type: "button", class: "report-info", "aria-label": "About " + type, "aria-expanded": "false", "aria-controls": id,
-      onclick: () => { body.hidden = !body.hidden; button.setAttribute("aria-expanded", String(!body.hidden)); } }, h("span", { "aria-hidden": "true" }, "ⓘ"));
-    return { button, body };
+    const button = h("button", { type: "button", class: "report-info", "aria-label": "About " + type, "aria-haspopup": "dialog",
+      onclick: () => openReportInfo(type, button) }, h("span", { "aria-hidden": "true" }, "ⓘ"));
+    return { button };
   }
   function reportHeading(text, type) {
     const help = reportHelp(type);
-    return h("div", { class: "report-heading" }, h("div", { class: "report-title" }, h("h4", { class: "pd-h" }, text), help.button), help.body);
+    return h("div", { class: "report-heading" }, h("div", { class: "report-title" }, h("h4", { class: "pd-h" }, text), help.button));
   }
   function tafForecast(a, opts = {}) {
     if (!a.taf) return null;
@@ -1688,7 +1727,7 @@
     const rows = periods.map(p => {
       const c = p.cond || {}, wind = c.wind || {};
       const label = p.kind === "TEMPO" ? "Temporary changes" : p.kind === "BECMG" ? "Gradually changing to" : p.kind === "PROB" ?
-        (Number.isFinite(p.probability) && p.probability > 0 ? (aviation() ? p.probability + "% chance" : p.probability / 10 + " in 10 chance") : "Possible conditions") : "Expected conditions";
+        (Number.isFinite(p.probability) && p.probability > 0 ? (aviation() ? p.probability + "% chance" : p.probability / 10 + " in 10 chance") : "Possible conditions") : "";
       const span = whenLabel(Date.parse(p.from), tz) + " – " + whenLabel(Date.parse(p.to), tz);
       const kv = [
         ["Wind", wind.spd == null ? "Not specified" : wind.spd === 0 ? "Calm" : (wind.dir == null || wind.dir === "VRB" ? "Variable" : "From " + compass(wind.dir)) + " " + mph1(wind.spd) + " mph"],
@@ -1698,14 +1737,13 @@
         ["Weather", c.wx ? decodeWx(c.wx) : "No significant weather forecast"]
       ];
       if (aviation() && c.fltCat) kv.unshift(["Flight category", fcChip(c.fltCat)]);
-      return h("div", { class: "taf-period", "data-kind": p.kind }, h("div", { class: "taf-time" }, span), h("b", {}, label),
+      return h("div", { class: "taf-period", "data-kind": p.kind }, h("div", { class: "taf-time" }, span), label ? h("b", {}, label) : null,
         h("dl", { class: "kv2" }, kv.map(([k,val]) => h("div", {}, h("dt", {}, k), h("dd", {}, val)))));
     });
-    const issued = a.taf.issued ? "Issued " + whenLabel(Date.parse(a.taf.issued), tz) : "";
+    const issued = (a.taf.issued ? "Issued " + whenLabel(Date.parse(a.taf.issued), tz) + " · " : "") + zoneAbbr(now, tz);
     const old = a.taf.issued && now - Date.parse(a.taf.issued) > 12 * HOUR;
     return section(aviation() ? "TAF forecast" : "Airport forecast", "sun", [
       old ? h("p", { class: "warn" }, "This forecast may be outdated.") : null,
-      h("p", { class: "muted small taf-note" }, "Forecast weather, separate from current observations. All times " + zoneAbbr(now, tz) + "."),
       ...rows,
       !rows.length ? h("p", { class: "muted" }, "Decoded forecast periods are unavailable right now.") : null,
       opts.raw && a.taf.raw ? h("pre", { class: "raw" }, a.taf.raw) : null
@@ -1717,7 +1755,6 @@
     const meta = opts.meta || (src ? (SEC_META[src.key] || "") + (s && s.at ? " · " + ago(Math.max(0, refNow() - Date.parse(s.at))).replace(" ago", "") : "") : "");
     return h("section", { class: "sec", id: opts.id || null },
       h("div", { class: "sec-h" }, ico ? icon(ICONS[ico]) : null, h("h3", {}, title), help?.button, h("span", { class: "rule", "aria-hidden": "true" }), meta ? h("span", { class: "meta" }, meta) : null),
-      help?.body,
       h("div", { class: "scard" + (opts.cls ? " " + opts.cls : "") }, ...kids, src ? srcLine(src.key, src.raw) : null));
   }
   function rawToggle(text) {
@@ -2562,6 +2599,7 @@
     if (c) c.focus({ preventScroll: true });
   }
   function closeDetails() {
+    closeReportInfo();
     if (!md.iata) return;
     if (md.page === "weather") window.AWXRadarCard?.close();
     md.iata = null;
@@ -2965,7 +3003,7 @@
 
   $("backdrop").addEventListener("click", closeSheet);
   $("panelBackdrop").addEventListener("click", () => closePanel());
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { if (md.iata) closeDetails(); else if (panel.kind) closePanel(); else closeSheet(); } });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { if (reportPopup.type) closeReportInfo(); else if (md.iata) closeDetails(); else if (panel.kind) closePanel(); else closeSheet(); } });
   // Refresh = a full page reload, like the browser's: refetch index.html past the HTTP cache first so the reload
   // (and checkVersion) see any new version; the icon spins until the page goes. The 2-minute background refresh stays.
   $("refresh").addEventListener("click", () => {

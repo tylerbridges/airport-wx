@@ -236,13 +236,19 @@ table.lt { border-collapse: collapse; font-size: 12px; }
 .report-info { border:0; background:transparent; color:var(--muted); min-width:44px; min-height:44px; padding:0; font-size:20px; cursor:pointer; flex-shrink:0; }
 .report-title { display:flex; align-items:center; gap:6px; }
 .report-title .pd-h { margin:0; }
-.report-help { line-height:1.5; margin:0 4px 10px; }
+.report-info-wrap { z-index:80; display:grid; place-items:center; padding:20px; }
+.report-info-wrap[hidden] { display:none; }
+.report-info-wrap .report-info-card { position:relative; inset:auto; width:min(100%,440px); max-height:80dvh; margin:0; padding:20px; border-radius:22px; transform:translateY(12px); }
+.report-info-wrap.open .report-info-card { transform:translateY(0); }
+.report-info-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.report-info-head h2 { margin:0; font-size:22px; font-weight:800; }
+.report-info-head .close { flex-shrink:0; }
+.report-info-copy { margin:14px 0 0; font-size:16px; line-height:1.55; color:var(--text); }
 .report-heading { margin:8px 0 4px; }
 .taf-period { padding:12px 0; border-top:1px solid var(--edge); }
 .taf-period .kv2 { margin-bottom:0; }
 .taf-time { font-weight:700; margin-bottom:4px; }
 .taf-period > b { font-size:13px; color:var(--muted); }
-.taf-note { margin:0 0 8px; }
 .pilot .taf-forecast { padding:0; }
 .pd-h { margin: 14px 0 6px; font-size: 13px; font-weight: 700; color: var(--muted); }
 .pd-h:first-child { margin-top: 0; }
@@ -908,7 +914,7 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="cats.js?v=4"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=6"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
-<script src="app.js?v=82" defer></script>
+<script src="app.js?v=83" defer></script>
 <script type="module" src="searched.js?v=12"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=18"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="flight-features.js?v=1"></script><!-- trips hook -->

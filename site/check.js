@@ -447,19 +447,23 @@ async function uiChecks(add, scenario) {
         const expected = (a.taf?.periods || []).filter(p => Date.parse(p.to) > Date.now()).length;
         const rows = forecast?.querySelectorAll(".taf-period").length || 0;
         const texts = forecast?.innerText || "";
-        add(expected > 0 && rows === expected && /Wind/.test(texts) && /Visibility/.test(texts) && (mode !== "traveler" || !/%/.test(texts)) ? "pass" : "fail",
+        add(expected > 0 && rows === expected && /Wind/.test(texts) && /Visibility/.test(texts) && !/Expected conditions|Forecast weather, separate/.test(texts) && (mode !== "traveler" || !/%/.test(texts)) ? "pass" : "fail",
           `Decoded airport forecast preserves periods and traveler units (${mode})`, `${rows} of ${expected} forecast periods; mph, visibility and cloud ceiling`);
         let helpOK = true;
         for (const type of ["METAR", "TAF"]) {
           const button = page.querySelector(`[aria-label="About ${type}"]`);
-          const body = button && doc.getElementById(button.getAttribute("aria-controls"));
-          if (!button || !body || !body.hidden) { helpOK = false; continue; }
+          if (!button || button.getAttribute("aria-haspopup") !== "dialog") { helpOK = false; continue; }
+          const top = page.scrollTop;
           button.click();
-          helpOK = helpOK && !body.hidden && button.getAttribute("aria-expanded") === "true" && body.textContent.includes(type);
-          button.click();
-          helpOK = helpOK && body.hidden && button.getAttribute("aria-expanded") === "false";
+          const card = doc.getElementById("reportInfoCard");
+          helpOK = helpOK && card?.getAttribute("role") === "dialog" && card?.textContent.includes(type) && page.inert && page.scrollTop === top;
+          const close = card?.querySelector('[aria-label="Close report information"]');
+          helpOK = helpOK && doc.activeElement === close;
+          if (type === "TAF") card?.dispatchEvent(new w.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+          else close?.click();
+          helpOK = helpOK && card?.parentElement.hidden && !page.inert && doc.activeElement === button && page.scrollTop === top;
         }
-        add(helpOK ? "pass" : "fail", `Weather report explanations open and close accessibly (${mode})`, "Observation and forecast information buttons toggle their linked explanations");
+        add(helpOK ? "pass" : "fail", `Weather report information cards open and close accessibly (${mode})`, "Dialog, X/Escape dismissal, unchanged parent scroll and restored focus");
         back?.click();
         add(clear && !doc.getElementById("sheetWrap").hidden ? "pass" : "fail",
           `Weather has a distinct page title and overview navigation (${mode})`, `${a.iata}: prominent Weather heading, airport identity and Back to overview`);
