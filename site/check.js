@@ -817,7 +817,7 @@ async function flightFeatureChecks(add) {
       check(toggle()?.getAttribute("aria-checked") === "false" && !doc.querySelector('[data-page="trips"]'), "Settings exposes opt-in without trip setup links");
       toggle().click();
       await w.AWXFlights.ready(); await w.AWXTrips.ready();
-      check(!!doc.getElementById("tab-trips") && !!doc.querySelector(".thome"), "Opt-in loads Trips and the day-of flight brief");
+      check(!!doc.getElementById("tab-trips") && !!doc.querySelector(".thome") === w.AWXTrips.hasTodayFlight(), "Opt-in loads Trips and shows the brief only on departure day");
       const trips = w.AWXTrips._state().trips.map(t => t.id).join(",");
       const deviceTrip = { id: "optin-test", legs: [{ from: "MSP", to: "ORD", dep: new Date(Date.now() + 3600000).toISOString(), arr: new Date(Date.now() + 7200000).toISOString() }] };
       w.localStorage.setItem("awx-trips", JSON.stringify([deviceTrip]));
