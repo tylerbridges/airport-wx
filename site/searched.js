@@ -201,7 +201,8 @@ function card(a, shard, opts) {
     e.t ? h("pre", { class: "raw" }, e.t) : h("div", { class: "muted small" }, "No TAF (forecast) issued for this airport"),
   ) : null;
   return shell(a, { right: [h("span", { class: "pill " + (unknown ? "off" : lv(e.p)) }, unknown ? "Unknown" : LEVELS[e.p] || "Clear")], body: [
-    h("div", { class: "reason" }, unknown ? "Weather status unconfirmed" : reason),
+    !unknown && e.p > 0 ? h("div", { class: "badges card-headline" }, h("span", { class: "badge " + lv(e.p) }, reason))
+      : h("div", { class: "reason" }, unknown ? "Weather status unconfirmed" : reason),
     health.quality && !health.quality.startsWith("Weather only") ? h("div", { class: "sub crit" }, health.quality) : null,
     e.n !== e.p ? h("div", { class: "sub" }, "Now: " + (!e.n && health.quality ? "Unconfirmed" : LEVELS[e.n] || "Clear")) : null,
     timeline(e, (lw && app().state.liveH0) || shard.data.h0 || e.pt, tz, a.code),

@@ -1274,17 +1274,18 @@
     const tz = dispTz(a);
     const cur = sm.current || {};
     const prog = progs.length ? (cur.programs || [])[0] : null;
-    const cls = (l) => "dl-line " + (l >= 3 ? "dl-hi" : l >= 2 ? "dl-mid" : "dl-lo");
     const zt = zoneTag(a);
-    if (sm.later) {
+    const forecast = () => {
       const head = levelWords(sm.level, sm.words, sm.peakHour);
-      return [h("div", { class: cls(sm.level) }, head + " " + rangeText(sm.start, sm.end, tz) + zt, sm.words && sm.words.cue ? h("span", { class: "dl-usual" }, " · " + sm.words.cue) : null)]; // the headline above already says the current status (and names its program)
-    }
+      const repeats = head.replace(/ expected$/i, "").toLowerCase() === String(headline || "").toLowerCase();
+      return h("div", { class: "card-forecast" },
+        repeats ? null : h("div", { class: "badges" }, h("span", { class: "badge " + lv(sm.level) }, head)),
+        h("div", { class: "sub card-context" }, h("b", {}, "Forecast " + rangeText(sm.start, sm.end, tz) + zt),
+          sm.words?.cue ? " · " + sm.words.cue : null));
+    };
+    if (sm.later) return [forecast()];
     if (prog) return []; // FAA timing is consolidated with the cause beneath its badge.
-    if (sm.level >= 2) {
-      const head = levelWords(sm.level, sm.words, sm.peakHour);
-      return [h("div", { class: cls(sm.level) }, (head.replace(/ expected$/i, "").toLowerCase() === String(headline || "").toLowerCase() ? "Forecast" : head) + " " + rangeText(sm.start, sm.end, tz) + zt, sm.words && sm.words.cue ? h("span", { class: "dl-usual" }, " · " + sm.words.cue) : null)];
-    }
+    if (sm.level >= 2) return [forecast()];
     return aviation() ? [window.AWXDelay ? safeCall(() => AWXDelay.delayLine(a)) : null] : [];
   }
 
@@ -1338,7 +1339,9 @@
           }, starSvg()))),
       h("div", { class: "where" }, `${a.city}, ${a.state}`),
       !fav && (window.AWXTrips?.todayAirportIds?.() || []).includes(a.iata) ? h("div", { class: "sub" }, "In your trip today") : null,
-      badgeHeadline ? h("div", { class: "badges card-headline" }, badges) : h("div", { class: "reason" }, head),
+      badgeHeadline ? h("div", { class: "badges card-headline" }, badges)
+        : sm.current?.level > 0 ? h("div", { class: "badges card-headline" }, h("span", { class: "badge " + lv(sm.current.level) }, head))
+        : h("div", { class: "reason" }, head),
       programEnd ? h("div", { class: "sub card-context" }, h("b", {}, programEnd), cond ? ": " + cond : "")
         : cond ? h("div", { class: "sub" }, cond) : null,
       health.quality ? h("div", { class: "muted small" }, health.quality) : null,
