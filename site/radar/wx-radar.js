@@ -9,6 +9,9 @@
 //   - data-theme "auto" follows the system (this app's prefs.js); downloaded scans in Cache API "awx-mrms-1"
 //   - shared callbacks (vector map, resize, colour scheme) are registered once, so the host can move between the
 //     card and the full-screen sheet
+//   - performance (full-screen sheet): ready() memoised for 150 ms per frame set and view, timeUi() skips unchanged
+//     scans/minutes, label canvas at up to 2x (not 3x), and the loop holds during a pan/zoom/fling (canvases move by
+//     CSS transform only) and carries on when the map comes to rest
 // The original description follows (MRMS from NOAA Open Data on AWS comes first; see AGENTS.md there).
 //
 // Radar tab: a small dependency-free slippy map drawn on three stacked canvases (base map, radar, labels).
@@ -478,7 +481,9 @@
   function frame(ts) {
     raf = 0; if (!on) return;
     var dt = lastT ? Math.min(0.1, (ts - lastT) / 1000) : 0; lastT = ts;
-    if (playing) { advance(dt); need |= 2; }
+    // (this app: the loop holds while a finger is on the map or it is still gliding, so a pan or zoom only moves the
+    //   canvases; redrawing the radar every frame mid-gesture halved the frame rate on the near-full-screen map)
+    if (playing && !(pts.size > 0 || inertia || tween)) { advance(dt); need |= 2; }
     if (inertia) { stepInertia(dt); }
     if (tween) { stepTween(ts); }
     // Each layer shows its last drawing moved/scaled by a CSS transform until it is redrawn at the current view:
@@ -736,7 +741,14 @@
     track(); var now = Date.now();
     if (now - lastPre > 220) { lastPre = now; preload(); }
   }
-  function ready(f) { return at(RV.R, function () { return readyIn(f); }); }
+  // (this app: memoised per frame set and radar view for 150 ms; checkPending asks several times every animation frame)
+  function ready(f) {
+    var v = RV.R, vk = v.x.toFixed(6) + "," + v.y.toFixed(6) + "," + v.z + "," + f.n, now = Date.now(), m = f._rd;
+    if (m && m.vk === vk && now - m.t < 150) return m.r;
+    var r = at(RV.R, function () { return readyIn(f); });
+    f._rd = { vk: vk, t: now, r: r };
+    return r;
+  }
   // share of every frame's tiles for the current view (rv) that are in
   function readyIn(f) {
     var vs = visible(rz()), n = 0, ok = 0;
@@ -791,10 +803,14 @@
     if (p) { ph = 0; frac = 0; if (cur === NF - 1) cur = 0; }
     paint(2);
   }
+  var timeK = "";
   function timeUi() {
     if (!ui.time) return;
     var pos = cur + frac, k = Math.round(pos) % NF;
     var rvv = String(+(pos > NF - 1 ? NF - 1 : pos).toFixed(2)); if (ui.range.value !== rvv) ui.range.value = rvv;
+    // (this app: the rest only changes with the shown scan, a refresh or the minute; skip it on the other frames)
+    var tk = k + "|" + (frames ? (frames.times ? frames.times[k] + "|" + frames.times[frames.n - 1] : frames.valid) : "") + "|" + upd + "|" + checking + "|" + !!ui.msg + "|" + Math.floor(Date.now() / 60000);
+    if (tk === timeK) return; timeK = tk;
     var t = !frames ? null : frames.times ? frames.times[k] : frames.valid ? frames.valid - (NF - 1 - k) * 5 * 60000 : null;
     var ago = t ? Math.max(0, Math.round((Date.now() - t) / 60000)) : (NF - 1 - k) * 5, abs = t ? fmt(t) : "";
     // RadarScope style: the shown scan's time, and under it when the radar last refreshed; both turn red when the
@@ -934,7 +950,7 @@
     // the stage is the view plus a spare margin on every side, so a drag shows already-drawn map until it is redrawn
     // map and radar at up to 2x; the lines-and-labels layer at the screen's full resolution (up to 3x) for sharp text
     // radar at 1.5x: the smoothed radar has about one source pixel per CSS pixel, so more only costs time per frame
-    W = r.width; HH = r.height; dpr = Math.min(2, root.devicePixelRatio || 1); rdpr = Math.min(1.5, root.devicePixelRatio || 1); ldpr = Math.min(3, root.devicePixelRatio || 1); MG = Math.round(Math.max(W, HH) * 0.2);
+    W = r.width; HH = r.height; dpr = Math.min(2, root.devicePixelRatio || 1); rdpr = Math.min(1.5, root.devicePixelRatio || 1); ldpr = Math.min(2, root.devicePixelRatio || 1); /* this app: 2x labels (3x on a near-full-screen map cost 2.25x the pixels per redraw) */ MG = Math.round(Math.max(W, HH) * 0.2);
     SW = W + 2 * MG; SH = HH + 2 * MG;
     stage.style.cssText = "left:" + -MG + "px;top:" + -MG + "px;width:" + SW + "px;height:" + SH + "px";
     ["B", "R", "L"].forEach(function (k) { RV[k].x = view.x; RV[k].y = view.y; RV[k].z = view.z; });

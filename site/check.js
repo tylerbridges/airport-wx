@@ -802,7 +802,7 @@ async function runLive() {
   // radar hook: one MRMS frame for MSP decoded in a hidden frame (warning if NOAA can't be reached). The uptime
   // monitor (check.html?ts=…) skips it to stay inside its 30-second budget.
   if (P.has("ts")) group("Radar")("info", "Radar: MSP frame", "skipped for the uptime monitor");
-  else try { await (await import("./radar/card.js?v=4")).checkRow(group("Radar")); } catch (e) { group("Radar")("warn", "Radar", "check failed: " + (e.message || e)); }
+  else try { await (await import("./radar/card.js?v=5")).checkRow(group("Radar")); } catch (e) { group("Radar")("warn", "Radar", "check failed: " + (e.message || e)); }
 
   const up = group("Uptime");
   const u = await getJson("./data/uptime.json");
@@ -885,7 +885,7 @@ async function runMock() {
   if (!idx.ok) { group("Scenarios")("fail", "data/scenarios/index.json loads", `HTTP ${idx.status || idx.error}`); return; }
   if (RENDER) await navChecks(group("Navigation (390 px, hidden frame)"), "./index.html?test=all-clear"); // nav hook
   if (RENDER) { try { await (await import("./map/check.js?v=1")).mapChecks(group("Map (thunderstorm-ground-stop, 390 px)"), "./index.html?test=thunderstorm-ground-stop"); } catch (e) { group("Map (thunderstorm-ground-stop, 390 px)")("fail", "Map checks load", String(e.message || e)); } } // map hook: site/map/check.js
-  if (RENDER) try { await (await import("./radar/card.js?v=4")).checkRow(group("Radar card (all-clear, 390 px)"), { mock: true }); } catch (e) { group("Radar card (all-clear, 390 px)")("fail", "Radar card", "check failed: " + (e.message || e)); } // radar hook
+  if (RENDER) try { await (await import("./radar/card.js?v=5")).checkRow(group("Radar card (all-clear, 390 px)"), { mock: true }); } catch (e) { group("Radar card (all-clear, 390 px)")("fail", "Radar card", "check failed: " + (e.message || e)); } // radar hook
   for (const sc of idx.data.scenarios) {
     const add = group(`Scenario: ${sc.name} — ${sc.title}`);
     const got = await getJson(`./data/scenarios/${sc.file}`);

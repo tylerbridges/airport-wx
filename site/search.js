@@ -111,17 +111,24 @@ export function nearest(a, list, filter = (x) => x.hasMetar || x.hasTaf) {
 // ---------- data loading (shared, cached) ----------
 
 const cache = { base: null, core: null, extra: null, list: null, extraWanted: false };
+let inflight = null; // { base, p }: every caller (startup prefetch, search, crosswind, map) shares one request
 /** Loads the core list once; returns the decoded list. */
-export async function loadAirports(base = "./data/") {
-  if (cache.core && cache.base === base) return cache.list;
-  const res = await fetch(base + "airports-all.json", { cache: "no-cache" });
-  if (!res.ok) throw new Error("HTTP " + res.status);
-  const j = await res.json();
-  cache.base = base;
-  cache.core = decodeList(j);
-  cache.extraWanted = !!j.extra;
-  cache.list = cache.core;
-  return cache.list;
+export function loadAirports(base = "./data/") {
+  if (cache.core && cache.base === base) return Promise.resolve(cache.list);
+  if (inflight && inflight.base === base) return inflight.p;
+  const p = (async () => {
+    const res = await fetch(base + "airports-all.json", { cache: "no-cache" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const j = await res.json();
+    cache.base = base;
+    cache.core = decodeList(j);
+    cache.extraWanted = !!j.extra;
+    cache.list = cache.core;
+    return cache.list;
+  })();
+  inflight = { base, p };
+  p.then(() => { if (inflight && inflight.p === p) inflight = null; }, () => { if (inflight && inflight.p === p) inflight = null; });
+  return p;
 }
 /** Loads airports-extra.json (only if the core file says it exists). */
 export async function loadExtra(base = "./data/") {
