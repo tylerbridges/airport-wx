@@ -110,14 +110,18 @@ jobs:
           fi
           echo "{\"liveUrl\":$url}" > site/data/config.json
           cat site/data/config.json
-      # The page reads data/summary.json + data/airport/<IATA>.json (README "status.json"); the full build stays
-      # unpublished (it carries research-only fields) and is kept for the history step below.
+      # The page reads data/summary.json + data/airport/<IATA>.json (README "status.json"). The full build (with
+      # research-only hubResearch) moves to .cache/status.json for the history step below.
+      # TODO: remove after 2026-10-13 once clients/relay are on the split: until then a temporary
+      # site/data/status.json (the full shape minus hubResearch) stays published for already-open app.js v84/v85
+      # tabs and the previous live relay, which still read it.
       - name: Keep the full build out of the site
         if: ${{ steps.poll.outcome == 'success' }}
         run: |
           mkdir -p .cache
           mv site/data/status.json .cache/status.json
-          ls -l site/data/summary.json; ls site/data/airport | wc -l
+          node -e 'const fs=require("fs");const s=JSON.parse(fs.readFileSync(".cache/status.json","utf8"));for(const a of s.airports||[])delete a.hubResearch;fs.writeFileSync("site/data/status.json",JSON.stringify(s)+"\n")'
+          ls -l site/data/summary.json site/data/status.json; ls site/data/airport | wc -l
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
@@ -155,7 +159,7 @@ jobs:
         if: ${{ !cancelled() && steps.history_prep.outcome == 'success' }}
         continue-on-error: true
         timeout-minutes: 3
-        # the full build (with hubResearch); site/data/status.json if the move above didn't run
+        # the full build (with hubResearch) from .cache; site/data/status.json only if the move above didn't run
         run: node poller/record.mjs history/ --status "$( [ -f .cache/status.json ] && echo .cache/status.json || echo site/data/status.json )"
       # movement hook: state, baseline and this run's log line -> history/movement/ (poller/movement.mjs record)
       - name: Record movement

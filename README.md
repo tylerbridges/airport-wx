@@ -14,7 +14,7 @@ aviationweather.gov does not send CORS headers, so a browser can't call it. Inst
 
 1. A GitHub Actions workflow (`.github/workflows/poll.yml`) runs every 10 minutes (and on push / manual dispatch).
 2. `poller/poll.mjs` fetches every source server-side (each independent, 20 s timeout, per-source `{ok, at, error}`), scores risk with `poller/risk.mjs`, and writes `site/data/status.json` (the full build) plus the page's split of it, `site/data/summary.json` and `site/data/airport/<IATA>.json` (see "status.json").
-3. The workflow moves the full `status.json` out of `site/` (to `.cache/status.json`, for the history step; it carries research-only fields), uploads `site/` as a Pages artifact and deploys it. Nothing is committed to `main`.
+3. The workflow moves the full `status.json` out of `site/` (to `.cache/status.json`, for the history step; it carries research-only fields), uploads `site/` as a Pages artifact and deploys it. Until 2026-10-13 (transition, TODO in `poll.yml`) a copy of `status.json` without `hubResearch` is still published for already-open older tabs and the previous relay. Nothing is committed to `main`.
 4. After the deploy, `poller/record.mjs` appends to a checkout of the `history` branch and `poller/history.sh` commits and pushes it (see "History"). Those steps are `continue-on-error`, run after the deploy, and can't fail the job.
 5. The page (`site/index.html`, `site/app.js`) reads `./data/summary.json` (re-fetched every 2 minutes and when the tab becomes visible) and, when an airport's sheet opens, `./data/airport/<IATA>.json`. If the summary 404s it falls back to the committed `site/data/sample.json` and shows a "Sample data" banner.
 
