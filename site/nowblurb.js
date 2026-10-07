@@ -96,7 +96,8 @@
         const words = condWords(x.cond);
         if (words.length) bits.push({ pri: 0.5, g: "cond", text: cap(list(words)) });
       }
-      if (x.kind === "unknown" && x.quality) bits.push({ pri: 0.4, g: "qual", text: qualityWords(x.quality) });
+      if (x.noReport) bits.push({ pri: 0.4, g: "qual", text: x.aviation ? "No METAR for this hour" : "No weather report from the airport for this hour" });
+      else if (x.kind === "unknown" && x.quality) bits.push({ pri: 0.4, g: "qual", text: qualityWords(x.quality) });
     }
     if (!bits.length) return "";
     const render = (bs) => {
@@ -151,6 +152,35 @@
   }
 
   /**
+   * An earlier hour (x.past, x.at its start): what happened next, from the timeline's later hours through the current
+   * one (x.after [{t, level}], level null = no report) — the first hour whose level differs, timed exactly by a level
+   * event of the same direction when today's log has one. Never a guess: hours without reports are said.
+   */
+  function pastTrend(x, F) {
+    const av = !!x.aviation;
+    const L = x.level;
+    const at = Number.isFinite(x.at) ? x.at : x.now;
+    const after = (x.after || []).filter((h) => Date.parse(h.t) > at).sort((p, q) => Date.parse(p.t) - Date.parse(q.t));
+    if (L == null) return { text: "", improvement: false }; // the hour itself has no report: its specifics say so
+    const known = after.filter((h) => h.level != null);
+    if (!known.length) return { text: after.length ? (av ? "No METARs after this hour" : "No weather reports after this hour") : "", improvement: false };
+    const ch = known.find((h) => h.level !== L);
+    if (!ch) {
+      const last = known[known.length - 1];
+      const tail = after.length && after[after.length - 1].level == null; // the latest hours have no report
+      return { text: tail ? "Unchanged through " + F.when(F.floor(Date.parse(last.t))) + "; no reports after that" : "Unchanged through now", improvement: false };
+    }
+    const T = Date.parse(ch.t), up = ch.level > L;
+    const ev = (x.events || []).filter((e) => e && (e.kind == null || e.kind === "level") && Number.isFinite(e.from) && Number.isFinite(e.to)
+      && (up ? e.to > e.from : e.to < e.from) && Date.parse(e.t) > at && Date.parse(e.t) < T + HOUR && Date.parse(e.t) <= x.now)
+      .sort((p, q) => Date.parse(p.t) - Date.parse(q.t));
+    const e = up ? ev[0] : ev[ev.length - 1];
+    const time = e ? (up ? "from " : "at ") + F.clock(Date.parse(e.t)) : "by " + F.when(F.floor(T));
+    if (av) return { text: (up ? "Up to " : "Down to ") + (LEVEL[ch.level] || "another level") + " " + time, improvement: false };
+    return { text: (up ? "Worse " : ch.level === 0 ? "Cleared " : "Improved ") + time, improvement: false };
+  }
+
+  /**
    * Where the Now condition is heading, from computed data only: recent level events, outlook recovery/eases, the
    * FAA program's end, the display levels of the coming hours and where forecast coverage stops. Never a guess and
    * never a quiet "all good" when data is missing. Returns {text, improvement} (improvement: the outlook's own
@@ -158,6 +188,10 @@
    */
   function trend(x, F) {
     const av = !!x.aviation;
+    if (x.past) return pastTrend(x, F);
+    // a previewed later hour (x.at, its start): the coming hours are read from that hour on, and today's level
+    // changes so far say nothing about it
+    const ref = Number.isFinite(x.at) && x.at > x.now ? x.at : x.now;
     if (x.kind === "unknown" || x.level == null) {
       if (!av) return { text: "", improvement: false };
       if (x.stale) return { text: "Trend unavailable until data refreshes", improvement: false };
@@ -165,11 +199,11 @@
       return { text: "Trend unavailable until data refreshes", improvement: false };
     }
     const L = x.level;
-    const past = pastBit(x, F);
+    const past = ref > x.now ? null : pastBit(x, F);
     const when = (ms) => F.when(F.floor(ms));
     const aft = (ms) => (!av && /^\d/.test(when(ms)) ? "after about " : "after ") + when(ms);
     let fut = null, improvement = false;
-    const levels = (x.levels || []).filter((h) => Date.parse(h.t) + HOUR > x.now);
+    const levels = (x.levels || []).filter((h) => Date.parse(h.t) + HOUR > ref);
     // the current run of hours at this level and what follows it
     let r = 0;
     while (r + 1 < levels.length && levels[r + 1].level === L) r++;
@@ -185,7 +219,7 @@
       fut = (av ? "Forecast eases to " : "Expected to ease to ") + (LEVEL[x.eases.level] || "a lower level") + " " + aft(x.eases.at); improvement = true;
     } else if (x.laterPeak) {
       fut = av ? "Higher risk forecast later" : "May get worse later";
-    } else if (after && after.level == null && runEnd - x.now < 12 * HOUR) { // a gap far ahead is just where the forecast ends
+    } else if (after && after.level == null && runEnd - ref < 12 * HOUR) { // a gap far ahead is just where the forecast ends
       fut = (av ? "TAF coverage ends " : "No forecast beyond ") + when(runEnd);
     } else if (after && after.level != null && after.level > L) {
       fut = (av ? "Forecast rises to " + LEVEL[after.level] + " " : "May get worse ") + aft(runEnd);
@@ -207,6 +241,9 @@
    * kind (outlook kind), headline, quality, stale, noForecast, programText, reasons[], cond {windMph, gustMph, visMi,
    * ceilingFt}, storms {near, until, spc, tcf[]}, warnings[], recovery, eases {at, level}, open, weatherCause,
    * laterPeak, levels [{t, level}] (outlook summary levels), events [{t, kind, from, to}], fmt {when, clock, floor}}.
+   * A previewed timeline hour adds at (its start, ms): a later hour reads the coming hours from it (no "since" part);
+   * past: true (an earlier hour) words what happened next from after [{t, level}] (the later hours through now) and
+   * never claims the FAA status of that time; noReport: true when the airport sent no report for it.
    */
   function build(x) {
     const now = Number.isFinite(x.now) ? x.now : Date.now();
@@ -219,5 +256,5 @@
   // Traveler strings: no raw codes, no "%", no certainty claims (tools/nowblurb.test.mjs guard)
   const CODES = /\b(VFR|MVFR|IFR|LIFR|METAR|TAF|SIGMET|LAMP|TCF|CWA|SPC|TEMPO|PROB[34]0|BECMG|NOSIG|CLSD|(?:FEW|SCT|BKN|OVC)\d{3}|\d{4}Z|\d{3}°?\s?\d+G?\d*\s?kt|kt)\b/;
   const CERTAIN = /\b(will|definitely|certainly|guaranteed?|for sure|no chance)\b/i;
-  return { build, specifics, trend, condWords, qualityWords, CODES, CERTAIN, LEVEL };
+  return { build, specifics, trend, pastTrend, condWords, qualityWords, CODES, CERTAIN, LEVEL };
 });

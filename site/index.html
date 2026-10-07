@@ -499,6 +499,15 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 @media (max-width: 374px) { .cur-line { gap: 6px; padding-left: 10px; } .cur-line .cl-t { font-size: 14px; } .cur-line .cl-temp { font-size: 18px; } }
 @media (prefers-reduced-motion: reduce) { .cur-line { transition: none; } .cur-line:active { transform: none; } }
 .cur-line:focus-visible { outline: 2px solid var(--l1); outline-offset: 2px; }
+.cur-line.still { cursor: default; padding-right: 13px; } /* an hour preview's pill: display only */
+.cur-line.still:active { transform: none; }
+.cur-line.still::before { content: none; }
+.sc .det-wait { margin: 10px 0 2px; }
+/* hour previews fill the Now card's footprint with the same parts; a touch smaller so a held finger sees them all */
+.bx-layer[data-i] .sc .sc-head.sc-big { font-size: clamp(18px, 5vw, 23px); }
+.bx-layer[data-i] .sc-blurb { font-size: 14.5px; }
+.bx-layer[data-i] > .sc { padding-bottom: 8px; }
+.bx-layer[data-i] .sc .cur-line { margin: 8px 0 0; }
 .cl-none { margin: 10px 0 2px; min-height: 36px; display: flex; align-items: center; padding: 0 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); font-size: 13.5px; }
 /* Now card blurb (site/nowblurb.js): what is happening and why, then where it's heading; neutral text, every state */
 .sc-blurb { margin-top: 6px; font-size: 15px; line-height: 1.35; overflow-wrap: anywhere; }
@@ -1008,8 +1017,8 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
 <script src="split.js?v=2"></script><!-- airport details: summary.json + data/airport/<IATA>.json -->
 <script src="wxdays.js?v=1"></script><!-- Weather page: conditions emoji + Today / Tomorrow forecast rows -->
-<script src="nowblurb.js?v=3"></script><!-- the airport sheet's Now card blurb (pure) -->
-<script src="app.js?v=97" defer></script>
+<script src="nowblurb.js?v=4"></script><!-- the airport sheet's Now card blurb (pure) -->
+<script src="app.js?v=98" defer></script>
 <script type="module" src="searched.js?v=14"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=20"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="flight-features.js?v=1"></script><!-- trips hook -->
