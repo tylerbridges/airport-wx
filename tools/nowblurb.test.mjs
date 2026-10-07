@@ -105,6 +105,61 @@ test("nowblurb: long specifics drop whole low-priority fragments, never cut mid-
   assert.match(r.specifics, /\.$/);
 });
 
+// previewed timeline hours (x.at): the same two parts for that hour
+const at = (k) => hourStart + k * H;
+test("nowblurb: a later hour with an FAA program reads from that hour on, with no 'since' part", () => {
+  const r = build(base({ at: at(1), level: 4, kind: "active", headline: "Ground Stop", programText: "Arrivals are held at their departure airports (thunderstorms)",
+    reasons: ["Thunderstorms"], levels: levels(4, 4, 4, 3, 3, 1, 0, 0), events: [{ t: new Date(now - 40 * 60000).toISOString(), kind: "level", from: 1, to: 4 }] }));
+  assert.equal(r.specifics, "Arrivals are held at their departure airports (thunderstorms). Thunderstorms.");
+  assert.equal(r.trend, "Expected to ease to High after about 8 PM."); // runs from 6 PM (hour 1), not from now
+  assert.doesNotMatch(r.trend, /since/);
+  const av = build({ ...all[all.length - 1].x, aviation: true });
+  assert.equal(av.trend, "Forecast eases to High after 8 PM.");
+});
+
+test("nowblurb: a later storm hour gets its own storm parts, warnings and outlook recovery", () => {
+  const r = build(base({ at: at(3), level: 3, kind: "forecast", headline: "Storms near the airport expected", reasons: ["Thunderstorms", "Wind gusts to 40 mph"],
+    storms: { near: false, spc: "ENH", tcf: [{ coverage: "medium", valid: new Date(at(3)).toISOString() }] }, warnings: ["Severe Thunderstorm Warning"],
+    cond: { windMph: 23, gustMph: 40, visMi: 3, ceilingFt: 2500 }, recovery: at(6), levels: levels(4, 4, 3, 3, 3, 3, 0, 0) }));
+  assert.equal(r.specifics, "Thunderstorms. Severe storms possible today (enhanced risk). Severe Thunderstorm Warning in effect."); // within three lines: whole lower fragments drop
+  const tcfOnly = build({ ...all[all.length - 1].x, warnings: [], storms: { tcf: [{ coverage: "medium", valid: new Date(at(3)).toISOString() }] }, reasons: ["Thunderstorms"] });
+  assert.equal(tcfOnly.specifics, "Thunderstorms. Scattered storms forecast for air traffic around 8 PM.");
+  assert.equal(r.trend, "Expected to improve after about 11 PM.");
+  // an hour that stays at its level to the end of coverage, and one that gets worse after it
+  assert.equal(build(base({ at: at(2), levels: levels(0, 0, 0, 0, 0, 0) })).trend, "No change expected through 11 PM.");
+  assert.equal(build(base({ at: at(2), level: 1, kind: "forecast", headline: "Strong winds", reasons: ["Wind gusts to 30 mph"], levels: levels(0, 1, 1, 1, 3, 3) })).trend, "May get worse after about 9 PM.");
+  // a quiet later hour: what it looks like, and FAA status as the page has it now
+  assert.equal(build(base({ at: at(4) })).specifics, "Light winds, good visibility and no FAA delays or weather warnings reported.");
+});
+
+test("nowblurb: an earlier hour says what happened next, from the later hours and today's level changes", () => {
+  const pastBase = (more) => base({ past: true, kind: "past", events: [], ...more });
+  const after = (...lv) => lv.map((level, i) => ({ t: new Date(at(-3 + i)).toISOString(), level })); // hours after 1 PM (at(-4)) through now
+  const imp = build(pastBase({ at: at(-4), level: 2, headline: "Low visibility", reasons: ["Rain, visibility about 2 miles"], after: after(2, 1, 1, 1) }));
+  assert.equal(imp.trend, "Improved by 3 PM.");
+  assert.equal(imp.improvement, false);
+  const worse = build(pastBase({ at: at(-4), level: 1, headline: "Disruption possible", reasons: ["Rain"], after: after(1, 4, 4, 4),
+    events: [{ t: new Date(at(-2) + 38 * 60000).toISOString(), kind: "level", from: 1, to: 4 }] }));
+  assert.equal(worse.trend, "Worse from 3:38 PM.");
+  assert.equal(build({ ...all[all.length - 1].x, aviation: true }).trend, "Up to Severe from 3:38 PM.");
+  const same = build(pastBase({ at: at(-4), level: 0, headline: "No disruption reported", cond: { windMph: 8, visMi: 10 }, after: after(0, 0, 0, 0) }));
+  assert.equal(same.trend, "Unchanged through now.");
+  assert.equal(same.specifics, "Light winds and good visibility."); // never claims the FAA status of an earlier hour
+  assert.equal(build(pastBase({ at: at(-4), level: 0, after: after(0, null, null, null) })).trend, "Unchanged through 2 PM; no reports after that.");
+  assert.equal(build(pastBase({ at: at(-4), level: 1, reasons: ["Rain"], after: after(null, null, 0, 0) })).trend, "Cleared by 4 PM."); // a gap before the change: "by"
+  const none = build(pastBase({ at: at(-4), level: null, kind: "unknown", headline: "No report for this hour", noReport: true, cond: null, after: after(0, 0) }));
+  assert.equal(none.specifics, "No weather report from the airport for this hour.");
+  assert.equal(none.trend, "");
+});
+
+test("nowblurb: a later hour no forecast covers says so, never a quiet all good", () => {
+  const r = build(base({ at: at(20), level: null, kind: "unknown", headline: "Forecast unavailable for this time", noForecast: true, cond: null, levels: levels(...Array(20).fill(0), null, null) }));
+  assert.equal(r.trend, "No airport forecast covers this hour.");
+  assert.doesNotMatch(r.specifics, /no FAA delays/);
+  // the last covered hour before the forecast ends
+  assert.equal(build(base({ at: at(18), levels: levels(...Array(20).fill(0), null) })).trend, "No forecast beyond tomorrow 1 PM.");
+});
+
 test("nowblurb: Traveler strings carry no raw codes, no % and no certainty words", () => {
   const trav = all.filter((c) => !c.x.aviation);
   assert.ok(trav.length >= 10);

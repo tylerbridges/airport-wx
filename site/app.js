@@ -432,7 +432,7 @@
       else if (/FZFG/.test(k)) p = "Freezing fog";
       else if (/SN/.test(k)) p = deg + "snow";
       else if (/PL/.test(k)) p = "Sleet";
-      else if (/SHRA/.test(k)) p = i === "VC" ? "Showers nearby" : deg + "showers";
+      else if (/SHRA/.test(k) || k === "SH" && i === "VC") p = i === "VC" ? "Showers nearby" : deg + "showers"; // VCSH: the emoji's "showers" too (wxdays.js kind)
       else if (/RA/.test(k)) p = deg + "rain";
       else if (/DZ/.test(k)) p = deg + "drizzle";
       else if (/FG/.test(k)) p = i === "VC" ? "Fog nearby" : "Fog";
@@ -444,7 +444,8 @@
     const cig = c.cig != null ? c.cig : c.ceiling;
     if (cig != null && cig < 1000) parts.push(cig < 500 ? "very low clouds" : "low clouds");
     if (!parts.length) {
-      const covers = (String(raw || "").match(/\b(FEW|SCT|BKN|OVC|VV)\d{3}/g) || []).map((x) => x.slice(0, 3));
+      // raw: the report text, or a list of cloud covers (["BKN", "OVC"]; [] = sky clear) for a forecast hour
+      const covers = Array.isArray(raw) ? raw.map((x) => String(x).slice(0, 2) === "VV" ? "VV0" : String(x).slice(0, 3)) : (String(raw || "").match(/\b(FEW|SCT|BKN|OVC|VV)\d{3}/g) || []).map((x) => x.slice(0, 3));
       parts.push(covers.includes("OVC") || covers.includes("VV0") ? "Overcast" : covers.includes("BKN") ? "Mostly cloudy" : covers.includes("SCT") ? "Partly cloudy"
         : covers.includes("FEW") ? "Mostly clear" : cig != null ? "Cloudy" : raw ? "Clear" : "No significant weather");
     }
@@ -2196,12 +2197,13 @@
     return null;
   }
   /** Facts row: temperature, wind/gusts mph, precip type, thunder chance (+ category, ceiling, visibility, wind kt in Aviation mode). */
-  function factsRow(c, a, t, past, compact) {
+  function factsRow(c, a, t, past, compact, techOnly) {
     const f = [];
     const lamp = past ? null : lampAt(a, t);
-    if (c && c.temp != null) f.push(h("span", {}, f1(c.temp) + "°F"));
-    if (c && c.wspd != null) f.push(h("span", {}, c.wspd === 0 ? "Calm" : "Wind " + mph1(c.wspd) + (c.wgst != null ? "–" + mph1(c.wgst) : "") + " mph"));
-    const p = precipWord(c, compact ? null : lamp); // compact: observed / forecast precipitation only
+    // techOnly: an hour preview, whose conditions pill already gives the temperature, wind and weather
+    if (!techOnly && c && c.temp != null) f.push(h("span", {}, f1(c.temp) + "°F"));
+    if (!techOnly && c && c.wspd != null) f.push(h("span", {}, c.wspd === 0 ? "Calm" : "Wind " + mph1(c.wspd) + (c.wgst != null ? "–" + mph1(c.wgst) : "") + " mph"));
+    const p = techOnly ? null : precipWord(c, compact ? null : lamp); // compact: observed / forecast precipitation only
     if (p) f.push(h("span", {}, p));
     const th = past || compact ? null : lampThunderAt(a, t);
     if (th != null && th > 0) f.push(h("span", {}, "Thunder chance " + (th >= 40 ? "high" : th >= 20 ? "some" : "low")));
@@ -2263,7 +2265,7 @@
     // the sheet's Now card: one two-part blurb (site/nowblurb.js) in every state — what is happening and why, then where it's heading
     const blurb = o.blurb && window.AWXNowBlurb ? safeCall(() => AWXNowBlurb.build({ ...o.blurb, headline: status, kind: shared ? shared.kind : o.level > 0 ? "forecast" : "normal",
       level: headLevel, quality: shared ? shared.quality : "",
-      programText: primaryProgram ? faaText(shared.programs[0], true, shared.current, true) : progTxt.map((t) => t.replace(/ until further notice/, "")).join("; "), // the header already says "FAA gives no end time"
+      programText: o.blurb.programText || (primaryProgram ? faaText(shared.programs[0], true, shared.current, true) : progTxt.map((t) => t.replace(/ until further notice/, "")).join("; ")), // the header already says "FAA gives no end time"
       reasons: primaryProgram ? extraReasons : shortList(others, a).slice(0, 3) })) : null;
     const blurbEl = blurb ? h("div", { class: "sc-blurb" }, blurb.specifics ? h("p", { class: "sc-spec" }, blurb.specifics) : null, blurb.trend ? h("p", { class: "sc-trend" }, blurb.trend) : null) : null;
     const ahead = [];
@@ -2293,7 +2295,9 @@
     const startText = Number.isFinite(programStart) ? "From " + faaUntil(programStart, a) + " · " : "";
     const low = (x) => (/^[A-Z][a-z]/.test(x) ? x.charAt(0).toLowerCase() + x.slice(1) : x);
     const qualWhen = qual ? cap(uniq([low(String(o.when || "").replace(/^Nearby flight/, "flight")), low(qual[2])].filter(Boolean)).join(" · ")) : null;
-    const when = primaryProgram ? startText + (shared.scheduledEnd ? "Until " + faaUntil(shared.scheduledEnd, a) + " · may change" : NO_END) : qualWhen || o.when;
+    // an hour preview keeps its own header ("6 PM · Forecast"), with a missing-data qualifier said once
+    const when = o.kind === "hour" ? uniq([o.when, qual ? low(qual[2]) : null].filter(Boolean)).join(" · ")
+      : primaryProgram ? startText + (shared.scheduledEnd ? "Until " + faaUntil(shared.scheduledEnd, a) + " · may change" : NO_END) : qualWhen || o.when;
     const card = h("div", { class: "box sc" + (o.full ? " full" : ""), "data-kind": o.kind, "data-layout": o.layout },
       h("div", { class: "sc-h" },
         h("h4", {}, h("span", { class: "sc-label" }, o.label), (o.full || o.simple) && when ? h("span", { class: "sc-when in" }, when) : null)),
@@ -2304,7 +2308,7 @@
       o.big ? o.cur : null, // current conditions under the Now status, mid-screen where they're easy to tap
       separateAhead ? null : aheadEl,
       progLine,
-      o.simple ? null : o.facts);
+      o.simple && !o.keepFacts ? null : o.facts);
     if (separateAhead && ahead.length) {
       const rows = ahead.map(row => {
         const dot = row.firstElementChild, content = row.lastElementChild;
@@ -2525,6 +2529,54 @@
         normalNote, reasons: shortList(notOwn(((n) => hourReasons(a, n.x, sm.nowLevel, n.reasons))(nowHourOf(a, v, sm))), a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true),
         chips: cardSources(v.now.reasons, "now"), empty: null });
     };
+    // ---- hour previews: the Now card's structure and detail for the held hour (README "Airport sheet") ----
+    // Data lookups use the slot's data hour (s.key; test scenarios shift times), labels the slot's clock hour (s.t).
+    const NOW_HEAD = { "Ground Stop scheduled": "Ground Stop", "Arrival delay program scheduled": "Arrivals delayed", "Airport closure scheduled": "Airport closed", "Flight delays scheduled": "Flight delays in effect" };
+    /** The hour's outlook: the Now card's own (outlook.js evaluate) for now and later hours; an earlier hour from its report. */
+    const hourOutlook = (s, isNow, past) => {
+      if (isNow) return outlook(a);
+      if (past) {
+        const L = s.kind === "none" ? null : s.level;
+        const headline = L == null ? "No report for this hour" : L > 0 ? AWXOutlook.conditionHeadline({ reasons: s.reasons, wx: s.h && s.h.wx }, true) : "No disruption reported";
+        return { kind: L == null ? "unknown" : "past", headline, level: L, current: true, quality: "", programs: [], impacts: [], scheduledEnd: null, recovery: null, eases: null };
+      }
+      const o = outlook(a, Math.max(s.key, refNow()));
+      // a program already in force keeps its present-tense words at a later hour ("Ground Stop", not "… scheduled")
+      const f = o.programs[0];
+      if (!f || o.current || Date.parse(f.start) > refNow() || !(f.active !== false)) return o;
+      return { ...o, current: true, headline: NOW_HEAD[o.headline] || o.headline.replace(/ delays scheduled$/, " delayed") };
+    };
+    /** Storms, warnings and FAA programs in force during the hour, for its blurb (each fact once: the hour's reasons drop what these say). */
+    const hourContext = (s, hO, isNow, past) => {
+      const t0h = s.key, t1h = s.key + HOUR, now = refNow();
+      const over = (on, end) => !(Number.isFinite(on) && on >= t1h) && !(Number.isFinite(end) && end <= t0h);
+      // a Convective SIGMET is a current alert (valid up to 2 hours from issue): now, or an earlier hour inside its window
+      const sig = isNow ? (v.sigmets || []) : past ? (v.sigmets || []).filter((g) => { const e = Date.parse(g.validTo); return Number.isFinite(e) && over(e - 2 * HOUR, e); }) : [];
+      const until = sig.map((g) => Date.parse(g.validTo)).filter(Number.isFinite);
+      const spc = v.spc && dayKey(t0h, tz) === dayKey(now, tz) ? v.spc : null; // "possible today": today's hours only
+      const tcf = past ? [] : (v.tcf || []).filter((x) => { const t = Date.parse(x.valid); return Number.isFinite(t) && t >= t0h - HOUR && t < t1h + HOUR; });
+      const alerts = (v.alerts || []).filter((x) => x.event && over(Date.parse(x.onset), Date.parse(x.ends || x.expires)));
+      return { storms: { near: sig.length > 0, until: until.length ? Math.max(...until) : null, spc, tcf }, warnings: alerts.map((x) => x.event), alerts };
+    };
+    /** The hour's conditions in the blurb's units (mph, statute miles, feet). */
+    const blurbCond = (c) => (c ? { windMph: c.wspd != null ? mph1(c.wspd) : null, gustMph: c.wgst != null ? mph1(c.wgst) : null,
+      visMi: c.vis == null ? null : typeof c.vis === "number" ? c.vis : visNum(String(c.vis).replace("+", "")), ceilingFt: c.cig != null ? c.cig : null } : null);
+    /** Cloud covers of the airport forecast's prevailing period holding ms (null when unknown). */
+    const tafCovers = (ms) => {
+      if (!D.have.taf) return null;
+      const p = ((a.taf && a.taf.periods) || []).find((x) => x.kind === "prevailing" && Date.parse(x.from) <= ms && ms < Date.parse(x.to));
+      return p && p.cond && Array.isArray(p.cond.clouds) && WXD() ? WXD().coversOf(p.cond.clouds) : null;
+    };
+    /** The hour's conditions pill (display only): emoji for that hour's sky and local day/night, temperature only when reported. */
+    const hourPill = (s, c, isNow, past) => {
+      if (isNow) return safeCall(() => currentLine(a, true));
+      if (!c) return s.h && !D.have.cond ? detailWait(a, "hour conditions") : null;
+      const covers = past ? null : tafCovers(s.key + HOUR / 2);
+      const k = WXD() ? WXD().kind(c, covers) : null;
+      const emo = k ? WXD().emoji(k, WXD().nightAt(a.lat, a.lon, s.key + HOUR / 2, a.tz)) : "";
+      const cond = oneCond(shortCond(c, covers).replace(/, gusty$/, ""));
+      return condPill({ emo, temp: c.temp, cond, dir: c.wdir, spd: c.wspd, gust: c.wgst, vis: blurbCond(c).visMi, still: true, label: (past ? "Observed" : "Forecast") + " weather" });
+    };
     const hourCard = (s) => {
       const isNow = s.kind === "now";
       const past = s.kind === "obs" || s.kind === "none";
@@ -2532,12 +2584,49 @@
       const label = cap(whenLabel(s.t, tz));
       const zulu = aviation() ? " · " + new Date(s.t).toISOString().slice(11, 13) + "00Z" : "";
       const when = (s.kind === "obs" ? (s.observed ? "Observed" : "Earlier forecast") : s.kind === "none" ? "No report" : s.kind === "na" ? "No forecast" : isNow ? "Now" : "Forecast") + zulu;
-      const progs = past || s.kind === "na" ? [] : programsAt(v, s.key, isNow);
+      let hO = safeCall(() => hourOutlook(s, isNow, past));
+      if (!hO) return stateCard({ a, kind: "hour", past, isNow, full: true, simple: true, label, level: s.level, when, reasons: shortList(s.reasons, a), programs: [], empty: null });
       const unsure = !past && !isNow && sm.uncertainFrom != null && s.key >= sm.uncertainFrom && s.level != null && s.level < sm.openLevel;
-      return stateCard({ a, kind: "hour", past, normalNote: isNow ? normalNote : unsure ? NO_END + " — the program may still be in place" : null, isNow, full: true, simple: !aviation(), max: 3, label, level: s.level, when, delay: !past && s.h ? s.h.delay : null,
-        reasons: shortList(s.reasons, a), programs: progs, impact: s.level == null ? null : CATS.impact(s.reasons, progs),
-        facts: c ? factsRow(c, a, s.key, past, true) : null, chips: s.level == null ? [] : cardSources(s.reasons, s.kind),
-        empty: s.kind === "none" ? "No weather report for this hour" : s.kind === "na" ? "No forecast for this hour" : null });
+      // an FAA program in force now with no stated end is held for a few hours (risk.mjs faaSpan; outlook.js counts it
+      // only now): those later hours say it as the Now card does; after them it "may still be in place"
+      const held = !past && !isNow && !unsure && !hO.programs.length && s.level != null
+        ? programsAt(v, s.key, false).filter((f) => f.type !== "closure" && !Number.isFinite(Date.parse(f.end)) && f.active !== false && f.scope !== "limited" && f.scope !== "runway") : [];
+      if (held.length) {
+        const programs = held.map((f) => ({ ...f, source: f.atcscc ? "atcscc" : "faa" })), impacts = AWXOutlook.directionRows(programs, true);
+        // the program leads the headline as it does now (evaluate's words for a program in force), never "… happening now" from the delay chance
+        const t = programs[0].type;
+        const headline = t === "ground_stop" ? "Ground Stop" : t === "ground_delay" ? "Arrivals delayed" : impacts.length === 1 ? impacts[0].label + " delayed" : "Flight delays in effect";
+        hO = { ...hO, kind: hO.kind === "unknown" ? hO.kind : "active", headline: hO.kind === "unknown" ? hO.headline : headline, programs, impacts, current: true };
+      }
+      const ctx = isNow ? null : hourContext(s, hO, isNow, past);
+      const progs = isNow ? nowPrograms : hO.programs;
+      // each fact once: reasons the blurb's storm/warning parts or the pill say, or with their own card below, stay out
+      const own = (r) => {
+        const t = String(r || "");
+        if (isNow) return ownCard(t);
+        if (ctx.alerts.some((x) => t.indexOf(x.event) === 0)) return true;
+        if (c && c.vis != null && /^Visibility\b/i.test(t)) return true;
+        if (ctx.storms.near && /^Convective SIGMET\b/.test(t) || ctx.storms.spc && CATS.reason(t).src === "SPC" || ctx.storms.tcf.length && /\(TCF\)/.test(t)) return true;
+        return planTexts.has(t.replace(/\.$/, ""));
+      };
+      const reasons = shortList((isNow ? ((n) => hourReasons(a, n.x, sm.nowLevel, n.reasons))(nowHourOf(a, v, sm)) : s.reasons).filter((r) => !own(r)), a);
+      // an earlier hour: what happened next, read from the timeline's later hours through now (the colours shown)
+      const later = past ? [...previewSlots.values()].filter((x) => x.i > s.i && (x.kind === "obs" || x.kind === "none" || x.kind === "now")) : [];
+      const base = blurbIn(hO);
+      const blurb = isNow ? base : {
+        ...base, at: s.key, past, noReport: s.kind === "none", cond: blurbCond(c), storms: ctx.storms, warnings: ctx.warnings,
+        recovery: hO.recovery, eases: hO.eases, laterPeak: false, levels: past ? [] : sm.levels,
+        open: (hO.programs || []).some((f) => f.source === "faa" && !Number.isFinite(Date.parse(f.end)) && !f.perm),
+        weatherCause: hO.programs.length > 0 && hO.programs.every((f) => f.cause === "weather"),
+        events: past ? base.events : [], after: later.map((x) => ({ t: new Date(x.key).toISOString(), level: x.kind === "none" ? null : x.level })),
+        // after an open program's held hours: never "no FAA delays reported" — it may still be in place
+        programText: unsure && !hO.programs.length ? NO_END + " — the program may still be in place" : null,
+      };
+      const card = stateCard({ a, kind: "hour", past, isNow, full: true, simple: true, big: true, keepFacts: aviation(), max: 3, label, when, outlook: hO, level: s.level,
+        delay: !past && s.h ? s.h.delay : null, reasons, programs: progs, blurb,
+        cur: safeCall(() => hourPill(s, c, isNow, past)), impact: s.level == null ? null : CATS.impact(s.reasons, progs),
+        facts: c && aviation() ? factsRow(c, a, s.key, past, true, true) : null, chips: [], empty: null });
+      return card;
     };
 
     const boxWrap = h("div", { class: "boxwrap", "aria-live": "polite" });
@@ -3109,27 +3198,35 @@
    * observation and functions as the Weather page's Current weather card. A button that opens that page; with no observation
    * in the last 2 hours it says so instead (outlook.js health, the same rule as the sheet's qualification).
    */
-  function currentLine(a) {
+  function currentLine(a, still) {
     const m = a.metar;
     const obs = m && Date.parse(m.obsTime);
     if (!m || !Number.isFinite(obs) || refNow() - obs > 2 * HOUR || obs - refNow() > 10 * 60000) return h("p", { class: "cl-none muted" }, "Current weather unavailable");
     const w = m.wind || {};
     const cond = oneCond(shortCond(metarCond(m), m.raw).replace(/, gusty$/, ""));
-    const parts = [m.temp != null ? f1(m.temp) + "°" : null, cond, windShort(w.dir, w.spd, m.gust),
-      m.visib != null ? "Vis " + visMiles(m.visib).replace(/ miles?$/, " mi") : null].filter(Boolean);
-    // Pill (Dark Sky–like): emoji, temperature, condition; wind (+ gust) and visibility below 6 miles as quieter segments
-    const gust = m.gust != null && w.spd != null && mph1(m.gust) > mph1(w.spd) ? mph1(m.gust) : null;
-    const wind = windAbbr(w);
-    const emo = obsEmoji(a, m, true);
-    return h("button", { type: "button", class: "cur-line", "data-detail": "weather", "aria-haspopup": "dialog",
-      "aria-label": "Current weather: " + parts.join(", ") + ". Open weather details.", onclick: () => openDetails(a.iata, "weather") },
-      emo ? h("span", { class: "cl-e", "aria-hidden": "true" }, emo) : null,
-      m.temp != null ? h("b", { class: "cl-temp" }, f1(m.temp) + "°") : null,
-      h("span", { class: "cl-t" }, cond),
+    return condPill({ emo: obsEmoji(a, m, true), temp: m.temp, cond, dir: w.dir, spd: w.spd, gust: m.gust, vis: m.visib, still,
+      label: "Current weather", detail: "weather", onclick: () => openDetails(a.iata, "weather") });
+  }
+  /**
+   * The conditions pill (Dark Sky–like): emoji, temperature, condition; wind (+ gust) and visibility below 6 miles as
+   * quieter segments. Wind/gust in kt, visibility in statute miles, temperature °C (left out when unknown, never faked).
+   * still: display only (an hour preview: a div, no chevron, nothing a held finger could activate).
+   */
+  function condPill(p) {
+    const parts = [p.temp != null ? f1(p.temp) + "°" : null, p.cond, windShort(p.dir, p.spd, p.gust),
+      p.vis != null ? "Vis " + visMiles(p.vis).replace(/ miles?$/, " mi") : null].filter(Boolean);
+    const gust = p.gust != null && p.spd != null && mph1(p.gust) > mph1(p.spd) ? mph1(p.gust) : null;
+    const wind = windAbbr({ dir: p.dir, spd: p.spd });
+    const kids = [p.emo ? h("span", { class: "cl-e", "aria-hidden": "true" }, p.emo) : null,
+      p.temp != null ? h("b", { class: "cl-temp" }, f1(p.temp) + "°") : null,
+      h("span", { class: "cl-t" }, p.cond),
       h("span", { class: "cl-sec" }, h("i", { class: "cl-z" }), // segments that don't fit wrap onto a hidden second line (visibility first, then wind)
         wind ? h("span", { class: "cl-s cl-w" }, wind.replace(/ mph$/, ""), gust != null ? h("span", { class: "cl-g" + (gust >= 25 ? " gh" : "") }, " G " + gust) : null, wind === "Calm" ? null : h("small", {}, " mph")) : null,
-        m.visib != null && m.visib < 6 ? h("span", { class: "cl-s cl-v" }, visMiles(m.visib).replace(/ miles?$/, " mi")) : null),
-      h("span", { class: "chev", "aria-hidden": "true" }, "›"));
+        p.vis != null && p.vis < 6 ? h("span", { class: "cl-s cl-v" }, visMiles(p.vis).replace(/ miles?$/, " mi")) : null)];
+    if (p.still) return h("div", { class: "cur-line still", "aria-label": p.label + ": " + parts.join(", ") }, kids);
+    return h("button", { type: "button", class: "cur-line", "data-detail": p.detail, "aria-haspopup": "dialog",
+      "aria-label": p.label + ": " + parts.join(", ") + ". Open weather details.", onclick: p.onclick },
+      kids, h("span", { class: "chev", "aria-hidden": "true" }, "›"));
   }
   /** Visibility as a short fraction: "½ mi", "1¾ mi", "under ¼ mi", "10+ mi". */
   function visFrac(v) {
