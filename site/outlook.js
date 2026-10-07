@@ -186,7 +186,7 @@
     const impacts = directionRows(programs, current);
     const s = score(h, opts);
     const first = programs[0];
-    let kind = "normal", headline = current ? "Operating normally" : "Normal conditions expected", level = s.level;
+    let kind = "normal", headline = current ? "No airport-wide disruptions reported" : "No major weather or FAA disruption forecast", level = s.level;
     if (first) {
       kind = current ? "active" : "forecast";
       headline = first.type === "closure" ? current ? "Airport closed" : "Airport closure scheduled"
@@ -217,6 +217,11 @@
       const lv = (j) => (j < hs.length && hs[j].level != null ? score(hs[j], opts).level : null);
       const ok = (j, max) => lv(j) != null && lv(j) <= max && !restrictions(a, ms(hs[j].t), now).length && (j + 1 >= hs.length || lv(j + 1) != null && lv(j + 1) <= max);
       let after = Number.isFinite(opts.notBefore) ? opts.notBefore : -Infinity;
+      // Also protect already-open tabs reading an older build that only scored advisories in hour 0.
+      for (const advisory of a.sigmets || []) {
+        const until = ms(advisory.validTo);
+        if (until > now) after = Math.max(after, until);
+      }
       if (window && window.start <= ms(h.t) + HOUR && window.end > after) after = window.end; // the window this hour is in
       const from = (max) => hs.findIndex((x, j) => j > i && ms(x.t) >= after && ok(j, max));
       const j1 = from(1);
@@ -235,6 +240,10 @@
       // This definition deliberately describes an airport hour rather than a personal flight outcome.
       definition: "Risk of weather or air traffic control disruption across this airport during an hour.",
     };
+  }
+  function forecastQuality(a) {
+    return (a.hours || []).some(h => h.delay?.modelCoverage === "pooled")
+      ? "Delay forecast uncertain · no airport-specific accuracy history" : "";
   }
   /** The level of hour h as the sheet and map show it: its own level, raised by notable delay chances and FAA restrictions in force at `at`. */
   function levelAt(a, h, opts, at, now) {
@@ -314,5 +323,5 @@
     const start = ms(at), end = Number.isFinite(ms(until)) ? ms(until) : start + 1;
     return !!window && start < window.end && end > window.start;
   }
-  return { conditionHeadline, reasonVisibility, quietHour, health, evaluate, summary, levelAt, score, restrictions, directionRows, windowFor, overlaps, withObsHour, OBS_NEXT_MAX, PROG_LEVEL, RAISE };
+  return { conditionHeadline, reasonVisibility, quietHour, health, forecastQuality, evaluate, summary, levelAt, score, restrictions, directionRows, windowFor, overlaps, withObsHour, OBS_NEXT_MAX, PROG_LEVEL, RAISE };
 });

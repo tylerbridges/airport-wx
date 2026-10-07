@@ -76,7 +76,7 @@ export function assemble({ airports, now, metars, tafs, sigmets, isigmets = null
     }
 
     const hourArgs = {
-      now, tz: a.tz, taf: t, metar: m, faa, sigmet: sigs.length > 0,
+      now, tz: a.tz, taf: t, metar: m, faa, sigmet: sigs,
       alerts: alertsFull.map((x) => ({ event: x.event, onset: x.onset, ends: x.ends })), spc: spcCat,
       atcscc: adv, lamp: lampSt, tcf: tcfHere, cwa: cwaHere, opsplan: op,
     };

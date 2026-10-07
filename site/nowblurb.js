@@ -61,9 +61,7 @@
       const end = Number.isFinite(st.until) ? st.until : null;
       if (aviation) out.push({ pri: 1, g: "storm", text: "Convective SIGMET over or within 10 nm" + (end ? " until " + F.when(end) : "") });
       else {
-        // the end rounded up to the half hour: "until 8:30 PM"
-        const hf = end && F.floor(end), half = end && (end <= hf ? hf : end <= hf + HOUR / 2 ? hf + HOUR / 2 : hf + HOUR);
-        out.push({ pri: 1, g: "storm", text: "Storms within about 10 miles" + (end ? " until " + F.when(half) : "") });
+        out.push({ pri: 1, g: "storm", text: "Thunderstorm advisory near the airport" + (end ? " until " + F.when(end) : "") });
       }
     }
     if (st.spc && SPC[st.spc] != null) {

@@ -375,6 +375,16 @@ export async function train(opts) {
     supportOn: vb.val, evaluatedOn: split.test, scoreMapping: "model isotonic only", overrides: "not included in weather-only forecast rows",
     bands: [...wordRows.values()].map(({ sumP, ...b }) => ({ ...b, meanP: r4(sumP / b.n), rate: r4(b.k / b.n) })),
   };
+  // Evaluate the frozen traveler labels, including misses; do not tune thresholds on test outcomes.
+  const positive = [...wordRows.values()].reduce((n, b) => n + b.k, 0);
+  test.displayWords.alerts = [
+    ["possible", ["possible", "likely", "very"]], ["likely", ["likely", "very"]], ["very", ["very"]],
+  ].map(([key, keys]) => {
+    const bands = [...wordRows.values()].filter(b => keys.includes(b.key));
+    const flagged = bands.reduce((n, b) => n + b.n, 0), caught = bands.reduce((n, b) => n + b.k, 0);
+    return { key, flagged, caught, missed: positive - caught, falseAlarms: flagged - caught,
+      detection: positive ? r4(caught / positive) : null, falseAlarmRate: flagged ? r4(1 - caught / flagged) : null };
+  });
   test.bySeason = Object.fromEntries(["winter", "spring", "summer", "fall"].map((s) => [s, evalSet(sub((q, r) => seasonOf(r.mo) === s))]).filter(([, v]) => v.n));
   // calibration by airport group (model, and the deployed model when it could be scored)
   const rc = (c) => (c ? { n: c.n, meanP: r4(c.meanP), rate: r4(c.rate), brier: r4(c.brier), ece: r4(c.ece), mid: c.mid ? { n: c.mid.n, meanP: r4(c.mid.meanP), rate: r4(c.mid.rate) } : null } : null);

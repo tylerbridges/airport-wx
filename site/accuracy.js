@@ -18,6 +18,9 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 const my = (ym) => { const m = /^(\d{4})-(\d{2})/.exec(String(ym || "")); return m ? `${MONTHS[+m[2] - 1]} ${m[1]}` : ""; };
 const day = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || "")); return m ? `${MONTHS[+m[2] - 1]} ${+m[3]}, ${m[1]}` : ""; };
 const card = (title, ...kids) => el("section", { class: "card" }, title ? el("h2", {}, title) : null, ...kids);
+const dataTable = (headers, rows) => el("div", { class: "tablewrap" }, el("table", {},
+  el("thead", {}, el("tr", {}, headers.map(x => el("th", {}, x)))),
+  el("tbody", {}, rows.map(row => el("tr", {}, row.map(x => el("td", {}, x)))))));
 const monthsText = (list) => (list.length ? (list.length === 1 ? my(list[0]) : `${my(list[0])} – ${my(list[list.length - 1])}`) : "");
 
 async function getJson(url) {
@@ -87,6 +90,16 @@ function renderReport(rep) {
   kids.push(card("In plain words",
     ...summarySentences(T.reliability),
     el("p", { class: "small muted" }, `${n0(T.n)} airport-hours were checked across ${Object.keys(T.byAirport).length} airports. Delays happened in ${pct(T.base)} of them.`)));
+
+  const words = T.displayWords;
+  kids.push(card("What the traveler warnings catch",
+    el("p", { class: "say" }, "These are airport-wide weather and air traffic disruption forecasts. They do not verify an individual flight, airline cancellation, crew problem or late inbound aircraft."),
+    words?.alerts?.length ? dataTable(["Warning", "Disruptions caught", "Warnings without disruption"],
+      words.alerts.map(x => [x.key === "possible" ? "Possible or stronger" : x.key === "likely" ? "Likely or stronger" : "Very likely", pct(x.detection), pct(x.falseAlarmRate)]))
+      : el("p", { class: "say" }, "The deployed report does not yet measure missed disruptions and false alarms for the current traveler labels. Its numerical-threshold results below are not a validation of the complete app."),
+    words?.bands?.length ? dataTable(["Words shown", "Forecasts", "Disruptions observed"],
+      words.bands.map(x => [x.word, n0(x.n), pct(x.rate)])) : null,
+    el("p", { class: "small muted" }, "Evaluation uses held-out dates and fixed wording thresholds. Multiple forecast lead times can refer to the same airport-hour; these are not independent flights. FAA overrides and separate weather warnings are excluded from these model-only results.")));
 
   // reliability chart
   kids.push(card("Said vs. happened",

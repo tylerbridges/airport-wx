@@ -13,12 +13,19 @@ test("outlook: a last-known active restriction remains visible without forecast 
   assert.match(o.impacts[0].value, /Held at their departure airports/);
 });
 test("outlook: quiet status, absent forecast, missing and stale data remain distinct", () => {
-  assert.equal(O.evaluate(base(), options()).headline, "Operating normally");
+  assert.equal(O.evaluate(base(), options()).headline, "No airport-wide disruptions reported");
   assert.equal(O.evaluate(base(), options({ at: now + 24 * H })).kind, "unknown");
   assert.equal(O.evaluate(base(), options({ generated: new Date(now - H).toISOString() })).kind, "unknown");
   assert.equal(O.evaluate(base(), options({ sources: { ...sources, faa: { ok: false } } })).kind, "unknown");
   assert.equal(O.evaluate(base(), options({ hidden: true })).headline, "No issues in your selected categories");
 });
+test("recovery never precedes a still-valid storm advisory in an older build", () => {
+  const a = base(); a.hours[0].level = 3;
+  a.sigmets = [{ validTo: new Date(now + 100 * 60000).toISOString() }];
+  assert.equal(O.evaluate(a, options()).recovery, Date.parse(a.hours[2].t));
+  assert.equal(O.forecastQuality({ hours: [{ delay: { modelCoverage: "pooled" } }] }), "Delay forecast uncertain · no airport-specific accuracy history");
+});
+
 test("outlook: scheduled end and FAA extension are not a forecast recovery time", () => {
   const a = base(); a.faa = [{ type: "ground_stop", end: new Date(now + H).toISOString() }];
   a.atcscc = [{ type: "GS", active: true, start: new Date(now - H).toISOString(), end: new Date(now + H).toISOString(), issued: new Date(now - H).toISOString(), extension: "high" }];
@@ -224,7 +231,7 @@ test("airport health: missing or stale storm sources (SIGMET, SPC, LAMP, TCF, CW
   assert.equal(O.evaluate(base(), options({ sources: { ...sources, lamp: { ok: true, at: old } } })).headline, "No disruptions reported · storm data unavailable");
   const { cwa, ...noCwa } = sources;
   assert.equal(O.evaluate(base(), options({ sources: noCwa })).kind, "unknown");
-  assert.equal(O.evaluate(base(), options({ sources: { ...sources, spc: { ok: true, at: new Date(now - 2 * H).toISOString() } } })).headline, "Operating normally");
+  assert.equal(O.evaluate(base(), options({ sources: { ...sources, spc: { ok: true, at: new Date(now - 2 * H).toISOString() } } })).headline, "No airport-wide disruptions reported");
   // a known disruption keeps its headline
   const a = base(); a.faa = [{ type: "ground_stop", end: new Date(now + H).toISOString() }];
   assert.equal(O.evaluate(a, options({ sources: { ...sources, tcf: { ok: false } } })).headline, "Ground Stop");

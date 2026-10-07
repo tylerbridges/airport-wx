@@ -203,6 +203,17 @@ test("buildHours: 24 rows from the top of the hour; hour 0 takes METAR, FAA, SIG
   assert.equal(hours[1].fltCat, "VFR");
 });
 
+test("a convective advisory holds every overlapping hour, including after the next hour boundary", () => {
+  const end = new Date(hr(1) * 1000 + 55 * 60000).toISOString();
+  const hs = buildHours({ now: NOW, tz: "America/Denver", taf: taf([vfr]), sigmet: [{ validTo: end }] });
+  assert.deepEqual(hs.slice(0, 3).map(h => h.level), [3, 3, 0]);
+  assert.ok(hs[1].items.some(x => /SIGMET/.test(x.text)));
+  const expired = buildHours({ now: NOW, taf: taf([vfr]), sigmet: [{ validTo: NOW.toISOString() }] });
+  assert.equal(expired[0].level, 0);
+  const unknownEnd = buildHours({ now: NOW, taf: taf([vfr]), sigmet: [{}] });
+  assert.deepEqual(unknownEnd.slice(0, 2).map(h => h.level), [3, 0]);
+});
+
 test("hour 0: the observation wins over TAF conditions", () => {
   const rainyTaf = taf([{ ...vfr, wxString: "-RA BR", clouds: [{ cover: "OVC", base: 800 }] }]);
   const metar = { wxString: null, visib: "10+", clouds: [{ cover: "OVC", base: 1300 }], wspd: 8, fltCat: "MVFR" };

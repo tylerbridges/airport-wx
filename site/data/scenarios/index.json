@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-07T00:34:30.948Z",
+ "generated": "2026-10-07T20:55:11.974Z",
  "groups": {
   "delays": "Delays & programs",
   "weather": "Weather",
@@ -154,7 +154,7 @@
    "title": "All quiet on a holiday evening",
    "group": "delays",
    "blurb": "Normal airport operations on a busy holiday evening.",
-   "description": "The Sunday evening after Thanksgiving: no weather or FAA programs. Routine airport delay rates remain available internally; Traveler cards show Operating normally without usual-delay commentary.",
+   "description": "The Sunday evening after Thanksgiving: no weather or FAA programs. Routine airport delay rates remain available internally; Traveler cards show No airport-wide disruptions reported without usual-delay commentary.",
    "file": "all-quiet-holiday-peak.json",
    "wx": "all-quiet-holiday-peak/wx/",
    "lagMin": 0,
@@ -216,7 +216,7 @@
     {
      "t": "card",
      "iata": "MDW",
-     "re": "Operating normally"
+     "re": "No airport-wide disruptions reported"
     },
     {
      "t": "noPercent"
@@ -228,7 +228,7 @@
     {
      "t": "sheet",
      "iata": "MDW",
-     "re": "Operating normally"
+     "re": "No airport-wide disruptions reported"
     }
    ]
   },
@@ -993,7 +993,7 @@
     {
      "t": "sheet",
      "iata": "SFO",
-     "re": "Operating normally[\\s\\S]*57° ?Clear[\\s\\S]*Now · Clear"
+     "re": "No airport-wide disruptions reported[\\s\\S]*57° ?Clear[\\s\\S]*Now · Clear"
     },
     {
      "t": "sheet",
@@ -1538,6 +1538,56 @@
    ]
   },
   {
+   "name": "storm-advisory-window",
+   "title": "Storm advisory remains active after the hour changes",
+   "group": "weather",
+   "blurb": "Clear local weather cannot end a still-valid nearby storm advisory.",
+   "description": "Denver has clear weather but a convective advisory valid until 21:55Z. Both overlapping hours retain High risk; recovery cannot be inferred at 21:00Z.",
+   "file": "storm-advisory-window.json",
+   "wx": "storm-advisory-window/wx/",
+   "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
+   "assert": [
+    {
+     "t": "hourLevel",
+     "iata": "DEN",
+     "at": [
+      0,
+      1
+     ],
+     "op": "==",
+     "v": 3
+    },
+    {
+     "t": "hourReason",
+     "iata": "DEN",
+     "at": [
+      0,
+      1
+     ],
+     "re": "Convective SIGMET",
+     "every": true
+    },
+    {
+     "t": "hourLevel",
+     "iata": "DEN",
+     "at": [
+      2,
+      2
+     ],
+     "op": "==",
+     "v": 0
+    },
+    {
+     "t": "sheet",
+     "iata": "DEN",
+     "re": "Thunderstorm advisory near the airport"
+    }
+   ]
+  },
+  {
    "name": "thunderstorm-ground-stop",
    "title": "Thunderstorm ground stop at ORD",
    "group": "weather",
@@ -1961,7 +2011,7 @@
     {
      "t": "card",
      "iata": "DCA",
-     "re": "Clear: Operating normally"
+     "re": "Clear: No airport-wide disruptions reported"
     },
     {
      "t": "sheet",

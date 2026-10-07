@@ -111,12 +111,10 @@ export function calibrate(p, report = REPORT) {
   return { rate: p, bin };
 }
 
-/** "typically 30–45 min": the median ± 10, rounded to 5, never one number. */
+/** The model stores a median, not a prediction interval. Never manufacture a range around it. */
 export function minutesRange(m) {
-  if (m == null || !Number.isFinite(Number(m))) return "";
-  const r5 = (x) => Math.max(5, Math.round(x / 5) * 5);
-  const lo = r5(Number(m) - 10), hi = Math.max(lo + 10, r5(Number(m) + 10));
-  return `typically ${lo}–${hi} min`;
+  if (m == null || !Number.isFinite(Number(m)) || Number(m) <= 0) return "";
+  return `historical median about ${Math.max(5, Math.round(Number(m) / 5) * 5)} min`;
 }
 
 const FAA_NOW = { ground_stop: true, ground_delay: true, delay: true, closure: true }; // closures hook: a closed airport is "happening now", never "very likely"

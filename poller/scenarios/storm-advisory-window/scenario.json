@@ -1,0 +1,13 @@
+{
+  "title": "Storm advisory remains active after the hour changes",
+  "group": "weather",
+  "at": "2026-10-07T20:30:00Z",
+  "blurb": "Clear local weather cannot end a still-valid nearby storm advisory.",
+  "description": "Denver has clear weather but a convective advisory valid until 21:55Z. Both overlapping hours retain High risk; recovery cannot be inferred at 21:00Z.",
+  "assert": [
+    {"t":"hourLevel","iata":"DEN","at":[0,1],"op":"==","v":3},
+    {"t":"hourReason","iata":"DEN","at":[0,1],"re":"Convective SIGMET","every":true},
+    {"t":"hourLevel","iata":"DEN","at":[2,2],"op":"==","v":0},
+    {"t":"sheet","iata":"DEN","re":"Thunderstorm advisory near the airport"}
+  ]
+}

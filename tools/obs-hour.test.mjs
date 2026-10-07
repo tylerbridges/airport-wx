@@ -81,7 +81,7 @@ test("observed next hour: viewed at 00:04Z every consumer reads the clear observ
   // sheet / map (app.js outlook → evaluate at refNow; map.js stateOf) and cards (outlook.js summary)
   const e = O.evaluate(v, { ...opts(now), at: now });
   assert.equal(e.level, 0);
-  assert.equal(e.headline, "Operating normally");
+  assert.equal(e.headline, "No airport-wide disruptions reported");
   assert.deepEqual(e.reasons, []);
   const sm = O.summary(v, opts(now));
   assert.equal(sm.nowLevel, 0);

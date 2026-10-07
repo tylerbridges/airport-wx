@@ -706,8 +706,14 @@ function hourRows({
         fltCat = metar.fltCat || flightCategory(parseVisib(metar.visib), ceilingOf(metar.clouds));
         cond = metar;
       }
-      if (sigmet) items.push({ level: 3, text: "Convective SIGMET over airport", fixed: true });
     }
+    // A current advisory remains relevant in every overlapping hour, not just the observation hour.
+    // Legacy boolean callers have no validity window and remain current-hour only.
+    const stormAdvisory = Array.isArray(sigmet) ? sigmet.some((s) => {
+      const end = toMs(s.validTo), from = toMs(s.validFrom) ?? +now;
+      return end == null ? cur : end > Math.max(t0, +now) && from < t1;
+    }) : cur && sigmet;
+    if (stormAdvisory) items.push({ level: 3, text: "Convective SIGMET over airport", fixed: true });
     const nowOnly = (x) => cur && x.from <= +now && (i === 0 || x.to == null);
     for (const x of progItems) {
       if (nowOnly(x) || (x.from < t1 && x.to != null && x.to > t0)) items.push({ level: x.level, text: x.text, fixed: true });

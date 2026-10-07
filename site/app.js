@@ -901,6 +901,12 @@
     const kids = [];
     if (state.sample) kids.push(h("div", { class: "banner" }, h("b", {}, "Sample data. "), "Live data isn't available yet; this is a frozen example snapshot."));
     if (window.AWXTest && AWXTest.name) kids.push(h("div", { class: "banner" }, h("b", {}, "Test scenario: " + ((state.data && state.data.scenario && state.data.scenario.title) || AWXTest.name) + " "), "(not live)")); // build2a hook
+    const src = state.data?.sources;
+    if (src) {
+      const missing = ["faa", "atcscc", "metar", "taf", "nws"].filter(k => !src[k]?.ok || src[k].error || src[k].stale);
+      if (missing.length) kids.push(h("div", { class: "banner coverage-warning", role: "status" },
+        h("b", {}, "Coverage incomplete. "), missing.map(k => SOURCE_NAMES[k]).join(", ") + " unavailable or limited. Disruptions may be missing from At risk."));
+    }
     b.replaceChildren(...kids);
   }
 
@@ -917,7 +923,9 @@
     if (!items.length) {
       const msg = state.filter === "mine"
         ? "No saved airports yet. Search for an airport and tap its star to save it here."
-        : "No airports at risk right now.";
+        : listed().some(a => { const q = AWXOutlook.health(a, outlookOpts(a, view(a))); return q.incomplete || q.outdated; })
+          ? "No disruptions identified in the next 24 hours with available data. Coverage is incomplete; some disruptions may be missing."
+          : "No elevated airport-wide disruption risk identified in the next 24 hours.";
       list.replaceChildren(h("div", { class: "empty" }, msg));
       return;
     }
@@ -1427,7 +1435,7 @@
     // Active programs lead with their badge; the cause and FAA timing share one context line.
     const rsn = (rs) => shortList((rs || []).filter((r) => !(progs.length && PROG_RE.test(r))), a);
     // the sheet's Now card headline leads (the same outlook() evaluation, so they can't drift); the weather condition is the secondary line
-    const head = ((x) => (/^(No disruptions reported) · /.exec(x) || [null, x])[1])(sm.current?.headline || "Operating normally");
+    const head = ((x) => (/^(No disruptions reported) · /.exec(x) || [null, x])[1])(sm.current?.headline || "No airport-wide disruptions reported");
     let cond = headlineLevel > 0 ? rsn(((n) => hourReasons(a, n.x, headlineLevel, n.reasons))(nowHourOf(a, v, sm)))[0] || (progs.length ? programCause(v.now.reasons) : null) : null;
     const badges = progs.length ? faaBadges({ faa: progs }) : [];
     const currentProgram = progs[0] || null;
@@ -1468,6 +1476,7 @@
       programEnd ? h("div", { class: "sub card-context" }, h("b", {}, programEnd), cond ? ": " + cond : "")
         : cond ? h("div", { class: "sub" }, cond) : null,
       health.quality ? h("div", { class: "muted small" }, health.quality) : null,
+      AWXOutlook.forecastQuality(a) ? h("div", { class: "muted small forecast-quality" }, AWXOutlook.forecastQuality(a)) : null,
       window.AWXMovement ? safeCall(() => AWXMovement.line(a)) : null, // movement hook: "Departures far below normal" (site/movement.js)
       !badgeHeadline && badges.length ? h("div", { class: "badges" }, badges) : null,
       cardTimeline(a),
@@ -2140,7 +2149,12 @@
     const airportAge = quality?.checked != null ? ago(Math.max(0, refNow() - quality.checked)) : when;
     return h("div", { class: "checked" },
       warn.map((w) => h("p", { class: "warn" }, w)),
-      any ? h("p", { class: "muted" }, `Checked FAA delays and NOAA weather${airportAge ? " · " + airportAge : ""}`) : null,
+      any ? h("p", { class: "muted" }, (() => {
+        const good = k => src[k]?.ok && !src[k].error && !src[k].stale;
+        const checked = [good("faa") ? "FAA delay status" : null,
+          ["metar", "taf", "nws"].every(good) ? "NOAA weather" : good("metar") ? "weather observations" : null].filter(Boolean);
+        return checked.length ? "Checked " + checked.join(" and ") + (airportAge ? " · " + airportAge : "") : "Source coverage incomplete";
+      })()) : null,
       quality ? h("p", { class: "muted" }, [quality.observed ? "Weather observed " + ago(Math.max(0, refNow() - quality.observed)) : null,
         quality.forecastIssued ? "Forecast issued " + ago(Math.max(0, refNow() - quality.forecastIssued)) : null].filter(Boolean).join(" · ")) : null);
   }
@@ -2242,7 +2256,7 @@
     const shared = o.outlook;
     // a quiet status with missing data: a short headline ("No disruptions reported"); its qualifier is said once, in the small line above
     const qual = shared && shared.kind === "unknown" ? /^(No disruptions reported) · (.+)$/.exec(shared.headline) : null;
-    const status = qual ? qual[1] : shared ? shared.headline : normal ? o.normalNote || (o.kind === "hour" && o.past ? "No disruption reported" : o.kind === "peak" || o.kind === "hour" && !o.isNow ? "No disruption expected" : "Operating normally")
+    const status = qual ? qual[1] : shared ? shared.headline : normal ? o.normalNote || (o.kind === "hour" && o.past ? "No disruption reported" : o.kind === "peak" || o.kind === "hour" && !o.isNow ? "No disruption expected" : "No airport-wide disruptions reported")
       : meaningful ? L.word : o.level > 0 ? o.level === 1 ? "Minor flight disruption possible" : "Disruption possible" : null;
     // the sheet's headline (o.big): the status in large level-coloured type; the delay outlook (o.lead) joins it
     // when it says the same thing ("Flight delays likely" + "5–9 PM"), else follows as a "Later" line
@@ -2465,7 +2479,7 @@
     const incomplete = health.incomplete;
     const stale = health.outdated;
     const normalNote = state.offline ? "Offline · status unconfirmed" : stale ? "Status may be outdated" : incomplete ? "No disruptions reported · some data unavailable"
-      : v.hiddenCats && v.hiddenCats.size ? "No issues in your selected categories" : noticesDown() ? "Operating normally · flight restrictions unavailable" : null;
+      : v.hiddenCats && v.hiddenCats.size ? "No issues in your selected categories" : noticesDown() ? "No disruptions reported · flight restrictions unavailable" : null;
     // the current run: "through 3 PM, then Clear" — or, for an FAA program with no stated end, "— FAA gives no end time"
     const nowWhen = () => (sm.open ? "— " + NO_END : "through " + whenLabel(hourFloor(sm.nowEnd || lastMs, tz), tz) + (sm.next != null ? ", then " + LEVELS[sm.next].label : ""));
 
@@ -2671,6 +2685,9 @@
       isStale() ? h("p", { class: "stale-line" }, "Last updated " + ago(dataAge()) + " — may be outdated") : null,
       // above the timeline: only the header, the Now / Peak (or single) card and the timeline itself
       boxWrap,
+      h("div", { class: "coverage-note muted small" },
+        h("p", {}, "Airport-wide weather and FAA outlook · individual flight status not checked."),
+        AWXOutlook.forecastQuality(a) ? h("p", { class: "forecast-quality" }, AWXOutlook.forecastQuality(a)) : null),
       h("section", { class: "sec tlsec" },
         h("div", { class: "sec-h" }, icon(ICONS.clock), h("h3", {}, tlTitle), h("span", { class: "rule", "aria-hidden": "true" }), dayBtn),
         tlHolder),
@@ -2866,12 +2883,11 @@
     const ends = (v.sigmets || []).map((g) => Date.parse(g.validTo)).filter(Number.isFinite);
     return ends.length ? Math.max(...ends) : null;
   }
-  /** Traveler "Storms within about 10 miles until 7:30 PM" (statute miles, end rounded up to the half hour); Aviation names the Convective SIGMET. */
+  /** Advisory validity is exact; its expiry is not a promise that storms or delays end. */
   function stormLine(v, tz) {
     const end = stormEnd(v);
     if (aviation()) return "Convective SIGMET over or within 10 nm of the airport" + (end ? " until " + whenLabel(end, tz) : "");
-    const hf = end && hourFloor(end, tz), half = end && (end <= hf ? hf : end <= hf + HOUR / 2 ? hf + HOUR / 2 : hf + HOUR);
-    return "Storms within about 10 miles" + (end ? " until " + whenLabel(half, tz) : "");
+    return "Thunderstorm advisory near the airport" + (end ? " until " + whenLabel(end, tz) : "");
   }
   /** "FAA plan & storm detail": the Command Center plan for this airport, nearby launches, SPC, TCF and CWA in plain words. */
   function planStormCard(a, v) {

@@ -27,7 +27,7 @@ test("nowblurb: storms with a nearby alert, the severe-storm outlook and the air
   const r = build(base({ level: 3, kind: "forecast", headline: "Storms near the airport", reasons: ["Storms near the airport until 5 PM", "Thunderstorm wind gusts to 50 mph"],
     storms: { near: true, until: now + 82 * 60000, spc: "ENH", tcf: [{ coverage: "medium", valid: new Date(hourStart + 2 * H).toISOString() }] },
     warnings: ["Severe Thunderstorm Warning"], levels: levels(3, 3, 1, 1, 0, 0, 0, 0), recovery: hourStart + 2 * H }));
-  assert.equal(r.specifics, "Storms within about 10 miles until 7 PM; severe storms possible today (enhanced risk)."); // the gusts are in the conditions line
+  assert.equal(r.specifics, "Thunderstorm advisory near the airport until 6:32 PM; severe storms possible today (enhanced risk)."); // the gusts are in the conditions line
   assert.doesNotMatch(r.specifics, /Storms near the airport/); // the headline isn't repeated
   assert.equal(r.trend, "Expected to improve after about 7 PM.");
   assert.equal(r.improvement, true);

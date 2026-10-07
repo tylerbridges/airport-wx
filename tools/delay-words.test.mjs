@@ -74,8 +74,8 @@ test("delay words: relative cue, size range, no % except Aviation mode", () => {
   assert.equal(W(0.55, { pTypical: 0.2 }).sentence, "Delays likely · higher than usual");
   assert.equal(W(0.15, { pTypical: 0.3 }).sentence, "Small chance of delays · lower than usual");
   assert.equal(W(0.35, { pTypical: 0.33 }).cue, "");
-  assert.equal(W(0.35, { minutes: 38 }).size, "typically 30–50 min");
-  assert.equal(D.minutesRange(12), "typically 5–20 min");
+  assert.equal(W(0.35, { minutes: 38 }).size, "historical median about 40 min");
+  assert.equal(D.minutesRange(12), "historical median about 10 min");
   for (const p of [0.02, 0.18, 0.35, 0.55, 0.76, 0.86]) assert.ok(!/%/.test(W(p, { pTypical: 0.2, minutes: 30 }).sentence));
   assert.equal(D.likelihood({ p: 0.55 }, { report: REPORT, aviation: true, iata: "ORD" }).word, "Delays likely (55%)");
   assert.equal(D.analogWords({ n: 214, k: 131, text: "In 214 similar evening hours at ORD since Aug 2024, 131 (61%) had delays of 15+ min; median 38 min." }),
@@ -117,7 +117,7 @@ test("routine line: the strongest band over the rest of the local day, in words,
   assert.equal(ev.text, "Usual delays this evening");
   assert.equal(ev.key, "usual");
   const pm = D.routineOutlook(ap((h) => (h === 20 || h === 21 ? { p: 0.35 } : {})), now);
-  assert.equal(pm.text, "Delays possible this afternoon · typically 15–35 min");
+  assert.equal(pm.text, "Delays possible this afternoon · historical median about 25 min");
   assert.ok(!/%/.test(pm.text));
   assert.equal(D.routineOutlook(ap((h) => (h === 19 ? { p: 1, override: "ground_stop" } : {})), now), null, "an FAA program in effect: no routine line");
   assert.equal(D.routineOutlook({ iata: "ORD", tz: "America/Chicago", hours: [] }, now), null);
