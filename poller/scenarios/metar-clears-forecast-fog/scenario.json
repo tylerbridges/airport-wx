@@ -12,7 +12,7 @@
     { "t": "hourLevel", "iata": "SFO", "at": [4, 5], "op": "==", "v": 3, "note": "Later forecast hours are untouched." },
     { "t": "now", "iata": "SFO", "level": 0, "obs": true, "notRe": "fog|visibility|ceiling|low clouds" },
     { "t": "card", "iata": "SFO", "re": "^(?![\\s\\S]*(fog|low clouds))" },
-    { "t": "sheet", "iata": "SFO", "re": "Operating normally ?57° · Clear[\\s\\S]*Now · Clear" },
+    { "t": "sheet", "iata": "SFO", "re": "Operating normally[\\s\\S]*57° ?Clear[\\s\\S]*Now · Clear" },
     { "t": "sheet", "iata": "SFO", "re": "^(?![\\s\\S]*Now · (Forecast|Dense fog|Fog|Very low clouds|Low clouds|Low visibility))" },
     { "t": "rendered", "text": "Test scenario: Clear observation after a fog forecast" }
   ]

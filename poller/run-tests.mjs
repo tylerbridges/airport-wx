@@ -22,6 +22,7 @@ import "../tools/cats.test.mjs";
 import "../tools/prefs.test.mjs";
 import "../tools/delay-words.test.mjs";
 import "../tools/outlook.test.mjs";
+import "../tools/wxdays.test.mjs"; // Weather page Today / Tomorrow rows
 import "../tools/split-equivalence.test.mjs"; // summary / detail split (README "status.json")
 import "../tools/obs-hour.test.mjs"; // the observed next hour (README "The observed next hour")
 // live relay
