@@ -446,12 +446,17 @@ async function uiChecks(add, scenario) {
         const back = page.querySelector(".ad-back");
         const clear = title?.textContent === "Weather" && back?.textContent.includes("overview")
           && doc.getElementById("mdTitle")?.textContent === a.iata && !doc.getElementById("mdWrap").hidden;
+        // One Forecast section: Today / Tomorrow rows in plain words (mph, no filler, no "%" in Traveler); Aviation keeps
+        // every decoded period (exact windows) behind "Forecast periods".
         const forecast = page.querySelector(".taf-forecast");
         const expected = (a.taf?.periods || []).filter(p => Date.parse(p.to) > Date.now()).length;
         const rows = forecast?.querySelectorAll(".taf-period").length || 0;
-        const texts = forecast?.innerText || "";
-        add(expected > 0 && rows === expected && /Wind/.test(texts) && /Visibility/.test(texts) && !/Expected conditions|Forecast weather, separate/.test(texts) && (mode !== "traveler" || !/%/.test(texts)) ? "pass" : "fail",
-          `Decoded airport forecast preserves periods and traveler units (${mode})`, `${rows} of ${expected} forecast periods; mph, visibility and cloud ceiling`);
+        const days = forecast?.querySelectorAll(".wxd").length || 0;
+        const texts = forecast?.textContent || "";
+        const outlooks = [...page.querySelectorAll(".sec-h h3")].filter(x => /^(Forecast|Weather outlook|Airport forecast|TAF forecast|Storm outlook)$/.test(x.textContent)).length;
+        const periodsOK = mode === "aviation" ? expected > 0 && rows === expected : rows === 0;
+        add(expected > 0 && days === 2 && periodsOK && outlooks === 1 && /mph|No forecast/.test(texts) && !/None forecast|No ceiling specified|No significant weather forecast|Forecast unavailable|Expected conditions/.test(texts) && (mode !== "traveler" || !/%/.test(texts)) ? "pass" : "fail",
+          `Airport forecast in one Today / Tomorrow section with traveler units (${mode})`, `${days} day rows; ${rows} of ${expected} decoded periods${mode === "aviation" ? "" : " (Aviation only)"}; ${outlooks} forecast section`);
         let helpOK = true;
         for (const type of ["METAR", "TAF"]) {
           const button = page.querySelector(`[aria-label="About ${type}"]`);

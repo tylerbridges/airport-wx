@@ -473,11 +473,22 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 .sc-lsub { margin-top: 3px; font-size: 14px; color: var(--muted); line-height: 1.35; }
 /* Looking ahead: a small label and compact bullets, less weight than the headline */
 /* Current-conditions line under the headline (opens the Weather page) */
-.cur-line { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 44px; margin: 10px 0 -6px; padding: 10px 0 6px; background: none; border: 0; border-top: 1px solid var(--line); border-radius: 0; color: var(--text); font: inherit; font-size: 14px; line-height: 1.3; font-weight: 600; text-align: left; font-variant-numeric: tabular-nums; }
-.cur-line .cl-t { min-width: 0; overflow-wrap: anywhere; }
-.cur-line .chev { flex: none; color: var(--muted); font-size: 20px; line-height: 1; }
-.cur-line:focus-visible { outline: 2px solid var(--l1); outline-offset: 2px; border-radius: 8px; }
-.cl-none { margin: 8px 0 0; font-size: 13.5px; }
+/* Current-conditions pill under the headline (opens the Weather page): emoji, temperature, condition, wind, low visibility */
+.cur-line { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 48px; margin: 12px 0 2px; padding: 0 10px 0 12px; background: var(--card); border: 1px solid var(--line); border-radius: 999px; color: var(--text); font: inherit; font-size: 15px; line-height: 1.2; font-weight: 600; text-align: left; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; cursor: pointer; transition: transform .12s ease; }
+.cur-line:active { transform: scale(.98); }
+.cur-line .cl-e { flex: none; font-size: 22px; line-height: 1; width: 26px; text-align: center; }
+.cur-line .cl-temp { flex: none; font-size: 21px; font-weight: 700; letter-spacing: -.02em; }
+.cur-line .cl-t { flex: 0 1 auto; min-width: 6em; overflow: hidden; text-overflow: ellipsis; }
+.cur-line .cl-z { width: 0; height: 1.25em; } /* first item, so even the wind can wrap away rather than be clipped */
+.cur-line .cl-sec { flex: 0 12 auto; min-width: 0; font-size: 13.5px; margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0 10px; height: 1.25em; overflow: hidden; }
+.cur-line .cl-s { flex: none; font-size: 13.5px; line-height: 1.25em; font-weight: 500; color: var(--muted); }
+.cur-line .cl-s small { font-size: 12px; }
+.cur-line .cl-g.gh { color: var(--l2); font-weight: 700; }
+.cur-line .chev { flex: none; margin-left: -2px; color: var(--muted); font-size: 20px; line-height: 1; }
+@media (max-width: 374px) { .cur-line { gap: 6px; } }
+@media (prefers-reduced-motion: reduce) { .cur-line { transition: none; } .cur-line:active { transform: none; } }
+.cur-line:focus-visible { outline: 2px solid var(--l1); outline-offset: 2px; }
+.cl-none { margin: 12px 0 2px; min-height: 40px; display: flex; align-items: center; padding: 0 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); font-size: 13.5px; }
 /* Next 12 hours (Weather page) */
 .nx-list { list-style: none; margin: 0; padding: 0; }
 .nx-i { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 1.35; }
@@ -550,6 +561,65 @@ b.la-lv0 { color: var(--l0); } b.la-lv1 { color: var(--l1); } b.la-lv2 { color: 
 .cw .srcl { margin-top: 12px; }
 .cw pre.raw { background: var(--card); }
 .cw-bar .mark { box-shadow: 0 0 0 2px var(--card-2); }
+
+/* Weather page (sheet .md-wx): quiet headers, a hero card, Today / Tomorrow rows; inner surfaces use --card on --card-2 */
+.md-wx .sec { margin-top: 20px; }
+.md-wx .sec-h { margin: 0 4px 8px; gap: 6px; flex-wrap: nowrap; min-height: 24px; }
+.md-wx .sec-h .ico { display: none; }
+.md-wx .sec-h h3 { font-size: 13px; font-weight: 600; letter-spacing: .02em; }
+.md-wx .sec-h .rule { border: 0; }
+.md-wx .sec-h .report-info { min-width: 44px; min-height: 44px; margin: -10px -12px -10px -10px; font-size: 16px; opacity: .8; }
+.md-wx .scard { border-radius: 16px; padding: 16px; border-color: transparent; }
+.md-wx .sec.wxh-sec { margin-top: 14px; }
+.wxh { position: relative; }
+.wxh .wxh-help { position: absolute; top: 2px; right: 2px; font-size: 16px; opacity: .8; }
+.wxh-top { display: flex; align-items: center; gap: 12px; padding-right: 32px; }
+.wxh-e { font-size: 44px; line-height: 1; }
+.wxh-temp { font-size: 60px; line-height: 1; font-weight: 300; letter-spacing: -.04em; font-variant-numeric: tabular-nums; display: flex; align-items: baseline; gap: 8px; }
+.wxh-temp .cw-c { font-size: 17px; font-weight: 500; }
+.wxh-cond { margin-top: 8px; font-size: 19px; font-weight: 600; line-height: 1.25; }
+.wxh-obs { margin-top: 2px; font-size: 13px; color: var(--muted); }
+.wxh-obs.late { color: var(--crit); font-weight: 600; }
+.wxt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
+.wxt-grid.odd .wxt:last-child { grid-column: 1 / -1; }
+.wxt { background: var(--card); border-radius: 12px; padding: 10px 12px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.wxt span { font-size: 12px; color: var(--muted); }
+.wxt b { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wxt b .fc { font-size: 13px; vertical-align: 2px; }
+.wxt.gh b { color: var(--l2); }
+.md-wx .cw-expl { margin-top: 12px; font-size: 13.5px; }
+.md-wx .cw pre.raw { background: var(--card); }
+.md-wx .awr-card.scard { padding: 8px 8px 6px; }
+.md-wx .awr-box { border-radius: 12px; border-color: transparent; }
+.wxf.scard { padding: 4px 16px; }
+.wxf > .warn { margin: 12px 0 0; color: var(--l2); font-weight: 600; font-size: 14px; }
+.wxf > .wxf-note { margin: 12px 0 0; }
+.wxd { display: flex; gap: 12px; padding: 14px 0; }
+.wxd + .wxd { border-top: 1px solid var(--line); }
+.wxd-e { flex: none; width: 30px; font-size: 26px; line-height: 30px; text-align: center; }
+.wxd-b { flex: 1; min-width: 0; }
+.wxd-h { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 8px; }
+.wxd-h b { font-size: 16px; font-weight: 700; }
+.wxd-h .fc { align-self: center; margin-left: auto; font-size: 11.5px; padding: 0 6px; }
+.wxd-cov { font-size: 13px; color: var(--muted); }
+.wxd-s { margin-top: 2px; font-size: 15px; line-height: 1.35; }
+.wxd.none .wxd-s { color: var(--muted); }
+.wxd-dot { display: inline-block; width: 8px; height: 8px; margin: 0 7px 1px 0; border-radius: 50%; vertical-align: middle; background: var(--muted); }
+.wxd-dot.l1 { background: var(--l1); } .wxd-dot.l2 { background: var(--l2); } .wxd-dot.l3 { background: var(--l3); } .wxd-dot.l4 { background: var(--l4); }
+.wxd-m { margin-top: 4px; font-size: 13.5px; line-height: 1.4; color: var(--muted); font-variant-numeric: tabular-nums; }
+.wxd-m span { white-space: nowrap; }
+.wxd-m span + span::before { content: " · "; color: var(--muted); font-weight: 400; }
+.wxd-m .gh { color: var(--l2); font-weight: 600; }
+.wxd-x { margin-top: 6px; font-size: 13.5px; line-height: 1.35; }
+.wxd-x + .wxd-x { margin-top: 2px; }
+.wxf-per { border-top: 1px solid var(--line); padding: 4px 0 8px; }
+.wxf-per summary { min-height: 44px; display: flex; align-items: center; font-size: 14px; font-weight: 600; color: var(--muted); cursor: pointer; }
+.wxf-per .wxp { padding: 8px 0; border-top: 1px solid var(--line); }
+.wxp-h { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; font-size: 13.5px; font-weight: 600; }
+.wxp-h b { font-size: 12px; color: var(--muted); }
+.wxp-h .fc { font-size: 11.5px; padding: 0 6px; }
+.wxp-d { margin-top: 2px; font: 12.5px/1.45 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+.wxf-per pre.raw { margin-top: 8px; background: var(--card); }
 
 /* panels (settings, national list) */
 .panel-wrap { position: fixed; inset: 0; z-index: 12; }
@@ -919,7 +989,8 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="sheet.js?v=6"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
 <script src="split.js?v=1"></script><!-- airport details: summary.json + data/airport/<IATA>.json -->
-<script src="app.js?v=88" defer></script>
+<script src="wxdays.js?v=1"></script><!-- Weather page: conditions emoji + Today / Tomorrow forecast rows -->
+<script src="app.js?v=89" defer></script>
 <script type="module" src="searched.js?v=14"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=18"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="flight-features.js?v=1"></script><!-- trips hook -->
