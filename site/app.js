@@ -2826,7 +2826,8 @@
     const sheet = mdWrap().querySelector(".sheet");
     const top = sheet.scrollTop;
     const focusedLabel = keepScroll && sheet.contains(document.activeElement) ? document.activeElement.getAttribute("aria-label") : null;
-    const controlSelector = 'button, a[href], input, select, textarea, [tabindex="0"]';
+    const controlSelector = 'button, summary, a[href], input, select, textarea, [tabindex="0"]';
+    const perOpen = keepScroll && !!sheet.querySelector("details.wxf-per[open]"); // Weather page: Aviation "Forecast periods" stays open through a refresh
     const focusedControl = keepScroll ? [...sheet.querySelectorAll(controlSelector)].indexOf(document.activeElement) : -1;
     const v = view(a);
     const code = codeOf(a);
@@ -2873,6 +2874,7 @@
       hiddenNote,
       checkedLine(a),
     ].filter(Boolean));
+    if (perOpen) { const d = sheet.querySelector("details.wxf-per"); if (d) d.open = true; }
     sheet.scrollTop = keepScroll ? top : 0;
     const focus = focusedLabel ? [...sheet.querySelectorAll("[aria-label]")].find((x) => x.getAttribute("aria-label") === focusedLabel) : focusedControl >= 0 ? sheet.querySelectorAll(controlSelector)[focusedControl] : null;
     focus?.focus({ preventScroll: true });
