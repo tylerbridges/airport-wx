@@ -439,6 +439,12 @@ test("fixture training end to end: with every family and with none (calibrated o
     assert.deepEqual(R.test.displayWords.evaluatedOn, R.period.test);
     assert.equal(R.test.displayWords.bands.reduce((n, b) => n + b.n, 0), R.test.n);
     assert.ok(Math.abs(R.test.displayWords.bands.reduce((n, b) => n + b.k, 0) / R.test.n - R.test.base) <= 0.00005);
+    for (const alert of R.test.displayWords.alerts) {
+      assert.equal(alert.flagged, alert.caught + alert.falseAlarms);
+      assert.equal(alert.caught + alert.missed, R.test.displayWords.bands.reduce((n, b) => n + b.k, 0));
+      assert.ok(alert.detection == null || alert.detection >= 0 && alert.detection <= 1);
+      assert.ok(alert.falseAlarmRate == null || alert.falseAlarmRate >= 0 && alert.falseAlarmRate <= 1);
+    }
     assert.match(renderMarkdown(R), /Displayed delay words \(untouched test\)/);
     assert.ok(on.model.feats.volume && on.model.vol.ORD.q.length === 168 && Array.isArray(on.model.hubs.MSP));
     assert.ok(modelOk(on.model));

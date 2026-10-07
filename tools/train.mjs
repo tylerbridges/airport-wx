@@ -572,6 +572,8 @@ export function renderMarkdown(rep) {
     L.push(`Probability comes directly from the pre-test isotonic model calibration. Word support and airport caps were frozen on ${T.displayWords.supportOn.join(", ")}; evaluated on ${T.displayWords.evaluatedOn.join(", ")}. FAA overrides are not represented by these weather-only rows.`, "");
     L.push(row(["Word", "Hours", "Mean predicted", "Observed disruption rate"]), sep(4));
     for (const b of T.displayWords.bands) L.push(row([b.word, int(b.n), pct(b.meanP), pct(b.rate)]));
+    L.push("", row(["Warning or stronger", "Disruptions caught", "Warnings without disruption", "Missed disruption rows"]), sep(4));
+    for (const a of T.displayWords.alerts || []) L.push(row([a.key, pct(a.detection), pct(a.falseAlarmRate), int(a.missed)]));
     L.push("");
   }
   L.push("## Reliability (test)");

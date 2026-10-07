@@ -99,6 +99,7 @@ function renderReport(rep) {
       : el("p", { class: "say" }, "The deployed report does not yet measure missed disruptions and false alarms for the current traveler labels. Its numerical-threshold results below are not a validation of the complete app."),
     words?.bands?.length ? dataTable(["Words shown", "Forecasts", "Disruptions observed"],
       words.bands.map(x => [x.word, n0(x.n), pct(x.rate)])) : null,
+    el("p", { class: "small muted" }, "A newer training run does not replace the deployed model unless it passes the safety gate. ", el("a", { href: "https://github.com/tylerbridges/airport-wx/tree/history/reports" }, "View training reports and promotion decisions")),
     el("p", { class: "small muted" }, "Evaluation uses held-out dates and fixed wording thresholds. Multiple forecast lead times can refer to the same airport-hour; these are not independent flights. FAA overrides and separate weather warnings are excluded from these model-only results.")));
 
   // reliability chart

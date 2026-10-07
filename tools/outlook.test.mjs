@@ -236,3 +236,14 @@ test("airport health: missing or stale storm sources (SIGMET, SPC, LAMP, TCF, CW
   const a = base(); a.faa = [{ type: "ground_stop", end: new Date(now + H).toISOString() }];
   assert.equal(O.evaluate(a, options({ sources: { ...sources, tcf: { ok: false } } })).headline, "Ground Stop");
 });
+
+test("trip guidance distinguishes inbound holds, closures, future risk and incomplete coverage", () => {
+  for (const type of ["ground_stop", "ground_delay"]) {
+    const text = O.travelAdvice({}, {current:{programs:[{type}]}}, {});
+    assert.match(text, /headed to this airport.*departure airport/);
+    assert.match(text, /keep your planned airport arrival time/);
+  }
+  assert.match(O.travelAdvice({}, {current:{programs:[{type:"closure"}]}}, {}), /Contact your airline before heading out/);
+  assert.match(O.travelAdvice({}, {later:true,level:3,current:{}}, {}), /departure, connection or arrival overlaps/);
+  assert.match(O.travelAdvice({}, {current:{level:0}}, {incomplete:true}), /^Coverage is incomplete.*does not guarantee/);
+});

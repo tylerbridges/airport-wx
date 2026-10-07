@@ -6,7 +6,7 @@
 // trips from site/trips.js when present) and "data" (build time, live relay, sources, checks).
 import { h, icon, prefs, reducedMotion, trapFocus, app, appVersion } from "./navui.js";
 import { loadAirports, airportsLoaded } from "./search.js";
-import { SOURCES as MV_SOURCES } from "./movement.js"; // movement hook: aircraft-position feeds in Data & checks
+import { SOURCES as MV_SOURCES } from "./movement.js?v=5"; // movement hook: aircraft-position feeds in Data & checks
 
 const GH = "https://github.com/tylerbridges/airport-wx";
 // Disruption categories: keys from prefs.js CATEGORIES, labels from site/cats.js (AWXCats.LABELS, the same table

@@ -83,7 +83,8 @@ const NOW_KINDS = { ground_stop: "FAA ground stop", ground_delay: "FAA ground de
 // ---------- likelihood words (build2b) ----------
 
 let REPORT = null; // data/model/report.json (test reliability table and per-airport skill); loaded once below
-export function setReport(r) { REPORT = r && r.test ? r : null; }
+let revision = 0;
+export function setReport(r) { REPORT = r && r.test ? r : null; revision++; }
 const MIN_BIN = 200; // supported hours a reliability bin needs before its word is trusted
 const LOW_SKILL = 0.02; // Brier skill vs climatology at or below this: cap at "Delays possible"
 const WORDS = [
@@ -281,7 +282,7 @@ export function dayPartPhrase(start, end, tz, whole = false) {
 /**
  * One short Traveler line for routine conditions over the rest of the airport's local day, in likelihood() words:
  * the strongest band (highest word, then highest calibrated rate) and its time window, e.g. "Delays unlikely today",
- * "Usual delays this evening", "Delays possible this afternoon · typically 15–30 min" (the size only from
+ * "Usual delays this evening", "Delays possible this afternoon · historical median about 25 min" (the size only from
  * "possible" up). Null when there are no delay numbers left today or delays are happening now (FAA program).
  * Returns {i (hour index), L, key, start, end, when, text}. Never a percentage.
  */
@@ -364,7 +365,7 @@ export function whyBlock(a, now = refNow()) {
 
 /**
  * The sheet's headline outlook, shown inside the top Now card: the Traveler peak window's words ("Flight delays
- * likely"), its time ("5–9 PM") and size ("typically 55–75 min"). Null when that window isn't notable or delays
+ * likely"), its time ("5–9 PM") and size ("historical median about 65 min"). Null when that window isn't notable or delays
  * are happening now (the FAA program is the headline then). Never a percentage.
  */
 export function outlookLead(a) {
@@ -434,7 +435,7 @@ export function delayBlock(a, i, opts = {}) {
   return el("div", "dl-block", ...kids);
 }
 
-const api = { delayLine, delayBlock, outlookLead, likelihood, notable, calibrate, analogWords, analogAgrees, minutesRange, setReport, routineOutlook, outlookHour, whyBlock, dayPartPhrase };
+const api = { get revision() { return revision; }, get validatedAirports() { return REPORT?.test?.byAirport ? Object.keys(REPORT.test.byAirport).length : null; }, delayLine, delayBlock, outlookLead, likelihood, notable, calibrate, analogWords, analogAgrees, minutesRange, setReport, routineOutlook, outlookHour, whyBlock, dayPartPhrase };
 if (typeof window !== "undefined" && window.document) {
   window.AWXDelay = api;
   // Holdout sample support and explanations; probabilities are calibrated by the model.

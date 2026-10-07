@@ -815,7 +815,6 @@
   // ---------- rendering ----------
 
   function render() {
-    sumCache = new WeakMap(); // levels follow the latest data, settings and delay calibration (site/delay.js loads its report late)
     renderHeader();
     renderSeg();
     renderBanner();
@@ -884,7 +883,7 @@
       mine: all.filter((a) => myAirportIds().includes(a.iata)).length,
       risk: all.filter((a) => levelOf(a) >= 2).length,
     };
-    const tabs = [["mine", "My airports"], ["risk", "At risk"]];
+    const tabs = [["mine", "My airports"], ["risk", "At risk · next 24h"]];
     const seg = $("seg");
     seg.replaceChildren(
       ...tabs.map(([k, label]) =>
@@ -1177,7 +1176,8 @@
       "aria-valuemin": "0", "aria-valuemax": String(n - 1), "aria-valuenow": String(Math.max(0, day.cur)),
       "aria-valuetext": day.cur >= 0 ? slotText(slots[day.cur], a) : slotText(slots[0], a),
       "data-start": String(day.start), "data-tz": tz,
-    }, label, tl, ticks, naNote, big ? h("div", { class: "tl-cap" }, h("div", { class: "tl-key", "aria-label": "Colour key: Clear, Low, Moderate, High, Severe" },
+    }, !opts.dayOff ? h("div", { class: "timeline-context", "aria-hidden": "true" }, h("span", {}, "Past 12h"), h("span", {}, "Now → forecast 24h")) : null,
+      label, tl, ticks, naNote, big ? h("div", { class: "scrub-hint muted small" }, "Hold or drag to explore hours · arrow keys also work") : null, big ? h("div", { class: "tl-cap" }, h("div", { class: "tl-key", "aria-label": "Colour key: Clear, Low, Moderate, High, Severe" },
       LEVELS.map(({ label: w }, i) => h("span", { class: "tk" }, h("i", { class: "tk-dot l" + i, "aria-hidden": "true" }), w))),
       sm.open ? h("div", { class: "tl-note" }, "Future hours are forecast estimates; FAA end time is unknown.") : null) : null);
     const T = { wrap, tl, lens, lensSeg, label, segs, slots, day, a, rest: day.cur, big, opts };
@@ -1448,13 +1448,17 @@
       if (!rest || /^(until|through|from|expected)\b/i.test(rest)) cond = cap(rest) || null;
     }
 
+    const upcoming = sm.later && sm.level >= 2 ? outlook(a, sm.start) : null;
+    const forecastHeadline = upcoming && /^Flight delays/.test(upcoming.headline) && sm.peakHour?.level >= 2
+      ? upcoming.headline + " · " + AWXOutlook.conditionHeadline(sm.peakHour, false) : upcoming?.headline;
+    const forecastText = upcoming ? rangeText(sm.start, sm.end, dispTz(a)) + ": " + forecastHeadline : "";
     const reason = (badgeHeadline ? badges.map(b => b.textContent).join(". ") : head) + (programEnd ? ". " + programEnd : "") + (cond ? ". " + cond : "");
     const mine = state.filter === "mine" && fav;
     if (mine) { const saved = visibleAirports().filter(x => state.favs.includes(x.iata)); idx = saved.findIndex(x => x.iata === a.iata); count = saved.length; }
     const code = codeOf(a);
     const el = h("div", {
       class: "card", role: "button", tabindex: "0", "data-iata": a.iata, "data-level": headlineLevel == null ? "unknown" : String(headlineLevel),
-      "aria-label": `${code}, ${a.city}. ${unknown ? "Status unconfirmed" : LEVELS[headlineLevel].label + " risk"}. ${reason}${health.quality ? ". " + health.quality : ""}`,
+      "aria-label": `${code}, ${a.city}. ${unknown ? "Status unconfirmed" : LEVELS[headlineLevel].label + " risk"}. ${reason}${forecastText ? ". Upcoming " + forecastText : ""}${health.quality ? ". " + health.quality : ""}`,
       onclick: open,
       onkeydown: (e) => {
         if ((e.key === "Enter" || e.key === " ") && e.target === el) { e.preventDefault(); open(); }
@@ -1475,6 +1479,7 @@
       h("div", { class: "badges card-headline" }, h("span", { class: "badge " + (headlineLevel == null ? "off" : lv(headlineLevel)), "data-level": headlineLevel, "data-phase": "current" }, consolidatedHeadline)),
       programEnd ? h("div", { class: "sub card-context" }, h("b", {}, programEnd), cond ? ": " + cond : "")
         : cond ? h("div", { class: "sub" }, cond) : null,
+      upcoming ? h("div", { class: "card-forecast" }, h("b", {}, rangeText(sm.start, sm.end, dispTz(a)) + ": "), forecastHeadline) : null,
       health.quality ? h("div", { class: "muted small" }, health.quality) : null,
       AWXOutlook.forecastQuality(a) ? h("div", { class: "muted small forecast-quality" }, AWXOutlook.forecastQuality(a)) : null,
       window.AWXMovement ? safeCall(() => AWXMovement.line(a)) : null, // movement hook: "Departures far below normal" (site/movement.js)
@@ -2349,7 +2354,7 @@
   let sumCache = new WeakMap();
   function summary(a) {
     const v = a.hours?.length ? view(a) : a;
-    const k = Math.floor(refNow() / 60e3) + "|" + S.mode + "|" + (state.data && state.data.generated);
+    const k = Math.floor(refNow() / 60e3) + "|" + S.mode + "|" + (state.data && state.data.generated) + "|" + (window.AWXDelay?.revision || 0) + "|" + !!state.offline + "|" + !!state.sample + "|" + !!noticesDown();
     const c = sumCache.get(v);
     if (c && c.k === k) return c.s;
     const sm = AWXOutlook.summary(v, outlookOpts(a, v));
@@ -2687,11 +2692,18 @@
       boxWrap,
       h("div", { class: "coverage-note muted small" },
         h("p", {}, "Airport-wide weather and FAA outlook · individual flight status not checked."),
+        h("p", {}, `${state.data?.airports?.length || "—"} airports monitored · ${window.AWXDelay?.validatedAirports ?? "unknown number of"} airports in model validation. Coverage varies by airport.`),
         AWXOutlook.forecastQuality(a) ? h("p", { class: "forecast-quality" }, AWXOutlook.forecastQuality(a)) : null),
       h("section", { class: "sec tlsec" },
         h("div", { class: "sec-h" }, icon(ICONS.clock), h("h3", {}, tlTitle), h("span", { class: "rule", "aria-hidden": "true" }), dayBtn),
         tlHolder),
       lookingAhead,
+      section("What this means for your trip", "plane", [
+        h("p", { class: "trip-advice" }, AWXOutlook.travelAdvice(a, sm, AWXOutlook.health(a, outlookOpts(a, view(a))))),
+        h("button", { type: "button", class: "trip-check", onclick: () => {
+          AWXSheet.transfer(closeSheet, () => window.AWXNav?.openSettings(window.AWXPrefs?.getPrefs().flights ? "trips" : "root"));
+        } }, "Check my trip"),
+        h("p", { class: "muted small" }, "Optional trip features match airport conditions to your schedule; confirm your flight with your airline.")]),
       routine, // Aviation baseline detail follows the timeline.
       log,
       ...secs,

@@ -323,5 +323,15 @@
     const start = ms(at), end = Number.isFinite(ms(until)) ? ms(until) : start + 1;
     return !!window && start < window.end && end > window.start;
   }
-  return { conditionHeadline, reasonVisibility, quietHour, health, forecastQuality, evaluate, summary, levelAt, score, restrictions, directionRows, windowFor, overlaps, withObsHour, OBS_NEXT_MAX, PROG_LEVEL, RAISE };
+  // Airport conditions guide preparation; never infer an individual flight's status.
+  function travelAdvice(a, sm, quality = {}) {
+    const programs = sm.current?.programs || [];
+    const coverage = quality.incomplete || quality.outdated ? "Coverage is incomplete or outdated. Confirm current conditions with your airline and refresh this outlook. " : "";
+    if (programs.some(p => p.type === "closure")) return coverage + "An airport closure may affect your trip. Contact your airline before heading out; a published reopening time may change.";
+    if (programs.some(p => p.type === "ground_stop" || p.type === "ground_delay")) return coverage + "Flights headed to this airport may be held at their departure airport. Outbound flights can also be affected by late aircraft. Check your airline before leaving; keep your planned airport arrival time unless the airline tells you otherwise.";
+    if (sm.later && sm.level >= 2) return coverage + "Conditions may worsen during the forecast window above. Check whether your departure, connection or arrival overlaps it, and recheck your airline before leaving and as that window approaches.";
+    if (sm.current?.level >= 2) return coverage + "Allow extra time and review your connection options. Check your airline before leaving and again before a connection; airport conditions cannot confirm your flight's status.";
+    return coverage + "Keep your planned airport arrival time. Recheck this outlook and your airline before leaving; a quiet airport outlook does not guarantee an on-time flight.";
+  }
+  return { travelAdvice, conditionHeadline, reasonVisibility, quietHour, health, forecastQuality, evaluate, summary, levelAt, score, restrictions, directionRows, windowFor, overlaps, withObsHour, OBS_NEXT_MAX, PROG_LEVEL, RAISE };
 });

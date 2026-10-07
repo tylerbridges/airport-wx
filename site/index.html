@@ -33,8 +33,8 @@
   --l0: #30d158;
   --l1: #2ec4d6;
   --l2: #ffb020;
-  --l3: #ff5a36;
-  --l4: #c04dff;
+  --l3: #ff704f;
+  --l4: #cf80ff;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Inter, "Segoe UI", Roboto, system-ui, sans-serif;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --brand: #ffb020; /* runway centreline amber (app icon); light mode: #a15f00 for text (5:1 on white) */
@@ -56,11 +56,11 @@
   --line: rgba(0, 0, 0, .1);
   --backdrop: rgba(0, 0, 0, .35);
   --crit: #d70015;
-  --l0: #1f9d43;
-  --l1: #0f8da0;
-  --l2: #b86e00;
-  --l3: #d63a14;
-  --l4: #9a2fd1;
+  --l0: #146c30;
+  --l1: #086474;
+  --l2: #805000;
+  --l3: #af2d0e;
+  --l4: #75239d;
   --nd: rgba(0, 0, 0, .12);
   --brand: #a15f00;
   --glass: rgba(255, 255, 255, .32);
@@ -81,11 +81,11 @@
     --line: rgba(0, 0, 0, .1);
     --backdrop: rgba(0, 0, 0, .35);
     --crit: #d70015;
-    --l0: #1f9d43;
-    --l1: #0f8da0;
-    --l2: #b86e00;
-    --l3: #d63a14;
-    --l4: #9a2fd1;
+    --l0: #146c30;
+    --l1: #086474;
+    --l2: #805000;
+    --l3: #af2d0e;
+    --l4: #75239d;
     --nd: rgba(0, 0, 0, .12);
   --brand: #a15f00;
     --glass: rgba(255, 255, 255, .32);
@@ -157,7 +157,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 800; letter-spa
 .tl-pending { margin-top: 10px; height: 71px; }
 .card:active { transform: scale(.985); }
 .top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-.code { font-size: 46px; line-height: .95; font-weight: 800; letter-spacing: -.035em; }
+.code { font-size: 40px; line-height: .95; font-weight: 800; letter-spacing: -.035em; }
 .sh-where { margin: 0 0 10px; font-size: 15px; line-height: 1.3; overflow-wrap: anywhere; }
 .sh-where .sh-aname { font-weight: 600; }
 .where { margin-top: 8px; font-size: 16px; line-height: 1.25; color: var(--muted); overflow-wrap: anywhere; }
@@ -177,6 +177,15 @@ h1 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 800; letter-spa
 .sh-hub { margin: 8px 2px 0; font-size: 13.5px; line-height: 1.35; color: var(--muted); } /* hubs hook: hub cascade line under the sheet's status card */
 .badges { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .card-headline { margin-top: 12px; }
+.card-headline .badge { font-size: 14px; line-height: 1.35; text-transform: none; letter-spacing: normal; }
+.card-forecast { margin-top: 9px; color: var(--text); font-size: 14px; line-height: 1.4; }
+.forecast-quality, .coverage-note { margin-top: 8px; line-height: 1.4; }
+.coverage-warning { padding: 12px; border: 1px solid var(--line); border-radius: 12px; margin: 8px 0; }
+.timeline-context { display: grid; grid-template-columns: 1fr 2fr; font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+.timeline-context span + span { border-left: 2px solid var(--text); padding-left: 6px; }
+.scrub-hint { margin-top: 8px; }
+.trip-advice { line-height: 1.5; }
+.trip-check { min-height: 44px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 10px; font-weight: 600; }
 .card-context { margin-top: 6px; }
 .card-context b { color: var(--text); font-weight: 600; }
 .badge {
@@ -220,7 +229,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 800; letter-spa
 .kv dt { color: var(--muted); }
 .kv dd { margin: 0; text-align: right; font-weight: 600; }
 .fc { display: inline-block; padding: 1px 8px; border-radius: 6px; font-weight: 800; font-size: 13px; color: #fff; }
-.fc.VFR { background: #1f9d43; } .fc.MVFR { background: #2867d6; } .fc.IFR { background: #d63a14; } .fc.LIFR { background: #b02bd1; }
+.fc.VFR { background: #146c30; } .fc.MVFR { background: #2867d6; } .fc.IFR { background: #af2d0e; } .fc.LIFR { background: #b02bd1; }
 pre.raw { margin: 0; font: 12.5px/1.45 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--card-2); border-radius: 14px; padding: 12px; user-select: text; }
 .item { padding: 8px 0; font-size: 14px; }
 .item + .item { border-top: 1px solid var(--line); }
@@ -236,7 +245,7 @@ table.lt { border-collapse: collapse; font-size: 12px; }
 .lt tbody th, .lt thead th:first-child { position: sticky; left: 0; background: var(--card); text-align: left; padding-left: 12px; }
 .lt td.hot { color: var(--c); font-weight: 800; }
 .fcd { display: inline-block; width: 18px; height: 18px; line-height: 18px; border-radius: 5px; color: #fff; font-weight: 800; font-size: 11px; }
-.fcd.VFR { background: #1f9d43; } .fcd.MVFR { background: #2867d6; } .fcd.IFR { background: #d63a14; } .fcd.LIFR { background: #b02bd1; }
+.fcd.VFR { background: #146c30; } .fcd.MVFR { background: #2867d6; } .fcd.IFR { background: #af2d0e; } .fcd.LIFR { background: #b02bd1; }
 .report-info { border:0; background:transparent; color:var(--muted); min-width:44px; min-height:44px; padding:0; font-size:20px; cursor:pointer; flex-shrink:0; }
 .report-title { display:flex; align-items:center; gap:6px; }
 .report-title .pd-h { margin:0; }
@@ -564,7 +573,7 @@ b.la-lv0 { color: var(--l0); } b.la-lv1 { color: var(--l1); } b.la-lv2 { color: 
 .cw-bar { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; height: 16px; }
 .cw-bar .seg { border-radius: 4px; display: grid; place-items: center; font-style: normal; }
 .cw-bar .seg i { font-style: normal; font-size: 9px; font-weight: 800; color: #fff; letter-spacing: .04em; }
-.cw-bar .LIFR { background: #b02bd1; } .cw-bar .IFR { background: #d63a14; } .cw-bar .MVFR { background: #2867d6; } .cw-bar .VFR { background: #1f9d43; }
+.cw-bar .LIFR { background: #b02bd1; } .cw-bar .IFR { background: #af2d0e; } .cw-bar .MVFR { background: #2867d6; } .cw-bar .VFR { background: #146c30; }
 .cw-bar .mark { position: absolute; top: -4px; bottom: -4px; width: 4px; margin-left: -2px; border-radius: 2px; background: var(--text); box-shadow: 0 0 0 2px var(--card-2); }
 .ticks-bar { position: relative; height: 12px; border-radius: 3px; background: repeating-linear-gradient(90deg, var(--line) 0 2px, transparent 2px calc(100% / 8)); overflow: hidden; }
 .ticks-bar::before { content: ""; position: absolute; inset: 0 auto 0 0; width: calc(var(--f) * 100%); background: repeating-linear-gradient(90deg, var(--l1) 0 calc(100% / 8 - 2px), transparent calc(100% / 8 - 2px) calc(100% / 8)); background-size: calc(100% / var(--f)) 100%; border-radius: 3px; }
@@ -753,7 +762,7 @@ b.la-lv0 { color: var(--l0); } b.la-lv1 { color: var(--l1); } b.la-lv2 { color: 
 :root[data-theme="light"] {
   color-scheme: light;
   --bg: #f2f2f7; --card: #fff; --card-2: #f2f2f7; --seg-sel: #fff; --text: #000; --muted: #6c6c70; --line: rgba(0, 0, 0, .1); --backdrop: rgba(0, 0, 0, .35);
-  --crit: #d70015; --l0: #1f9d43; --l1: #0f8da0; --l2: #b86e00; --l3: #d63a14; --l4: #9a2fd1;
+  --crit: #d70015; --l0: #146c30; --l1: #086474; --l2: #805000; --l3: #af2d0e; --l4: #75239d;
   --glass-bg: rgba(255, 255, 255, .66); --glass-strong: rgba(255, 255, 255, .88); --glass-solid: rgba(250, 250, 252, .97); --glass-rim: rgba(255, 255, 255, .95); --glass-hi: rgba(255, 255, 255, 1);
   --glass-shadow: 0 10px 30px rgba(0, 0, 0, .14), 0 1px 4px rgba(0, 0, 0, .08), 0 0 0 .5px rgba(0, 0, 0, .08);
   --capsule: rgba(0, 0, 0, .07); --tab-off: rgba(60, 60, 67, .85); --brand: #a15f00; --brand-fill: #c77700; --brand-ink: #fff; --accent: var(--brand); --accent-btn: #a15f00;
@@ -763,7 +772,7 @@ b.la-lv0 { color: var(--l0); } b.la-lv1 { color: var(--l1); } b.la-lv2 { color: 
 :root[data-theme="dark"] {
   color-scheme: dark;
   --bg: #000; --card: #1c1c1e; --card-2: #2c2c2e; --seg-sel: #3a3a3c; --text: #fff; --muted: #a1a1a6; --line: rgba(255, 255, 255, .1); --backdrop: rgba(0, 0, 0, .55);
-  --crit: #ff453a; --l0: #30d158; --l1: #2ec4d6; --l2: #ffb020; --l3: #ff5a36; --l4: #c04dff;
+  --crit: #ff453a; --l0: #30d158; --l1: #2ec4d6; --l2: #ffb020; --l3: #ff704f; --l4: #cf80ff;
   --glass-bg: rgba(44, 44, 48, .56); --glass-strong: rgba(40, 40, 44, .84); --glass-solid: rgba(38, 38, 42, .97); --glass-rim: rgba(255, 255, 255, .16); --glass-hi: rgba(255, 255, 255, .2);
   --glass-shadow: 0 10px 30px rgba(0, 0, 0, .5), 0 2px 8px rgba(0, 0, 0, .3);
   --capsule: rgba(255, 255, 255, .13); --tab-off: rgba(235, 235, 245, .75); --brand: #ffb020; --brand-fill: #ffb020; --brand-ink: #1a1200; --accent: var(--brand); --accent-btn: var(--brand);
@@ -995,19 +1004,19 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 </div>
 <div class="sr" id="announce" aria-live="polite"></div>
 <script src="offline.js?v=5"></script>
-<script src="outlook.js?v=16"></script>
+<script src="outlook.js?v=17"></script>
 <script src="cats.js?v=4"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=6"></script><!-- build2b: shared sheet drag / back / scroll lock -->
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
 <script src="split.js?v=2"></script><!-- airport details: summary.json + data/airport/<IATA>.json -->
 <script src="wxdays.js?v=1"></script><!-- Weather page: conditions emoji + Today / Tomorrow forecast rows -->
 <script src="nowblurb.js?v=2"></script><!-- the airport sheet's Now card blurb (pure) -->
-<script src="app.js?v=95" defer></script>
+<script src="app.js?v=96" defer></script>
 <script type="module" src="searched.js?v=14"></script><!-- build2a hook -->
-<script type="module" src="delay.js?v=19"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
+<script type="module" src="delay.js?v=20"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="flight-features.js?v=1"></script><!-- trips hook -->
-<script type="module" src="nav.js?v=25"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
-<script type="module" src="movement.js?v=4"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
+<script type="module" src="nav.js?v=26"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
+<script type="module" src="movement.js?v=5"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
 <script type="module" src="brief.js?v=10"></script><!-- brief hook: airport Today’s changes -->
 <script type="module" src="terminals.js?v=6"></script><!-- terminals hook: terminal map + lounges cards in the airport sheet -->
 <script type="module" src="radar/card.js?v=5"></script><!-- radar hook: radar loop card in the airport sheet (engine loads on demand) -->

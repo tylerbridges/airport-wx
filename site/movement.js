@@ -215,8 +215,11 @@ export async function checkRow(add) {
   add(run.ok && age < FRESH_MS ? "pass" : "warn", "Movement feed", bits.join(" · "));
 }
 
+let loading = false;
 async function load() {
+  if (loading || document.visibilityState === "hidden") return;
   if (window.AWXTest && window.AWXTest.name) return; // test scenarios aren't live traffic
+  loading = true;
   try {
     const r = await fetch("./data/movement.json", { cache: "no-store" });
     if (!r.ok) return;
@@ -228,12 +231,12 @@ async function load() {
       const app = window.AWXApp;
       if (app && app.render && app.state && app.state.data) app.render();
     }
-  } catch { /* no movement data: the page simply doesn't show it */ }
+  } catch { /* no movement data: the page simply doesn't show it */ } finally { loading = false; }
 }
 
 const api = { card, line, alerts, checkRow, SOURCES, _set: (d) => { data = d; } };
 // Only the main page loads data (check.html and Settings import this module for checkRow/SOURCES).
-if (typeof document !== "undefined" && document.getElementById("list")) {
+if (typeof document !== "undefined" && document.getElementById("list") && !window.AWXMovement) {
   window.AWXMovement = api;
   injectStyle();
   load();

@@ -510,13 +510,13 @@ export async function consistencyChecks(add, w, doc, where = "") {
     if (!a) continue;
     const badgeLevels = [...card.querySelectorAll(".badge[data-level]")].map(el => Number(el.dataset.level));
     const cardLv = badgeLevels.length ? Math.max(...badgeLevels) : null;
-    // The home summary is current-only; the forecast remains in details and hourly timelines.
+    // Current severity stays primary; meaningful higher future risk has a separate neutral line.
     const sm = A.summary(a);
     const laterBadge = card.querySelector('.badge[data-phase="forecast"]');
     const currentLevel = sm.current?.kind === "unknown" ? null : (sm.current?.level ?? sm.nowLevel);
-    if (laterBadge || card.querySelector(".card-forecast")) levels.push(`${iata}: future risk leaked onto the home summary`);
+    if (laterBadge || !!card.querySelector(".card-forecast") !== !!(sm.later && sm.level >= 2)) levels.push(`${iata}: upcoming risk presentation disagrees with outlook`);
     if (cardLv !== currentLevel || card.dataset.level !== (currentLevel == null ? "unknown" : String(currentLevel))) levels.push(`${iata}: card ${cardLv}, current outlook ${currentLevel}`);
-    if (/Upcoming /.test(card.getAttribute("aria-label"))) levels.push(`${iata}: card accessibility label announces a future risk`);
+    if ((sm.later && sm.level >= 2) && !/Upcoming /.test(card.getAttribute("aria-label"))) levels.push(`${iata}: upcoming risk missing from accessibility label`);
     const tl = card.querySelector(".tl-wrap");
     const T = tl && tl._tl;
     if (T && sm.level >= 1 && Number.isFinite(sm.end)) {

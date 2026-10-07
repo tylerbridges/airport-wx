@@ -7,7 +7,7 @@
 import { loadAirports, rank, decodeList } from "./search.js";
 import { navChecks } from "./navcheck.js?v=6"; // nav hook
 import { tripChecks } from "./check-trips.js?v=9"; // trips hook
-import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=14"; // scenarios hook; More details page helpers
+import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=15"; // scenarios hook; More details page helpers
 
 const P = new URLSearchParams(location.search);
 const MOCK = P.get("mock") === "1";
@@ -931,7 +931,10 @@ async function flightFeatureChecks(add) {
       check(!doc.getElementById("tab-trips") && w.AWXNav.tab() === "airports" && w.location.hash === "#airports", "Disabled Trips deep link returns to Airports");
       const resources = () => w.performance.getEntriesByType("resource").filter(e => /\/(trips\.js|trip-risk\.js|trip-import\.js|calendar-link\.js|trips\.json)(?:[?]|$)/.test(e.name));
       check(resources().length === 0, "No flight module or schedule requests while disabled");
-      w.AWXNav.openSettings();
+      doc.querySelector("#list .card[data-iata]").click();
+      doc.querySelector("#sheet .trip-check").click();
+      await new Promise(resolve => setTimeout(resolve, 400));
+      check(!w.AWXPrefs.getPrefs().flights && !w.AWXTrips && !!doc.querySelector('[data-key="flights"]'), "Check my trip opens opt-in and survives the airport sheet closing");
       const toggle = () => doc.querySelector('[data-key="flights"]');
       check(toggle()?.getAttribute("aria-checked") === "false" && !doc.querySelector('[data-page="trips"]'), "Settings exposes opt-in without trip setup links");
       toggle().click();
