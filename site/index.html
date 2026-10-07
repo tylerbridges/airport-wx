@@ -609,9 +609,8 @@ b.la-lv0 { color: var(--l0); } b.la-lv1 { color: var(--l1); } b.la-lv2 { color: 
 .wxd.none .wxd-s { color: var(--muted); }
 .wxd-dot { display: inline-block; width: 8px; height: 8px; margin: 0 7px 1px 0; border-radius: 50%; vertical-align: middle; background: var(--muted); }
 .wxd-dot.l1 { background: var(--l1); } .wxd-dot.l2 { background: var(--l2); } .wxd-dot.l3 { background: var(--l3); } .wxd-dot.l4 { background: var(--l4); }
-.wxd-m { margin-top: 4px; font-size: 13.5px; line-height: 1.4; color: var(--muted); font-variant-numeric: tabular-nums; }
+.wxd-m { display: flex; flex-wrap: wrap; gap: 1px 12px; margin-top: 4px; font-size: 13.5px; line-height: 1.4; color: var(--muted); font-variant-numeric: tabular-nums; }
 .wxd-m span { white-space: nowrap; }
-.wxd-m span + span::before { content: " · "; color: var(--muted); font-weight: 400; }
 .wxd-m .gh { color: var(--l2); font-weight: 600; }
 .wxd-x { margin-top: 6px; font-size: 13.5px; line-height: 1.35; }
 .wxd-x + .wxd-x { margin-top: 2px; }
