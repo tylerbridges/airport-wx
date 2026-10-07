@@ -2245,7 +2245,6 @@
     if (separateAhead && ahead.length) {
       const rows = ahead.map(row => {
         const dot = row.firstElementChild, content = row.lastElementChild;
-        if (dot.classList.contains("la-good")) content.style.color = "var(--l0)";
         dot.remove();
         row.classList.remove("la-i");
         row.replaceChildren(h("div", { class: "lg-entry" },
@@ -2642,14 +2641,15 @@
     fillCrosswind(a);
   }
 
-  /** "Today so far": the newest two of the airport's events today (site/brief.js) not already on the sheet (skip), newest first; null when none remain. */
-  const LOG_MAX = 2;
+  /** "Today so far": the newest three of the airport's events today (site/brief.js), newest first; events already shown elsewhere on the sheet (skip) go last, so three show whenever there are three changes today; null when there are none. */
+  const LOG_MAX = 3;
   function logSection(a, skip = () => false) {
-    const list = AWXBrief.todayEvents(a).filter((e) => !skip(e));
-    if (!list.length) return null;
+    const all = AWXBrief.todayEvents(a);
+    if (!all.length) return null;
     const tz = dispTz(a);
-    const shown = list.slice(0, LOG_MAX);
-    const more = list.length - shown.length;
+    const fresh = all.filter((e) => !skip(e)), dup = all.filter((e) => skip(e));
+    const shown = fresh.concat(dup).slice(0, LOG_MAX).sort((x, y) => all.indexOf(x) - all.indexOf(y));
+    const more = all.length - shown.length;
     const open = () => openDetails(a.iata, "today");
     return section("Today so far", "clock", [h("ul", { class: "sh-log" },
       shown.map((e) => h("li", {}, h("button", { type: "button", class: "lg-entry", "data-detail": "today", "aria-haspopup": "dialog", onclick: open },

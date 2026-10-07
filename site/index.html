@@ -522,6 +522,9 @@ b.la-lv0 { color: var(--l0); } b.la-lv1 { color: var(--l1); } b.la-lv2 { color: 
 .ahead-card .lg-s { flex: 1; min-width: 0; }
 .ahead-card .lg-t { font-size: 12px; line-height: 1.4; }
 .ahead-card .lg-entry::before { content: none; }
+/* Looking ahead stays neutral (the colour belongs to the Now status above): text in --text, no level colours */
+.ahead-card .lg-s, .ahead-card .lg-s b, .ahead-card .lg-s [class*="la-lv"], .ahead-card .lg-s .dl-hi, .ahead-card .lg-s .dl-mid,
+.sc-ahead .la-list b { color: var(--text); }
 .lg-entry:focus-visible, .lg-more:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .sh-log li:last-child, .bf-ev:last-child { border-bottom: 0; }
 .lg-t, .bf-t { flex: none; width: 72px; min-width: 72px; color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -990,7 +993,7 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
 <script src="split.js?v=1"></script><!-- airport details: summary.json + data/airport/<IATA>.json -->
 <script src="wxdays.js?v=1"></script><!-- Weather page: conditions emoji + Today / Tomorrow forecast rows -->
-<script src="app.js?v=89" defer></script>
+<script src="app.js?v=91" defer></script>
 <script type="module" src="searched.js?v=14"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=18"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="flight-features.js?v=1"></script><!-- trips hook -->
