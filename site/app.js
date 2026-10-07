@@ -2245,7 +2245,6 @@
     if (separateAhead && ahead.length) {
       const rows = ahead.map(row => {
         const dot = row.firstElementChild, content = row.lastElementChild;
-        if (dot.classList.contains("la-good")) content.style.color = "var(--l0)";
         dot.remove();
         row.classList.remove("la-i");
         row.replaceChildren(h("div", { class: "lg-entry" },
