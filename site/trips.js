@@ -364,7 +364,7 @@ function render(container) {
 
 function testBanner() {
   if (!T.scenario && !T.name) return null;
-  return h("div", { class: "banner" }, h("b", {}, "Test scenario: " + (T.info?.title || T.scenario || T.name) + " "), "(not live) · ",
+  return h("div", { class: "msgbar" }, h("b", {}, "Test scenario: " + (T.info?.title || T.scenario || T.name) + " "), "(not live) · ",
     h("a", { href: T.exitUrl || "./", onclick: e => { e.preventDefault(); T.exit(); } }, "Exit"));
 }
 

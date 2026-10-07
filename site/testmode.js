@@ -279,12 +279,12 @@
   }
   /** "Test scenario: <title> (not live) · Exit" — app.js draws the banner (rebuilt on every render); this adds Exit, or the whole banner on LIVE_PATH pages. */
   function decorate() {
-    var box = document.getElementById("banner");
+    var box = document.getElementById("msgbar");
     if (!box) return;
-    var b = [].slice.call(box.querySelectorAll(".banner")).filter(function (x) { return /Test scenario/.test(x.textContent); })[0];
+    var b = [].slice.call(box.querySelectorAll(".msgbar")).filter(function (x) { return /Test scenario/.test(x.textContent); })[0];
     var info = T.info || {};
     if (!b && live) {
-      b = el("div", { class: "banner awx-tp-banner" }, [el("b", { text: "Test scenario: " + (info.title || scen) + " " }), "(not live)"]);
+      b = el("div", { class: "msgbar awx-tp-note" }, [el("b", { text: "Test scenario: " + (info.title || scen) + " " }), "(not live)"]);
       box.prepend(b);
     }
     if (!b || b.querySelector("[data-awx-exit]")) return;
@@ -297,7 +297,7 @@
   function watchBanner() {
     if (watching) return;
     var go = function () {
-      var box = document.getElementById("banner");
+      var box = document.getElementById("msgbar");
       if (!box) { setTimeout(go, 50); return; }
       watching = true;
       decorate();
@@ -330,7 +330,7 @@
       ".awx-tp-r[aria-current=true] b::after { content: \" · open\"; color: var(--l2, #ffb020); font-weight: 600; }",
       ".awx-tp-r.acc b { color: var(--l1, #2ec4d6); }",
       ".awx-tp-r:focus-visible, .awx-tp-x:focus-visible { outline: 2px solid var(--l1, #2ec4d6); outline-offset: -2px; border-radius: 10px; }",
-      ".banner .awx-tp-exit { color: var(--l1, #2ec4d6); font-weight: 600; }",
+      ".msgbar .awx-tp-exit { color: var(--l1, #2ec4d6); font-weight: 600; }",
     ].join("\n");
     document.head.append(css);
   }

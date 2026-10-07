@@ -897,14 +897,14 @@
   }
 
   function renderBanner() {
-    const b = $("banner");
+    const b = $("msgbar");
     const kids = [];
-    if (state.sample) kids.push(h("div", { class: "banner" }, h("b", {}, "Sample data. "), "Live data isn't available yet; this is a frozen example snapshot."));
-    if (window.AWXTest && AWXTest.name) kids.push(h("div", { class: "banner" }, h("b", {}, "Test scenario: " + ((state.data && state.data.scenario && state.data.scenario.title) || AWXTest.name) + " "), "(not live)")); // build2a hook
+    if (state.sample) kids.push(h("div", { class: "msgbar" }, h("b", {}, "Sample data. "), "Live data isn't available yet; this is a frozen example snapshot."));
+    if (window.AWXTest && AWXTest.name) kids.push(h("div", { class: "msgbar" }, h("b", {}, "Test scenario: " + ((state.data && state.data.scenario && state.data.scenario.title) || AWXTest.name) + " "), "(not live)")); // build2a hook
     const src = state.data?.sources;
     if (src) {
       const missing = ["faa", "atcscc", "metar", "taf", "nws"].filter(k => !src[k]?.ok || src[k].error || src[k].stale);
-      if (missing.length) kids.push(h("div", { class: "banner coverage-warning", role: "status" },
+      if (missing.length) kids.push(h("div", { class: "msgbar coverage-warning", role: "status" },
         h("b", {}, "Coverage incomplete. "), missing.map(k => SOURCE_NAMES[k]).join(", ") + " unavailable or limited. Disruptions may be missing from At risk."));
     }
     b.replaceChildren(...kids);
@@ -2791,15 +2791,15 @@
       log,
       ...secs,
       aviation() ? pilotDetails(a, { title: "Aviation details" }) : null,
-      section("Airport details", "plane", [h("div", { class: "ad-menu" },
+      section("Airport details", "plane", [h("div", { class: "dt-menu" },
         detailRow("Weather", "Current conditions and storm outlook", "weather", () => openDetails(a.iata, "weather")),
         window.AWXRadarCard && AWXRadarCard.covered(a) ? detailRow("Radar", "Live rain and snow", "radar", () => AWXRadarCard.open(a)) : null,
         informationalNotices ? detailRow("Flight restrictions", "Nearby airspace restrictions", "notices", () => openDetails(a.iata, "notices")) : null,
         mv ? detailRow("Traffic right now", "Aircraft movements and coverage", "traffic", () => openDetails(a.iata, "traffic")) : null,
-        h("button", { type: "button", class: "md-row ad-row trip-check", onclick: () => {
+        h("button", { type: "button", class: "md-row dt-row trip-check", onclick: () => {
           AWXSheet.transfer(closeSheet, () => window.AWXNav?.openSettings(window.AWXPrefs?.getPrefs().flights ? "trips" : "root"));
-        } }, h("span", {}, h("span", { class: "ad-title" }, "Check my trip")), h("span", { class: "chev", "aria-hidden": "true" }, "›")),
-        detailRow("More details", "Outlook, sources and aviation reports", "technical", () => openDetails(a.iata)))], null, { cls: "ad-card" }),
+        } }, h("span", {}, h("span", { class: "dt-title" }, "Check my trip")), h("span", { class: "chev", "aria-hidden": "true" }, "›")),
+        detailRow("More details", "Outlook, sources and aviation reports", "technical", () => openDetails(a.iata)))], null, { cls: "dt-card" }),
       hiddenNote,
       checkedLine(a),
     ].filter(Boolean));
@@ -2823,7 +2823,7 @@
   const menuWarned = new Set();
   /** Three quick taps on the "Airport details" heading show what the menu looks like on this device (for a bug report). */
   function menuDiag(sheet) {
-    const menu = sheet.querySelector(".ad-menu"), head = menu && menu.closest(".sec")?.querySelector(".sec-h");
+    const menu = sheet.querySelector(".dt-menu"), head = menu && menu.closest(".sec")?.querySelector(".sec-h");
     if (!head) return;
     let taps = [];
     head.addEventListener("click", () => {
@@ -2841,24 +2841,24 @@
   }
   function healMenu(sheet, a) {
     const warn = (k, msg) => { if (!menuWarned.has(k)) { menuWarned.add(k); console.warn("Airport details menu: " + msg); } };
-    let menu = sheet.querySelector(".ad-menu");
+    let menu = sheet.querySelector(".dt-menu");
     if (!menu) {
-      menu = h("div", { class: "ad-menu" });
-      const sec = section("Airport details", "plane", [menu], null, { cls: "ad-card" });
+      menu = h("div", { class: "dt-menu" });
+      const sec = section("Airport details", "plane", [menu], null, { cls: "dt-card" });
       const tail = sheet.querySelector(".hidnote") || sheet.lastElementChild;
       if (tail && tail.parentNode === sheet) tail.before(sec); else sheet.append(sec);
       warn("missing", "rebuilt the missing menu");
     }
-    if (menu.querySelectorAll(".ad-row").length < 2) {
+    if (menu.querySelectorAll(".dt-row").length < 2) {
       if (!menu.querySelector('[data-detail="weather"]')) menu.prepend(detailRow("Weather", "Current conditions and storm outlook", "weather", () => openDetails(a.iata, "weather")));
       if (!menu.querySelector('[data-detail="technical"]')) menu.append(detailRow("More details", "Outlook, sources and aviation reports", "technical", () => openDetails(a.iata)));
       warn("rows", "rebuilt missing rows");
     }
     requestAnimationFrame(() => {
       if (!menu.isConnected || $("sheetWrap").hidden || !sheet.offsetHeight) return;
-      if (menu.getBoundingClientRect().height < 1 || [...menu.querySelectorAll(".ad-row")].some((r) => r.getBoundingClientRect().height < 1)) {
+      if (menu.getBoundingClientRect().height < 1 || [...menu.querySelectorAll(".dt-row")].some((r) => r.getBoundingClientRect().height < 1)) {
         menu.style.display = "block";
-        for (const r of menu.querySelectorAll(".ad-row")) { r.style.display = "flex"; r.style.minHeight = "52px"; }
+        for (const r of menu.querySelectorAll(".dt-row")) { r.style.display = "flex"; r.style.minHeight = "52px"; }
         warn("height", "rows had no height; forced block layout");
       }
     });
@@ -2902,8 +2902,8 @@
   // ---------- More details page (a full-height sheet over the airport sheet; site/sheet.js makeSheet) ----------
 
   function detailRow(title, subtitle, key, action) {
-    return h("button", { type: "button", class: "md-row ad-row", "data-detail": key, "aria-haspopup": "dialog", onclick: action },
-      h("span", {}, h("span", { class: "ad-title" }, title), subtitle ? h("span", { class: "ad-sub" }, subtitle) : null),
+    return h("button", { type: "button", class: "md-row dt-row", "data-detail": key, "aria-haspopup": "dialog", onclick: action },
+      h("span", {}, h("span", { class: "dt-title" }, title), subtitle ? h("span", { class: "dt-sub" }, subtitle) : null),
       h("span", { class: "chev", "aria-hidden": "true" }, "›"));
   }
   function popupFocus(el, ev) {
@@ -3107,7 +3107,7 @@
       h("div", { class: "grab", "aria-hidden": "true" }),
       h("div", { class: "sh-head md-page-head" },
         h("div", { class: "md-nav" },
-          h("button", { type: "button", class: "ad-back", "aria-label": "Back to airport", onclick: () => closeDetails() }, `‹ ${code} overview`),
+          h("button", { type: "button", class: "dt-back", "aria-label": "Back to airport", onclick: () => closeDetails() }, `‹ ${code} overview`),
           h("button", { type: "button", class: "close", "aria-label": "Close " + title.toLowerCase(), onclick: () => closeDetails() }, closeSvg())),
         h("h1", { class: "md-page-title", id: "mdPageTitle" }, title)),
       h("div", { class: "sh-where" }, h("b", { id: "mdTitle" }, code), " · ", h("span", { class: "sh-aname" }, a.name)),

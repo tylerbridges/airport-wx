@@ -486,7 +486,7 @@ async function cardCheck(add) {
     const ok = row && /Radar/.test(row.textContent) && /Live rain and snow/.test(row.textContent) && !inline && !w.WXRadar;
     add(ok ? "pass" : "fail", "Radar in the airport details menu", ok ? "Opens on demand; no radar engine or inline card in the main sheet" : "Radar menu missing or engine loaded before opening");
     const doc = w.document;
-    const rows = [...doc.querySelectorAll("#sheet .ad-row")];
+    const rows = [...doc.querySelectorAll("#sheet .dt-row")];
     const compact = rows.length >= 3 && rows.every((x) => x.getBoundingClientRect().height >= 44) && !doc.querySelector("#sheet .ln-sec, #sheet .tm-sec, #sheet .pilot, #sheet .bf-today");
     add(compact ? "pass" : "fail", "Airport details use navigation rows", compact ? "44 px targets; amenities and technical reports open on demand" : "Rows missing, undersized, or secondary cards inline");
     const calls = { show: 0, hide: 0, destroy: 0 };

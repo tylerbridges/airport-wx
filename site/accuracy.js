@@ -73,7 +73,7 @@ function summarySentences(rel) {
 function renderReport(rep) {
   const T = rep.test;
   const kids = [];
-  if (rep.fixtures) kids.push(el("div", { class: "banner" }, el("b", {}, "Fixture data. "), "These numbers come from a synthetic test world, not real flights."));
+  if (rep.fixtures) kids.push(el("div", { class: "msgbar" }, el("b", {}, "Fixture data. "), "These numbers come from a synthetic test world, not real flights."));
   // what is live
   const live = rep.live || {};
   const statusText = rep.deployed

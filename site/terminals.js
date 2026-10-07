@@ -253,7 +253,7 @@ function loungeCard(a, list) {
 /** Navigation only: maps and lounge lists stay behind the Airport details menu. */
 function decorateSheet(sheet, a) {
   if (!sheet || !a) return;
-  const menu = sheet.querySelector(".ad-menu"), A = W.AWXApp;
+  const menu = sheet.querySelector(".dt-menu"), A = W.AWXApp;
   if (!menu || !A?.detailRow) return;
   if (!S.index) { loadBase().then(() => redecorate(a.iata)); return; }
   if (!S.lounges) loadLounges().then(() => redecorate(a.iata)); // the Lounges row appears when its list arrives

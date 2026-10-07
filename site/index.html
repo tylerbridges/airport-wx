@@ -16,7 +16,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Airports">
-<script src="testmode.js?v=2"></script>
+<script src="testmode.js?v=3"></script>
 <!-- /build2a hook -->
 <style>
 :root {
@@ -142,7 +142,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 800; letter-spa
 .seg button[aria-selected="true"] { background: var(--seg-sel); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, .25); }
 .seg .n { font-weight: 500; opacity: .7; margin-left: 2px; }
 
-.banner { background: var(--card); border-radius: 14px; padding: 10px 14px; margin-bottom: 12px; font-size: 14px; border-left: 4px solid var(--l2); }
+.msgbar { background: var(--card); border-radius: 14px; padding: 10px 14px; margin-bottom: 12px; font-size: 14px; border-left: 4px solid var(--l2); }
 .notes { margin: 14px 4px 0; font-size: 13px; color: var(--muted); }
 .notes p { margin: 2px 0; }
 .empty { text-align: center; color: var(--muted); padding: 40px 16px; }
@@ -424,19 +424,19 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 .md-row .chev { color: var(--muted); font-size: 20px; line-height: 1; }
 .md-row:focus-visible { outline: 2px solid var(--l1); outline-offset: 2px; }
 /* Airport details menu: explicit, non-collapsing layout (an iPhone once painted the header without its rows) */
-.scard.ad-card { display: block; padding: 0 14px; min-height: 104px; overflow: visible; }
-.ad-menu { display: flex; flex-direction: column; min-height: 104px; }
-.ad-menu .ad-row { -webkit-appearance: none; appearance: none; flex: 0 0 auto; box-sizing: border-box; display: flex; width: 100%; margin: 0; padding: 10px 0; min-height: 52px; border: 0; border-radius: 0; background: transparent; }
-.ad-menu .ad-row + .ad-row { border-top: 1px solid var(--line); }
-.ad-title, .ad-sub { display: block; }
-.ad-sub { color: var(--muted); font-size: 12px; font-weight: 400; margin-top: 3px; }
-.ad-back { min-height: 44px; padding: 0 10px; color: var(--brand); font-size: 15px; font-weight: 600; background: transparent; }
+.scard.dt-card { display: block; padding: 0 14px; min-height: 104px; overflow: visible; }
+.dt-menu { display: flex; flex-direction: column; min-height: 104px; }
+.dt-menu .dt-row { -webkit-appearance: none; appearance: none; flex: 0 0 auto; box-sizing: border-box; display: flex; width: 100%; margin: 0; padding: 10px 0; min-height: 52px; border: 0; border-radius: 0; background: transparent; }
+.dt-menu .dt-row + .dt-row { border-top: 1px solid var(--line); }
+.dt-title, .dt-sub { display: block; }
+.dt-sub { color: var(--muted); font-size: 12px; font-weight: 400; margin-top: 3px; }
+.dt-back { min-height: 44px; padding: 0 10px; color: var(--brand); font-size: 15px; font-weight: 600; background: transparent; }
 .md-wrap { z-index: 11; }
 .md-sheet.sheet { top: max(env(safe-area-inset-top), 10px); max-height: none; }
 .md-sheet .sh-head { position: sticky; top: -8px; z-index: 5; background: var(--card); padding-top: 8px; padding-bottom: 8px; }
 .md-page-head { flex-direction: column; align-items: stretch; gap: 10px; }
 .md-nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.md-nav .ad-back { padding-left: 0; }
+.md-nav .dt-back { padding-left: 0; }
 .md-page-title { margin: 0; font-size: 32px; font-weight: 800; line-height: 1.1; letter-spacing: -.025em; }
 .md-sheet .sec-h { flex-wrap: wrap; }
 .md-sub { margin-top: 12px; }
@@ -991,7 +991,7 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
   <div id="search"></div><!-- build2a hook: search (site/searched.js) -->
   <section id="trips" aria-label="Your trips" hidden></section><!-- trips hook: "Your trips" (site/trips.js) -->
   <div class="seg" id="seg" role="tablist" aria-label="Filter airports"></div>
-  <div id="banner"></div>
+  <div id="msgbar"></div>
   <div class="national" id="national" hidden></div><!-- build2b: national summary strip -->
   <div class="list" id="extra"></div><!-- build2a hook: searched / starred non-major airports -->
   <main class="list" id="list" role="tabpanel"></main>
@@ -1018,15 +1018,15 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="split.js?v=2"></script><!-- airport details: summary.json + data/airport/<IATA>.json -->
 <script src="wxdays.js?v=1"></script><!-- Weather page: conditions emoji + Today / Tomorrow forecast rows -->
 <script src="nowblurb.js?v=4"></script><!-- the airport sheet's Now card blurb (pure) -->
-<script src="app.js?v=99" defer></script>
+<script src="app.js?v=100" defer></script>
 <script type="module" src="searched.js?v=14"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=20"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="flight-features.js?v=1"></script><!-- trips hook -->
 <script type="module" src="nav.js?v=26"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
-<script type="module" src="movement.js?v=5"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
-<script type="module" src="brief.js?v=10"></script><!-- brief hook: airport Today’s changes -->
-<script type="module" src="terminals.js?v=6"></script><!-- terminals hook: terminal map + lounges cards in the airport sheet -->
-<script type="module" src="radar/card.js?v=5"></script><!-- radar hook: radar loop card in the airport sheet (engine loads on demand) -->
+<script type="module" src="movement.js?v=6"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
+<script type="module" src="brief.js?v=11"></script><!-- brief hook: airport Today’s changes -->
+<script type="module" src="terminals.js?v=7"></script><!-- terminals hook: terminal map + lounges cards in the airport sheet -->
+<script type="module" src="radar/card.js?v=6"></script><!-- radar hook: radar loop card in the airport sheet (engine loads on demand) -->
 <script>/* service worker (site/sw.js, README "Service worker"): the installed app opens from this device's copy, then reads fresh data. ?nosw=1 and test scenarios skip it. */
 if ("serviceWorker" in navigator && !/[?&](?:nosw=1|test=)/.test(location.search)) addEventListener("load", () => { navigator.serviceWorker.register("./sw.js", { scope: "./", updateViaCache: "none" }).catch(() => {}); });</script>
 </body>

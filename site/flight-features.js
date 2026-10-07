@@ -3,7 +3,7 @@ let pending = null, failed = false;
 const enabled = () => window.AWXPrefs.getPrefs().flights;
 async function ready() {
   if (!enabled()) return;
-  if (!pending) pending = import("./trips.js?v=28").catch(error => { pending = null; failed = true; throw error; });
+  if (!pending) pending = import("./trips.js?v=29").catch(error => { pending = null; failed = true; throw error; });
   await pending;
   window.AWXTrips.setEnabled(enabled());
 }

@@ -52,7 +52,7 @@ const STYLE = `
 .mv-src { margin-top: 6px; font-size: 12px; color: var(--muted); line-height: 1.4; }
 .mv-src a { color: var(--l1); text-decoration: none; }
 .mv-src a:focus-visible { outline: 2px solid var(--l1); outline-offset: 2px; border-radius: 4px; }
-.banner.mv-alert { border-left-color: var(--l3); }
+.msgbar.mv-alert { border-left-color: var(--l3); }
 .mv-alert .mv-am { color: var(--muted); font-size: 12.5px; }
 `;
 
@@ -195,7 +195,7 @@ export function alerts() {
     for (const x of list) strip.append(el("div", "mv-alert", x.sentence));
     return null;
   }
-  return el("div", "banner mv-alert", ...kids, el("div", "mv-am", "From aircraft tracking, compared with the usual for this hour"));
+  return el("div", "msgbar mv-alert", ...kids, el("div", "mv-am", "From aircraft tracking, compared with the usual for this hour"));
 }
 
 /** check.html row. add(status, label, detail). */

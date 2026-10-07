@@ -120,7 +120,7 @@ function todaySection(a) {
 }
 function decorateSheet(sheet, a) {
   if (!sheet || !a) return;
-  const A = app(), menu = sheet.querySelector(".ad-menu");
+  const A = app(), menu = sheet.querySelector(".dt-menu");
   if (!menu || !A?.detailRow) return;
   if (!todayEvents(a).length || menu.querySelector('[data-detail="today"]')) return;
   const row = A.detailRow("Today’s changes", "Recent airport updates", "today", () => A.openDetails(a.iata, "today"));

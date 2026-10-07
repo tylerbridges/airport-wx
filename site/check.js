@@ -7,7 +7,7 @@
 import { loadAirports, rank, decodeList } from "./search.js";
 import { navChecks } from "./navcheck.js?v=6"; // nav hook
 import { tripChecks } from "./check-trips.js?v=9"; // trips hook
-import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=15"; // scenarios hook; More details page helpers
+import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=16"; // scenarios hook; More details page helpers
 
 const P = new URLSearchParams(location.search);
 const MOCK = P.get("mock") === "1";
@@ -443,7 +443,7 @@ async function uiChecks(add, scenario) {
         doc.querySelector('#sheet [data-detail="weather"]').click();
         await frameSleep(w, 30);
         const page = doc.getElementById("mdSheet"), title = page.querySelector("h1#mdPageTitle");
-        const back = page.querySelector(".ad-back");
+        const back = page.querySelector(".dt-back");
         const clear = title?.textContent === "Weather" && back?.textContent.includes("overview")
           && doc.getElementById("mdTitle")?.textContent === a.iata && !doc.getElementById("mdWrap").hidden;
         // One Forecast section: Today / Tomorrow rows in plain words (mph, no filler, no "%" in Traveler); Aviation keeps
@@ -627,7 +627,7 @@ async function uiChecks(add, scenario) {
         A.openSheet(a.iata);
         await frameSleep(w, 30);
         const sh = doc.getElementById("sheet");
-        const rows = [...sh.querySelectorAll(".ad-card .ad-menu .ad-row")];
+        const rows = [...sh.querySelectorAll(".dt-card .dt-menu .dt-row")];
         const tall = rows.filter((r) => r.getBoundingClientRect().height >= 44);
         if (tall.length < 2) bad.push(`${a.iata}: ${tall.length} of ${rows.length} rows with height`);
         if (sh.inert) bad.push(`${a.iata}: sheet inert on open`);
@@ -892,7 +892,7 @@ async function runLive() {
   // radar hook: one MRMS frame for MSP decoded in a hidden frame (warning if NOAA can't be reached). The uptime
   // monitor (check.html?ts=…) skips it to stay inside its 30-second budget.
   if (P.has("ts")) group("Radar")("info", "Radar: MSP frame", "skipped for the uptime monitor");
-  else try { await (await import("./radar/card.js?v=5")).checkRow(group("Radar")); } catch (e) { group("Radar")("warn", "Radar", "check failed: " + (e.message || e)); }
+  else try { await (await import("./radar/card.js?v=6")).checkRow(group("Radar")); } catch (e) { group("Radar")("warn", "Radar", "check failed: " + (e.message || e)); }
 
   const up = group("Uptime");
   const u = await getJson("./data/uptime.json");
@@ -979,7 +979,7 @@ async function runMock() {
   if (!idx.ok) { group("Scenarios")("fail", "data/scenarios/index.json loads", `HTTP ${idx.status || idx.error}`); return; }
   if (RENDER) await navChecks(group("Navigation (390 px, hidden frame)"), "./index.html?test=all-clear"); // nav hook
   if (RENDER) { try { await (await import("./map/check.js?v=1")).mapChecks(group("Map (thunderstorm-ground-stop, 390 px)"), "./index.html?test=thunderstorm-ground-stop"); } catch (e) { group("Map (thunderstorm-ground-stop, 390 px)")("fail", "Map checks load", String(e.message || e)); } } // map hook: site/map/check.js
-  if (RENDER) try { await (await import("./radar/card.js?v=5")).checkRow(group("Radar card (all-clear, 390 px)"), { mock: true }); } catch (e) { group("Radar card (all-clear, 390 px)")("fail", "Radar card", "check failed: " + (e.message || e)); } // radar hook
+  if (RENDER) try { await (await import("./radar/card.js?v=6")).checkRow(group("Radar card (all-clear, 390 px)"), { mock: true }); } catch (e) { group("Radar card (all-clear, 390 px)")("fail", "Radar card", "check failed: " + (e.message || e)); } // radar hook
   for (const sc of idx.data.scenarios) {
     const add = group(`Scenario: ${sc.name} — ${sc.title}`);
     const got = await getJson(`./data/scenarios/${sc.file}`);

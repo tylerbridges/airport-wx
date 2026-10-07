@@ -343,7 +343,7 @@ export async function pageAsserts(add, w, doc, asserts) {
       }
       case "header":
       case "banner": {
-        const id = x.t === "header" ? "updated" : "banner";
+        const id = x.t === "header" ? "updated" : "msgbar";
         const hit = await until(w, () => { const e = doc.getElementById(id); return e && re(x.re).test(e.textContent) ? e : null; }, 4000);
         const e = doc.getElementById(id);
         ok = !!hit;
