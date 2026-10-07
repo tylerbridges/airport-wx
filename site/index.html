@@ -480,12 +480,13 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 .cur-line .cl-temp { flex: none; font-size: 21px; font-weight: 700; letter-spacing: -.02em; }
 .cur-line .cl-t { flex: 0 1 auto; min-width: 6em; overflow: hidden; text-overflow: ellipsis; }
 .cur-line .cl-z { width: 0; height: 1.25em; } /* first item, so even the wind can wrap away rather than be clipped */
-.cur-line .cl-sec { flex: 0 12 auto; min-width: 0; font-size: 13.5px; margin-left: auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0 10px; height: 1.25em; overflow: hidden; }
+.cur-line .cl-sec { flex: 1 1 0; min-width: 0; font-size: 13.5px; display: flex; flex-wrap: wrap; justify-content: flex-end; height: 1.25em; overflow: hidden; }
+.cur-line .cl-s + .cl-s { margin-left: 10px; }
 .cur-line .cl-s { flex: none; font-size: 13.5px; line-height: 1.25em; font-weight: 500; color: var(--muted); }
 .cur-line .cl-s small { font-size: 12px; }
 .cur-line .cl-g.gh { color: var(--l2); font-weight: 700; }
 .cur-line .chev { flex: none; margin-left: -2px; color: var(--muted); font-size: 20px; line-height: 1; }
-@media (max-width: 374px) { .cur-line { gap: 6px; } }
+@media (max-width: 374px) { .cur-line { gap: 6px; padding-left: 10px; } .cur-line .cl-t { font-size: 14px; } .cur-line .cl-temp { font-size: 20px; } }
 @media (prefers-reduced-motion: reduce) { .cur-line { transition: none; } .cur-line:active { transform: none; } }
 .cur-line:focus-visible { outline: 2px solid var(--l1); outline-offset: 2px; }
 .cl-none { margin: 12px 0 2px; min-height: 40px; display: flex; align-items: center; padding: 0 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); font-size: 13.5px; }
