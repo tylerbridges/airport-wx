@@ -64,7 +64,7 @@
         out.push({ pri: 1, g: "storm", text: "Thunderstorm advisory near the airport" + (end ? " until " + F.when(end) : "") });
       }
     }
-    if (st.spc && SPC[st.spc] != null) {
+    if (st.spc && SPC[st.spc] != null && (aviation || SPC[st.spc] > 0)) {
       const n = SPC[st.spc];
       out.push({ pri: 2, g: "storm", text: aviation ? (n ? `SPC ${cap(SPC_NAME[st.spc])} risk (level ${n} of 5)` : "SPC general thunderstorms")
         : n ? `severe storms possible today (${SPC_NAME[st.spc]} risk)` : "thunderstorms possible in the area today" });
@@ -92,11 +92,10 @@
     warns.forEach((w, i) => bits.push({ pri: i === 0 ? 4 : 6, g: "warn", text: w }));
     const quiet = !bits.some((b) => b.g === "prog" || b.g === "wx") && !(x.level > 0);
     if (quiet) {
-      // nothing disruptive: still say what the airport looks like (never a bare "Clear")
-      const cw = condWords(x.cond);
-      const none = x.kind === "normal" ? (warns.length ? "no FAA delays reported" : "no FAA delays or weather warnings reported") : null;
-      const words = cw.concat(none ? [none] : []);
-      if (words.length) bits.push({ pri: 0.5, g: "cond", text: cap(list(words)) });
+      if (av) {
+        const words = condWords(x.cond);
+        if (words.length) bits.push({ pri: 0.5, g: "cond", text: cap(list(words)) });
+      }
       if (x.kind === "unknown" && x.quality) bits.push({ pri: 0.4, g: "qual", text: qualityWords(x.quality) });
     }
     if (!bits.length) return "";
@@ -160,6 +159,7 @@
   function trend(x, F) {
     const av = !!x.aviation;
     if (x.kind === "unknown" || x.level == null) {
+      if (!av) return { text: "", improvement: false };
       if (x.stale) return { text: "Trend unavailable until data refreshes", improvement: false };
       if (x.noForecast) return { text: av ? "No TAF covers this hour" : "No airport forecast covers this hour", improvement: false };
       return { text: "Trend unavailable until data refreshes", improvement: false };
@@ -178,7 +178,7 @@
     if (x.open) {
       // an FAA program with no stated end: only the weather can be forecast
       if (x.weatherCause && (x.recovery || x.eases)) { fut = (av ? "Weather forecast improves " : "Weather expected to improve ") + aft(x.recovery || x.eases.at); improvement = true; }
-      else fut = av ? "No FAA end time; improvement depends on the program" : "No improvement forecast until the FAA lifts it";
+      else fut = av ? "No FAA end time; improvement depends on the program" : null;
     } else if (x.recovery) {
       fut = (av ? "Forecast drops to Low or Clear " : "Expected to improve ") + aft(x.recovery); improvement = true;
     } else if (x.eases && Number.isFinite(x.eases.at)) {
@@ -193,10 +193,10 @@
       fut = after.level === 0 ? (av ? "Forecast Clear " : "Expected to clear ") + aft(runEnd)
         : (av ? "Forecast eases to " : "Expected to ease to ") + LEVEL[after.level] + " " + aft(runEnd);
     } else if (runEnd != null && !(after && after.level != null)) {
-      fut = L === 0 ? (av ? "No change forecast through " : "No change expected through ") + when(runEnd)
-        : (av ? "No improvement forecast before " : "Not expected to improve before ") + when(runEnd);
+      fut = L === 0 ? (av ? "No change forecast through " + when(runEnd) : null)
+        : av ? "No improvement forecast before " + when(runEnd) : null;
     }
-    if (!fut && !past) return { text: "Trend unavailable until data refreshes", improvement: false };
+    if (!fut && !past) return { text: av ? "Trend unavailable until data refreshes" : "", improvement: false };
     let text = past && fut ? past + "; " + low(fut) : past || fut;
     if (text.length > MAX_TREND && fut) text = fut; // the forward part is the one the brief can't drop
     return { text, improvement };

@@ -13,14 +13,21 @@ const base = (more = {}) => ({ aviation: false, now, tz, level: 0, kind: "normal
 const all = [];
 const build = (x) => { const r = B.build(x); all.push({ x, r }); return r; };
 
-test("nowblurb: a clear, quiet airport still says what it looks like and that nothing changes", () => {
+test("nowblurb: a clear, quiet airport adds no routine commentary", () => {
   const r = build(base());
-  assert.equal(r.specifics, "Light winds, good visibility and no FAA delays or weather warnings reported.");
+  assert.equal(r.specifics, "");
   const w = build(base({ level: 1, kind: "forecast", headline: "Strong winds", reasons: ["Wind gusts to 30 mph"], warnings: ["Wind Advisory"], levels: levels(1, 1, 0) }));
   assert.equal(w.specifics, "Wind gusts to 30 mph. Wind Advisory in effect.");
   assert.equal(w.trend, "Expected to clear after about 7 PM.");
-  assert.match(r.trend, /^No change expected through tomorrow 5 PM\.$/);
+  assert.equal(r.trend, "");
   assert.equal(r.improvement, false);
+});
+
+test("nowblurb: quiet status keeps concrete warnings and changes, without generic storm commentary", () => {
+  assert.equal(build(base({ storms: { spc: "TSTM" } })).specifics, "");
+  assert.equal(build(base({ warnings: ["Wind Advisory"] })).specifics, "Wind Advisory in effect.");
+  assert.match(build(base({ levels: levels(0, 0, 3, 3) })).trend, /May get worse/);
+  assert.match(build(base({ aviation: true })).specifics, /Light winds and good visibility/);
 });
 
 test("nowblurb: storms with a nearby alert, the severe-storm outlook and the air-traffic storm forecast", () => {
@@ -46,7 +53,7 @@ test("nowblurb: a ground stop with a scheduled end eases when its hours end", ()
 test("nowblurb: a ground stop without an end time never promises one", () => {
   const r = build(base({ level: 4, kind: "active", headline: "Ground Stop", programText: "Arrivals are held at their departure airports (equipment)", open: true, weatherCause: false,
     levels: levels(4, 0, 0, 0) }));
-  assert.equal(r.trend, "No improvement forecast until the FAA lifts it.");
+  assert.equal(r.trend, "");
   assert.equal(r.improvement, false);
   const w = build(base({ level: 4, kind: "active", headline: "Ground Stop", programText: "Arrivals are held at their departure airports (thunderstorms)", open: true, weatherCause: true,
     recovery: hourStart + 3 * H, levels: levels(4, 3, 3, 0) }));
@@ -60,9 +67,9 @@ test("nowblurb: High fog that is improving says since when and what comes next",
   assert.equal(r.trend, "Improving since 4:38 PM; expected to improve after about 8 PM.");
 });
 
-test("nowblurb: not improving only when every covered hour stays at or above the level", () => {
+test("nowblurb: steady forecasts add no commentary; meaningful worsening stays visible", () => {
   const r = build(base({ level: 3, kind: "forecast", headline: "Winter weather", reasons: ["Heavy snow, poor visibility"], levels: levels(...Array(24).fill(3)) }));
-  assert.equal(r.trend, "Not expected to improve before tomorrow 5 PM.");
+  assert.equal(r.trend, "");
   const worse = build(base({ level: 2, kind: "forecast", headline: "Winter weather", reasons: ["Snow"], levels: levels(2, 2, 3, 3, 2) }));
   assert.equal(worse.trend, "May get worse after about 7 PM.");
   const split = build(base({ level: 1, kind: "forecast", headline: "Disruption possible", reasons: ["Light snow"], laterPeak: true, levels: levels(1, 1, 3, 3) }));
@@ -71,23 +78,23 @@ test("nowblurb: not improving only when every covered hour stays at or above the
 
 test("nowblurb: stale data and a missing forecast are stated, never a quiet all good", () => {
   const stale = build(base({ level: null, kind: "unknown", headline: "Status may be outdated", quality: "Data may be outdated", stale: true }));
-  assert.equal(stale.trend, "Trend unavailable until data refreshes.");
+  assert.equal(stale.trend, "");
   assert.match(stale.specifics, /may be outdated/);
   assert.doesNotMatch(stale.specifics, /no FAA delays/);
   const missing = build(base({ level: null, kind: "unknown", headline: "No disruptions reported", quality: "Storm data unavailable" }));
-  assert.match(missing.specifics, /^Light winds and good visibility\. Storm reports couldn't be checked/);
-  assert.equal(missing.trend, "Trend unavailable until data refreshes.");
+  assert.match(missing.specifics, /^Storm reports couldn't be checked/);
+  assert.equal(missing.trend, "");
 });
 
 test("nowblurb: forecast coverage that stops is said, never read as clear", () => {
   const r = build(base({ level: 0, levels: levels(0, 0, 0, null, null) }));
   assert.equal(r.trend, "No forecast beyond 8 PM.");
   const none = build(base({ level: null, kind: "unknown", headline: "Forecast unavailable for this time", noForecast: true, levels: levels(null, null) }));
-  assert.equal(none.trend, "No airport forecast covers this hour.");
+  assert.equal(none.trend, "");
   const far = build(base({ level: 0, levels: levels(...Array(20).fill(0), null) }));
-  assert.equal(far.trend, "No change expected through 1 PM tomorrow.".replace("1 PM tomorrow", "tomorrow 1 PM")); // the last hours of the window aren't news
+  assert.equal(far.trend, ""); // the last hours of the window aren't news
   const farHigh = build(base({ level: 4, kind: "forecast", headline: "Storms near the airport", reasons: ["Heavy thunderstorms"], levels: levels(...Array(14).fill(4), null) }));
-  assert.equal(farHigh.trend, "Not expected to improve before 7 AM tomorrow.".replace("7 AM tomorrow", "tomorrow 7 AM")); // an unknown hour is never an improvement
+  assert.equal(farHigh.trend, ""); // an unknown hour is never an improvement
   const tmw = build(base({ level: 3, kind: "forecast", headline: "Winter weather", reasons: ["Heavy snow"], recovery: hourStart + 20 * H, levels: levels(...Array(20).fill(3), 0, 0) }));
   assert.equal(tmw.trend, "Expected to improve after tomorrow 1 PM."); // never "after about tomorrow"
   const av = build(base({ aviation: true, level: 0, levels: levels(0, 0, null) }));

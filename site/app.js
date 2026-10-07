@@ -1177,7 +1177,7 @@
       "aria-valuetext": day.cur >= 0 ? slotText(slots[day.cur], a) : slotText(slots[0], a),
       "data-start": String(day.start), "data-tz": tz,
     }, !opts.dayOff ? h("div", { class: "timeline-context", "aria-hidden": "true" }, h("span", {}, "Past 12h"), h("span", {}, "Now → forecast 24h")) : null,
-      label, tl, ticks, naNote, big ? h("div", { class: "scrub-hint muted small" }, "Hold or drag to explore hours · arrow keys also work") : null, big ? h("div", { class: "tl-cap" }, h("div", { class: "tl-key", "aria-label": "Colour key: Clear, Low, Moderate, High, Severe" },
+      label, tl, ticks, naNote, big ? h("div", { class: "tl-cap" }, h("div", { class: "tl-key", "aria-label": "Colour key: Clear, Low, Moderate, High, Severe" },
       LEVELS.map(({ label: w }, i) => h("span", { class: "tk" }, h("i", { class: "tk-dot l" + i, "aria-hidden": "true" }), w))),
       sm.open ? h("div", { class: "tl-note" }, "Future hours are forecast estimates; FAA end time is unknown.") : null) : null);
     const T = { wrap, tl, lens, lensSeg, label, segs, slots, day, a, rest: day.cur, big, opts };
@@ -1481,7 +1481,6 @@
         : cond ? h("div", { class: "sub" }, cond) : null,
       upcoming ? h("div", { class: "card-forecast" }, h("b", {}, rangeText(sm.start, sm.end, dispTz(a)) + ": "), forecastHeadline) : null,
       health.quality ? h("div", { class: "muted small" }, health.quality) : null,
-      AWXOutlook.forecastQuality(a) ? h("div", { class: "muted small forecast-quality" }, AWXOutlook.forecastQuality(a)) : null,
       window.AWXMovement ? safeCall(() => AWXMovement.line(a)) : null, // movement hook: "Departures far below normal" (site/movement.js)
       !badgeHeadline && badges.length ? h("div", { class: "badges" }, badges) : null,
       cardTimeline(a),
@@ -2127,7 +2126,7 @@
     return [h("div", { class: "lamp" }, table), h("div", { class: "muted small", style: "margin:6px 4px 0" }, note)];
   }
 
-  function checkedLine(a) {
+  function checkedLine(a, details = false) {
     const d = state.data;
     const src = a?.coverage?.sources || (d && d.sources) || {};
     const warn = [];
@@ -2152,15 +2151,17 @@
     else if (dt.mismatch) warn.push("Some details are from another update (" + ago(Math.max(0, refNow() - Date.parse(dt.mismatch))) + ") than the status above");
     if (quality?.advisoriesAge && !quality.incomplete) warn.push("FAA Command Center advisories last updated " + ago(quality.advisoriesAge) + " — planned programs may have changed; current FAA delays are live");
     const airportAge = quality?.checked != null ? ago(Math.max(0, refNow() - quality.checked)) : when;
+    const full = details || aviation();
+    if (!full && !warn.length) return null;
     return h("div", { class: "checked" },
       warn.map((w) => h("p", { class: "warn" }, w)),
-      any ? h("p", { class: "muted" }, (() => {
+      full && any ? h("p", { class: "muted" }, (() => {
         const good = k => src[k]?.ok && !src[k].error && !src[k].stale;
         const checked = [good("faa") ? "FAA delay status" : null,
           ["metar", "taf", "nws"].every(good) ? "NOAA weather" : good("metar") ? "weather observations" : null].filter(Boolean);
         return checked.length ? "Checked " + checked.join(" and ") + (airportAge ? " · " + airportAge : "") : "Source coverage incomplete";
       })()) : null,
-      quality ? h("p", { class: "muted" }, [quality.observed ? "Weather observed " + ago(Math.max(0, refNow() - quality.observed)) : null,
+      full && quality ? h("p", { class: "muted" }, [quality.observed ? "Weather observed " + ago(Math.max(0, refNow() - quality.observed)) : null,
         quality.forecastIssued ? "Forecast issued " + ago(Math.max(0, refNow() - quality.forecastIssued)) : null].filter(Boolean).join(" · ")) : null);
   }
 
@@ -2275,16 +2276,16 @@
     const leadSub = lead ? cap([lead.cue, lead.size ? "When disrupted: " + lead.size : ""].filter(Boolean).join(" · ")) : "";
     // "Looking ahead": one compact list under the current status — the delay outlook (when it isn't already the
     // headline), then improvements, scheduled ends and FAA extension outlooks; each bullet's dot carries its colour
-    const leadNotes = lead ? [leadSub, ...lead.notes].filter(Boolean) : [];
+    const leadNotes = lead ? [aviation() ? leadSub : lead.size ? "When disrupted: " + lead.size : null, ...lead.notes].filter(Boolean) : [];
     const primaryProgram = !aviation() && o.simple && shared?.programs.length === 1 && shared.programs[0].type !== "closure";
     const cause = primaryProgram ? plainCause(shared.programs[0]).toLowerCase() : "";
     const extraReasons = primaryProgram ? shortList(others, a).filter((r) => !cause || !r.toLowerCase().includes(cause) || /\d/.test(r)).slice(0, max) : [];
-    // the sheet's Now card: one two-part blurb (site/nowblurb.js) in every state — what is happening and why, then where it's heading
+    // The Now card adds details only for disruptions, specific alerts, data warnings or meaningful changes.
     const blurb = o.blurb && window.AWXNowBlurb ? safeCall(() => AWXNowBlurb.build({ ...o.blurb, headline: status, kind: shared ? shared.kind : o.level > 0 ? "forecast" : "normal",
       level: headLevel, quality: shared ? shared.quality : "",
       programText: primaryProgram ? faaText(shared.programs[0], true, shared.current, true) : progTxt.map((t) => t.replace(/ until further notice/, "")).join("; "), // the header already says "FAA gives no end time"
       reasons: primaryProgram ? extraReasons : shortList(others, a).slice(0, 3) })) : null;
-    const blurbEl = blurb ? h("div", { class: "sc-blurb" }, blurb.specifics ? h("p", { class: "sc-spec" }, blurb.specifics) : null, blurb.trend ? h("p", { class: "sc-trend" }, blurb.trend) : null) : null;
+    const blurbEl = blurb && (blurb.specifics || blurb.trend) ? h("div", { class: "sc-blurb" }, blurb.specifics ? h("p", { class: "sc-spec" }, blurb.specifics) : null, blurb.trend ? h("p", { class: "sc-trend" }, blurb.trend) : null) : null;
     const ahead = [];
     // a later, higher risk window (o.peak) comes first; the delay outlook joins it when they say the same thing
     const pk = o.peak;
@@ -2529,7 +2530,7 @@
         const peak = { headline: pkO.headline, level: sm.level, when: rangeText(sm.start, sm.end, tz),
           reasons: shortList(notOwn(hourReasons(a, pk, sm.level)), a).filter((r) => r !== pkO.headline && !/^(Ground stop|Ground delay program|Delays\b|Airport closed)/.test(r)).slice(0, 2) };
         return restCard({ a, layout, kind: "nowpeak", full: true, simple: true, big: true, cur: safeCall(() => currentLine(a)), lead, peak, rows: nextRows, label: "Now", outlook: nowO, level: sm.nowLevel, blurb: blurbIn(nowO),
-          when: nowO.kind === "unknown" ? nowO.quality || "Forecast unavailable" : sm.open ? NO_END : "through " + whenLabel(hourFloor(sm.nowEnd, tz), tz), delay: v.hours[0].delay,
+          when: nowO.kind === "unknown" ? nowO.quality || "Forecast unavailable" : sm.open ? NO_END : aviation() || nowO.level > 0 ? "through " + whenLabel(hourFloor(sm.nowEnd, tz), tz) : "", delay: v.hours[0].delay,
           normalNote, reasons: shortList(notOwn(((n) => hourReasons(a, n.x, sm.nowLevel, n.reasons))(nowHourOf(a, v, sm))), a), programs: nowPrograms, impact: CATS.impact(v.now.reasons, nowPrograms), facts: factsRow(nowCond, a, t0, false, true),
           chips: cardSources(v.now.reasons, "now"), empty: null });
       }
@@ -2537,7 +2538,7 @@
       // "Clear through" the end of forecast coverage: hours no forecast covers are unknown, never Clear
       const gap = sm.levels.findIndex((x) => x.level == null);
       const clearEnd = gap > 0 ? Date.parse(sm.levels[gap].t) : lastMs;
-      let when = layout === "clear" ? "Clear through " + whenLabel(hourFloor(clearEnd, tz), tz) : nowWhen();
+      let when = layout === "clear" ? (aviation() ? "Clear through " + whenLabel(hourFloor(clearEnd, tz), tz) : "") : nowWhen();
       if (currentOutlook.kind === "unknown") when = currentOutlook.quality || "Forecast unavailable";
       else if (layout === "clear" && currentOutlook.kind !== "normal") when = "This hour";
       return restCard({ a, layout, kind: "nowpeak", full: true, simple: true, big: true, cur: safeCall(() => currentLine(a)), lead, rows: nextRows, label: "Now", outlook: currentOutlook, level: sm.nowLevel, blurb: blurbIn(currentOutlook), when, delay: v.hours[0].delay,
@@ -2690,20 +2691,13 @@
       isStale() ? h("p", { class: "stale-line" }, "Last updated " + ago(dataAge()) + " — may be outdated") : null,
       // above the timeline: only the header, the Now / Peak (or single) card and the timeline itself
       boxWrap,
-      h("div", { class: "coverage-note muted small" },
-        h("p", {}, "Airport-wide weather and FAA outlook · individual flight status not checked."),
-        h("p", {}, `${state.data?.airports?.length || "—"} airports monitored · ${window.AWXDelay?.validatedAirports ?? "unknown number of"} airports in model validation. Coverage varies by airport.`),
-        AWXOutlook.forecastQuality(a) ? h("p", { class: "forecast-quality" }, AWXOutlook.forecastQuality(a)) : null),
       h("section", { class: "sec tlsec" },
         h("div", { class: "sec-h" }, icon(ICONS.clock), h("h3", {}, tlTitle), h("span", { class: "rule", "aria-hidden": "true" }), dayBtn),
         tlHolder),
       lookingAhead,
-      section("What this means for your trip", "plane", [
+      sm.level >= 2 || sm.current?.programs?.length ? section("What this means for your trip", "plane", [
         h("p", { class: "trip-advice" }, AWXOutlook.travelAdvice(a, sm, AWXOutlook.health(a, outlookOpts(a, view(a))))),
-        h("button", { type: "button", class: "trip-check", onclick: () => {
-          AWXSheet.transfer(closeSheet, () => window.AWXNav?.openSettings(window.AWXPrefs?.getPrefs().flights ? "trips" : "root"));
-        } }, "Check my trip"),
-        h("p", { class: "muted small" }, "Optional trip features match airport conditions to your schedule; confirm your flight with your airline.")]),
+      ]) : null,
       routine, // Aviation baseline detail follows the timeline.
       log,
       ...secs,
@@ -2713,6 +2707,9 @@
         window.AWXRadarCard && AWXRadarCard.covered(a) ? detailRow("Radar", "Live rain and snow", "radar", () => AWXRadarCard.open(a)) : null,
         informationalNotices ? detailRow("Flight restrictions", "Nearby airspace restrictions", "notices", () => openDetails(a.iata, "notices")) : null,
         mv ? detailRow("Traffic right now", "Aircraft movements and coverage", "traffic", () => openDetails(a.iata, "traffic")) : null,
+        h("button", { type: "button", class: "md-row ad-row trip-check", onclick: () => {
+          AWXSheet.transfer(closeSheet, () => window.AWXNav?.openSettings(window.AWXPrefs?.getPrefs().flights ? "trips" : "root"));
+        } }, h("span", {}, h("span", { class: "ad-title" }, "Check my trip")), h("span", { class: "chev", "aria-hidden": "true" }, "›")),
         detailRow("More details", "Outlook, sources and aviation reports", "technical", () => openDetails(a.iata)))], null, { cls: "ad-card" }),
       hiddenNote,
       checkedLine(a),
@@ -2990,7 +2987,10 @@
     else if (md.page === "terminal") content = [h("p", { class: "muted" }, "The terminal map could not load right now. Try again from Airport details.")];
     else if (md.page === "notices") content = [window.AWXNotices ? AWXNotices.section(v, a, { h, section, aviation: aviation(), retime: (t) => retime(t, a), hidden: isHidden, now: refNow(), sources: state.data.noticeSources || {} }) : null];
     else content = [
-      mark(section("Why this outlook", "clock", [why || h("p", { class: "muted", style: "margin:0" }, "Delay numbers aren't available right now.")], null, { cls: "md-why" }), "why"),
+      mark(section("Why this outlook", "clock", [h("div", { class: "coverage-note muted small" },
+        h("p", {}, "Airport-wide weather and FAA outlook · individual flight status not checked."),
+        h("p", {}, `${state.data?.airports?.length || "—"} airports monitored · ${window.AWXDelay?.validatedAirports ?? "unknown number of"} airports in model validation. Coverage varies by airport.`),
+        AWXOutlook.forecastQuality(a) ? h("p", { class: "forecast-quality" }, AWXOutlook.forecastQuality(a)) : null), why || h("p", { class: "muted", style: "margin:0" }, "Delay numbers aren't available right now.")], null, { cls: "md-why" }), "why"),
       mark(pd, "pilot"), mark(safeCall(() => planStormCard(a, v)), "plan")];
     sheet.classList.toggle("md-wx", md.page === "weather"); // Weather page look (index.html "Weather page")
     sheet.setAttribute("aria-label", code + " " + title.toLowerCase());
@@ -3005,7 +3005,7 @@
       h("div", { class: "sh-where" }, h("b", { id: "mdTitle" }, code), " · ", h("span", { class: "sh-aname" }, a.name)),
       ...content,
       hiddenNote,
-      checkedLine(a),
+      checkedLine(a, true),
     ].filter(Boolean));
     if (perOpen) { const d = sheet.querySelector("details.wxf-per"); if (d) d.open = true; }
     sheet.scrollTop = keepScroll ? top : 0;
