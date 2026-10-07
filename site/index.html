@@ -203,7 +203,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 800; letter-spa
   padding: 8px calc(env(safe-area-inset-right) + 16px) calc(env(safe-area-inset-bottom) + 16px) calc(env(safe-area-inset-left) + 16px);
   transform: translateY(100%); transition: transform .28s cubic-bezier(.2, .8, .2, 1);
 }
-#sheet { max-height: 88vh; max-height: 88dvh; }
+#sheet { max-height: 88vh; max-height: 88dvh; padding-bottom: calc(env(safe-area-inset-bottom) + 72px); } /* room under the last card so the Airport details rows always scroll clear of the screen's bottom edge */
 .sheet-wrap.open .backdrop { opacity: 1; }
 .sheet-wrap.open .sheet { transform: none; }
 .grab { position: relative; width: 100%; height: 24px; margin: -4px auto 2px; cursor: grab; }
@@ -1018,7 +1018,7 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="split.js?v=2"></script><!-- airport details: summary.json + data/airport/<IATA>.json -->
 <script src="wxdays.js?v=1"></script><!-- Weather page: conditions emoji + Today / Tomorrow forecast rows -->
 <script src="nowblurb.js?v=4"></script><!-- the airport sheet's Now card blurb (pure) -->
-<script src="app.js?v=98" defer></script>
+<script src="app.js?v=99" defer></script>
 <script type="module" src="searched.js?v=14"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=20"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="flight-features.js?v=1"></script><!-- trips hook -->

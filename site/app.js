@@ -2808,6 +2808,7 @@
     if (window.AWXBrief) safeCall(() => window.AWXBrief.decorateSheet(sheet, a)); // brief hook: "Today" card (site/brief.js)
     if (window.AWXTerminals) safeCall(() => window.AWXTerminals.decorateSheet(sheet, a)); // terminals hook: "Terminal map" + "Lounges" cards (site/terminals.js)
     safeCall(() => healMenu(sheet, a));
+    safeCall(() => menuDiag(sheet)); // three taps on the "Airport details" heading: on-device menu facts (iPhone report)
     sheet.scrollTop = keepScroll ? top : 0; // a newly opened sheet starts at the top; live refreshes keep the place
     if (focusedDetail) sheet.querySelector('[data-detail="' + focusedDetail + '"]')?.focus({ preventScroll: true });
     scheduleLenses();
@@ -2820,6 +2821,24 @@
    * gets explicit block/flex layout. Each problem is reported once in the console.
    */
   const menuWarned = new Set();
+  /** Three quick taps on the "Airport details" heading show what the menu looks like on this device (for a bug report). */
+  function menuDiag(sheet) {
+    const menu = sheet.querySelector(".ad-menu"), head = menu && menu.closest(".sec")?.querySelector(".sec-h");
+    if (!head) return;
+    let taps = [];
+    head.addEventListener("click", () => {
+      const t = Date.now(); taps = taps.filter((x) => t - x < 1500).concat(t);
+      if (taps.length < 3) return;
+      taps = [];
+      const r = (el) => { const b = el.getBoundingClientRect(); return Math.round(b.top) + "/" + Math.round(b.height); };
+      const card = menu.closest(".scard"), cs = getComputedStyle(menu);
+      const lines = ["app v" + APP_V, "rows " + menu.children.length + ": " + [...menu.children].map((c) => (c.dataset.detail || c.className) + " " + r(c) + (getComputedStyle(c).display === "none" ? " none" : "")).join(", "),
+        "menu " + r(menu) + " " + cs.display + " vis " + cs.visibility + " op " + cs.opacity, "card " + (card ? r(card) : "-"),
+        "sheet " + sheet.scrollTop + "+" + sheet.clientHeight + "/" + sheet.scrollHeight + " inert " + sheet.inert, "view " + innerWidth + "x" + innerHeight,
+        "standalone " + !!(navigator.standalone || matchMedia("(display-mode: standalone)").matches) + " sw " + !!(navigator.serviceWorker && navigator.serviceWorker.controller)];
+      alert(lines.join("\n"));
+    });
+  }
   function healMenu(sheet, a) {
     const warn = (k, msg) => { if (!menuWarned.has(k)) { menuWarned.add(k); console.warn("Airport details menu: " + msg); } };
     let menu = sheet.querySelector(".ad-menu");
