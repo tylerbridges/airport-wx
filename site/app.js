@@ -2548,12 +2548,12 @@
     };
     /** Storms, warnings and FAA programs in force during the hour, for its blurb (each fact once: the hour's reasons drop what these say). */
     const hourContext = (s, hO, isNow, past) => {
-      const t0h = s.key, t1h = s.key + HOUR, now = refNow();
+      const t0h = s.key, t1h = s.key + HOUR;
       const over = (on, end) => !(Number.isFinite(on) && on >= t1h) && !(Number.isFinite(end) && end <= t0h);
       // a Convective SIGMET is a current alert (valid up to 2 hours from issue): now, or an earlier hour inside its window
       const sig = isNow ? (v.sigmets || []) : past ? (v.sigmets || []).filter((g) => { const e = Date.parse(g.validTo); return Number.isFinite(e) && over(e - 2 * HOUR, e); }) : [];
       const until = sig.map((g) => Date.parse(g.validTo)).filter(Number.isFinite);
-      const spc = v.spc && dayKey(t0h, tz) === dayKey(now, tz) ? v.spc : null; // "possible today": today's hours only
+      const spc = null; // the severe-storm outlook is said through the hour's own reasons (the poller gives each hour its SPC reason)
       const tcf = past ? [] : (v.tcf || []).filter((x) => { const t = Date.parse(x.valid); return Number.isFinite(t) && t >= t0h - HOUR && t < t1h + HOUR; });
       const alerts = (v.alerts || []).filter((x) => x.event && over(Date.parse(x.onset), Date.parse(x.ends || x.expires)));
       return { storms: { near: sig.length > 0, until: until.length ? Math.max(...until) : null, spc, tcf }, warnings: alerts.map((x) => x.event), alerts };
@@ -3223,7 +3223,7 @@
       h("span", { class: "cl-sec" }, h("i", { class: "cl-z" }), // segments that don't fit wrap onto a hidden second line (visibility first, then wind)
         wind ? h("span", { class: "cl-s cl-w" }, wind.replace(/ mph$/, ""), gust != null ? h("span", { class: "cl-g" + (gust >= 25 ? " gh" : "") }, " G " + gust) : null, wind === "Calm" ? null : h("small", {}, " mph")) : null,
         p.vis != null && p.vis < 6 ? h("span", { class: "cl-s cl-v" }, visMiles(p.vis).replace(/ miles?$/, " mi")) : null)];
-    if (p.still) return h("div", { class: "cur-line still", "aria-label": p.label + ": " + parts.join(", ") }, kids);
+    if (p.still) return h("div", { class: "cur-line still", "aria-hidden": "true" }, kids); // inside the aria-hidden preview layer
     return h("button", { type: "button", class: "cur-line", "data-detail": p.detail, "aria-haspopup": "dialog",
       "aria-label": p.label + ": " + parts.join(", ") + ". Open weather details.", onclick: p.onclick },
       kids, h("span", { class: "chev", "aria-hidden": "true" }, "›"));
