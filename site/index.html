@@ -416,8 +416,10 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 .md-row { width: 100%; margin-top: 14px; min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 0 14px; border-radius: 16px; background: var(--card-2); border: 1px solid var(--line); color: var(--text); font-size: 15px; font-weight: 600; text-align: left; }
 .md-row .chev { color: var(--muted); font-size: 20px; line-height: 1; }
 .md-row:focus-visible { outline: 2px solid var(--l1); outline-offset: 2px; }
-.ad-card { padding: 0 14px; }
-.ad-menu .ad-row { margin: 0; padding: 10px 0; min-height: 52px; border: 0; border-radius: 0; background: transparent; }
+/* Airport details menu: explicit, non-collapsing layout (an iPhone once painted the header without its rows) */
+.scard.ad-card { display: block; padding: 0 14px; min-height: 104px; overflow: visible; }
+.ad-menu { display: flex; flex-direction: column; min-height: 104px; }
+.ad-menu .ad-row { -webkit-appearance: none; appearance: none; flex: 0 0 auto; box-sizing: border-box; display: flex; width: 100%; margin: 0; padding: 10px 0; min-height: 52px; border: 0; border-radius: 0; background: transparent; }
 .ad-menu .ad-row + .ad-row { border-top: 1px solid var(--line); }
 .ad-title, .ad-sub { display: block; }
 .ad-sub { color: var(--muted); font-size: 12px; font-weight: 400; margin-top: 3px; }
@@ -490,6 +492,11 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 @media (prefers-reduced-motion: reduce) { .cur-line { transition: none; } .cur-line:active { transform: none; } }
 .cur-line:focus-visible { outline: 2px solid var(--l1); outline-offset: 2px; }
 .cl-none { margin: 12px 0 2px; min-height: 40px; display: flex; align-items: center; padding: 0 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); font-size: 13.5px; }
+/* Now card blurb (site/nowblurb.js): what is happening and why, then where it's heading; neutral text, every state */
+.sc-blurb { margin-top: 6px; font-size: 15px; line-height: 1.35; overflow-wrap: anywhere; }
+.sc-blurb p { margin: 0; }
+.sc-spec { color: var(--text); }
+.sc-trend { margin-top: 3px !important; color: var(--muted); }
 /* Next 12 hours (Weather page) */
 .nx-list { list-style: none; margin: 0; padding: 0; }
 .nx-i { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 1.35; }
@@ -993,14 +1000,15 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="notices.js?v=2"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
 <script src="split.js?v=2"></script><!-- airport details: summary.json + data/airport/<IATA>.json -->
 <script src="wxdays.js?v=1"></script><!-- Weather page: conditions emoji + Today / Tomorrow forecast rows -->
-<script src="app.js?v=92" defer></script>
+<script src="nowblurb.js?v=1"></script><!-- the airport sheet's Now card blurb (pure) -->
+<script src="app.js?v=93" defer></script>
 <script type="module" src="searched.js?v=14"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=18"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="flight-features.js?v=1"></script><!-- trips hook -->
 <script type="module" src="nav.js?v=25"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
 <script type="module" src="movement.js?v=4"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
-<script type="module" src="brief.js?v=9"></script><!-- brief hook: airport Today’s changes -->
-<script type="module" src="terminals.js?v=5"></script><!-- terminals hook: terminal map + lounges cards in the airport sheet -->
+<script type="module" src="brief.js?v=10"></script><!-- brief hook: airport Today’s changes -->
+<script type="module" src="terminals.js?v=6"></script><!-- terminals hook: terminal map + lounges cards in the airport sheet -->
 <script type="module" src="radar/card.js?v=5"></script><!-- radar hook: radar loop card in the airport sheet (engine loads on demand) -->
 <script>/* service worker (site/sw.js, README "Service worker"): the installed app opens from this device's copy, then reads fresh data. ?nosw=1 and test scenarios skip it. */
 if ("serviceWorker" in navigator && !/[?&](?:nosw=1|test=)/.test(location.search)) addEventListener("load", () => { navigator.serviceWorker.register("./sw.js", { scope: "./", updateViaCache: "none" }).catch(() => {}); });</script>

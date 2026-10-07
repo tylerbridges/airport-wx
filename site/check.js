@@ -617,6 +617,31 @@ async function uiChecks(add, scenario) {
         out.map((x) => `${x.iata} bar ends at ${x.bottom} px`).join(", ") + " (viewport 700)");
     }, [390, 700]);
 
+    // Airport details menu: after opening several sheets at 390 px every sheet has at least two tappable rows with height,
+    // the sheet is never left inert after a details page, and every Now card carries its two-part blurb (site/nowblurb.js)
+    await withPage(url, async (w, doc) => {
+      const A = w.AWXApp;
+      const bad = [], blurbs = [];
+      const aps = A.state.data.airports.slice(0, 6);
+      for (const [i, a] of aps.entries()) {
+        A.openSheet(a.iata);
+        await frameSleep(w, 30);
+        const sh = doc.getElementById("sheet");
+        const rows = [...sh.querySelectorAll(".ad-card .ad-menu .ad-row")];
+        const tall = rows.filter((r) => r.getBoundingClientRect().height >= 44);
+        if (tall.length < 2) bad.push(`${a.iata}: ${tall.length} of ${rows.length} rows with height`);
+        if (sh.inert) bad.push(`${a.iata}: sheet inert on open`);
+        const bl = sh.querySelector('.bx-layer[data-layer="rest"] .sc .sc-blurb');
+        if (!bl || !bl.querySelector(".sc-trend")?.textContent.trim()) blurbs.push(a.iata);
+        if (i === 0) { (sh.querySelector('[data-detail="terminal"]') || sh.querySelector('[data-detail="technical"]')).click(); await sleep(600); } // closed below with its terminal map (or details page) still open
+        if (i === 1 && !doc.getElementById("tmWrap")?.hidden && doc.getElementById("tmWrap")?.classList.contains("open")) bad.push("terminal map stayed open after its sheet closed");
+        A.closeSheet();
+        await frameSleep(w, 20);
+      }
+      add(bad.length ? "fail" : "pass", "Airport details menu: at least two tappable rows on every sheet at 390 px, never left inert", bad.join("; ") || `${aps.length} sheets`);
+      add(blurbs.length ? "fail" : "pass", "Every Now card has its specifics and trend blurb", blurbs.join(", ") || `${aps.length} sheets`);
+    }, [390, 844]);
+
     // no percentages in Traveler-mode delay text (cards, Now/Peak/hour cards, the delay card, trips)
     await withPage(url, async (w, doc) => {
       const A = w.AWXApp;

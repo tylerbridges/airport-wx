@@ -123,7 +123,9 @@ function decorateSheet(sheet, a) {
   const A = app(), menu = sheet.querySelector(".ad-menu");
   if (!menu || !A?.detailRow) return;
   if (!todayEvents(a).length || menu.querySelector('[data-detail="today"]')) return;
-  menu.querySelector('[data-detail="technical"]').before(A.detailRow("Today’s changes", "Recent airport updates", "today", () => A.openDetails(a.iata, "today")));
+  const row = A.detailRow("Today’s changes", "Recent airport updates", "today", () => A.openDetails(a.iata, "today"));
+  const anchor = menu.querySelector('[data-detail="technical"]');
+  if (anchor) anchor.before(row); else menu.append(row); // never throw on a menu missing its More details row
 }
 
 // ---------- check page ----------
