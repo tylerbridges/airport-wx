@@ -620,9 +620,30 @@ export function nextUtcHour(now, hour) {
  * alerts [{event, onset, ends}], spc category string, atcscc advisories [{type, active, end, cause,
  * causeText}], lamp {hours: [{t, tstmProb}]}, tcf [{valid, coverage}], cwa [{hazard, validFrom, validTo, raw}].
  */
-export function buildHours({
+export function buildHours(args) {
+  const { count = 24 } = args;
+  const row = hourRows(args);
+  const hours = [];
+  for (let i = 0; i < count; i++) hours.push(row(i, i === 0));
+  return hours;
+}
+
+/**
+ * Hour 1 as it would read with the observation winning (README "Risk levels", "The observed next hour"): the same
+ * row as buildHours' hour 1 except that its weather is the METAR's (assessConditions, flight category and conditions;
+ * the TAF is left out), the convective SIGMET counts, and the items that score "hour 0 only" (plan items for now, FAA
+ * closures and runway items with no known end) count as they would for a poll run in that hour. Programs that end
+ * before the hour still don't. null without a METAR. The page shows it in place of hours[1] once hour 1 has become
+ * the current hour and the METAR is still fresh (site/outlook.js withObsHour).
+ */
+export function buildObsHour(args) {
+  if (!args.metar) return null;
+  return hourRows(args)(1, true);
+}
+
+function hourRows({
   now = new Date(), tz, taf = null, metar = null, faa = [], sigmet = false, alerts = [], spc = null,
-  atcscc = [], lamp = null, tcf = [], cwa = [], opsplan = null, count = 24,
+  atcscc = [], lamp = null, tcf = [], cwa = [], opsplan = null,
 }) {
   const start = Math.floor(+now / HOUR) * HOUR;
   const spcEnd = nextUtcHour(now, 12);
@@ -665,19 +686,21 @@ export function buildHours({
     if (t == null || !level) continue;
     tcfItems.push({ from: t - HOUR, to: t + HOUR, level, text: `Thunderstorms, ${x.coverage} coverage (TCF)` });
   }
-  const hours = [];
-  for (let i = 0; i < count; i++) {
+  // cur: the hour is scored as the current one (hour 0; buildObsHour's hour 1): the METAR wins over the TAF, the
+  // SIGMET counts, and "hour 0 only" items count. Hour 0 keeps its original rule (every started item); a later
+  // current hour only takes started items with no end, so a program that ended before it never comes back.
+  return (i, cur) => {
     const t0 = start + i * HOUR;
     const t1 = t0 + HOUR;
     let items = [];
     let fltCat = null;
     let cond = null;
     // hour 0: the observation wins; the TAF only fills in when there is no current METAR
-    if (taf && !(i === 0 && metar)) {
+    if (taf && !(cur && metar)) {
       const th = tafHour(taf, t0, t1);
       if (th) { items.push(...th.items); fltCat = th.fltCat; cond = th.cond; }
     }
-    if (i === 0) {
+    if (cur) {
       if (metar) {
         items.push(...assessConditions(metar).map((x) => ({ ...x, fc: false })));
         fltCat = metar.fltCat || flightCategory(parseVisib(metar.visib), ceilingOf(metar.clouds));
@@ -685,8 +708,9 @@ export function buildHours({
       }
       if (sigmet) items.push({ level: 3, text: "Convective SIGMET over airport", fixed: true });
     }
+    const nowOnly = (x) => cur && x.from <= +now && (i === 0 || x.to == null);
     for (const x of progItems) {
-      if ((i === 0 && x.from <= +now) || (x.from < t1 && x.to != null && x.to > t0)) items.push({ level: x.level, text: x.text, fixed: true });
+      if (nowOnly(x) || (x.from < t1 && x.to != null && x.to > t0)) items.push({ level: x.level, text: x.text, fixed: true });
     }
     for (const a of alertItems) if (a.from < t1 && a.to > t0) items.push({ level: a.level, text: a.text, fixed: true });
     for (const c of cwaItems) if (c.from < t1 && c.to > t0) items.push({ level: c.level, text: c.text, fixed: true });
@@ -701,14 +725,13 @@ export function buildHours({
     if (cl > tl) items.push({ level: cl, text: "Storms likely nearby (LAMP)", fc: true });
     for (const x of planItems) {
       if (!(x.to > t0 && x.from < t1)) continue;
-      if (x.at === "now" ? i === 0 && x.level : x.at === "span" ? x.level : false) items.push({ level: x.level, text: x.text, fixed: true });
+      if (x.at === "now" ? cur && x.level : x.at === "span" ? x.level : false) items.push({ level: x.level, text: x.text, fixed: true });
       else if (x.at === "ifr" && (fltCat === "IFR" || fltCat === "LIFR")) items.push({ level: 1, text: x.text, fixed: true });
     }
     for (const x of tcfItems) if (x.from < t1 && x.to > t0) items.push({ level: x.level, text: x.text, fc: true });
     items = dedupe(items);
-    hours.push({ t: new Date(t0), items, level: levelOf(items), fltCat, cond: condOf(cond) });
-  }
-  return hours;
+    return { t: new Date(t0), items, level: levelOf(items), fltCat, cond: condOf(cond) };
+  };
 }
 
 /** Add "forecast 4–7 PM" style windows to a reason from hour idx. */

@@ -3,7 +3,7 @@
 // global.mjs. Moved here unchanged from poll.mjs (assemble) and global.mjs (computeGlobal); the
 // only addition is assemble's optional `over` hook (live relay).
 import {
-  buildHours, summarize, hoursOutput, compareAirports, parseVisib, ceilingOf, flightCategory, toMs, fmtClock, tzAbbr, opsPlanItems,
+  buildHours, buildObsHour, summarize, hoursOutput, compareAirports, parseVisib, ceilingOf, flightCategory, toMs, fmtClock, tzAbbr, opsPlanItems,
 } from "./risk.mjs";
 import { spcCategoryAt, convectiveSigmetsAt, normalizeAlerts, latestBy } from "./lib.mjs";
 import { tcfAt, cwaAt } from "./sources.mjs";
@@ -75,32 +75,47 @@ export function assemble({ airports, now, metars, tafs, sigmets, isigmets = null
       }
     }
 
-    const hours = buildHours({
+    const hourArgs = {
       now, tz: a.tz, taf: t, metar: m, faa, sigmet: sigs.length > 0,
       alerts: alertsFull.map((x) => ({ event: x.event, onset: x.onset, ends: x.ends })), spc: spcCat,
       atcscc: adv, lamp: lampSt, tcf: tcfHere, cwa: cwaHere, opsplan: op,
-    });
+    };
+    const hours = buildHours(hourArgs);
+    // hour 1 with the observation winning (README "The observed next hour"): shown by the page in place of hours[1]
+    // once that hour has begun and the METAR is still fresh, so a build seen after the top of the hour never says
+    // "Now · Dense fog" from the TAF next to a clear observation
+    const obs = buildObsHour(hourArgs);
     // restrictions hook: nearby TFRs (README "Notices") add their reasons to the hours
     const nt = has("notices") ? (o.notices ? { ...o.notices, items: (o.notices.items || []).filter((x) => x.src === "tfr").map((x) => ({ ...x })) } : null)
       : notices ? noticesFor({ a, tfrs: notices.tfrs, faa, opsplan: op, now }) : null;
-    if (nt) applyNotices(hours, nt, { faa, opsplan: op, tz: a.tz, now });
+    if (nt) applyNotices(obs ? [...hours, obs] : hours, nt, { faa, opsplan: op, tz: a.tz, now }); // obs has hour 1's window: same peaks
     // plain-English items for the sheet ("From the FAA Command Center"), same texts as the risk reasons
     const opOut = op
       ? { ...op, items: opsPlanItems(op, { faa, atcscc: adv, tz: a.tz, now }).map(({ kind, level, text, cause, until, raw, dup, ifr, constraint }) => ({ kind, level, text, cause, until, raw, dup, ifr, constraint })) }
       : null;
     const { now: nowS, peak } = summarize(hours, a.tz);
     // phase3 hook: chance of a real delay per hour (FAA programs override; README "Delay model")
-    const dl = delay ? scoreHours({
-      iata: a.iata, tz: a.tz, now, hours, taf: t, metar: m, lamp: lampSt, faa, atcscc: adv, opsplan: op,
+    const delayArgs = delay ? {
+      iata: a.iata, tz: a.tz, now, taf: t, metar: m, lamp: lampSt, faa, atcscc: adv, opsplan: op,
       hubTafs: (HUBS[a.iata] || []).map((h) => validTaf(tafBy.get(delay.icaoOf?.[h])) || validTaf(delay.hubTaf?.(h))).filter(Boolean),
       model: delay.model, fallback: delay.fallback, analogs: delay.analogs?.[a.iata] || null,
-    }) : null;
+    } : null;
+    const dl = delayArgs ? scoreHours({ ...delayArgs, hours }) : null;
     const hoursOut = hoursOutput(hours);
     if (dl) hoursOut.forEach((h, i) => { if (dl[i]) h.delay = dl[i]; });
+    // the observed hour 1 is scored at index 1 (as hour 1, not as hour 0: delay.mjs overrides() treats index 0 as
+    // "happening now" whatever a program's end), with the same features as hours[1]
+    let obsNext = null;
+    if (obs) {
+      obsNext = hoursOutput([obs])[0];
+      const od = delayArgs && hours.length > 1 ? scoreHours({ ...delayArgs, hours: [hours[0], obs] })[1] : null;
+      if (od) obsNext.delay = od;
+    }
 
     out.push({
       iata: a.iata, icao: a.icao, name: a.name, city: a.city, state: a.state, tz: a.tz, lat: a.lat, lon: a.lon,
       now: nowS, peak, hours: hoursOut,
+      ...(obsNext ? { obsNext } : {}),
       metar: m
         ? {
             raw: m.rawOb || "",

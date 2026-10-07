@@ -477,12 +477,14 @@
     }
     return live.cfg;
   }
-  /** Starred airports first (non-majors via site/searched.js, with their zone), then the visible list; at most 12. */
+  /** The open sheet's airport first (README "The observed next hour"), then starred airports (non-majors via
+   * site/searched.js, with their zone), then the visible list; at most 12. */
   function liveQuery() {
     const majors = new Set(((state.build && state.build.airports) || []).map((a) => a.iata));
     const ids = [];
     const tz = [];
     const add = (c) => { if (c && ids.length < LIVE_MAX && !ids.includes(c)) ids.push(c); };
+    if (majors.has(state.openIata)) add(state.openIata); // an airport opened from At risk, the Map or search gets relay-recomputed hours too
     for (const c of (window.AWXTrips && AWXTrips.liveIds ? AWXTrips.liveIds() : [])) if (majors.has(c)) add(c); // trips hook: trip airports first
     for (const c of state.favs) if (majors.has(c)) add(c);
     const extra = (window.AWXExtra && AWXExtra.liveIds && AWXExtra.liveIds()) || [];
@@ -528,8 +530,49 @@
     }
     return Object.assign({}, a, { hours, now, peak, cascade: undefined });
   }
-  /** state.data = the build with the live airports (and sources) over it, unless the last live call failed. */
+  /**
+   * state.data = the build with the live airports (and sources) over it, unless the last live call failed; then each
+   * airport's current hour is the observed one when the build's hour 1 has become current (site/outlook.js
+   * withObsHour, README "The observed next hour"). Every view (cards, sheet, Map, At risk, national strip, trips,
+   * offline snapshot) reads these hours.
+   */
   function mergeLive() {
+    mergeLive0();
+    const d = state.data;
+    if (d && Array.isArray(d.airports) && window.AWXOutlook && AWXOutlook.withObsHour) {
+      const now = refNow();
+      const wx = state.liveWx || {};
+      const airports = d.airports.map((a) => {
+        const e = a.icao && wx[a.icao]; // a fresher METAR the page has for this airport, if any
+        return safeCall(() => AWXOutlook.withObsHour(a, now, e && e.mt ? { metar: { obsTime: e.mt, raw: e.m || "" } } : {})) || a;
+      });
+      if (airports.some((a, i) => a !== d.airports[i])) state.data = Object.assign({}, d, { airports });
+    }
+    hourTick();
+  }
+  // the build's hour 1 becomes current at the top of the hour: re-assemble then, without waiting for the next refresh
+  let hourTimer = 0;
+  function hourTick() {
+    clearTimeout(hourTimer);
+    if (state.sample) return; // sample data's clock stands still (refNow = its build time)
+    const now = Date.now();
+    hourTimer = setTimeout(() => { if (!loading && state.data) { mergeLive(); render(); } else hourTick(); }, Math.floor(now / HOUR) * HOUR + HOUR - now + 1500);
+  }
+  // an airport sheet opened for an airport the last relay answer didn't cover: ask the relay again (debounced), with
+  // that airport first, so its hours are recomputed from the live METAR (README "The observed next hour")
+  let liveOpenTimer = 0;
+  function liveForOpen(iata) {
+    clearTimeout(liveOpenTimer);
+    if (!iata || det.live.has(iata) || !det.majors.has(iata) || testMode() || state.sample || state.offline) return;
+    liveOpenTimer = setTimeout(async () => {
+      if (loading || state.openIata !== iata || det.live.has(iata)) return;
+      await loadLive();
+      if (loading || !live.data || live.failed) return;
+      mergeLive();
+      render();
+    }, 400);
+  }
+  function mergeLive0() {
     const b = state.build && Object.assign({}, state.build, { airports: state.build.airports.map(withoutLegacySpillover) });
     const L = live.data;
     state.liveWx = {};
@@ -1041,8 +1084,10 @@
     if (a.nowText && !cascadeText) return "Now · " + a.nowText;
     // the sheet's wording: the current hour's first weather condition, as its reasons name it
     const v = a.hours && a.hours.length ? view(a) : null;
-    const cond = v ? safeCall(() => shortList(nowHourOf(a, v, summary(a)).reasons.filter((r) => !CATS.reason(r).src && !/^Chance of /.test(r)), a)[0]) : null;
-    if (cond) return "Now · " + cond;
+    const nh = v ? safeCall(() => nowHourOf(a, v, summary(a))) : null;
+    const cond = nh ? safeCall(() => shortList(nh.reasons.filter((r) => !CATS.reason(r).src && !/^Chance of /.test(r)), a)[0]) : null;
+    // a current hour still read from the forecast (outlook.js withObsHour fcNow) says so, never as observed
+    if (cond) return "Now · " + (nh.x && nh.x.fcNow ? "Forecast · " : "") + cond;
     const c = a.metar ? metarCond(a.metar) : a.hours[0];
     const w = shortCond(c, a.metar && a.metar.raw);
     return "Now · " + (w || LEVELS[view(a).now.level].label);
@@ -1691,6 +1736,7 @@
     wrap.hidden = false;
     document.documentElement.classList.add("lock");
     renderSheet(false);
+    liveForOpen(iata); // live relay: this airport's hours from the live METAR when the last answer didn't include it
     sheetCtl.opened();
     void wrap.offsetHeight; // reflow so the transition runs
     wrap.classList.add("open");

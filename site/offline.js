@@ -7,7 +7,7 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
   const KEY = "awx-airport-snapshot-v2", MAX_AGE = 6 * 3600000, MAX_BYTES = 750000;
-  const AIRPORT_KEYS = ["iata", "icao", "name", "city", "state", "tz", "lat", "lon", "now", "peak", "hours", "observed", "metar", "taf", "faa", "atcscc", "alerts", "spc", "sigmets", "aviationAdvisories", "tcf", "cwa", "opsplan", "notices", "cascade", "coverage"];
+  const AIRPORT_KEYS = ["iata", "icao", "name", "city", "state", "tz", "lat", "lon", "now", "peak", "hours", "obsNext", "observed", "metar", "taf", "faa", "atcscc", "alerts", "spc", "sigmets", "aviationAdvisories", "tcf", "cwa", "opsplan", "notices", "cascade", "coverage"];
   const OMIT = /^(?:id|trip|trips|flight(?:No|Number|Id)?|nameOfTraveler|email|confirmation|seat|notes|url|calendar|ics|raw|rawTAF|rawOb)$/i;
   function clean(value, depth = 0) {
     if (depth > 8 || value == null) return null;

@@ -290,6 +290,7 @@ export function overlay({ now = new Date(), majors = [], others = [], build = nu
     airports = out.map((a) => {
       const m = { ...(buildBy.get(a.iata) || {}), ...a };
       if (!a.cascade) delete m.cascade; // hubs hook: recomputed above; none now means none
+      if (!a.obsNext) delete m.obsNext; // recomputed from the live METAR; none now means none (never the build's)
       delete m.lamp; // not shipped: unchanged from the build (the page reads it from data/airport/<IATA>.json)
       delete m.hubResearch; // research only, never published
       return m;
@@ -298,6 +299,9 @@ export function overlay({ now = new Date(), majors = [], others = [], build = nu
       for (const a of airports) {
         const bh = new Map((buildBy.get(a.iata)?.hours || []).map((h) => [h.t, h.delay]));
         a.hours = a.hours.map((h) => (h.delay || !bh.get(h.t) ? h : { ...h, delay: bh.get(h.t) }));
+        const bo = buildBy.get(a.iata)?.obsNext; // the observed hour 1 (README "The observed next hour"): the build's numbers for it
+        const od = a.obsNext && !a.obsNext.delay ? (bo?.t === a.obsNext.t && bo.delay) || bh.get(a.obsNext.t) : null;
+        if (od) a.obsNext = { ...a.obsNext, delay: od };
       }
     }
     if (src.nws) {

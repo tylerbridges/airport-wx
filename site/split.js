@@ -8,7 +8,8 @@
 // Detail-only parts are REMOVED from the summary by name, so a field added later stays in the summary by default:
 // lamp, taf.raw/periods (taf keeps issued), forecast-hour conditions after the first hour (wx stays: outlook.js
 // conditionHeadline reads it; the first hour keeps everything: app.js nowWords falls back to it), the delay
-// explanation fields (analog, basis, lead, rateFrom), observed-hour conditions. hubResearch (research only, recorded
+// explanation fields (analog, basis, lead, rateFrom), observed-hour conditions. obsNext (the observed hour 1, README
+// "The observed next hour") stays like the first hour: it becomes the current hour after the top of the hour. hubResearch (research only, recorded
 // to history from the unpublished full file) is in neither file.
 (function (root, factory) {
   const api = factory();
@@ -34,6 +35,7 @@
     const r = omit(a, ["lamp", ...DROP]);
     if (a.taf && typeof a.taf === "object") r.taf = omit(a.taf, ["raw", "periods"]);
     if (Array.isArray(a.hours)) r.hours = a.hours.map((h, i) => slimHour(h, i === 0));
+    if (a.obsNext && typeof a.obsNext === "object") r.obsNext = slimHour(a.obsNext, true);
     if (Array.isArray(a.observed)) r.observed = a.observed.map((h) => (h && typeof h === "object" ? omit(h, OBS_DETAIL) : h));
     return r;
   }
@@ -62,17 +64,21 @@
     if ("lamp" in full) out.lamp = full.lamp;
     if (slim.taf && typeof slim.taf === "object" && full.taf && typeof full.taf === "object") out.taf = { ...full.taf, ...slim.taf };
     const byT = (list) => new Map((Array.isArray(list) ? list : []).filter((h) => h && h.t).map((h) => [h.t, h]));
+    const one = (h, f) => {
+      if (!f) return h;
+      const r = { ...f, ...h };
+      if (f.delay && h.delay) r.delay = { ...f.delay, ...h.delay };
+      else if (!("delay" in h)) delete r.delay; // the summary's hour has no delay numbers: none
+      return r;
+    };
+    // an hour the page replaced with the observed hour 1 (obs: true, site/outlook.js withObsHour) takes its details from
+    // the detail file's obsNext, never from the forecast hour at that time (whose ceiling/visibility would leak in)
+    const fObs = full.obsNext && typeof full.obsNext === "object" ? full.obsNext : null;
     if (Array.isArray(slim.hours)) {
       const fh = byT(full.hours);
-      out.hours = slim.hours.map((h) => {
-        const f = h && fh.get(h.t);
-        if (!f) return h;
-        const r = { ...f, ...h };
-        if (f.delay && h.delay) r.delay = { ...f.delay, ...h.delay };
-        else if (!("delay" in h)) delete r.delay; // the summary's hour has no delay numbers: none
-        return r;
-      });
+      out.hours = slim.hours.map((h) => (h && h.obs ? one(h, fObs && fObs.t === h.t ? fObs : null) : one(h, h && fh.get(h.t))));
     }
+    if (slim.obsNext && typeof slim.obsNext === "object") out.obsNext = one(slim.obsNext, fObs && fObs.t === slim.obsNext.t ? fObs : null);
     if (Array.isArray(slim.observed)) {
       const fo = byT(full.observed);
       out.observed = slim.observed.map((h) => { const f = h && fo.get(h.t); return f ? { ...f, ...h } : h; });

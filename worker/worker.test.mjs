@@ -98,7 +98,7 @@ test("same inputs as the build -> the build's airports exactly (levels, hours, r
     assert.deepEqual(a.now, b.now, a.iata + " now");
     assert.deepEqual(a.peak, b.peak, a.iata + " peak");
     assert.deepEqual(a.hours, b.hours, a.iata + " hours");
-    for (const k of ["metar", "taf", "faa", "atcscc", "alerts", "spc", "sigmets", "tcf", "cwa", "opsplan", "observed"]) assert.deepEqual(a[k], b[k], `${a.iata} ${k}`);
+    for (const k of ["metar", "taf", "faa", "atcscc", "alerts", "spc", "sigmets", "tcf", "cwa", "opsplan", "observed", "obsNext"]) assert.deepEqual(a[k], b[k], `${a.iata} ${k}`);
     assert.equal(a.lamp, undefined, a.iata + " LAMP isn't shipped (the page reads the build's airport file)");
     assert.equal(a.hubResearch, undefined, a.iata + " research fields aren't published");
   }
@@ -117,6 +117,8 @@ test("a newer live METAR changes the level; slow sources stay the build's", asyn
     assert.match(a.now.reasons.join(" "), /Heavy thunderstorms/);
     assert.equal(a.metar.gust, 48);
     assert.equal(a.metar.raw, world.metars[0].rawOb);
+    assert.equal(a.obsNext.level, 4, "the observed hour 1 follows the live METAR (README \"The observed next hour\")");
+    assert.equal(a.obsNext.t, a.hours[1].t);
     const b = buildAp("MSP");
     assert.equal(a.lamp, undefined); // the build's, read by the page from data/airport/MSP.json
     assert.deepEqual(a.tcf, b.tcf);
@@ -124,6 +126,14 @@ test("a newer live METAR changes the level; slow sources stay the build's", asyn
   } finally {
     world.metars = saved;
   }
+});
+
+test("the build's observed hour 1 never carries over when the relay has no METAR for the airport", () => {
+  const b = { ...buildAp("ORD"), metar: null, obsNext: { t: "2000-01-01T00:00:00.000Z", level: 4, reasons: ["stale"] } };
+  const meta = world.airports.find((a) => a.iata === "ORD");
+  const o = W.overlay({ now: NOW, majors: [meta], build: { ...world.status, airports: [b] }, src: {} });
+  assert.equal(o.airports[0].metar, null);
+  assert.equal(o.airports[0].obsNext, undefined);
 });
 
 test("fields the relay doesn't compute carry over from the build", () => {
@@ -298,6 +308,7 @@ test("phase3: model files unavailable -> the build's delay numbers carry over", 
     const b = buildAp(a.iata);
     assert.ok(b.hours.some((h) => h.delay), a.iata + " build has delay numbers");
     assert.deepEqual(a.hours.map((h) => h.delay), b.hours.map((h) => h.delay), a.iata);
+    if (b.obsNext) assert.deepEqual(a.obsNext.delay, b.obsNext.delay, a.iata + " observed hour 1");
   }
 });
 

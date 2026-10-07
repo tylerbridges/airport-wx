@@ -19,6 +19,9 @@
 //        level = the highest level it set in the 24 hours (0 = information)            (restrictions hook)
 //   {t:"noticeSource", name: tfr, ok}  (restrictions hook)
 // Page assertions:
+//   {t:"now", iata, level?, obs?, re?, notRe?}  the page's current hour (README "The observed next hour"): the
+//        airport's current level (outlook.js summary), whether that hour is the observed one (obs: true/false), and
+//        its headline + "Now" reasons match re / don't match notRe
 //   {t:"card", iata, re}   the airport's card on the All list
 //   {t:"sheet", iata, re}  the airport's sheet (text, including closed "Why?" parts)
 //   {t:"airportDetail", iata, page, re} selected Airport details menu popup (material safety assertions stay "sheet")
@@ -55,7 +58,7 @@ export async function openDetailsPage(w, doc, iata, page = "technical") {
 }
 
 const DATA = new Set(["words", "badge", "noFaa", "opsplan", "atcscc", "alert", "spc", "sigmet", "model", "movement", "airlineAlert", "tripConcern", "hourLevel", "hourReason", "cascade", "noCascade", "change", "notice", "noticeSource"]); // brief hook: change; restrictions hook: notice, noticeSource
-const PAGE = new Set(["card", "sheet", "airportDetail", "national", "header", "banner", "noPercent", "noAirportBrief", "today", "details"]); // airportDetail: selected secondary menu page
+const PAGE = new Set(["now", "card", "sheet", "airportDetail", "national", "header", "banner", "noPercent", "noAirportBrief", "today", "details"]); // airportDetail: selected secondary menu page
 export const isPageAssert = (x) => PAGE.has(x.t);
 
 async function getJson(url) {
@@ -292,6 +295,16 @@ export async function pageAsserts(add, w, doc, asserts) {
   for (const x of list) {
     let ok = false, label = "", got = "";
     switch (x.t) {
+      case "now": {
+        const a = (A.state.data.airports || []).find((y) => y.iata === x.iata);
+        const sm = a ? A.summary(a) : null, o = a ? A.outlook(a) : null, h = sm && sm.nowHour;
+        const text = [o && o.headline, ...((h && h.reasons) || [])].join(" | ");
+        ok = !!a && !!h && (x.level == null || sm.nowLevel === x.level) && (x.obs == null || !!h.obs === x.obs)
+          && (!x.re || re(x.re).test(text)) && (!x.notRe || !new RegExp(x.notRe, "i").test(text));
+        label = `${x.iata} now: ${[x.level != null && `level ${x.level}`, x.obs != null && (x.obs ? "the observed hour" : "the forecast hour"), x.re && `/${x.re}/`, x.notRe && `not /${x.notRe}/i`].filter(Boolean).join(", ")}`;
+        got = a ? `level ${sm.nowLevel}, ${h && h.obs ? "observed" : h && h.fcNow ? "forecast (worded as one)" : "build hour " + (a.hours || []).indexOf(h)}: "${text}"` : "no such airport";
+        break;
+      }
       case "card": {
         await showAll();
         let c = doc.querySelector(`#list .card[data-iata="${x.iata}"]`);
@@ -427,9 +440,42 @@ export async function pageAsserts(add, w, doc, asserts) {
  *   - Traveler text on cards and sheets (outside Pilot details and raw text) has no "%".
  * add(status, label, detail).
  */
+/**
+ * README "The observed next hour": an airport whose fresh METAR (within outlook.js OBS_NEXT_MAX, newer than the TAF
+ * the current hour was read from) is VFR with no weather must not have a current hour that claims fog, low
+ * visibility or low clouds now. Hours replaced by the observed hour 1 (obs) pass; a current hour still read from the
+ * forecast but worded as one (fcNow) is reported, not failed. Fails on test data, warns on live data (an older build
+ * without obsNext, or a fresher METAR the build hasn't seen).
+ */
+export function obsHourGuard(add, w, where = "") {
+  const A = w.AWXApp, O = w.AWXOutlook;
+  const now = A.refNow(), H = 3600e3, max = (O && O.OBS_NEXT_MAX) || 75 * 60e3;
+  const LOW = /\b(fog|low visibility|low clouds|mist)\b/i, LOWR = /^(Visibility|Ceiling|Vertical visibility)\b|\b(Fog|Mist)\b/i;
+  const bad = [], fixed = [], qualified = [];
+  for (const a of A.state.data.airports || []) {
+    const m = a.metar, hs = a.hours || [];
+    const obs = Date.parse(m && m.obsTime);
+    if (!m || !Number.isFinite(obs) || now - obs > max || m.fltCat !== "VFR" || m.wx) continue;
+    const i = hs.findIndex((h) => Date.parse(h.t) <= now && now < Date.parse(h.t) + H);
+    if (i < 1) continue; // hour 0 is the METAR's own
+    const h = hs[i];
+    if (h.obs) { fixed.push(a.iata); continue; }
+    const basis = Date.parse(a.taf && a.taf.issued);
+    if (Number.isFinite(basis) && obs <= basis) continue; // the forecast is newer than the observation
+    const o = A.outlook(a);
+    const claims = LOW.test((o && o.headline) || "") || (h.reasons || []).some((r) => LOWR.test(r));
+    if (!claims) continue;
+    if (h.fcNow && !/^(Dense fog|Low visibility|Fog|Low clouds)$/i.test((o && o.headline) || "")) { qualified.push(a.iata); continue; }
+    bad.push(`${a.iata}: "${o && o.headline}" with METAR ${m.raw || m.obsTime}`);
+  }
+  add(bad.length ? (/live/.test(where) ? "warn" : "fail") : "pass", `A fresh clear METAR is never under a forecast fog / low cloud "Now"${where}`,
+    bad.slice(0, 4).join("; ") || `${fixed.length} current hours from the observation${fixed.length ? " (" + fixed.slice(0, 6).join(", ") + ")" : ""}${qualified.length ? `; ${qualified.length} worded as forecast` : ""}`);
+}
+
 export async function consistencyChecks(add, w, doc, where = "") {
   const A = w && w.AWXApp;
   if (!A || !A.state || !A.state.data) { add("fail", `Consistency checks${where}`, "the app didn't load"); return; }
+  try { obsHourGuard(add, w, where); } catch (e) { add("fail", `Observed next hour check${where}`, String(e.message || e)); }
   const P = w.AWXPrefs;
   if (P && P.setPref && P.getPrefs) for (const [k, v] of Object.entries({ mode: "traveler", timeRef: "airport", clock: 12, codes: "iata" })) if (String(P.getPrefs()[k]) !== String(v)) P.setPref(k, v);
   const LV = { Clear: 0, Minor: 1, Moderate: 2, High: 3, Severe: 4 };

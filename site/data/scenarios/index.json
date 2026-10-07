@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-06T15:09:41.900Z",
+ "generated": "2026-10-07T00:34:30.948Z",
  "groups": {
   "delays": "Delays & programs",
   "weather": "Weather",
@@ -923,6 +923,86 @@
     },
     {
      "t": "noPercent"
+    }
+   ]
+  },
+  {
+   "name": "metar-clears-forecast-fog",
+   "title": "Clear observation after a fog forecast (SFO)",
+   "group": "weather",
+   "blurb": "Built at 23:58Z, seen at 00:04Z: the forecast's fog hour is now current, but the latest report is clear.",
+   "description": "The build ran two minutes before the top of the hour with a clear SFO report from 23:53Z (10 miles, no clouds) and an airport forecast with temporary dense fog and very low clouds from 00Z to 02Z and again 03Z to 05Z. The page opens six minutes later, at 00:04Z, when the build's hour 1 (the forecast's fog hour) has become the current hour. The current hour must read from the clear observation (the poller's observed hour 1, obsNext), not \"Now · Dense fog\"; the later fog stays in the forecast. Modeled on Arcata (ACV), Oct 6 2026.",
+   "file": "metar-clears-forecast-fog.json",
+   "wx": "metar-clears-forecast-fog/wx/",
+   "lagMin": 6,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
+   "assert": [
+    {
+     "t": "level",
+     "iata": "SFO",
+     "of": "now",
+     "op": "==",
+     "v": 0,
+     "note": "The build's hour 0 is the clear observation."
+    },
+    {
+     "t": "hourLevel",
+     "iata": "SFO",
+     "at": [
+      1,
+      1
+     ],
+     "op": "==",
+     "v": 3,
+     "note": "The build's forecast hour 1 is fog (LIFR, High); the page replaces it with the observed hour once it is current."
+    },
+    {
+     "t": "hourReason",
+     "iata": "SFO",
+     "at": [
+      1,
+      1
+     ],
+     "re": "^Visibility"
+    },
+    {
+     "t": "hourLevel",
+     "iata": "SFO",
+     "at": [
+      4,
+      5
+     ],
+     "op": "==",
+     "v": 3,
+     "note": "Later forecast hours are untouched."
+    },
+    {
+     "t": "now",
+     "iata": "SFO",
+     "level": 0,
+     "obs": true,
+     "notRe": "fog|visibility|ceiling|low clouds"
+    },
+    {
+     "t": "card",
+     "iata": "SFO",
+     "re": "^(?![\\s\\S]*(fog|low clouds))"
+    },
+    {
+     "t": "sheet",
+     "iata": "SFO",
+     "re": "Operating normally ?57° · Clear[\\s\\S]*Now · Clear"
+    },
+    {
+     "t": "sheet",
+     "iata": "SFO",
+     "re": "^(?![\\s\\S]*Now · (Forecast|Dense fog|Fog|Very low clouds|Low clouds|Low visibility))"
+    },
+    {
+     "t": "rendered",
+     "text": "Test scenario: Clear observation after a fog forecast"
     }
    ]
   },

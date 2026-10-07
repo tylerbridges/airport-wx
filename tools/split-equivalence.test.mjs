@@ -61,9 +61,19 @@ function compareAirport(name, data, F, Sl, nows) {
     plain: (r) => r, words: (d) => D.likelihood(d, { iata: F.iata, aviation: false }), notable: D.notable,
   };
   let checks = 0;
+  const F0 = F, Sl0 = Sl;
   for (const now of nows) {
     const opts = { ...opts0, now };
     const eq = (a, b, what) => { assert.deepStrictEqual(a, b, `${where} @${new Date(now).toISOString()} ${what}`); checks++; };
+    // README "The observed next hour": the page swaps in obsNext once hour 1 is current (app.js mergeLive); the
+    // summary must carry it so both sides swap alike, and the swapped hour restores from the detail's obsNext
+    F = O.withObsHour(F0, now); Sl = O.withObsHour(Sl0, now);
+    eq(Sl !== Sl0, F !== F0, "observed hour swapped alike");
+    if (Sl !== Sl0) {
+      const { hubResearch: _h, ...want } = deep(F);
+      eq(S.restore(Sl, deep(F0)), want, "summary + detail = the full airport after the swap");
+      if (Sl.hours.some((h) => h.obs)) obsSwaps++;
+    }
     eq(O.health(Sl, opts), O.health(F, opts), "health");
     const sF = O.summary(F, opts), sS = O.summary(Sl, opts);
     eq(normSummary(sS), normSummary(sF), "summary");
@@ -86,6 +96,7 @@ function compareAirport(name, data, F, Sl, nows) {
     eq(D.routineOutlook(Sl, now), D.routineOutlook(F, now), "routineOutlook");
     eq(D.outlookHour(Sl, now), D.outlookHour(F, now), "outlookHour");
   }
+  F = F0; Sl = Sl0;
   // Settings → Show these disruptions: hidden categories recompute each hour from its reasons (app.js view)
   const hide = { fog: true, storms: true, wind: true };
   const filtered = (a) => {
@@ -103,6 +114,7 @@ function compareAirport(name, data, F, Sl, nows) {
   return checks + 2;
 }
 let raisedHours = 0; // hours whose level the delay words raise: the comparisons above must cover some
+let obsSwaps = 0; // airport evaluations whose current hour was the observed hour 1: the comparisons above must cover some
 
 for (const [name, file] of files) {
   test(`split equivalence: ${name}`, () => {
@@ -130,7 +142,7 @@ for (const [name, file] of files) {
       const byF = new Map(full.airports.map((a) => [a.iata, a])), byS = new Map(summary.airports.map((a) => [a.iata, a]));
       for (const trip of trips) {
         for (const now of nows) {
-          const run = (by) => T.tripStatus(trip, (c) => by.get(c) || null, { now, words: (dl, iata) => D.likelihood(dl, { iata, aviation: false })?.word,
+          const run = (by) => T.tripStatus(trip, (c) => (by.get(c) ? O.withObsHour(by.get(c), now) : null), { now, words: (dl, iata) => D.likelihood(dl, { iata, aviation: false })?.word,
             health: (a) => O.health(a, { now, generated: full.generated, sources: full.sources }) });
           assert.deepStrictEqual(normTrip(run(byS)), normTrip(run(byF)), `${name} trip ${trip.id} @${new Date(now).toISOString()}`);
           checks++;
@@ -144,6 +156,27 @@ for (const [name, file] of files) {
 test("split equivalence covered hours raised by delay words", (t) => {
   t.diagnostic(`${raisedHours} hour evaluations raised by delay words`);
   assert.ok(raisedHours > 0, `${raisedHours} raised hours`);
+});
+
+test("split equivalence covered the observed next hour", (t) => {
+  t.diagnostic(`${obsSwaps} airport evaluations on the observed hour 1`);
+  assert.ok(obsSwaps > 0, `${obsSwaps} swaps`);
+});
+
+test("split: obsNext stays in the summary like the first hour, and a swapped hour never takes the forecast's conditions", () => {
+  const full = deep(JSON.parse(readFileSync(join(SCN, "metar-clears-forecast-fog.json"), "utf8")));
+  const { summary, details } = S.split(full);
+  const F = full.airports.find((a) => a.iata === "SFO"), Sl = summary.airports.find((a) => a.iata === "SFO");
+  assert.ok(F.obsNext && Sl.obsNext, "obsNext in both files");
+  assert.equal(Sl.obsNext.vis, F.obsNext.vis, "conditions kept");
+  assert.ok(S.DELAY_DETAIL.every((k) => !(k in Sl.obsNext.delay)), "delay explanation detail-only");
+  const now = Date.parse(full.generated) + 6 * 60e3;
+  const v = O.withObsHour(Sl, now);
+  const r = S.restore(v, deep(details.SFO.airport));
+  assert.equal(r.hours[1].obs, true);
+  assert.equal(r.hours[1].cig, undefined, "no ceiling from the forecast hour at that time");
+  assert.equal(r.hours[1].vis, 10);
+  assert.deepEqual(r.hours[1].delay, F.obsNext.delay, "delay explanation restored from obsNext");
 });
 
 test("split: smaller summary, details restore what was removed, mismatched polls keep the summary's own fields", () => {

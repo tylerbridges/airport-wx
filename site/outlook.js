@@ -197,7 +197,8 @@
     } else if (!h || h.level == null) { kind = "unknown"; headline = "Forecast unavailable for this time"; level = null; } // no forecast covers this hour: unknown, never normal
     else if (s.meaningful || s.level > 0) {
       kind = "forecast";
-      headline = s.meaningful ? s.L.word.replace(/^Delays/, "Flight delays") : conditionHeadline(h, current);
+      // a current hour still read from the forecast (fcNow: withObsHour couldn't use a fresh observation) says so
+      headline = s.meaningful ? s.L.word.replace(/^Delays/, "Flight delays") : conditionHeadline(h, current && !h.fcNow);
     }
     if ((outdated || incomplete) && kind === "normal") { kind = "unknown"; headline = opts.offline ? "Offline · status unconfirmed" : outdated ? "Status may be outdated" : opts.noticesDown ? "No disruptions reported · flight restrictions unavailable" : stormDown ? "No disruptions reported · storm data unavailable" : "No disruptions reported · some data unavailable"; }
     else if (opts.hidden && kind === "normal") headline = "No issues in your selected categories";
@@ -276,9 +277,42 @@
     }
     return out;
   }
+  // README "The observed next hour": hour 0 of a build is the METAR's, hour 1 the TAF's. Builds are shown for minutes
+  // after they are made (polls every 5–10 min, deploy delays, outages), so after the top of the hour the build's hour
+  // 1 becomes the page's current hour. The poller also writes obsNext: hour 1 with the observation winning (same
+  // code path as hour 0, risk.mjs buildObsHour). withObsHour puts it in place of hours[1] (marked obs: true) while
+  // hour 1 holds `now` and that METAR is at most OBS_NEXT_MAX old (an hourly report plus 15 min: past that a newer
+  // one should exist). Otherwise the current hour stays the forecast's and is marked fcNow: its headline is worded
+  // as a forecast ("Dense fog expected"), never as what is happening now. A fresher, different METAR the page has
+  // for the airport (opts.metar {obsTime, raw}) means obsNext no longer describes the latest report: fcNow as well.
+  // The page applies this once, where state.data is assembled (app.js mergeLive), so every view reads the same hours.
+  const OBS_NEXT_MAX = 75 * 60000;
+  function withObsHour(a, now, opts = {}) {
+    const hs = a && a.hours;
+    if (!Array.isArray(hs) || hs.length < 2 || !Number.isFinite(now)) return a;
+    const i = hs.findIndex((h) => h && ms(h.t) <= now && now < ms(h.t) + HOUR);
+    if (i < 1 || hs[i].obs || hs[i].fcNow) return a; // hour 0 (the METAR's) is still current, no hour holds now, or done
+    const h = hs[i], o = a.obsNext, m = a.metar || null;
+    const obsT = ms(m && m.obsTime);
+    const fresh = Number.isFinite(obsT) && now - obsT <= OBS_NEXT_MAX && obsT - now <= 10 * 60000;
+    const later = opts.metar && ms(opts.metar.obsTime);
+    const newer = Number.isFinite(later) && later > obsT && (opts.metar.raw || "") !== ((m && m.raw) || "");
+    const use = i === 1 && o && typeof o === "object" && o.t === h.t && fresh && !newer;
+    if (!use && h.level == null) return a; // no forecast for the hour: already unknown, nothing to qualify
+    const hours = hs.slice();
+    hours[i] = use ? { ...o, obs: true } : { ...h, fcNow: true };
+    const out = { ...a, hours };
+    // the build's peak was the hour just replaced: the highest hour from now on (earliest), as the page computes it
+    if (use && a.peak && a.peak.at === h.t) {
+      let p = i;
+      for (let j = i + 1; j < hours.length; j++) if (hours[j].level != null && hours[j].level > (hours[p].level ?? -1)) p = j;
+      out.peak = { level: hours[p].level ?? 0, at: hours[p].t, reasons: hours[p].reasons || [] };
+    }
+    return out;
+  }
   function overlaps(window, at, until) {
     const start = ms(at), end = Number.isFinite(ms(until)) ? ms(until) : start + 1;
     return !!window && start < window.end && end > window.start;
   }
-  return { conditionHeadline, reasonVisibility, quietHour, health, evaluate, summary, levelAt, score, restrictions, directionRows, windowFor, overlaps, PROG_LEVEL, RAISE };
+  return { conditionHeadline, reasonVisibility, quietHour, health, evaluate, summary, levelAt, score, restrictions, directionRows, windowFor, overlaps, withObsHour, OBS_NEXT_MAX, PROG_LEVEL, RAISE };
 });
