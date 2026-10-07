@@ -476,10 +476,11 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 /* Looking ahead: a small label and compact bullets, less weight than the headline */
 /* Current-conditions line under the headline (opens the Weather page) */
 /* Current-conditions pill under the headline (opens the Weather page): emoji, temperature, condition, wind, low visibility */
-.cur-line { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 48px; margin: 12px 0 2px; padding: 0 10px 0 12px; background: var(--card); border: 1px solid var(--line); border-radius: 999px; color: var(--text); font: inherit; font-size: 15px; line-height: 1.2; font-weight: 600; text-align: left; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; cursor: pointer; transition: transform .12s ease; }
+.cur-line { position: relative; display: flex; align-items: center; gap: 7px; width: 100%; min-height: 40px; margin: 10px 0 2px; padding: 0 9px 0 11px; background: var(--card); border: 1px solid var(--line); border-radius: 999px; color: var(--text); font: inherit; font-size: 15px; line-height: 1.2; font-weight: 600; text-align: left; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: visible; cursor: pointer; transition: transform .12s ease; }
 .cur-line:active { transform: scale(.98); }
-.cur-line .cl-e { flex: none; font-size: 22px; line-height: 1; width: 26px; text-align: center; }
-.cur-line .cl-temp { flex: none; font-size: 21px; font-weight: 700; letter-spacing: -.02em; }
+.cur-line::before { content: ""; position: absolute; inset: -2px 0; } /* keeps the 44 px touch target on the shorter pill */
+.cur-line .cl-e { flex: none; font-size: 19px; line-height: 1; width: 26px; text-align: center; }
+.cur-line .cl-temp { flex: none; font-size: 19px; font-weight: 700; letter-spacing: -.02em; }
 .cur-line .cl-t { flex: 0 1 auto; min-width: 6em; overflow: hidden; text-overflow: ellipsis; }
 .cur-line .cl-z { width: 0; height: 1.25em; } /* first item, so even the wind can wrap away rather than be clipped */
 .cur-line .cl-sec { flex: 1 1 0; min-width: 0; font-size: 13.5px; display: flex; flex-wrap: wrap; justify-content: flex-end; height: 1.25em; overflow: hidden; }
@@ -488,10 +489,10 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 .cur-line .cl-s small { font-size: 12px; }
 .cur-line .cl-g.gh { color: var(--l2); font-weight: 700; }
 .cur-line .chev { flex: none; margin-left: -2px; color: var(--muted); font-size: 20px; line-height: 1; }
-@media (max-width: 374px) { .cur-line { gap: 6px; padding-left: 10px; } .cur-line .cl-t { font-size: 14px; } .cur-line .cl-temp { font-size: 20px; } }
+@media (max-width: 374px) { .cur-line { gap: 6px; padding-left: 10px; } .cur-line .cl-t { font-size: 14px; } .cur-line .cl-temp { font-size: 18px; } }
 @media (prefers-reduced-motion: reduce) { .cur-line { transition: none; } .cur-line:active { transform: none; } }
 .cur-line:focus-visible { outline: 2px solid var(--l1); outline-offset: 2px; }
-.cl-none { margin: 12px 0 2px; min-height: 40px; display: flex; align-items: center; padding: 0 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); font-size: 13.5px; }
+.cl-none { margin: 10px 0 2px; min-height: 36px; display: flex; align-items: center; padding: 0 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); font-size: 13.5px; }
 /* Now card blurb (site/nowblurb.js): what is happening and why, then where it's heading; neutral text, every state */
 .sc-blurb { margin-top: 6px; font-size: 15px; line-height: 1.35; overflow-wrap: anywhere; }
 .sc-blurb p { margin: 0; }
@@ -1001,7 +1002,7 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="split.js?v=2"></script><!-- airport details: summary.json + data/airport/<IATA>.json -->
 <script src="wxdays.js?v=1"></script><!-- Weather page: conditions emoji + Today / Tomorrow forecast rows -->
 <script src="nowblurb.js?v=1"></script><!-- the airport sheet's Now card blurb (pure) -->
-<script src="app.js?v=93" defer></script>
+<script src="app.js?v=94" defer></script>
 <script type="module" src="searched.js?v=14"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=18"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="flight-features.js?v=1"></script><!-- trips hook -->
