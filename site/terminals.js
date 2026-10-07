@@ -257,7 +257,8 @@ function decorateSheet(sheet, a) {
   if (!menu || !A?.detailRow) return;
   if (!S.index) { loadBase().then(() => redecorate(a.iata)); return; }
   if (!S.lounges) loadLounges().then(() => redecorate(a.iata)); // the Lounges row appears when its list arrives
-  const anchor = menu.querySelector('[data-detail="technical"]');
+  const tech = menu.querySelector('[data-detail="technical"]');
+  const anchor = { before: (row) => (tech && tech.parentNode === menu ? tech.before(row) : menu.append(row)) }; // never throw on a menu missing its More details row
   if (hasMap(a.iata) && !menu.querySelector('[data-detail="terminal"]')) {
     const row = A.detailRow("Terminal map", "Find a gate or concourse", "terminal", async () => {
       const [t] = await Promise.all([S.files.get(a.iata) || loadFile(a.iata), loadLounges()]); // lounges.json carries the airport's official-map link
@@ -588,7 +589,7 @@ const STYLE = `
 .tm-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--brand); font-weight: 600; font-size: 14.5px; text-decoration: none; }
 `;
 
-const api = { decorateSheet, detail, checkRow, loungeProblems, staleLounges, findGate, gateInfo, _state: () => S, _open: (iata) => { const t = S.files.get(iata); const A = W.AWXApp; const a = A && A.state.data && A.state.data.airports.find((x) => x.iata === iata); if (t && a) openViewer(a, t); return !!(t && a); }, _find: (q) => S.viewer && S.viewer.find && S.viewer.find(q) };
+const api = { decorateSheet, detail, close: closeViewer, checkRow, loungeProblems, staleLounges, findGate, gateInfo, _state: () => S, _open: (iata) => { const t = S.files.get(iata); const A = W.AWXApp; const a = A && A.state.data && A.state.data.airports.find((x) => x.iata === iata); if (t && a) openViewer(a, t); return !!(t && a); }, _find: (q) => S.viewer && S.viewer.find && S.viewer.find(q) };
 // Only the main page draws (check.html imports this module for checkRow).
 if (typeof document !== "undefined" && document.getElementById("list")) {
   if (!document.getElementById("awx-tm-css")) document.head.append(h("style", { id: "awx-tm-css" }, STYLE));
