@@ -1,3 +1,4 @@
+import { createSinceChecked } from "./since.js?v=1";
 // Per-airport Today’s changes, refreshed with app data. The day-of flight brief lives in trips.js.
 const HOUR = 3600e3;
 const MIN = 60e3;
@@ -6,6 +7,7 @@ const T = W.AWXTest || { name: null };
 const app = () => W.AWXApp;
 export const KINDS = ["level", "program_start", "program_end", "program_extend", "closure_start", "closure_end", "warning", "word", "plan_gs_add", "plan_gs_drop", "movement"];
 
+let sinceChecked = null;
 const S = { data: null, failed: false, gen: null, seen: -1, loading: null };
 
 // ---------- helpers ----------
@@ -54,6 +56,7 @@ function load() {
       } else { S.data = null; S.failed = r.status !== 404; }
     } catch { S.failed = true; }
     S.loading = null;
+    sinceChecked?.render();
     const gen = S.data ? S.data.generated : null;
     if (gen !== S.gen) {
       S.gen = gen;
@@ -100,6 +103,7 @@ export function todayEvents(a) {
 // Changes remain available from airport details; the trip module owns the day-of brief.
 function render() {
   const A = app();
+  sinceChecked?.render();
   if (A?.state && A.state.fetchedAt !== S.seen) { S.seen = A.state.fetchedAt; load(); }
 }
 
@@ -174,6 +178,14 @@ const api = { render, decorateSheet, todaySection, todayEvents, reload: () => { 
 // Only the main page loads airport changes (check.html imports checkRow).
 if (typeof document !== "undefined" && document.getElementById("list")) {
   if (!document.getElementById("awx-brief-css")) document.head.append(h("style", { id: "awx-brief-css" }, CSS));
+  const host = document.getElementById("sinceChecked");
+  if (host) sinceChecked = createSinceChecked(host, () => {
+    const A = app(), airports = A?.state?.data?.airports || [];
+    const ids = [...(A?.state?.favs || []), ...(A?.prefs?.getPrefs().flights ? window.AWXTrips?.todayAirportIds?.() || [] : [])];
+    return {log:S.data, failed:S.failed, blocked:!!T.name || !A?.state?.loaded || A.state.sample || A.state.offline,
+      ids:ids.filter(id => airports.some(a => a.iata === id)), hidden:e => catsHidden(eventCat(e)),
+      text:e => eventText(e, airports.find(a => a.iata === e.iata)), open:id => A.openSheet(id)};
+  }, {getItem:k => localStorage.getItem(k), setItem:(k,v) => localStorage.setItem(k,v)});
   window.AWXBrief = api;
   load();
   setInterval(() => { if (document.visibilityState === "visible") render(); }, 5 * MIN);

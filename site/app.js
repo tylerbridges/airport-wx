@@ -2792,8 +2792,6 @@
       ...secs,
       aviation() ? pilotDetails(a, { title: "Aviation details" }) : null,
       section("Airport details", "plane", [h("div", { class: "dt-menu" },
-        detailRow("Weather", "Current conditions and storm outlook", "weather", () => openDetails(a.iata, "weather")),
-        window.AWXRadarCard && AWXRadarCard.covered(a) ? detailRow("Radar", "Live rain and snow", "radar", () => AWXRadarCard.open(a)) : null,
         informationalNotices ? detailRow("Flight restrictions", "Nearby airspace restrictions", "notices", () => openDetails(a.iata, "notices")) : null,
         mv ? detailRow("Traffic right now", "Aircraft movements and coverage", "traffic", () => openDetails(a.iata, "traffic")) : null,
         h("button", { type: "button", class: "md-row dt-row trip-check", onclick: () => {
@@ -2849,9 +2847,8 @@
       if (tail && tail.parentNode === sheet) tail.before(sec); else sheet.append(sec);
       warn("missing", "rebuilt the missing menu");
     }
-    if (menu.querySelectorAll(".dt-row").length < 2) {
-      if (!menu.querySelector('[data-detail="weather"]')) menu.prepend(detailRow("Weather", "Current conditions and storm outlook", "weather", () => openDetails(a.iata, "weather")));
-      if (!menu.querySelector('[data-detail="technical"]')) menu.append(detailRow("More details", "Outlook, sources and aviation reports", "technical", () => openDetails(a.iata)));
+    if (!menu.querySelector('[data-detail="technical"]')) {
+      menu.append(detailRow("More details", "Outlook, sources and aviation reports", "technical", () => openDetails(a.iata)));
       warn("rows", "rebuilt missing rows");
     }
     requestAnimationFrame(() => {

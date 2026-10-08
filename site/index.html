@@ -192,6 +192,15 @@ h1 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 800; letter-spa
 }
 
 
+.since-card { background: var(--card); border-radius: 18px; padding: 8px 14px; margin-bottom: 14px; }
+.since-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.since-head h2 { font-size: 15px; margin: 0; }
+.since-dismiss, .since-more { min-height: 44px; background: transparent; color: var(--brand); font-size: 13px; }
+.since-list { list-style: none; padding: 0; margin: 0; }
+.since-list li + li { border-top: 1px solid var(--line); }
+.since-row { display: flex; align-items: baseline; gap: 10px; width: 100%; min-height: 44px; padding: 10px 0; text-align: left; font-size: 14px; background: transparent; }
+.since-code { min-width: 38px; }.since-text { flex: 1; overflow-wrap: anywhere; }.since-arrow, .since-note { color: var(--muted); }
+.since-note { margin: 4px 0 6px; font-size: 12px; line-height: 1.35; }
 /* bottom sheet */
 .sheet-wrap { position: fixed; inset: 0; z-index: 10; }
 .sheet-wrap[hidden] { display: none; }
@@ -990,6 +999,7 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
   </header>
   <div id="search"></div><!-- build2a hook: search (site/searched.js) -->
   <section id="trips" aria-label="Your trips" hidden></section><!-- trips hook: "Your trips" (site/trips.js) -->
+  <section id="sinceChecked" class="since-card" aria-label="Since you last checked" hidden></section>
   <div class="seg" id="seg" role="tablist" aria-label="Filter airports"></div>
   <div id="msgbar"></div>
   <div class="national" id="national" hidden></div><!-- build2b: national summary strip -->
@@ -1018,15 +1028,15 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 <script src="split.js?v=2"></script><!-- airport details: summary.json + data/airport/<IATA>.json -->
 <script src="wxdays.js?v=1"></script><!-- Weather page: conditions emoji + Today / Tomorrow forecast rows -->
 <script src="nowblurb.js?v=4"></script><!-- the airport sheet's Now card blurb (pure) -->
-<script src="app.js?v=100" defer></script>
+<script src="app.js?v=101" defer></script>
 <script type="module" src="searched.js?v=14"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=20"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
 <script type="module" src="flight-features.js?v=1"></script><!-- trips hook -->
 <script type="module" src="nav.js?v=26"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
 <script type="module" src="movement.js?v=6"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
-<script type="module" src="brief.js?v=11"></script><!-- brief hook: airport Today’s changes -->
+<script type="module" src="brief.js?v=12"></script><!-- brief hook: airport Today’s changes -->
 <script type="module" src="terminals.js?v=7"></script><!-- terminals hook: terminal map + lounges cards in the airport sheet -->
-<script type="module" src="radar/card.js?v=6"></script><!-- radar hook: radar loop card in the airport sheet (engine loads on demand) -->
+<script type="module" src="radar/card.js?v=7"></script><!-- radar hook: radar loop card in the airport sheet (engine loads on demand) -->
 <script>/* service worker (site/sw.js, README "Service worker"): the installed app opens from this device's copy, then reads fresh data. ?nosw=1 and test scenarios skip it. */
 if ("serviceWorker" in navigator && !/[?&](?:nosw=1|test=)/.test(location.search)) addEventListener("load", () => { navigator.serviceWorker.register("./sw.js", { scope: "./", updateViaCache: "none" }).catch(() => {}); });</script>
 </body>

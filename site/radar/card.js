@@ -483,11 +483,11 @@ async function cardCheck(add) {
     await sleep(300);
     const row = w.document.querySelector('#sheet [data-detail="radar"]');
     const inline = w.document.querySelector("#sheet .awr-sec");
-    const ok = row && /Radar/.test(row.textContent) && /Live rain and snow/.test(row.textContent) && !inline && !w.WXRadar;
-    add(ok ? "pass" : "fail", "Radar in the airport details menu", ok ? "Opens on demand; no radar engine or inline card in the main sheet" : "Radar menu missing or engine loaded before opening");
+    const ok = !row && w.document.querySelector('#sheet [data-detail="weather"]') && !inline && !w.WXRadar;
+    add(ok ? "pass" : "fail", "Weather card is the single entry to weather and radar", ok ? "No duplicate Radar menu or engine load before opening Weather" : "Weather entry missing, duplicate Radar menu, or engine loaded early");
     const doc = w.document;
     const rows = [...doc.querySelectorAll("#sheet .dt-row")];
-    const compact = rows.length >= 3 && rows.every((x) => x.getBoundingClientRect().height >= 44) && !doc.querySelector("#sheet .ln-sec, #sheet .tm-sec, #sheet .pilot, #sheet .bf-today");
+    const compact = rows.length >= 1 && doc.querySelector('#sheet .dt-menu [data-detail="technical"]') && rows.every((x) => x.getBoundingClientRect().height >= 44) && !doc.querySelector("#sheet .ln-sec, #sheet .tm-sec, #sheet .pilot, #sheet .bf-today");
     add(compact ? "pass" : "fail", "Airport details use navigation rows", compact ? "44 px targets; amenities and technical reports open on demand" : "Rows missing, undersized, or secondary cards inline");
     const calls = { show: 0, hide: 0, destroy: 0 };
     w.WXRadar = {
