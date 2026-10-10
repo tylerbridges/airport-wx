@@ -60,6 +60,19 @@ export function assemble({ airports, now, metars, tafs, sigmets, isigmets = null
     const lampSt = lamp?.stations?.[a.icao] || null;
     const adv = (atcscc || []).filter((x) => x.airport === a.iata)
       .map((x) => ({ ...Object.fromEntries(ADV_KEYS.map((k) => [k, x[k] ?? null])), causeLabel: causePhrase(x.cause, x.causeText) }));
+    // NAS sometimes says only "other"; use the latest active advisory for the same program's cause.
+    // Keep the NAS reason untouched for raw-source detail, and never replace a specific NAS cause.
+    for (const f of faa) {
+      const type = { ground_stop: "GS", ground_delay: "GDP" }[f.type];
+      if (!type || f.active === false || !["other", "unknown"].includes(f.cause)
+        || !/^\s*(?:other(?: cause)?|unknown)?\s*$/i.test(f.reason || "")) continue;
+      const latest = adv.filter((x) => x.type === type).sort((x, y) => (toMs(y.issued) ?? 0) - (toMs(x.issued) ?? 0))[0];
+      if (!latest || !latest.active || latest.cnx || !latest.causeText || !latest.cause || ["other", "unknown"].includes(latest.cause)) continue;
+      const issued = toMs(latest.issued), start = toMs(latest.start), end = toMs(latest.end);
+      if (issued == null || issued > +now || start == null || end == null || start > +now || end <= +now) continue;
+      f.cause = latest.cause;
+      f.causeLabel = latest.causeLabel;
+    }
     const tcfHere = has("tcf") ? o.tcf : tcf ? tcfAt(a.lon, a.lat, tcf, now) : [];
     const cwaHere = has("cwa") ? o.cwa : cwa ? cwaAt(a.lon, a.lat, cwa, now) : [];
     const op = has("opsplan") ? o.opsplan : opsPlanFor(plan, a.iata, now, known);

@@ -319,6 +319,7 @@ test("FAA programs score by type whatever the cause; reasons name the cause", ()
   for (const r of ["STAFFING", "SECURITY", "VIP MOVEMENT", "SPACE LAUNCH", "EQUIPMENT / OUTAGE", "VOLUME / VOLUME", "WEATHER / WIND"]) assert.equal(gs(r).level, 4, r);
   assert.equal(assessFaa({ type: "ground_delay", reason: "VOLUME / VOLUME", detail: "avg 52m" }).text, "Ground delay program — high traffic volume, avg 52m, until further notice");
   assert.equal(assessFaa({ type: "ground_delay", reason: "SECURITY", detail: "avg 52m" }).level, 3);
+  assert.equal(assessFaa({ type: "ground_delay", reason: "other", cause: "staffing", causeLabel: "air traffic control staffing", detail: "avg 52m" }).text, "Ground delay program — air traffic control staffing, avg 52m, until further notice");
   assert.equal(assessFaa({ type: "delay", reason: "volume", detail: "Arrivals 31–45m; Departures 16–30m" }).text, "Delays — high traffic volume, arrivals 31–45m; departures 16–30m, until further notice");
   assert.equal(assessFaa({ type: "closure", reason: "snow removal", scope: "full", detail: "until 9 PM ET" }).text, "Airport closed — weather (snow removal), until 9 PM ET");
 });
