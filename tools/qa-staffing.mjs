@@ -1,6 +1,7 @@
 import { chromium } from 'playwright-core';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { assemble } from '../poller/core.mjs';
 import { parseFaaXml, expandTemplate } from '../poller/lib.mjs';
 import { parseAdvisory, finalizeAtcscc } from '../poller/sources.mjs';
@@ -32,6 +33,8 @@ status.airports = status.airports.map(a => a.iata === 'ORD' ? { ...old, ...ord }
 status.generated = now.toISOString();
 await writeFile('site/data/status.json', JSON.stringify(status));
 await writeSplit(status, 'site/data');
+execFileSync('node', ['poller/movement.mjs', '--fixtures'], { stdio: 'inherit' });
+execFileSync('node', ['poller/changes.mjs', '--fixtures'], { stdio: 'inherit' });
 await writeFile('qa-evidence/synthetic-cause.json', JSON.stringify({ fixture: true, input: { nas: 'other', advisory: text }, output: { faa: ord.faa, reasons: ord.now.reasons } }, null, 2));
 
 const browser = await chromium.launch({ executablePath: '/usr/bin/google-chrome', headless: true, args: ['--no-sandbox', '--disable-gpu'] });
