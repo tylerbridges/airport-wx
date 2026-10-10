@@ -25,15 +25,17 @@
       return Number.isFinite(end) ? at < end : current;
     }).map((f) => ({ ...f, source: "faa" }));
     for (const x of a.atcscc || []) {
-      if (x.cnx || !["GS", "GDP"].includes(x.type)) continue;
+      if (x.cnx || !["GS", "GDP"].includes(x.type) || x.airport && x.airport !== a.iata || ms(x.issued) > now) continue;
       const start = ms(x.start), end = ms(x.end);
       if (!Number.isFinite(start) || !Number.isFinite(end) || at < start || at >= end) continue;
       // A superseded advisory must never reappear in a future map hour.
-      const latest = (a.atcscc || []).filter((y) => y.type === x.type).every((y) => !(ms(y.issued) > ms(x.issued)));
+      const latest = (a.atcscc || []).filter((y) => y.type === x.type && (!y.airport || y.airport === a.iata))
+        .every((y) => !(ms(y.issued) > ms(x.issued)) && !(ms(y.issued) === ms(x.issued) && String(y.id || "") > String(x.id || "")));
       if (!latest || start <= now && !x.active) continue;
       const type = x.type === "GS" ? "ground_stop" : "ground_delay";
       const existing = out.find((f) => f.type === type);
       if (existing) { existing.extension = x.extension || null; continue; }
+      if ((a.faa || []).some((f) => f.type === type)) continue; // NAS's resolved window wins, including its endpoint.
       out.push({ type, end: x.end, start: x.start, extension: x.extension, detail: "", source: "atcscc", cause: x.cause || null, causeLabel: x.causeLabel || x.causeText || "" });
     }
     return out.sort((x, y) => ({ closure: 0, ground_stop: 1, ground_delay: 2, delay: 3 }[x.type] ?? 4) - ({ closure: 0, ground_stop: 1, ground_delay: 2, delay: 3 }[y.type] ?? 4));
@@ -145,6 +147,23 @@
       observed: Number.isFinite(observed) ? observed : null, forecastIssued: Number.isFinite(forecastIssued) ? forecastIssued : null, missingWeather, missingForecast, weatherOnly };
 
   }
+  /** Next instant when a snapshot can change without a response. Health uses strict > age limits. */
+  function nextChange(a, opts = {}) {
+    const now = opts.now ?? Date.now();
+    let next = Math.floor(now / HOUR) * HOUR + HOUR;
+    const add = (t) => { if (Number.isFinite(t) && t > now) next = Math.min(next, t); };
+    const coverage = a.coverage || {}, sources = coverage.sources || opts.sources || {};
+    const generated = ms(coverage.generated || opts.generated);
+    add(generated + 30 * 60000 + 1); add(generated - 5 * 60000);
+    const obs = ms(a.metar?.obsTime), taf = ms(a.taf?.issued);
+    add(obs + 2 * HOUR + 1); add(obs + OBS_NEXT_MAX + 1); add(obs - 10 * 60000);
+    add(taf + 12 * HOUR + 1); add(taf - 10 * 60000);
+    for (const s of Object.values(sources)) {
+      add(ms(s?.at) + 30 * 60000 + 1); add(ms(s?.at) + 3 * HOUR + 1);
+    }
+    for (const p of [...(a.faa || []), ...(a.atcscc || [])]) { add(ms(p.start)); add(ms(p.end)); }
+    return next;
+  }
   // "1/8", "3/8", "1 1/2", "0.25", "2" (statute miles) -> number
   function visNumber(s) {
     const m = /^(?:(\d+)\s+)?(\d+)\/(\d+)$/.exec(String(s).trim());
@@ -202,6 +221,7 @@
     }
     if ((outdated || incomplete) && kind === "normal") { kind = "unknown"; headline = opts.offline ? "Offline · status unconfirmed" : outdated ? "Status may be outdated" : opts.noticesDown ? "No disruptions reported · flight restrictions unavailable" : stormDown ? "No disruptions reported · storm data unavailable" : "No disruptions reported · some data unavailable"; }
     else if (opts.hidden && kind === "normal") headline = "No issues in your selected categories";
+    if (kind === "unknown") level = null;
     if (kind === "normal" && opts.noticesDown) headline += " · flight restrictions unavailable"; // nearby TFRs couldn't be read: never an unqualified "normal"
     const window = h ? windowFor(a, opts, at) : null;
     const end = first && ms(first.end);
@@ -263,10 +283,10 @@
     const now = opts.now ?? Date.now();
     const current = evaluate(a, { ...opts, at: now });
     const hs = (a.hours || []).filter((h) => ms(h.t) + HOUR > now);
-    // an hour no forecast covers has level null (unknown); the current hour keeps a number (health qualifies it)
-    const levels = hs.map((h, i) => ({ t: h.t, level: i === 0 && ms(h.t) <= now && current.level != null ? current.level : i === 0 ? levelAt(a, h, opts, Math.max(ms(h.t), now), now) ?? 0 : levelAt(a, h, opts, Math.max(ms(h.t), now), now) }));
+    // Unknown current coverage stays null in summaries and timelines; it never falls back to Clear.
+    const levels = hs.map((h, i) => ({ t: h.t, level: i === 0 && ms(h.t) <= now ? current.level : levelAt(a, h, opts, Math.max(ms(h.t), now), now) }));
     const L = (i) => levels[i].level;
-    const nowLevel = levels.length ? L(0) : current.level || 0;
+    const nowLevel = current.level;
     const open = (current.programs || []).find((f) => f.source === "faa" && !Number.isFinite(ms(f.end)) && !f.perm && PROG_LEVEL[f.type]) || null;
     const out = { level: nowLevel, nowLevel, later: false, start: now, end: null, peakAt: null, peakHour: null, words: null, nowEnd: null, next: null,
       current, levels, byT: new Map(levels.map((x) => [x.t, x.level])), nowHour: hs[0] || null, open, openLevel: open ? PROG_LEVEL[open.type] : null, uncertainFrom: null };
@@ -333,5 +353,5 @@
     if (sm.current?.level >= 2) return coverage + "Allow extra time and review your connection options. Check your airline before leaving and again before a connection; airport conditions cannot confirm your flight's status.";
     return coverage + "Keep your planned airport arrival time. Recheck this outlook and your airline before leaving; a quiet airport outlook does not guarantee an on-time flight.";
   }
-  return { travelAdvice, conditionHeadline, reasonVisibility, quietHour, health, forecastQuality, evaluate, summary, levelAt, score, restrictions, directionRows, windowFor, overlaps, withObsHour, OBS_NEXT_MAX, PROG_LEVEL, RAISE };
+  return { travelAdvice, conditionHeadline, reasonVisibility, quietHour, health, nextChange, forecastQuality, evaluate, summary, levelAt, score, restrictions, directionRows, windowFor, overlaps, withObsHour, OBS_NEXT_MAX, PROG_LEVEL, RAISE };
 });

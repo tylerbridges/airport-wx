@@ -54,8 +54,7 @@ const clock = (ms, tz) => (window.AWXApp && AWXApp.clock ? AWXApp.clock(ms, tz) 
 const tzOf = (a) => (window.AWXApp && AWXApp.dispTz ? AWXApp.dispTz(a) : a.tz); // build2b hook: airport or my time zone
 const dayKey = (ms, tz) => fmt(tz, { year: "numeric", month: "numeric", day: "numeric" }, "ymd").format(ms);
 const refNow = () => {
-  const st = window.AWXApp && window.AWXApp.state;
-  return st && st.sample && st.data ? Date.parse(st.data.generated) : Date.now();
+  return window.AWXApp?.refNow ? AWXApp.refNow() : Date.now();
 };
 function dayPrefix(ms, tz) {
   const now = refNow();

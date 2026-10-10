@@ -18,7 +18,16 @@ import { noticesFor, applyNotices } from "./notices.mjs"; // restrictions hook: 
 import { tafPeriods } from "./taf-periods.mjs";
 
 const HOUR = 3600e3;
-const ADV_KEYS = ["id", "type", "airport", "issued", "cause", "causeText", "title", "active", "cnx", "start", "end"];
+const ADV_KEYS = ["id", "type", "airport", "issued", "cause", "causeText", "title", "active", "cnx", "start", "end", "extension"];
+
+function latestProgramAdvisory(adv, type) {
+  return adv.filter((x) => x.type === type).sort((x, y) => (toMs(y.issued) ?? 0) - (toMs(x.issued) ?? 0)
+    || String(y.id || "").localeCompare(String(x.id || "")))[0];
+}
+function currentAdvisory(x, now) {
+  return x?.active && !x.cnx && toMs(x.issued) != null && toMs(x.issued) <= +now
+    && toMs(x.start) != null && toMs(x.start) <= +now && toMs(x.end) > +now;
+}
 
 /**
  * status.json airports from parsed sources. over(a) (live relay) may return per-airport values that
@@ -45,12 +54,12 @@ export function assemble({ airports, now, metars, tafs, sigmets, isigmets = null
     let t = tafBy.get(a.icao) || null;
     if (t && toMs(t.validTimeTo) != null && toMs(t.validTimeTo) < +now) t = null;
 
-    const faa = has("faa") ? o.faa : (faaParsed?.byAirport[a.iata] || []).map((f) => {
+    const faa = has("faa") ? (o.faa || []).map((f) => ({ ...f })) : (faaParsed?.byAirport[a.iata] || []).map((f) => {
       const cause = classifyCause(f.reason);
       // closures' reasons are NOTAM text: the page shows their plain-English summary instead
       const o = { type: f.type, reason: f.reason, detail: f.detail, badge: f.badge, cause, causeLabel: f.type === "closure" ? "" : causePhrase(cause, f.reason) };
       if (f.type === "closure") Object.assign(o, { scope: f.scope, active: f.active, plain: f.plain, runways: f.runways, start: f.start ?? null, end: f.end ?? null, ...(f.perm ? { perm: true } : {}) });
-      else Object.assign(o, { end: f.end ?? null, trend: f.trend ?? null });
+      else Object.assign(o, { end: f.end ?? null, ...(f.end ? { endFrom: "nas" } : {}), trend: f.trend ?? null });
       return o;
     });
     const alertsFull = has("alerts") ? o.alerts : nws ? normalizeAlerts(nws[a.iata], now) : [];
@@ -60,31 +69,50 @@ export function assemble({ airports, now, metars, tafs, sigmets, isigmets = null
     const lampSt = lamp?.stations?.[a.icao] || null;
     const adv = (atcscc || []).filter((x) => x.airport === a.iata)
       .map((x) => ({ ...Object.fromEntries(ADV_KEYS.map((k) => [k, x[k] ?? null])), causeLabel: causePhrase(x.cause, x.causeText) }));
+    for (const x of adv) {
+      if (["GS", "GDP"].includes(x.type) && x.active
+        && (!currentAdvisory(x, now) || latestProgramAdvisory(adv, x.type) !== x)) x.active = false;
+    }
     // NAS sometimes says only "other"; use the latest active advisory for the same program's cause.
     // Keep the NAS reason untouched for raw-source detail, and never replace a specific NAS cause.
     for (const f of faa) {
       const type = { ground_stop: "GS", ground_delay: "GDP" }[f.type];
       if (!type || f.active === false || !["other", "unknown"].includes(f.cause)
         || !/^\s*(?:other(?: cause)?|unknown)?\s*$/i.test(f.reason || "")) continue;
-      const latest = adv.filter((x) => x.type === type).sort((x, y) => (toMs(y.issued) ?? 0) - (toMs(x.issued) ?? 0))[0];
-      if (!latest || !latest.active || latest.cnx || !latest.causeText || !latest.cause || ["other", "unknown"].includes(latest.cause)) continue;
-      const issued = toMs(latest.issued), start = toMs(latest.start), end = toMs(latest.end);
-      if (issued == null || issued > +now || start == null || end == null || start > +now || end <= +now) continue;
+      const latest = latestProgramAdvisory(adv, type);
+      if (!currentAdvisory(latest, now) || !latest.causeText || !latest.cause || ["other", "unknown"].includes(latest.cause)) continue;
       f.cause = latest.cause;
       f.causeLabel = latest.causeLabel;
     }
     const tcfHere = has("tcf") ? o.tcf : tcf ? tcfAt(a.lon, a.lat, tcf, now) : [];
     const cwaHere = has("cwa") ? o.cwa : cwa ? cwaAt(a.lon, a.lat, cwa, now) : [];
     const op = has("opsplan") ? o.opsplan : opsPlanFor(plan, a.iata, now, known);
-    // NAS status wins over the ops plan for the same program; when NAS gives no end, take the plan's
+    // Resolve once before scoring/splitting/relay output. Derived ends must be revalidated on a relay fallback;
+    // explicit NAS ends always win, even when an advisory lists a different time.
     for (const f of faa) {
-      if (f.end || !(f.type === "ground_stop" || f.type === "ground_delay")) continue;
+      if (!(f.type === "ground_stop" || f.type === "ground_delay")) continue;
+      if (["atcscc", "opsplan"].includes(f.endFrom)) {
+        f.end = null;
+        delete f.endFrom;
+        delete f.endAdvisory;
+        f.detail = (f.detail || "").replace(/(?:,\s*)?until\s[^,;]+/gi, "").trim();
+      }
+      if (toMs(f.end) != null) { f.endFrom = "nas"; continue; }
+      if (f.active === false) continue;
       const want = f.type === "ground_stop" ? "GS" : "GDP";
-      const p = (op?.programs || []).find((x) => x.status === "active" && x.program === want && x.until);
-      if (p) {
-        f.end = p.until;
-        f.endFrom = "opsplan";
-        f.detail = [f.detail, `until ${fmtClock(p.until, a.tz, now)} ${tzAbbr(p.until, a.tz)}`].filter(Boolean).join(", ");
+      const latest = latestProgramAdvisory(adv, want);
+      if (currentAdvisory(latest, now)) {
+        f.end = latest.end;
+        f.endFrom = "atcscc";
+        f.endAdvisory = latest.id;
+      } else if (!latest && toMs(op?.plan?.issued) != null && toMs(op.plan.issued) <= +now
+        && (op.plan.validEnd == null || toMs(op.plan.validEnd) > +now)) {
+        const p = (op.programs || []).find((x) => x.status === "active" && x.program === want
+          && toMs(x.until) > +now && (x.from == null || toMs(x.from) <= +now));
+        if (p) { f.end = p.until; f.endFrom = "opsplan"; f.endAdvisory = op.plan.advisory; }
+      }
+      if (f.end) {
+        f.detail = [f.detail, `until ${fmtClock(f.end, a.tz, now)} ${tzAbbr(f.end, a.tz)}`].filter(Boolean).join(", ");
       }
     }
 

@@ -1,0 +1,57 @@
+{
+  "title": "Partial flight restriction coverage",
+  "at": "2026-10-02T16:30:00Z",
+  "blurb": "A valid Washington VIP restriction survives a missing eligible detail; unrelated fire records are excluded.",
+  "description": "Three listed records: one valid VIP detail, one missing VIP detail and one intentionally excluded Idaho fire record. Useful restrictions remain visible, while traveler views qualify globally incomplete coverage. Counts distinguish the omission from the intentional exclusion.",
+  "group": "system",
+  "assert": [
+    {
+      "t": "noticeSource",
+      "name": "tfr",
+      "ok": true,
+      "incomplete": true,
+      "counts": {
+        "listed": 3,
+        "excluded": 1,
+        "eligible": 2,
+        "attempted": 2,
+        "parsed": 1,
+        "cached": 0,
+        "skipped": 0,
+        "failed": 1,
+        "tfrs": 1
+      }
+    },
+    {
+      "t": "notice",
+      "iata": "DCA",
+      "kind": "vip",
+      "level": 2
+    },
+    {
+      "t": "level",
+      "iata": "DCA",
+      "of": "peak",
+      "op": "==",
+      "v": 2
+    },
+    {
+      "t": "sheet",
+      "iata": "DCA",
+      "re": "Flight restrictions.*VIP movement nearby: flight restrictions"
+    },
+    {
+      "t": "sheet",
+      "iata": "DCA",
+      "re": "Nearby flight restriction coverage is incomplete; some restrictions may be missing"
+    },
+    {
+      "t": "sheet",
+      "iata": "MSP",
+      "re": "Nearby flight restriction coverage is incomplete; some restrictions may be missing"
+    },
+    {
+      "t": "noPercent"
+    }
+  ]
+}

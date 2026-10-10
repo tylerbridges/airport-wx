@@ -673,7 +673,7 @@ export function scoreHours({
       } else {
         d.p = 1;
         d.override = x.override;
-        if (x.minutes != null) { d.minutes = r5(x.minutes); d.minutesFrom = "faa"; }
+        if (x.minutes != null) { d.minutes = x.override === "ground_delay" ? x.minutes : r5(x.minutes); d.minutesFrom = "faa"; }
       }
     }
     return d;

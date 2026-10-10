@@ -1,3 +1,4 @@
+import "./notices.js?v=3";
 // Check page. check.html            -> checks the live data (data/summary.json + an airport detail file, data/wx/, airport list)
 //             check.html?mock=1     -> runs every test scenario (data/scenarios/index.json) instead
 //             &render=0             -> skip the render tests (hidden iframes)
@@ -7,7 +8,7 @@
 import { loadAirports, rank, decodeList } from "./search.js";
 import { navChecks } from "./navcheck.js?v=6"; // nav hook
 import { tripChecks } from "./check-trips.js?v=9"; // trips hook
-import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=16"; // scenarios hook; More details page helpers
+import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=18"; // scenarios hook; More details page helpers
 
 const P = new URLSearchParams(location.search);
 const MOCK = P.get("mock") === "1";
@@ -91,12 +92,12 @@ async function checkData(data, ctx) {
   // Optional TFR coverage warns separately from the core feeds.
   const ns = data.noticeSources;
   const nsBits = (s) => [s.ok ? "ok" : "error",
-    s.tfrs != null ? `${s.tfrs} TFRs parsed of ${s.listed ?? "?"} listed` : null, s.error].filter(Boolean).join(" · ");
+    AWXNotices.describe(s), s.error].filter(Boolean).join(" · ");
   if (!ns) r("notices", "warn", "Flight restrictions", "not in this build");
   else {
     for (const [k, label] of [["tfr", "TFR source"]]) {
       const s = ns[k];
-      r(`notices:${k}`, s && s.ok ? (s.error ? "warn" : "pass") : "warn", label, s ? nsBits(s) : "missing");
+      r(`notices:${k}`, s && !AWXNotices.coverage(s).down ? "pass" : "warn", label, s ? nsBits(s) : "missing");
     }
   }
 

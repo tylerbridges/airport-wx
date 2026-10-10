@@ -22,11 +22,10 @@
     cwa: "center weather advisories may be missing",
   };
   // restrictions hook: FAA TFRs (status.noticeSources); when the source failed, quiet statuses say so
-  const NOTICES_DOWN = "Nearby flight restrictions unavailable right now";
-  function noticesDown() {
-    const ns = (state.data && state.data.noticeSources) || {};
-    return ["tfr"].some((k) => ns[k] && (!ns[k].ok || ns[k].error || ns[k].stale));
+  function noticesQuality() {
+    return AWXNotices.coverage(state.data?.noticeSources?.tfr);
   }
+  function noticesDown() { return noticesQuality().down; }
   const SPC_NAMES = { MRGL: "Marginal", SLGT: "Slight", ENH: "Enhanced", MDT: "Moderate", HIGH: "High" };
   const FAV_KEY = "awx-favs";
   const DEFAULT_FAVS = ["MSP", "ORD", "DEN", "ATL"];
@@ -254,7 +253,9 @@
     return hr < 24 ? hr + "H" + (m % 60 ? " " + (m % 60) + "M" : "") + " AGO" : Math.floor(hr / 24) + "D AGO";
   }
 
-  const refNow = () => (state.sample && state.data ? Date.parse(state.data.generated) : Date.now());
+  // Cards, restored details and the sliced Map share a clock until the next complete render.
+  let evaluatedAt = Date.now();
+  const refNow = () => (state.sample && state.data ? Date.parse(state.data.generated) : evaluatedAt);
   /** The time the reasons' texts were written relative to (their "until 7 PM" is after this). */
   const dataRef = () => (state.data && Date.parse(state.data.live || state.data.generated)) || refNow();
 
@@ -504,7 +505,8 @@
       if (!res.ok) throw new Error("HTTP " + res.status);
       const d = await res.json();
       if (!d || !d.live || !Array.isArray(d.airports) || !d.sources) throw new Error("bad live data");
-      live.data = d;
+      // Overlapping sheet/background requests can finish out of order; a late old answer cannot roll back risk.
+      if (!live.data || Date.parse(d.generated) >= Date.parse(live.data.generated)) live.data = d;
       live.failed = false;
     } catch (e) {
       live.failed = true; // silent: the build is shown, and the header says so
@@ -551,13 +553,15 @@
     }
     hourTick();
   }
-  // the build's hour 1 becomes current at the top of the hour: re-assemble then, without waiting for the next refresh
+  // Refresh all surfaces at validity boundaries, including observation and source expiry.
   let hourTimer = 0;
   function hourTick() {
     clearTimeout(hourTimer);
     if (state.sample) return; // sample data's clock stands still (refNow = its build time)
-    const now = Date.now();
-    hourTimer = setTimeout(() => { if (!loading && state.data) { mergeLive(); render(); } else hourTick(); }, Math.floor(now / HOUR) * HOUR + HOUR - now + 1500);
+    const now = refNow();
+    let next = Math.floor(now / HOUR) * HOUR + HOUR;
+    for (const a of state.data?.airports || []) next = Math.min(next, AWXOutlook.nextChange(a, { now, generated: state.data.generated, sources: state.data.sources }));
+    hourTimer = setTimeout(() => { if (state.data) render(); else { evaluatedAt = Date.now(); hourTick(); } }, Math.max(1, next - Date.now()));
   }
   // an airport sheet opened for an airport the last relay answer didn't cover: ask the relay again (debounced), with
   // that airport first, so its hours are recomputed from the live METAR (README "The observed next hour")
@@ -569,7 +573,6 @@
       if (loading || state.openIata !== iata || det.live.has(iata)) return;
       await loadLive();
       if (loading || !live.data || live.failed) return;
-      mergeLive();
       render();
     }, 400);
   }
@@ -749,6 +752,7 @@
       }
     } finally {
       await Promise.all([liveP || loadLive(), openP]); // live relay: the refresh button waits for fresh data
+      evaluatedAt = Date.now();
       mergeLive();
       if (!testMode() && !state.sample && !state.offline && state.data) saveStatus(state.data);
       loading = false;
@@ -816,6 +820,8 @@
   // ---------- rendering ----------
 
   function render() {
+    evaluatedAt = Date.now();
+    if (state.build) mergeLive(); // start from original hours: an expired obsNext must not survive
     renderHeader();
     renderSeg();
     renderBanner();
@@ -1106,6 +1112,7 @@
     const when = (dayKey(s.t, tz) === dayKey(refNow(), tz) ? "" : timelineDay(s.t, tz) + " ") + hourLabel(s.t, tz);
     if (s.kind === "none") return when + " · No report";
     if (s.kind === "na") return when + " · No forecast";
+    if (s.level == null) return when + " · Status unconfirmed";
     if (s.level === 0 && s.kind !== "obs" && AWXOutlook.health(a, outlookOpts(a, view(a))).quality) return when + " · Status unconfirmed";
     const top = plainList(s.reasons, a)[0];
     return [s.kind === "now" ? "Now" : when, s.kind === "obs" ? (s.observed ? "Observed" : "Earlier forecast") : s.kind === "fc" ? "Forecast" : null, LEVELS[s.level].label, top, s.kind === "fc" && AWXOutlook.quietHour(s.t, a.tz) ? "Few flights" : null].filter(Boolean).join(" · ");
@@ -1116,6 +1123,7 @@
     const when = s.kind === "now" ? "Now" : day + hourLabel(s.t, tz);
     if (s.kind === "none") return when + " · No report";
     if (s.kind === "na") return when + " · No forecast";
+    if (s.level == null) return when + " · Status unconfirmed";
     if (s.level === 0) return when + " · " + (AWXOutlook.health(a, outlookOpts(a, view(a))).quality ? "Status unconfirmed" : s.kind === "fc" && AWXOutlook.quietHour(s.t, a.tz) ? "Few flights" : "Low risk");
     const r = (s.reasons || []).join(" ");
     const topic = (s.reasons || []).some(x => /^Airport closed\b/i.test(x)) ? "Airport closed" : (s.reasons || []).some(x => /^Ground stop\b/i.test(x)) ? "Ground Stop"
@@ -1444,7 +1452,7 @@
     const badgeHeadline = !!currentProgram && badges.length > 0;
     const consolidatedHeadline = (headlineLevel == null ? "Unknown" : LEVELS[headlineLevel].label) + ": " + (badgeHeadline ? badges.map(b => b.textContent).join(" · ") : head);
     const programEnd = !currentProgram ? null : sm.open ? NO_END : sm.current.scheduledEnd
-      ? (currentProgram.type === "closure" ? "Reopens " : "Until ") + faaUntil(sm.current.scheduledEnd, a) + zoneTag(a) : null;
+      ? (currentProgram.type === "closure" ? "Reopens " : "Until ") + faaUntil(sm.current.scheduledEnd, a) + zoneTag(a) + (currentProgram.type === "closure" ? "" : " · may change") : null;
     if (cond && cond.toLowerCase().startsWith(head.toLowerCase())) {
       const rest = cond.slice(head.length).trim();
       if (!rest || /^(until|through|from|expected)\b/i.test(rest)) cond = cap(rest) || null;
@@ -1659,11 +1667,11 @@
     const stops = [], closed = [], gdps = [], delays = [], storms = [];
     for (const a of listed()) {
       const v = view(a);
-      const has = (t) => (v.faa || []).some((f) => f.type === t && (t !== "closure" || ((f.scope || "full") === "full" && f.active !== false)));
-      const advGS = (v.atcscc || []).some((x) => x.type === "GS" && x.active);
-      if (has("ground_stop") || advGS) stops.push(a);
+      const programs = AWXOutlook.restrictions(v, refNow(), refNow());
+      const has = (t) => programs.some((f) => f.type === t);
+      if (has("ground_stop")) stops.push(a);
       if (has("closure")) closed.push(a);
-      if (has("ground_delay") || (v.atcscc || []).some((x) => x.type === "GDP" && x.active)) gdps.push(a);
+      if (has("ground_delay")) gdps.push(a);
       if (has("delay")) delays.push(a);
       const st = v.hours.some((x) => x.reasons.some((r) => CATS.reason(r).cat === "storms" && CATS.reason(r).level >= 2));
       if (st) storms.push(a);
@@ -1994,7 +2002,7 @@
     return out;
   }
   const durTxt = (x) => x.replace(/\b(\d+)h (\d+)m\b/, "$1 hr $2 min").replace(/(\d)m\b/, "$1 min").replace(/(\d)h\b/, "$1 hr");
-  /** End of an FAA program for display: its end, or the hours it is held without one (risk.mjs faaSpan). */
+  /** Resolved scheduled end only; forecast risk holds never provide an endpoint. */
   function programEnd(f) {
     const e = Date.parse(f.end);
     return Number.isFinite(e) ? e : null;
@@ -2017,7 +2025,7 @@
     for (const x of v.atcscc || []) {
       if (!x.active || (x.type !== "GS" && x.type !== "GDP")) continue;
       const type = x.type === "GS" ? "ground_stop" : "ground_delay";
-      if (out.some((f) => f.type === type)) continue;
+      if ((v.faa || []).some((f) => f.type === type)) continue;
       const end = Date.parse(x.end);
       if (!Number.isFinite(end) || t < end) out.push({ type, end: x.end, detail: "", atcscc: true });
     }
@@ -2027,7 +2035,7 @@
   function programLine(f, a) {
     const tz = dispTz(a);
     const end = programEnd(f);
-    const until = end ? "until " + faaUntil(end, a) : /until /.test(f.detail || "") ? retime(/until [^,]+/.exec(f.detail)[0], a) : "until further notice";
+    const until = end ? "until " + faaUntil(end, a) + " · may change" : "until further notice";
     const avg = /avg ([^,]+)/.exec(f.detail || "");
     if (f.type === "closure") return "Airport closed" + (end ? " until " + whenLabel(end, tz) : ""); // closures hook
     if (f.type === "ground_stop") return "Ground stop " + until;
@@ -2046,8 +2054,8 @@
         info ? null : chip, rawAdds(f.reason, f.plain || [f.reason, f.detail].join(" ")) ? rawToggle(f.reason) : null);
     }
     const text = faaText(f, compact, current);
-    const until = /until [^,]+$/.exec(f.detail || "");
-    const end = f.end ? "until " + faaUntil(Date.parse(f.end), a) : until ? retime(until[0], a) : "until further notice";
+    const scheduled = programEnd(f);
+    const end = scheduled ? "until " + faaUntil(scheduled, a) + " · may change" : "until further notice";
     return h("div", { class: "item" },
       compact ? null : h("span", { class: "badge " + (FAA_CLS[f.type] || "l2") }, badgeText(f.badge || f.type)),
       h("div", { style: "margin-top:4px" }, text + (compact ? "." : ", " + end + ".")),
@@ -2071,9 +2079,10 @@
   function advItem(x, a) {
     const tz = dispTz(a);
     const now = refNow();
-    const end = x.end ? Date.parse(x.end) : null;
+    const nas = x.active && !x.cnx ? (a.faa || []).find((f) => f.type === ({ GS: "ground_stop", GDP: "ground_delay" }[x.type]) && f.active !== false) : null;
+    const end = programEnd(nas || x);
     const start = x.start ? Date.parse(x.start) : null;
-    const status = x.cnx ? "Cancelled" : x.active ? (end ? "Active until " + whenLabel(end, tz) : "Active")
+    const status = x.cnx ? "Cancelled" : x.active && (end == null || end > now) ? (end ? "Active until " + faaUntil(end, a) + " · may change" : "Active · " + NO_END)
       : end != null && end < now ? "Ended" : start != null && start > now ? "Starts " + whenLabel(start, tz) : "Superseded";
     const cls = x.active ? ({ GS: "l4", GDP: "l3", AFP: "l2" }[x.type] || "l1") : "off";
     const name = { GS: "Ground Stop", GDP: "Ground delay program", AFP: "Airspace flow program" }[x.type] || "Advisory";
@@ -2141,7 +2150,7 @@
       if (x.error) warn.push(`${SOURCE_NAMES[k]} partly unavailable — ${SOURCE_MISSING[k]}`);
       else if (x.stale) warn.push(`${SOURCE_NAMES[k]}: live update unavailable — showing the last known data`);
     }
-    if (noticesDown()) warn.push("Nearby flight restrictions unavailable"); // restrictions hook
+    if (noticesDown()) warn.push(noticesQuality().text); // restrictions hook
     const when = state.sample ? "sample data" : d ? ago(Math.max(0, Date.now() - Date.parse(d.generated))) : "";
     if (d && !state.sample && refNow() - Date.parse(d.generated) > STALE_MS) warn.unshift("Data is " + when + " — status may have changed");
     const quality = a ? AWXOutlook.health(a, outlookOpts(a, view(a))) : null;
@@ -2355,12 +2364,12 @@
   /**
    * The airport's one level (site/outlook.js summary): the home card's pill and text, the sheet's headline, the
    * national panel, the lists' sorting and At risk, the brief and trips all read it, so they never disagree.
-   * Cached per view and minute.
+   * Cached per view and evaluation snapshot; expiry can fall inside a minute.
    */
   let sumCache = new WeakMap();
   function summary(a) {
     const v = a.hours?.length ? view(a) : a;
-    const k = Math.floor(refNow() / 60e3) + "|" + S.mode + "|" + (state.data && state.data.generated) + "|" + (window.AWXDelay?.revision || 0) + "|" + !!state.offline + "|" + !!state.sample + "|" + !!noticesDown();
+    const k = refNow() + "|" + S.mode + "|" + (state.data && state.data.generated) + "|" + (window.AWXDelay?.revision || 0) + "|" + !!state.offline + "|" + !!state.sample + "|" + !!noticesDown();
     const c = sumCache.get(v);
     if (c && c.k === k) return c.s;
     const sm = AWXOutlook.summary(v, outlookOpts(a, v));
@@ -2376,7 +2385,7 @@
     if (!x) return null;
     const sm = summary(a);
     const hit = sm.byT && sm.byT.get(x.t);
-    if (hit != null) return hit;
+    if (sm.byT?.has(x.t)) return hit;
     const v = a.hours?.length ? view(a) : a;
     const now = refNow();
     return AWXOutlook.levelAt(v, x, outlookOpts(a, v), isNow ? now : Math.max(Date.parse(x.t), now), now);
@@ -2716,8 +2725,8 @@
     const primaryNotices = v.notices ? { ...v.notices, items: (v.notices.items || []).filter((x) => x.peak !== 0 || x.cat === "always") } : null;
     if (primaryNotices) primaryNotices.count = primaryNotices.items.length + Math.max(0, (v.notices.count || 0) - (v.notices.items || []).length);
     const nts = window.AWXNotices ? safeCall(() => AWXNotices.section({ ...v, notices: primaryNotices }, a, noticeContext)) : null; // restrictions hook: material notices stay visible
-    const ntsDown = noticesDown() && !(outlook(a).kind === "unknown" && !nts) ? h("p", { class: "ntc-down muted" }, NOTICES_DOWN) : null; // never silently missing (a quiet Now card already says it)
-    if (nts) { secs.push(nts); if (ntsDown) nts.querySelector(".scard").append(ntsDown); }
+    const ntsDown = noticesDown() && !nts ? h("p", { class: "ntc-down muted" }, noticesQuality().text) : null;
+    if (nts) secs.push(nts);
     else if (ntsDown) secs.push(ntsDown);
 
     // a warning's description without its repeated title: "Severe Thunderstorm Warning issued for Cook and DuPage Counties" -> "Cook and DuPage Counties"
@@ -3451,7 +3460,7 @@
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
       checkVersion(); // live relay
-      renderHeader();
+      render();
       if (Date.now() - state.fetchedAt > 20e3) load(false);
     }
   });
@@ -3461,7 +3470,7 @@
   setInterval(() => { if (document.visibilityState === "visible") checkVersion(); }, 10 * 60e3); // live relay: self-update
 
   window.AWXApp = {
-    state, openSheet, closeSheet, toggleFav, render, tafForecast, // build2a hook: used by site/searched.js
+    state, openSheet, closeSheet, toggleFav, render, refresh: () => load(false), tafForecast, // build2a hook: used by site/searched.js
     // build2b: for site/searched.js, the settings UI and check.js
     openDetails, closeDetails, detailRow, popupFocus, refreshDetails: () => { if (md.iata) renderDetails(true); }, // Airport details pages
     ensureCardTimeline, prefs: PREFS, codeOf, view, outlook, summary, hourLevel, slotText, refNow, whenLabel, dispTz, zoneAbbr, clock, hourLabel, daySlots, openNational, closePanel, placeLenses, retime,

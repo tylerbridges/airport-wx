@@ -134,7 +134,7 @@ test("FAA override: ground stop / GDP in effect -> p = 1, the FAA's average dela
   const d = scoreHours({ iata: "ORD", tz: "America/Chicago", now: NOW, hours, taf: TAF, fallback: FALLBACK, faa });
   assert.equal(d[0].p, 1);
   assert.equal(d[0].override, "ground_delay");
-  assert.equal(d[0].minutes, 70); // 72 min rounded to 5
+  assert.equal(d[0].minutes, 72); // preserve the FAA's explicit average
   assert.equal(d[0].minutesFrom, "faa");
   assert.equal(d[2].p, 1);
   assert.notEqual(d[3].override, "ground_delay");

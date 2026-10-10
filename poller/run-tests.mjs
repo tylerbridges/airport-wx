@@ -23,6 +23,7 @@ import "../tools/prefs.test.mjs";
 import "../tools/delay-words.test.mjs";
 import "../tools/outlook.test.mjs";
 import "../tools/wxdays.test.mjs"; // Weather page Today / Tomorrow rows
+import "../tools/severity.test.mjs"; // expiry and asynchronous generation transitions
 import "../tools/split-equivalence.test.mjs"; // summary / detail split (README "status.json")
 import "../tools/obs-hour.test.mjs"; // the observed next hour (README "The observed next hour")
 // live relay
@@ -46,6 +47,7 @@ import "./hubs.test.mjs";
 import "../tools/radar.test.mjs";
 // Nearby flight restriction coverage
 import "./notices.test.mjs";
+import "./notices-poll.test.mjs";
 import "./tfr.test.mjs";
 // terminals hook: terminal maps (Overpass parsing, simplification) and the curated lounge data
 import "../tools/terminals.test.mjs";

@@ -13,6 +13,21 @@
     return m < 60 ? m + " MIN AGO" : Math.round(m / 60) + " H AGO";
   }
 
+  /** Coverage is global: omitted geometry cannot safely be assigned to individual airports. */
+  function coverage(s) {
+    if (!s) return { down: false, text: "" }; // Older builds without this optional source.
+    var partial = !!s.incomplete || (s.eligible == null && s.listed > s.tfrs);
+    return { down: partial || !s.ok || !!s.error || !!s.stale, text: partial
+      ? "Nearby flight restriction coverage is incomplete; some restrictions may be missing"
+      : "Nearby flight restrictions unavailable right now" };
+  }
+  function describe(s) {
+    if (s.eligible == null) return (s.tfrs == null ? "" : s.tfrs + " details available; " + s.listed + " listed; coverage breakdown unavailable");
+    return s.listed + " listed · " + s.excluded + " intentionally excluded · " + s.eligible + " eligible · " +
+      s.attempted + " attempted · " + s.parsed + " parsed · " + s.cached + " cached · " + s.skipped +
+      " skipped (" + s.capSkipped + " cap, " + s.budgetSkipped + " budget) · " + s.failed + " failed";
+  }
+
   /** Items shown under the settings: not hidden, not ended, and in Traveler mode not already shown elsewhere (dup). */
   function visible(n, ctx) {
     return ((n && n.items) || []).filter(function (x) {
@@ -43,16 +58,18 @@
         ctx.aviation && x.raw ? h("pre", { class: "raw rawt" }, x.raw + (x.src === "tfr" && x.nm != null ? "\n(" + (x.nm ? x.nm + " NM from the airport" : "over the airport") + ")" : "")) : null);
     });
     if (more > 0) kids.push(h("div", { class: "muted small", style: "padding:8px 0 2px" }, "+" + more + " more"));
+    var quality = coverage((ctx.sources || {}).tfr);
+    if (quality.down) kids.push(h("p", { class: "ntc-down muted" }, quality.text));
     if (ctx.aviation) {
       var s = ctx.sources || {};
       var parts = [];
-      if (s.tfr && s.tfr.ok) parts.push("FAA TFR LIST · UPDATED " + agoMin(s.tfr.at, ctx.now));
+      if (s.tfr && s.tfr.ok) parts.push("FAA TFR LIST · UPDATED " + agoMin(s.tfr.at, ctx.now) + " · " + describe(s.tfr));
       if (parts.length) kids.push(h("div", { class: "srcl" }, "SOURCE: " + parts.join("; ")));
     }
     return ctx.section("Flight restrictions", "ops", kids, null, { meta: "FAA", id: "notices" });
   }
 
-  var api = { section: section, visible: visible, MAX: MAX };
+  var api = { section: section, visible: visible, MAX: MAX, coverage: coverage, describe: describe };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.AWXNotices = api;
 })(typeof window !== "undefined" ? window : this);

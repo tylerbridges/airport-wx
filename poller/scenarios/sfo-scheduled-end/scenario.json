@@ -1,0 +1,30 @@
+{
+  "title": "SFO scheduled FAA end (midnight rollover)",
+  "group": "delays",
+  "at": "2026-10-10T05:00:00Z",
+  "blurb": "SFO arrivals delayed 57 min, scheduled through October 9 at 11:59 PM PDT.",
+  "description": "Frozen reproduction of the October 10 05:00 UTC conflict: NAS XML omits the GDP endpoint; the matching current advisory supplies 06:59 UTC. All surfaces use the same scheduled end, with provenance and may-change qualification.",
+  "assert": [
+    {
+      "t": "faa",
+      "iata": "SFO",
+      "type": "ground_delay",
+      "cause": "volume"
+    },
+    {
+      "t": "words",
+      "iata": "SFO",
+      "at": "now",
+      "sentence": "Delays happening now \u00b7 FAA average about 57 min"
+    },
+    {
+      "t": "faaEnd",
+      "iata": "SFO",
+      "minutes": 119,
+      "source": "atcscc"
+    },
+    {
+      "t": "noPercent"
+    }
+  ]
+}

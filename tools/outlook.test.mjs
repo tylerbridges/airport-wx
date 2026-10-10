@@ -247,3 +247,30 @@ test("trip guidance distinguishes inbound holds, closures, future risk and incom
   assert.match(O.travelAdvice({}, {later:true,level:3,current:{}}, {}), /departure, connection or arrival overlaps/);
   assert.match(O.travelAdvice({}, {current:{level:0}}, {incomplete:true}), /^Coverage is incomplete.*does not guarantee/);
 });
+
+test("resolved SFO scheduled end survives summary/detail split and wins over a longer advisory", () => {
+  const S = createRequire(import.meta.url)("../site/split.js");
+  const end = Date.parse("2026-10-10T06:59:00Z"), frozen = Date.parse("2026-10-10T05:00:00Z");
+  const a = base(); a.iata = "SFO"; a.tz = "America/Los_Angeles";
+  a.hours = Array.from({ length: 24 }, (_, i) => ({ t: new Date(frozen + i * H).toISOString(), level: i < 2 ? 3 : 0, reasons: [] }));
+  a.faa = [{ type: "ground_delay", end: new Date(end).toISOString(), endFrom: "nas", detail: "avg 57m" }];
+  a.atcscc = [{ id: "100", airport: "SFO", type: "GDP", active: true, issued: new Date(frozen - H).toISOString(), start: new Date(frozen - 2 * H).toISOString(), end: new Date(end + H).toISOString() }];
+  const slim = S.slimAirport(a);
+  assert.deepEqual(slim.faa, a.faa);
+  for (const airport of [a, slim]) {
+    const opts = options({ now: frozen, generated: new Date(frozen).toISOString() });
+    assert.equal(O.evaluate(airport, opts).scheduledEnd, end);
+    assert.equal(O.evaluate(airport, { ...opts, at: frozen + H }).scheduledEnd, end);
+    assert.equal(O.evaluate(airport, { ...opts, at: end }).programs.length, 0, "advisory cannot revive an ended NAS window");
+    assert.equal(O.summary(airport, opts).open, null);
+  }
+});
+
+test("wrong-airport and future-issued advisories never provide current restrictions", () => {
+  const a = base();
+  const x = { id: "100", airport: "ORD", type: "GDP", active: true, start: new Date(now - H).toISOString(), end: new Date(now + H).toISOString(), issued: new Date(now - H).toISOString() };
+  for (const bad of [{ airport: "SFO" }, { issued: new Date(now + 1).toISOString() }]) {
+    a.atcscc = [{ ...x, ...bad }];
+    assert.equal(O.evaluate(a, options()).programs.length, 0);
+  }
+});

@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-10T01:27:48.162Z",
+ "generated": "2026-10-10T14:52:54.196Z",
  "groups": {
   "delays": "Delays & programs",
   "weather": "Weather",
@@ -1367,6 +1367,69 @@
    ]
   },
   {
+   "name": "partial-tfr-coverage",
+   "title": "Partial flight restriction coverage",
+   "group": "system",
+   "blurb": "A valid Washington VIP restriction survives a missing eligible detail; unrelated fire records are excluded.",
+   "description": "Three listed records: one valid VIP detail, one missing VIP detail and one intentionally excluded Idaho fire record. Useful restrictions remain visible, while traveler views qualify globally incomplete coverage. Counts distinguish the omission from the intentional exclusion.",
+   "file": "partial-tfr-coverage.json",
+   "wx": "partial-tfr-coverage/wx/",
+   "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
+   "assert": [
+    {
+     "t": "noticeSource",
+     "name": "tfr",
+     "ok": true,
+     "incomplete": true,
+     "counts": {
+      "listed": 3,
+      "excluded": 1,
+      "eligible": 2,
+      "attempted": 2,
+      "parsed": 1,
+      "cached": 0,
+      "skipped": 0,
+      "failed": 1,
+      "tfrs": 1
+     }
+    },
+    {
+     "t": "notice",
+     "iata": "DCA",
+     "kind": "vip",
+     "level": 2
+    },
+    {
+     "t": "level",
+     "iata": "DCA",
+     "of": "peak",
+     "op": "==",
+     "v": 2
+    },
+    {
+     "t": "sheet",
+     "iata": "DCA",
+     "re": "Flight restrictions.*VIP movement nearby: flight restrictions"
+    },
+    {
+     "t": "sheet",
+     "iata": "DCA",
+     "re": "Nearby flight restriction coverage is incomplete; some restrictions may be missing"
+    },
+    {
+     "t": "sheet",
+     "iata": "MSP",
+     "re": "Nearby flight restriction coverage is incomplete; some restrictions may be missing"
+    },
+    {
+     "t": "noPercent"
+    }
+   ]
+  },
+  {
    "name": "recovering",
    "title": "Recovering after an EWR ground stop",
    "group": "delays",
@@ -1461,6 +1524,42 @@
     },
     {
      "t": "noAirportBrief"
+    }
+   ]
+  },
+  {
+   "name": "sfo-scheduled-end",
+   "title": "SFO scheduled FAA end (midnight rollover)",
+   "group": "delays",
+   "blurb": "SFO arrivals delayed 57 min, scheduled through October 9 at 11:59 PM PDT.",
+   "description": "Frozen reproduction of the October 10 05:00 UTC conflict: NAS XML omits the GDP endpoint; the matching current advisory supplies 06:59 UTC. All surfaces use the same scheduled end, with provenance and may-change qualification.",
+   "file": "sfo-scheduled-end.json",
+   "wx": "sfo-scheduled-end/wx/",
+   "lagMin": 0,
+   "live": false,
+   "model": null,
+   "delayOverride": false,
+   "assert": [
+    {
+     "t": "faa",
+     "iata": "SFO",
+     "type": "ground_delay",
+     "cause": "volume"
+    },
+    {
+     "t": "words",
+     "iata": "SFO",
+     "at": "now",
+     "sentence": "Delays happening now · FAA average about 57 min"
+    },
+    {
+     "t": "faaEnd",
+     "iata": "SFO",
+     "minutes": 119,
+     "source": "atcscc"
+    },
+    {
+     "t": "noPercent"
     }
    ]
   },

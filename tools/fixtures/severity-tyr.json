@@ -1,0 +1,456 @@
+{
+  "evidence": {
+    "run": "https://github.com/tylerbridges/airport-wx/actions/runs/38025565205",
+    "commit": "40bb42f7028c9092a1e9582de4d030236534fe56",
+    "issues": [
+      8,
+      9
+    ],
+    "historyCommit": "9a785f6021502a5964a28f3a739130685dce4d03",
+    "historyForecastGenerated": "2026-10-10T04:01:41Z",
+    "reconstruction": "METAR and hourly forecast recovered from history. Build generation and healthy sources from the job log. Per-source fetch times, detail generation and initial render time were not retained; fixture pins them to the build and immediately before expiry. This is a minimal reconstruction, not a complete captured browser response.",
+    "summaryGenerated": "2026-10-10T04:50:17.347Z",
+    "detailGenerated": "2026-10-10T04:50:17.347Z",
+    "relayGenerated": null
+  },
+  "before": "2026-10-10T04:52:59.000Z",
+  "after": "2026-10-10T04:53:29.449Z",
+  "build": {
+    "generated": "2026-10-10T04:50:17.347Z",
+    "sources": {
+      "metar": {
+        "ok": true,
+        "at": "2026-10-10T04:50:17.347Z"
+      },
+      "taf": {
+        "ok": true,
+        "at": "2026-10-10T04:50:17.347Z"
+      },
+      "faa": {
+        "ok": true,
+        "at": "2026-10-10T04:50:17.347Z"
+      },
+      "atcscc": {
+        "ok": true,
+        "at": "2026-10-10T04:50:17.347Z"
+      },
+      "nws": {
+        "ok": true,
+        "at": "2026-10-10T04:50:17.347Z"
+      },
+      "sigmet": {
+        "ok": true,
+        "at": "2026-10-10T04:50:17.347Z"
+      },
+      "isigmet": {
+        "ok": true,
+        "at": "2026-10-10T04:50:17.347Z"
+      },
+      "spc": {
+        "ok": true,
+        "at": "2026-10-10T04:50:17.347Z"
+      },
+      "lamp": {
+        "ok": true,
+        "at": "2026-10-10T04:50:17.347Z"
+      },
+      "tcf": {
+        "ok": true,
+        "at": "2026-10-10T04:50:17.347Z"
+      },
+      "cwa": {
+        "ok": true,
+        "at": "2026-10-10T04:50:17.347Z"
+      }
+    },
+    "noticeSources": {
+      "tfr": {
+        "ok": true,
+        "at": "2026-10-10T04:50:17.347Z"
+      }
+    },
+    "airports": [
+      {
+        "iata": "TYR",
+        "icao": "KTYR",
+        "name": "Tyler Pounds Regional Airport",
+        "city": "Tyler",
+        "state": "TX",
+        "tz": "America/Chicago",
+        "lat": 32.354,
+        "lon": -95.402,
+        "metar": {
+          "obsTime": "2026-10-10T02:53Z",
+          "raw": "METAR KTYR 100253Z AUTO 00000KT 10SM CLR 23/16 A2997 RMK AO2 SLP141 T02330156 53011",
+          "fltCat": "VFR",
+          "visib": 10,
+          "wspd": 0,
+          "wind": {
+            "spd": 0,
+            "dir": 0
+          },
+          "temp": 23.3
+        },
+        "taf": {
+          "issued": "2026-10-09T23:37Z",
+          "raw": "TAF KTYR 092337Z 1000/1024 VRB04KT P6SM SKC FM101200 06006KT P6SM SKC FM101900 05011G18KT P6SM FEW050"
+        },
+        "hours": [
+          {
+            "t": "2026-10-10T04:00Z",
+            "level": 0,
+            "delay": {
+              "p": 0.19,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "0-3",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "reasons": []
+          },
+          {
+            "t": "2026-10-10T05:00Z",
+            "level": 0,
+            "delay": {
+              "p": 0.17,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "0-3",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "reasons": []
+          },
+          {
+            "t": "2026-10-10T06:00Z",
+            "level": 0,
+            "delay": {
+              "p": 0.17,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "0-3",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "reasons": []
+          },
+          {
+            "t": "2026-10-10T07:00Z",
+            "level": 0,
+            "delay": {
+              "p": 0.16,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "0-3",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "reasons": []
+          },
+          {
+            "t": "2026-10-10T08:00Z",
+            "level": 0,
+            "delay": {
+              "p": 0.16,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "3-6",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "reasons": []
+          },
+          {
+            "t": "2026-10-10T09:00Z",
+            "level": 0,
+            "delay": {
+              "p": 0.15,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "3-6",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "reasons": []
+          },
+          {
+            "t": "2026-10-10T10:00Z",
+            "level": 0,
+            "delay": {
+              "p": 0.17,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "3-6",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "reasons": []
+          },
+          {
+            "t": "2026-10-10T11:00Z",
+            "level": 0,
+            "delay": {
+              "p": 0.18,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "6-12",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "reasons": []
+          },
+          {
+            "t": "2026-10-10T12:00Z",
+            "level": 0,
+            "delay": {
+              "p": 0.17,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "6-12",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "reasons": []
+          },
+          {
+            "t": "2026-10-10T13:00Z",
+            "level": 0,
+            "delay": {
+              "p": 0.17,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "6-12",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "reasons": []
+          },
+          {
+            "t": "2026-10-10T14:00Z",
+            "level": 0,
+            "delay": {
+              "p": 0.17,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "6-12",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "reasons": []
+          },
+          {
+            "t": "2026-10-10T15:00Z",
+            "level": 0,
+            "delay": {
+              "p": 0.17,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "6-12",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "reasons": []
+          },
+          {
+            "t": "2026-10-10T16:00Z",
+            "level": 0,
+            "delay": {
+              "p": 0.17,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "6-12",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "reasons": []
+          },
+          {
+            "t": "2026-10-10T17:00Z",
+            "level": 0,
+            "delay": {
+              "p": 0.17,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "12-24",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "reasons": []
+          },
+          {
+            "t": "2026-10-10T18:00Z",
+            "level": 0,
+            "delay": {
+              "p": 0.16,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "12-24",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "reasons": []
+          },
+          {
+            "t": "2026-10-10T19:00Z",
+            "level": 0,
+            "delay": {
+              "p": 0.17,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "12-24",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "reasons": []
+          },
+          {
+            "t": "2026-10-10T20:00Z",
+            "level": 0,
+            "delay": {
+              "p": 0.17,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "12-24",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "reasons": []
+          },
+          {
+            "t": "2026-10-10T21:00Z",
+            "level": 0,
+            "delay": {
+              "p": 0.16,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "12-24",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "reasons": []
+          },
+          {
+            "t": "2026-10-10T22:00Z",
+            "level": 0,
+            "delay": {
+              "p": 0.16,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "12-24",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "reasons": []
+          },
+          {
+            "t": "2026-10-10T23:00Z",
+            "level": 0,
+            "delay": {
+              "p": 0.16,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "12-24",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "reasons": []
+          },
+          {
+            "t": "2026-10-11T00:00Z",
+            "delay": {
+              "p": 0.19,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "12-24",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "level": null,
+            "reasons": []
+          },
+          {
+            "t": "2026-10-11T01:00Z",
+            "delay": {
+              "p": 0.19,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "12-24",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "level": null,
+            "reasons": []
+          },
+          {
+            "t": "2026-10-11T02:00Z",
+            "delay": {
+              "p": 0.2,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "12-24",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "level": null,
+            "reasons": []
+          },
+          {
+            "t": "2026-10-11T03:00Z",
+            "delay": {
+              "p": 0.2,
+              "pTypical": 0.2,
+              "minutes": 45,
+              "basis": "model",
+              "lead": "12-24",
+              "modelCoverage": "pooled",
+              "typicalScope": "pooled"
+            },
+            "level": null,
+            "reasons": []
+          }
+        ],
+        "now": {
+          "level": 0,
+          "reasons": []
+        },
+        "peak": {
+          "level": 0,
+          "at": "2026-10-10T04:00Z",
+          "reasons": []
+        },
+        "observed": [],
+        "faa": [],
+        "atcscc": [],
+        "alerts": [],
+        "sigmets": [],
+        "notices": {
+          "items": []
+        }
+      }
+    ]
+  }
+}

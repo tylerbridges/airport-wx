@@ -151,6 +151,21 @@ const ZONE_REGION = { ET: "America/New_York", CT: "America/Chicago", MT: "Americ
  */
 export function faaTimeMs(raw, tz, now = new Date()) {
   const s = String(raw || "").trim();
+  // A dated NAS endpoint is an absolute scheduled time, not a clock to roll forward relative to now.
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})$/i.test(s)) {
+    const t = Date.parse(s);
+    return Number.isFinite(t) ? t : null;
+  }
+  const dated = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2}):(\d{2})\s*(AKST|AKDT|AKT|[ECMPH][SD]T|[ECMP]T|UTC|GMT|Z)?\.?$/i.exec(s);
+  if (dated) {
+    const [, year, month, day, hour, minute, zone] = dated;
+    const local = Date.UTC(+year, +month - 1, +day, +hour, +minute);
+    const d = new Date(local);
+    if (+hour > 23 || +minute > 59 || d.getUTCFullYear() !== +year || d.getUTCMonth() !== +month - 1 || d.getUTCDate() !== +day) return null;
+    const z = (zone || "").toUpperCase();
+    const off = z in ZONE_OFFSET ? ZONE_OFFSET[z] * 3600e3 : tzOffset(local, ZONE_REGION[z] || tz);
+    return local - off;
+  }
   const a = /(\d{1,2}):(\d{2})\s*([ap])\.?m\.?(?:\s*\b(AKST|AKDT|AKT|[ECMPH][SD]T|[ECMP]T|UTC|GMT|Z)\b)?/i.exec(s);
   if (a) {
     const hh = (Number(a[1]) % 12) + (a[3].toLowerCase() === "p" ? 12 : 0);
@@ -178,6 +193,10 @@ export function faaTimeMs(raw, tz, now = new Date()) {
 export function formatFaaTime(raw, tz, now = new Date()) {
   const s = String(raw || "").trim().replace(/\.$/, "");
   if (!s) return "";
+  if (/^\d{4}-\d{2}-\d{2}[ T]/.test(s)) {
+    const ms = faaTimeMs(s, tz, now);
+    return ms == null ? s : `${fmtClock(ms, tz, now)} ${tzAbbr(ms, tz)}`;
+  }
   const a = /(\d{1,2}):(\d{2})\s*([ap])\.?m\.?/i.exec(s);
   if (a) {
     // in the airport's own zone, whatever zone the FAA wrote it in ("7:45 pm EDT" at SFO -> "4:45 PM PT")
@@ -255,8 +274,11 @@ export function parseFaaXml(xml, { now = new Date(), tzFor = () => "America/New_
         const arpt = textOf(e.body, "ARPT");
         const avg = compactDuration(textOf(e.body, "Avg"));
         const max = compactDuration(textOf(e.body, "Max"));
-        const detail = [avg && `avg ${avg}`, max && `max ${max}`].filter(Boolean).join(", ");
-        push(arpt, { type: "ground_delay", reason: textOf(e.body, "Reason"), detail, badge: avg ? `GDP avg ${avg.replace(/ /g, "")}` : "GDP" });
+        const endRaw = textOf(e.body, "End_Time");
+        const endMs = faaTimeMs(endRaw, tzFor(arpt), now);
+        const end = endMs != null ? new Date(endMs).toISOString() : null;
+        const detail = [avg && `avg ${avg}`, max && `max ${max}`, end && `until ${formatFaaTime(endRaw, tzFor(arpt), now)}`].filter(Boolean).join(", ");
+        push(arpt, { type: "ground_delay", reason: textOf(e.body, "Reason"), detail, badge: avg ? `GDP avg ${avg.replace(/ /g, "")}` : "GDP", end });
       }
     } else if (/arrival|departure|delay/.test(name)) {
       for (const e of elements(dt.body, "Delay")) {

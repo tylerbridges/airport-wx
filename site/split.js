@@ -66,9 +66,10 @@
     const byT = (list) => new Map((Array.isArray(list) ? list : []).filter((h) => h && h.t).map((h) => [h.t, h]));
     const one = (h, f) => {
       if (!f) return h;
-      const r = { ...f, ...h };
-      if (f.delay && h.delay) r.delay = { ...f.delay, ...h.delay };
-      else if (!("delay" in h)) delete r.delay; // the summary's hour has no delay numbers: none
+      // Restore only fields the split removed. An absent summary level/reason/override is authoritative too,
+      // especially when a detail response belongs to another poll with coverage the summary doesn't have.
+      const r = { ...Object.fromEntries(COND.filter(k => k in f).map(k => [k, f[k]])), ...h };
+      if (f.delay && h.delay) r.delay = { ...Object.fromEntries(DELAY_DETAIL.filter(k => k in f.delay).map(k => [k, f.delay[k]])), ...h.delay };
       return r;
     };
     // an hour the page replaced with the observed hour 1 (obs: true, site/outlook.js withObsHour) takes its details from
@@ -81,7 +82,7 @@
     if (slim.obsNext && typeof slim.obsNext === "object") out.obsNext = one(slim.obsNext, fObs && fObs.t === slim.obsNext.t ? fObs : null);
     if (Array.isArray(slim.observed)) {
       const fo = byT(full.observed);
-      out.observed = slim.observed.map((h) => { const f = h && fo.get(h.t); return f ? { ...f, ...h } : h; });
+      out.observed = slim.observed.map((h) => { const f = h && fo.get(h.t); return f ? { ...Object.fromEntries(OBS_DETAIL.filter(k => k in f).map(k => [k, f[k]])), ...h } : h; });
     }
     return out;
   }

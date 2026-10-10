@@ -228,10 +228,10 @@ export function mountMap(container) {
     requestAnimationFrame(() => setTimeout(go, 0));
     t = setTimeout(go, 200);
   }
-  /** Drop cached states when the data, settings or the minute change (gen is bumped by awx:render and prefs). */
+  /** Drop cached states when the data, settings or evaluation snapshot change (gen is bumped by awx:render and prefs). */
   function checkCache(A) {
     const d = A.state.data || {};
-    const k = [gen, Math.floor(A.refNow() / 60e3), d.generated, d.live, !!A.state.offline, !!A.state.sample].join("|");
+    const k = [gen, A.refNow(), d.generated, d.live, !!A.state.offline, !!A.state.sample].join("|");
     if (k === cacheKey) return;
     cacheKey = k; stateCache.clear(); atBy.clear(); dsCache = new WeakMap();
   }
@@ -759,7 +759,7 @@ export function mountMap(container) {
   function schedule() { if (pending || container.hidden) return; pending = true; afterFrame(() => { if (pending) { pending = false; render(); } }); }
   const restyle = () => { colors = null; draw(true); };
   new ResizeObserver(() => draw(true)).observe(container);
-  document.addEventListener("awx:render", () => { gen++; schedule(); });
+  document.addEventListener("awx:render", () => { gen++; job++; pfTok++; schedule(); });
   document.addEventListener("awx:trips", schedule);
   safe(() => window.AWXPrefs.onPrefs(() => { gen++; restyle(); textW.clear(); schedule(); }));
   safe(() => matchMedia("(prefers-color-scheme: dark)").addEventListener("change", restyle));

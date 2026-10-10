@@ -88,7 +88,7 @@ test("FAA XML parser covers all four program types and ignores unknown ones", ()
   const r = parseFaaXml(XML, { now: NOW, tzFor: (c) => (c === "ANC" ? "America/Anchorage" : "America/Los_Angeles") });
   assert.equal(r.updated, "Sat Oct 03 19:15:00 2026 GMT");
   assert.deepEqual(r.byAirport.SFO, [{ type: "ground_stop", reason: "fog", detail: "until 5:30 PM PT", badge: "GROUND STOP", end: "2026-10-04T00:30:00.000Z" }]);
-  assert.deepEqual(r.byAirport.EWR, [{ type: "ground_delay", reason: "wind", detail: "avg 52m, max 2h 8m", badge: "GDP avg 52m" }]);
+  assert.deepEqual(r.byAirport.EWR, [{ type: "ground_delay", reason: "wind", detail: "avg 52m, max 2h 8m", badge: "GDP avg 52m", end: null }]);
   assert.deepEqual(r.byAirport.JFK, [{ type: "delay", reason: "volume & wx", detail: "Departures 16–30m, increasing", badge: "DELAYS", trend: "increasing" }]);
   assert.equal(faaTimeMs("5:30 pm EDT", "America/New_York", NOW), Date.parse("2026-10-03T21:30:00Z"));
   assert.equal(faaTimeMs("1:15 am EDT", "America/New_York", NOW), Date.parse("2026-10-04T05:15:00Z")); // rolls to tomorrow
@@ -296,4 +296,63 @@ test("generic NAS program causes use only the latest matching active advisory", 
   assert.equal(build("other", [adv, { ...adv, issued: NOW.toISOString(), cnx: true }]).faa[0].cause, "other", "a cancelled latest advisory supersedes older active ones");
   assert.equal(build("other", [adv, { ...adv, issued: NOW.toISOString(), active: false }]).faa[0].cause, "other");
   assert.equal(build("other", []).faa[0].causeLabel, "other cause");
+});
+
+
+test("SFO scheduled ends: NAS wins; matching current advisory supplies only missing ends", () => {
+  const now = new Date("2026-10-10T05:00:00Z"), end = "2026-10-10T06:59:00.000Z";
+  const airport = { iata: "SFO", icao: "KSFO", tz: "America/Los_Angeles", lat: 37.62, lon: -122.38 };
+  const advisory = { id: "2026-10-09#100", airport: "SFO", type: "GDP", active: true, cnx: false,
+    issued: "2026-10-10T04:00:00Z", start: "2026-10-09T23:00:00Z", end,
+    cause: "volume", causeText: "VOLUME / VOLUME", extension: "high" };
+  const nas = { type: "ground_delay", reason: "other", detail: "avg 57m", badge: "GDP avg 57m" };
+  const build = (advisories = [advisory], f = nas, extra = {}) => assemble({ airports: [airport], now,
+    metars: [], tafs: [], sigmets: null, spc: null, nws: null,
+    faaParsed: { byAirport: { SFO: [f] } }, atcscc: advisories, ...extra })[0];
+  const a = build();
+  assert.equal(a.faa[0].end, end);
+  assert.equal(a.faa[0].endFrom, "atcscc");
+  assert.equal(a.faa[0].endAdvisory, advisory.id);
+  assert.match(a.faa[0].detail, /avg 57m, until 11:59 PM PT/);
+  assert.equal(a.atcscc[0].extension, "high");
+  assert.ok(a.hours[1].reasons.some(r => /Ground delay program.*11:59 PM/.test(r)));
+  assert.ok(!a.hours[2].reasons.some(r => /Ground delay program/.test(r)), "no program beyond 06:59Z");
+  const explicit = "2026-10-10T06:30:00.000Z";
+  assert.equal(build([advisory], { ...nas, end: explicit }).faa[0].end, explicit);
+  assert.equal(build([advisory], { ...nas, end: explicit }).faa[0].endFrom, "nas");
+  for (const bad of [
+    { airport: "ORD" }, { type: "GS" }, { cnx: true }, { active: false },
+    { issued: "2026-10-10T05:01:00Z" }, { issued: null },
+    { start: "2026-10-10T05:01:00Z" }, { start: null },
+    { end: "2026-10-10T05:00:00Z" }, { end: null },
+  ]) assert.equal(build([{ ...advisory, ...bad }]).faa[0].end, null, JSON.stringify(bad));
+  const cancel = { ...advisory, id: "2026-10-09#101", issued: "2026-10-10T04:30:00Z", cnx: true };
+  assert.equal(build([advisory, cancel]).faa[0].end, null, "cancellation supersedes older active advisory");
+  assert.equal(build([advisory, { ...cancel, issued: advisory.issued }]).faa[0].end, null, "id breaks tied issue times");
+  assert.equal(build([], nas).faa[0].end, null, "forecast hold is not an end");
+  const saved = structuredClone(a.faa);
+  assert.equal(build([cancel], nas, { over: () => ({ faa: saved }) }).faa[0].end, null, "relay invalidates derived end");
+  assert.equal(saved[0].end, end, "assembly does not mutate the saved build");
+  const op = { plan: { advisory: "099", issued: "2026-10-10T04:00:00Z", validEnd: "2026-10-10T08:00:00Z" },
+    programs: [{ program: "GDP", status: "active", until: end }], staffing: [], constraints: [], sirs: [], notes: [] };
+  const planBuild = (advisories, opsplan) => build(advisories, nas, { over: () => ({ opsplan }) });
+  assert.equal(planBuild([], op).faa[0].endFrom, "opsplan", "valid existing ops-plan fallback preserved");
+  assert.equal(planBuild([cancel], op).faa[0].end, null, "cancelled advisory blocks plan fallback");
+  assert.equal(planBuild([], { ...op, plan: { ...op.plan, validEnd: now.toISOString() } }).faa[0].end, null);
+  assert.equal(planBuild([], { ...op, programs: [{ ...op.programs[0], from: "2026-10-10T05:01:00Z" }] }).faa[0].end, null);
+});
+
+test("dated NAS endpoints preserve timezone, date rollover and expired explicit dates", () => {
+  const now = new Date("2026-10-10T05:00:00Z");
+  for (const raw of ["2026-10-10 01:59 CDT", "2026-10-09 23:59 PDT", "2026-10-10T06:59:00Z", "2026-10-10T01:59:00-05:00"]) {
+    assert.equal(faaTimeMs(raw, "America/Los_Angeles", now), Date.parse("2026-10-10T06:59:00Z"), raw);
+    assert.equal(formatFaaTime(raw, "America/Los_Angeles", now), "11:59 PM PT", raw);
+    const xml = `<Delay_type><Name>Ground Delay Programs</Name><Ground_Delay><ARPT>SFO</ARPT><Reason>other</Reason><Avg>57 minutes</Avg><End_Time>${raw}</End_Time></Ground_Delay></Delay_type>`;
+    const f = parseFaaXml(xml, { now, tzFor: () => "America/Los_Angeles" }).byAirport.SFO[0];
+    assert.equal(f.end, "2026-10-10T06:59:00.000Z");
+    assert.match(f.detail, /avg 57m.*11:59 PM PT/);
+  }
+  assert.equal(faaTimeMs("2026-10-08 01:59 CDT", "America/Los_Angeles", now), Date.parse("2026-10-08T06:59:00Z"), "never roll an explicit expired date forward");
+  assert.equal(faaTimeMs("2026-02-30 01:59 CDT", "America/Los_Angeles", now), null);
+  assert.equal(faaTimeMs("until further notice", "America/Los_Angeles", now), null);
 });

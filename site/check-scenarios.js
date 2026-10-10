@@ -17,7 +17,7 @@
 //   {t:"cascade", iata, hub, re?}  {t:"noCascade", iata, hub?}  hub cascade notes (status.json cascade, poller/hubs.mjs)
 //   {t:"notice", iata, kind?, re?, level?}  one of the airport's notices (README "Notices") of that kind matches re;
 //        level = the highest level it set in the 24 hours (0 = information)            (restrictions hook)
-//   {t:"noticeSource", name: tfr, ok}  (restrictions hook)
+//   {t:"noticeSource", name: tfr, ok, incomplete?, counts?: {listed, excluded, ...}}  (restrictions hook)
 // Page assertions:
 //   {t:"now", iata, level?, obs?, re?, notRe?}  the page's current hour (README "The observed next hour"): the
 //        airport's current level (outlook.js summary), whether that hour is the observed one (obs: true/false), and
@@ -26,6 +26,7 @@
 //   {t:"sheet", iata, re}  the airport's sheet (text, including closed "Why?" parts)
 //   {t:"airportDetail", iata, page, re} selected Airport details menu popup (material safety assertions stay "sheet")
 //   {t:"national", re}     the national strip (#natstrip)
+//   {t:"faaEnd", iata, minutes, source} resolved GDP end agrees across national/card/Now/timeline/notice in 12/24 h
 //   {t:"header", re}       the "Updated …" / "Live updates unavailable …" line
 //   {t:"banner", re}       the banner area
 //   {t:"noPercent"}        Traveler mode: no "%" in delay-chance text (cards, every sheet, trips)
@@ -58,7 +59,7 @@ export async function openDetailsPage(w, doc, iata, page = "technical") {
 }
 
 const DATA = new Set(["words", "badge", "noFaa", "opsplan", "atcscc", "alert", "spc", "sigmet", "model", "movement", "airlineAlert", "tripConcern", "hourLevel", "hourReason", "cascade", "noCascade", "change", "notice", "noticeSource"]); // brief hook: change; restrictions hook: notice, noticeSource
-const PAGE = new Set(["now", "card", "sheet", "airportDetail", "national", "header", "banner", "noPercent", "noAirportBrief", "today", "details"]); // airportDetail: selected secondary menu page
+const PAGE = new Set(["now", "card", "sheet", "airportDetail", "national", "faaEnd", "header", "banner", "noPercent", "noAirportBrief", "today", "details"]); // airportDetail: selected secondary menu page
 export const isPageAssert = (x) => PAGE.has(x.t);
 
 async function getJson(url) {
@@ -220,9 +221,10 @@ export async function dataAsserts(add, { sc, data, delta, shift }) {
       }
       case "noticeSource": { // restrictions hook
         const s = (data.noticeSources || {})[x.name];
-        ok = !!s && !!s.ok === x.ok;
+        ok = !!s && !!s.ok === x.ok && (x.incomplete == null || s.incomplete === x.incomplete) &&
+          Object.entries(x.counts || {}).every(([k, v]) => s[k] === v);
         label = `notice source ${x.name} ${x.ok ? "ok" : "unavailable"}`;
-        got = `got ${s ? (s.ok ? "ok" : "error: " + s.error) : "missing"}`;
+        got = `got ${s ? JSON.stringify(s) : "missing"}`;
         break;
       }
       case "change": { // brief hook
@@ -331,6 +333,44 @@ export async function pageAsserts(add, w, doc, asserts) {
         ok = re(x.re).test(t);
         label = `${x.iata} sheet /${x.re}/`;
         got = `sheet says "${t.slice(0, 240)}"`;
+        break;
+      }
+      case "faaEnd": {
+        await showAll();
+        const failures = [];
+        for (const clock of [12, 24]) {
+          P.setPref("clock", clock);
+          const a = A.fullAirport(A.state.data.airports.find(y => y.iata === x.iata));
+          const f = a.faa.find(y => y.type === "ground_delay");
+          const expected = Date.parse(A.state.data.generated) + x.minutes * 60000;
+          const endText = A.whenLabel(expected, A.dispTz(a));
+          const check = (text, where) => {
+            if (!text.includes(endText) || /until further notice|FAA gives no end time/.test(text) || !text.includes("may change")) failures.push(where + ": " + text.slice(0, 220));
+          };
+          if (Date.parse(f.end) !== expected || f.endFrom !== x.source) failures.push("resolved end/provenance");
+          if (A.outlook(a).scheduledEnd !== expected || A.summary(a).open) failures.push("outlook/summary");
+          const c = doc.querySelector(`#list .card[data-iata="${x.iata}"]`);
+          check(c.textContent, "card");
+          A.openNational(); await later(w, 40);
+          check([...doc.querySelectorAll("#panel .nrow")].find(y => y.textContent.includes(x.iata))?.textContent || "", "national");
+          A.closePanel();
+          await sheetText(x.iata);
+          check(doc.querySelector("#sheet .sc-when")?.textContent || "", "Now");
+          const tl = doc.querySelector("#sheet .bigwrap");
+          tl.dispatchEvent(new w.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+          await later(w, 20);
+          check(doc.querySelector("#sheet .sc-when")?.textContent || "", "timeline preview");
+          tl.dispatchEvent(new w.KeyboardEvent("keyup", { key: "ArrowRight", bubbles: true }));
+          P.setPref("mode", "aviation");
+          await sheetText(x.iata);
+          const active = await until(w, () => [...doc.querySelectorAll("#sheet .item")].find(y => y.textContent.includes("Active until")), 1500);
+          check(active?.textContent || "", "traffic notice");
+          P.setPref("mode", "traveler"); closeSheet();
+        }
+        P.setPref("clock", 12);
+        ok = !failures.length;
+        label = `${x.iata} scheduled end agrees: national, card, Now, timeline, traffic notice (12/24 h)`;
+        got = failures.join("; ") || "one resolved end with provenance and may-change qualification";
         break;
       }
       case "national": {
@@ -503,9 +543,13 @@ export async function consistencyChecks(add, w, doc, where = "") {
   const listEl = doc.getElementById("list"), listDisplay = listEl.style.display;
   listEl.style.display = "none";
   let compared = 0, noPill = 0;
-  for (const card of doc.querySelectorAll("#list .card[data-iata]")) {
+  const ids = [...doc.querySelectorAll("#list .card[data-iata]")].map(c => c.dataset.iata);
+  for (const iata of ids) {
+    A.openSheet(iata);
+    await later(w, 10); // details or a relay refresh can replace the entire render while this task yields
+    const card = doc.querySelector(`#list .card[data-iata="${iata}"]`);
+    if (!card) { levels.push(`${iata}: card missing after opening detail`); continue; }
     A.ensureCardTimeline?.(card); // Exercise every lazy timeline, including off-screen airports.
-    const iata = card.dataset.iata;
     const a = A.state.data.airports.find((x) => x.iata === iata);
     if (!a) continue;
     const badgeLevels = [...card.querySelectorAll(".badge[data-level]")].map(el => Number(el.dataset.level));
@@ -528,8 +572,6 @@ export async function consistencyChecks(add, w, doc, where = "") {
       if ((s.kind === "now" || s.kind === "fc") && s.level > 0 && A.slotText(s, a).split(" · ").length < 3) unexplained.push(`${iata} ${new Date(s.key).toISOString().slice(11, 16)}Z level ${s.level}`);
     }
     // The main card matches Now; Looking ahead may have a higher level.
-    A.openSheet(iata);
-    await later(w, 10);
     const sh = doc.getElementById("sheet");
     if (sm.later && !sh.querySelector(`#lookingAhead [data-level="${sm.level}"]`)) levels.push(`${iata}: later risk is missing from detail Looking ahead`);
     const ahead = sh.querySelector("#lookingAhead"), timeline = sh.querySelector(".tlsec"), log = sh.querySelector(".logcard:not(.ahead-card)");

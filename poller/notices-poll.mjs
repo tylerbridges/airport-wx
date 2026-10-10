@@ -15,11 +15,11 @@ export const KEEP_MS = 180 * MIN;
 const TFR_DETAIL_MS = 60 * MIN;
 const MAX_TFR_DETAILS = 60;
 
-async function request(url, { method = "GET", headers = {}, body = null } = {}) {
+async function request(url, { method = "GET", headers = {}, body = null, fetchFn = fetch } = {}) {
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
   try {
-    const res = await fetch(url, { method, headers: { "User-Agent": UA, ...headers }, body, signal: ctl.signal });
+    const res = await fetchFn(url, { method, headers: { "User-Agent": UA, ...headers }, body, signal: ctl.signal });
     const text = await res.text();
     if (!res.ok) { const e = new Error(`HTTP ${res.status} from ${new URL(url).host}`); e.status = res.status; e.body = text.slice(0, 300); throw e; }
     return { status: res.status, text, type: res.headers.get("content-type") || "" };
@@ -56,47 +56,73 @@ async function writeCache(c) {
 
 const DETAIL_TYPES = new Set(["VIP", "SPACE", "SECURITY", "SPECIAL", "STADIUM", "AIRSHOW"]);
 
-async function liveTfrs(airports, now, raw, cache) {
-  const store = (cache.tfr ||= {});
+function eligibleDetails(list, airports) {
+  const states = new Set(airports.map((a) => a.state).filter(Boolean));
+  return list.filter((t) => DETAIL_TYPES.has(t.type) || (t.type === "HAZARDS" && (!t.state || states.has(t.state))))
+    .sort((x, y) => (x.type === "VIP" ? 0 : x.type === "SPACE" ? 1 : 2) - (y.type === "VIP" ? 0 : y.type === "SPACE" ? 1 : 2));
+}
+function accounting(list, want) {
+  return { listed: list.length, excluded: list.length - want.length, eligible: want.length,
+    attempted: 0, parsed: 0, cached: 0, cacheHits: 0, skipped: 0, capSkipped: 0, budgetSkipped: 0, failed: 0 };
+}
+function detail(xml, t) {
+  const d = parseTfrDetail(xml, { typeText: t.typeText });
+  if (!d || (d.id && d.id !== t.id)) throw new Error(`invalid TFR detail (${t.id})`);
+  return { ...d, id: t.id, type: t.type !== "SPECIAL" ? t.type : d.type };
+}
+function result(counts, tfrs, firstErr) {
+  // Skips covered by a current, unchanged cached detail need no missing-coverage warning.
+  const incomplete = tfrs.length < counts.eligible || counts.failed > 0;
+  return { meta: { ok: !counts.eligible || tfrs.length > 0, ...counts, tfrs: tfrs.length, incomplete,
+    error: incomplete ? `TFR coverage incomplete: ${tfrs.length} of ${counts.eligible} eligible details available; ${counts.skipped} skipped, ${counts.failed} failed${firstErr ? `: ${firstErr}` : ""}` : null },
+    tfrs: counts.eligible && !tfrs.length ? null : tfrs };
+}
+
+/** Bounded detail polling; injected transport/clock also exercise every fallback deterministically. */
+export async function liveTfrs(airports, now, raw, cache, { fetchFn = fetch, clock = Date.now } = {}) {
+  const store = (cache.tfr ||= {}), started = clock();
   raw.note("tfr", { url: TFR_LIST });
   let list;
   try {
-    const r = await request(TFR_LIST, { headers: { Accept: "application/json" } });
+    const r = await request(TFR_LIST, { headers: { Accept: "application/json" }, fetchFn });
     raw.save("tfr", "tfr-list.json", r.text, { http: r.status });
     list = parseTfrList(jsonOrWhy(r.text, "The FAA TFR list"));
   } catch (e) {
     if (e.status) raw.note("tfr", { http: e.status, errorBody: e.body || undefined });
     return { meta: { ok: false, error: String(e.message || e) }, tfrs: null };
   }
-  const states = new Set(airports.map((a) => a.state).filter(Boolean));
-  // details: types that can matter to airline flights; hazards (fires) only in states we cover
-  const want = list.filter((t) => DETAIL_TYPES.has(t.type) || (t.type === "HAZARDS" && (!t.state || states.has(t.state))))
-    .sort((x, y) => (x.type === "VIP" ? 0 : x.type === "SPACE" ? 1 : 2) - (y.type === "VIP" ? 0 : y.type === "SPACE" ? 1 : 2))
-    .slice(0, MAX_TFR_DETAILS);
-  const t0 = Date.now();
-  let failed = 0, firstErr = null, sampled = false;
+  const want = eligibleDetails(list, airports), counts = accounting(list, want);
+  const t0 = clock(), current = () => +now + Math.max(0, clock() - started);
+  let firstErr = null, sampled = false;
   const tfrs = [];
-  await pool(want, 4, async (t) => {
-    const c = store[t.id];
-    if (c && +now - c.at < TFR_DETAIL_MS && c.modified === t.modified) { if (c.tfr) tfrs.push(c.tfr); return; }
-    if (Date.now() - t0 > 30_000) { if (c?.tfr) tfrs.push(c.tfr); return; }
+  function cached(t, limit = KEEP_MS) {
+    const c = store[t.id], age = current() - c?.at;
+    // An absent modification token cannot establish that a fallback is unchanged.
+    return c?.tfr?.id === t.id && t.modified != null && String(t.modified).trim() && c.modified === t.modified &&
+      Number.isFinite(age) && age >= 0 && age < limit ? c.tfr : null;
+  }
+  function fallback(t) { const c = cached(t); if (c) { tfrs.push(c); counts.cached++; } }
+  for (const t of want.slice(MAX_TFR_DETAILS)) { counts.skipped++; counts.capSkipped++; fallback(t); }
+  await pool(want.slice(0, MAX_TFR_DETAILS), 4, async (t) => {
+    const c = cached(t, TFR_DETAIL_MS);
+    if (c) { tfrs.push(c); counts.cached++; counts.cacheHits++; return; }
+    if (clock() - t0 >= 30_000) { counts.skipped++; counts.budgetSkipped++; fallback(t); return; }
+    counts.attempted++;
     try {
-      const r = await request(tfrDetailUrl(t.id), { headers: { Accept: "application/xml,text/xml" } });
+      const r = await request(tfrDetailUrl(t.id), { headers: { Accept: "application/xml,text/xml" }, fetchFn });
       if (!sampled) { sampled = true; raw.save("tfr", "tfr-detail.xml", r.text, { detailUrl: tfrDetailUrl(t.id) }, false); }
-      const d = parseTfrDetail(r.text, { typeText: t.typeText });
-      const tfr = d ? { ...d, id: d.id || t.id, type: t.type !== "SPECIAL" ? t.type : d.type } : null;
-      store[t.id] = { at: +now, modified: t.modified, tfr };
-      if (tfr) tfrs.push(tfr);
+      const tfr = detail(r.text, t);
+      store[t.id] = { at: current(), modified: t.modified, tfr };
+      tfrs.push(tfr); counts.parsed++;
     } catch (e) {
-      failed++;
-      firstErr ||= String(e.message || e);
-      if (c?.tfr && +now - c.at < KEEP_MS) tfrs.push(c.tfr);
+      counts.failed++; firstErr ||= String(e.message || e); fallback(t);
     }
   });
-  for (const k of Object.keys(store)) if (!list.some((t) => t.id === k)) delete store[k];
-  raw.note("tfr", { listed: list.length, details: want.length, failed, parsed: tfrs.length });
-  if (want.length && failed === want.length && !tfrs.length) return { meta: { ok: false, error: `all ${failed} TFR details failed: ${firstErr}` }, tfrs: null };
-  return { meta: { ok: true, error: failed ? `${failed} of ${want.length} TFR details failed: ${firstErr}` : null, listed: list.length, tfrs: tfrs.length }, tfrs };
+  const ids = new Set(list.map(t => t.id));
+  for (const k of Object.keys(store)) if (!ids.has(k)) delete store[k];
+  const out = result(counts, tfrs, firstErr);
+  raw.note("tfr", { details: Math.min(want.length, MAX_TFR_DETAILS), ...out.meta });
+  return out;
 }
 
 // ---------- fixtures ----------
@@ -115,20 +141,22 @@ async function fixtureNotices(airports, now, raw) {
   const dir = process.env.FIXTURES_DIR ? resolve(process.env.FIXTURES_DIR) : join(HERE, "fixtures");
   const read = async (f) => expandFixture(await readFile(join(dir, f), "utf8"), now);
   const out = { sources: {}, data: { tfrs: null } };
-  const at = new Date().toISOString();
+  const at = now.toISOString();
   try {
     const text = await read("tfr-list.json");
     raw.save("tfr", "tfr-list.json", text, { url: "fixture:tfr-list.json" });
     const list = parseTfrList(JSON.parse(text));
-    const tfrs = [];
-    for (const t of list) {
-      let xml;
-      try { xml = await read(`tfr-detail-${t.id.replace(/\//g, "_")}.xml`); } catch { continue; }
-      const d = parseTfrDetail(xml, { typeText: t.typeText });
-      if (d) tfrs.push({ ...d, id: d.id || t.id, type: t.type !== "SPECIAL" ? t.type : d.type });
+    const want = eligibleDetails(list, airports), counts = accounting(list, want), tfrs = [];
+    let firstErr = null;
+    counts.skipped = counts.capSkipped = Math.max(0, want.length - MAX_TFR_DETAILS);
+    for (const t of want.slice(0, MAX_TFR_DETAILS)) {
+      counts.attempted++;
+      try { tfrs.push(detail(await read(`tfr-detail-${t.id.replace(/\//g, "_")}.xml`), t)); counts.parsed++; }
+      catch (e) { counts.failed++; firstErr ||= e.code === "ENOENT" ? `missing TFR fixture (${t.id})` : String(e.message || e); }
     }
-    out.data.tfrs = tfrs;
-    out.sources.tfr = { ok: true, at, error: null, listed: list.length, tfrs: tfrs.length };
+    const r = result(counts, tfrs, firstErr);
+    out.data.tfrs = r.tfrs;
+    out.sources.tfr = { at, ...r.meta };
   } catch (e) {
     out.sources.tfr = { ok: false, at, error: e.code === "ENOENT" ? "no TFR fixture" : String(e.message || e) };
   }
