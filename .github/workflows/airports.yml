@@ -1,43 +1,72 @@
-name: Airport list
-
-# Weekly rebuild of the searchable airport list (site/data/airports-all.json and, when it is
-# split, airports-extra.json) from OurAirports + AWC's station list. Commits to main only when
-# the content changed (the "generated" stamp alone doesn't count).
+name: Staffing cause build and QA
 on:
-  schedule:
-    - cron: "17 6 * * 1"
-  workflow_dispatch:
-
+  push:
+    branches: [qa/staffing-cause-20261010]
 permissions:
   contents: write
-
 concurrency:
-  group: airports
+  group: staffing-cause-publish
   cancel-in-progress: false
-
 jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
-      - name: Unit tests
-        run: node poller/run-tests.mjs
-      # Logs the CSV headers and a sample AWC station record: the TAF/METAR field names are
-      # detected at run time and are not verified anywhere else.
-      - name: Build airport list
-        run: node tools/build-airports.mjs
-      - name: Commit if changed
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Prepare clean production candidate
         run: |
-          set -eu
+          set -euo pipefail
+          base=1a7984d6e9837389690a901a4bb7c71591a2aafb
+          head="$(git ls-remote origin refs/heads/main | cut -f1)"
+          [ "$head" = "$base" ] || { echo "::error::Main changed; stop without publishing"; exit 1; }
+          git fetch --no-tags --depth=1 origin "$base"
+          git worktree add --detach candidate "$base"
+          files=(README.md poller/core.mjs poller/lib.test.mjs poller/risk.mjs poller/risk.test.mjs site/app.js site/index.html)
+          for f in "${files[@]}"; do git show "$GITHUB_SHA:$f" > "candidate/$f"; done
+          cp tools/qa-staffing.mjs candidate/tools/qa-staffing.mjs
+          cd candidate
+          node poller/run-tests.mjs
+          node tools/build-scenarios.mjs
+          git diff --check
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A site/data/airports-all.json site/data/airports-extra.json 2>/dev/null || git add -A site/data/airports-all.json
-          if git diff --cached --quiet; then echo "airport list unchanged"; exit 0; fi
-          git commit -q -m "Update airport list ($(date -u +%F))"
-          for i in 1 2 3; do
-            if git push origin HEAD:main; then exit 0; fi
-            echo "push rejected; rebasing on main and retrying"
-            git pull --rebase -q origin main
-          done
-          exit 1
+          git add "${files[@]}" site/data/scenarios
+          git commit -m "Show resolved FAA staffing and program causes consistently"
+          git rev-parse HEAD > ../candidate-sha.txt
+          git rev-parse HEAD^{tree} > ../candidate-tree.txt
+          git diff --name-only "$base" HEAD > ../candidate-files.txt
+          [ "$(git rev-parse HEAD^)" = "$base" ]
+          ! grep -E '(^\.github/|^tools/qa-)' ../candidate-files.txt
+          git status --short
+      - name: Check candidate with existing runner Chrome
+        run: |
+          set -euo pipefail
+          cd candidate
+          node poller/poll.mjs --fixtures --out site/data/status.json --raw none
+          node poller/poll.mjs --split site/data/status.json
+          npm i --no-save --no-audit --no-fund playwright-core@1.48.2
+          python3 -m http.server -d site 8000 > qa-server.log 2>&1 &
+          GITHUB_SHA="$(cat ../candidate-sha.txt)" node tools/qa-staffing.mjs
+      - name: Save candidate and browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staffing-publication-${{ github.sha }}
+          path: |
+            candidate/qa-evidence/
+            candidate/qa-server.log
+            candidate-sha.txt
+            candidate-tree.txt
+            candidate-files.txt
+          retention-days: 7
+      - name: Push verified clean task-branch commit
+        run: |
+          set -euo pipefail
+          base=1a7984d6e9837389690a901a4bb7c71591a2aafb
+          [ "$(git ls-remote origin refs/heads/main | cut -f1)" = "$base" ] || { echo "::error::Main changed; stop"; exit 1; }
+          candidate="$(cat candidate-sha.txt)"
+          git push origin "$candidate:refs/heads/qa/staffing-ready-20261010"
+          echo "Verified production candidate: $candidate"
