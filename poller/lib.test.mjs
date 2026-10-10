@@ -264,3 +264,36 @@ test("FAA times with a stated zone use that zone; the text is shown in the airpo
   // no zone: the airport's
   assert.equal(faaTimeMs("5:30 pm", "America/Los_Angeles", NOW), Date.parse("2026-10-04T00:30:00Z"));
 });
+
+test("generic NAS program causes use only the latest matching active advisory", () => {
+  const airport = { iata: "ORD", icao: "KORD", lat: 41.98, lon: -87.9, tz: "America/Chicago" };
+  const adv = { airport: "ORD", type: "GDP", active: true, cnx: false, issued: new Date(+NOW - 60000).toISOString(), start: new Date(+NOW - 3600000).toISOString(), end: new Date(+NOW + 3600000).toISOString(), cause: "staffing", causeText: "STAFFING / STAFFING" };
+  const build = (reason = "other", advisories = [adv], type = "ground_delay") => assemble({ airports: [airport], now: NOW, metars: [], tafs: [], sigmets: null, spc: null, nws: null, faaParsed: { byAirport: { ORD: [{ type, reason, detail: "avg 65m", badge: "GDP" }] } }, atcscc: advisories })[0];
+  for (const [cause, causeText, phrase] of [
+    ["staffing", "STAFFING / STAFFING", "air traffic control staffing"],
+    ["equipment", "EQUIPMENT / OUTAGE", "equipment outage"],
+    ["weather", "WEATHER / WIND", "weather (wind)"],
+    ["volume", "VOLUME / VOLUME", "high traffic volume"],
+    ["airline", "COMPANY REQUEST / IT OUTAGE", "airline request (IT outage)"],
+  ]) {
+    const a = build("other", [{ ...adv, cause, causeText }]);
+    assert.equal(a.faa[0].reason, "other", "raw NAS reason is preserved");
+    assert.equal(a.faa[0].cause, cause);
+    assert.equal(a.faa[0].causeLabel, phrase);
+    assert.ok(a.now.reasons.some((r) => r.includes(phrase)), phrase);
+    assert.ok(!a.now.reasons.some((r) => /other cause/.test(r)), phrase);
+  }
+  assert.equal(build("").faa[0].cause, "staffing");
+  assert.equal(build("wind").faa[0].cause, "weather", "specific NAS causes still win");
+  assert.equal(build("OTHER / AIRSHOW").faa[0].causeLabel, "other cause (airshow)", "unclassified but specific NAS detail stays intact");
+  assert.equal(build("other", [{ ...adv, type: "GS" }], "ground_stop").faa[0].cause, "staffing");
+  for (const bad of [
+    { airport: "SFO" }, { type: "GS" }, { active: false }, { cnx: true },
+    { end: new Date(+NOW - 1).toISOString() }, { start: new Date(+NOW + 1).toISOString() },
+    { cause: "other", causeText: "OTHER" }, { cause: "unknown", causeText: "" },
+    { start: null }, { end: null }, { issued: null }, { issued: new Date(+NOW + 1).toISOString() },
+  ]) assert.equal(build("other", [{ ...adv, ...bad }]).faa[0].cause, "other", JSON.stringify(bad));
+  assert.equal(build("other", [adv, { ...adv, issued: NOW.toISOString(), cnx: true }]).faa[0].cause, "other", "a cancelled latest advisory supersedes older active ones");
+  assert.equal(build("other", [adv, { ...adv, issued: NOW.toISOString(), active: false }]).faa[0].cause, "other");
+  assert.equal(build("other", []).faa[0].causeLabel, "other cause");
+});

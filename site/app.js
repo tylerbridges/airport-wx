@@ -1440,6 +1440,7 @@
     let cond = headlineLevel > 0 ? rsn(((n) => hourReasons(a, n.x, headlineLevel, n.reasons))(nowHourOf(a, v, sm)))[0] || (progs.length ? programCause(v.now.reasons) : null) : null;
     const badges = progs.length ? faaBadges({ faa: progs }) : [];
     const currentProgram = progs[0] || null;
+    if (currentProgram && currentProgram.type !== "closure") cond = cap(plainCause(currentProgram)) || cond;
     const badgeHeadline = !!currentProgram && badges.length > 0;
     const consolidatedHeadline = (headlineLevel == null ? "Unknown" : LEVELS[headlineLevel].label) + ": " + (badgeHeadline ? badges.map(b => b.textContent).join(" · ") : head);
     const programEnd = !currentProgram ? null : sm.open ? NO_END : sm.current.scheduledEnd

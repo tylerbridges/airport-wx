@@ -225,7 +225,7 @@ const lowerFirstChar = (s) => (s ? s.replace(/(^|; )([A-Z])(?=[a-z])/g, (m, a, b
  * "limited" (closed only to some users, e.g. GA) and not-yet/no-longer active ones add nothing.
  */
 export function assessFaa(f, { tz = null, now = new Date() } = {}) {
-  const cause = f.type === "closure" ? closureCause(f) : causePhrase(f.cause, f.reason);
+  const cause = f.type === "closure" ? closureCause(f) : f.causeLabel || causePhrase(f.cause, f.reason);
   // programs without a stated end: "until further notice"
   const open = PROGRAMS.has(f.type) && toMs(f.end) == null && !/\buntil\b/i.test(f.detail || "");
   const join = (name, detail) => [name + (cause ? " — " + cause : ""), detail, open ? "until further notice" : ""].filter(Boolean).join(", ");
@@ -372,7 +372,7 @@ export function opsPlanItems(op, { faa = [], atcscc = [], tz = "UTC", now = new 
   const statusCause = (t) => {
     for (const k of t === "GS/GDP" ? ["GS", "GDP"] : [t]) {
       const f = (faa || []).find((x) => x.type === (k === "GS" ? "ground_stop" : "ground_delay"));
-      if (f) return { cause: f.cause, text: f.reason };
+      if (f) return { cause: f.cause, text: f.reason, phrase: f.causeLabel };
       const a = (atcscc || []).find((x) => x.active && x.type === k);
       if (a) return { cause: a.cause, text: a.causeText };
     }
@@ -392,7 +392,7 @@ export function opsPlanItems(op, { faa = [], atcscc = [], tz = "UTC", now = new 
       // The same program in the NAS status / an active advisory: its cause wins (BOS: NAS "runway construction" vs the
       // plan's terminal constraint "wind"); the plan's constraint stays only as `constraint` for the technical detail.
       const fc = dup ? statusCause(p.program) : null;
-      const fcText = fc ? causePhrase(fc.cause, fc.text) : "";
+      const fcText = fc ? fc.phrase || causePhrase(fc.cause, fc.text) : "";
       const Name = name.charAt(0).toUpperCase() + name.slice(1);
       const text = dup && fcText ? `${Name}${until} — ${fcText}` : Name + until + (ph ? ` (${ph.short})` : "");
       const cause = dup && fc && fc.cause && fc.cause !== "unknown" ? fc.cause : conCause;
