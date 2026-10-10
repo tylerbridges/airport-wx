@@ -286,7 +286,8 @@ test("partial airport and flight-hour coverage never imply an all-clear trip", (
 test("optional notice source failures qualify quiet Trips; absent notice source keys do not", () => {
   const airports = by(healthyAirport("MSP"), healthyAirport("ATL"));
   assert.equal(tripStatus(quietTrip, airports, { now: NOW, health: healthFor() }).status, "ok");
-  const r = tripStatus(quietTrip, airports, { now: NOW, health: healthFor({ noticesDown: true }) });
+  // site/trips.js passes noticesQualify (the airport views treat the same gap as a minor note under a Clear status)
+  const r = tripStatus(quietTrip, airports, { now: NOW, health: healthFor({ noticesDown: true, noticesQualify: true }) });
   assert.equal(r.status, "unknown");
   assert.match(r.concerns[0].text, /flight restrictions unavailable/);
 });

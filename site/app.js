@@ -931,7 +931,7 @@
         ? "No saved airports yet. Search for an airport and tap its star to save it here."
         : listed().some(a => { const q = AWXOutlook.health(a, outlookOpts(a, view(a))); return q.incomplete || q.outdated; })
           ? "No disruptions identified in the next 24 hours with available data. Coverage is incomplete; some disruptions may be missing."
-          : "No elevated airport-wide disruption risk identified in the next 24 hours.";
+          : "No elevated airport-wide disruption risk identified in the next 24 hours." + (noticesDown() ? " " + noticesQuality().note + "." : "");
       list.replaceChildren(h("div", { class: "empty" }, msg));
       return;
     }
@@ -1468,7 +1468,7 @@
     const code = codeOf(a);
     const el = h("div", {
       class: "card", role: "button", tabindex: "0", "data-iata": a.iata, "data-level": headlineLevel == null ? "unknown" : String(headlineLevel),
-      "aria-label": `${code}, ${a.city}. ${unknown ? "Status unconfirmed" : LEVELS[headlineLevel].label + " risk"}. ${reason}${forecastText ? ". Upcoming " + forecastText : ""}${health.quality ? ". " + health.quality : ""}`,
+      "aria-label": `${code}, ${a.city}. ${unknown ? "Status unconfirmed" : LEVELS[headlineLevel].label + " risk"}. ${reason}${forecastText ? ". Upcoming " + forecastText : ""}${health.quality ? ". " + health.quality : ""}${health.note ? ". " + health.note : ""}`,
       onclick: open,
       onkeydown: (e) => {
         if ((e.key === "Enter" || e.key === " ") && e.target === el) { e.preventDefault(); open(); }
@@ -1489,8 +1489,10 @@
       h("div", { class: "badges card-headline" }, h("span", { class: "badge " + (headlineLevel == null ? "off" : lv(headlineLevel)), "data-level": headlineLevel, "data-phase": "current" }, consolidatedHeadline)),
       programEnd ? h("div", { class: "sub card-context" }, h("b", {}, programEnd), cond ? ": " + cond : "")
         : cond ? h("div", { class: "sub" }, cond) : null,
+      // missing data qualifies the status right under it (after its own end/cause line, which stays with the badge);
+      // a minor gap (nearby flight restrictions) is a note, never "Unknown"
+      health.quality || health.note ? h("div", { class: "muted small card-gap" }, [health.quality, health.note].filter(Boolean).join(" · ")) : null,
       upcoming ? h("div", { class: "card-forecast" }, h("b", {}, rangeText(sm.start, sm.end, dispTz(a)) + ": "), forecastHeadline) : null,
-      health.quality ? h("div", { class: "muted small" }, health.quality) : null,
       window.AWXMovement ? safeCall(() => AWXMovement.line(a)) : null, // movement hook: "Departures far below normal" (site/movement.js)
       !badgeHeadline && badges.length ? h("div", { class: "badges" }, badges) : null,
       cardTimeline(a),
@@ -1755,6 +1757,7 @@
     const fresh = !state.openIata;
     state.openIata = iata;
     sheetDay = 0;
+    aheadOpen = false;
     lastFocus = document.activeElement;
     // a popup that set the sheet inert (details page, terminal map, radar, report info) belongs to the last airport:
     // a freshly opened sheet must never stay untappable
@@ -2150,7 +2153,7 @@
       if (x.error) warn.push(`${SOURCE_NAMES[k]} partly unavailable — ${SOURCE_MISSING[k]}`);
       else if (x.stale) warn.push(`${SOURCE_NAMES[k]}: live update unavailable — showing the last known data`);
     }
-    if (noticesDown()) warn.push(noticesQuality().text); // restrictions hook
+    if (details && noticesDown()) warn.push(noticesQuality().text); // restrictions hook: the sheet says it once, under the status (outlook.js health note)
     const when = state.sample ? "sample data" : d ? ago(Math.max(0, Date.now() - Date.parse(d.generated))) : "";
     if (d && !state.sample && refNow() - Date.parse(d.generated) > STALE_MS) warn.unshift("Data is " + when + " — status may have changed");
     const quality = a ? AWXOutlook.health(a, outlookOpts(a, view(a))) : null;
@@ -2285,6 +2288,8 @@
     const headLevel = shared?.kind === "unknown" ? null : shared?.level ?? o.level;
     const hcls = (o.big ? " sc-big" : "") + (headLevel != null ? " lv" + Math.max(0, Math.min(4, headLevel)) : "");
     const delay = status ? h("div", { class: "sc-head" + hcls, "data-level": headLevel }, h("span", { class: "sc-delay" }, status), !separateAhead && merged && lead.when ? h("span", { class: "sc-hwhen" }, lead.when) : null) : null;
+    // a minor coverage gap (outlook.js health note: nearby flight restrictions couldn't be checked) — small, right under the status
+    const gapEl = status && shared?.note && !o.past ? h("p", { class: "sc-gap muted" }, shared.note) : null;
     const leadSub = lead ? cap([lead.cue, lead.size ? "When disrupted: " + lead.size : ""].filter(Boolean).join(" · ")) : "";
     // "Looking ahead": one compact list under the current status — the delay outlook (when it isn't already the
     // headline), then improvements, scheduled ends and FAA extension outlooks; each bullet's dot carries its colour
@@ -2299,9 +2304,13 @@
       reasons: primaryProgram ? extraReasons : shortList(others, a).slice(0, 3) })) : null;
     const blurbEl = blurb && (blurb.specifics || blurb.trend) ? h("div", { class: "sc-blurb" }, blurb.specifics ? h("p", { class: "sc-spec" }, blurb.specifics) : null, blurb.trend ? h("p", { class: "sc-trend" }, blurb.trend) : null) : null;
     const ahead = [];
+    // the collapsed "Next: …" row's words for each entry (the first one shows), in neutral text with its dot class
+    const aheadSum = [];
     // a later, higher risk window (o.peak) comes first; the delay outlook joins it when they say the same thing
     const pk = o.peak;
     const pkMerged = pk && lead && !merged && bare(pk.headline) === lead.word;
+    if (pk) aheadSum.push({ text: [pk.headline.replace(/ in forecast$/, ""), pk.when].filter(Boolean).join(" "), dot: "la-lv" + pk.level }); // "Next:" already says it's ahead
+    if (lead && (separateAhead || !merged) && !pkMerged) aheadSum.push({ text: [lead.word, lead.when].filter(Boolean).join(" "), dot: lead.cls });
     if (pk) ahead.push(h("li", { class: "la-i", "data-when": pk.when || "Forecast" }, h("span", { class: "la-dot la-lv" + pk.level, "aria-hidden": "true" }),
       h("span", {}, h("b", { class: "la-lv" + pk.level, "data-level": pk.level }, pk.headline), !separateAhead && pk.when ? " " + pk.when : "",
         pk.reasons.length ? h("span", { class: "la-sub" }, pk.reasons.join(" · ")) : null,
@@ -2309,8 +2318,12 @@
     if (lead && (separateAhead || !merged) && !pkMerged) ahead.push(h("li", { class: "la-i", "data-when": lead.when || "Forecast" }, h("span", { class: "la-dot " + lead.cls, "aria-hidden": "true" }),
       h("span", {}, h("b", { class: lead.cls }, lead.word), !separateAhead && lead.when ? " " + lead.when : "", ...leadNotes.map((n) => h("span", { class: "la-sub" }, n)))));
     const AHEAD = { "Forecast improvement": (v) => v, "Scheduled end": (v) => "FAA scheduled end " + v, "FAA extension outlook": (v) => "FAA extension outlook: " + v };
-    for (const r of (o.rows || []).filter((r) => !(blurb && blurb.improvement && r.label === "Forecast improvement"))) ahead.push(h("li", { class: "la-i", "data-when": ({ "Forecast improvement": "Forecast", "Scheduled end": "FAA end", "FAA extension outlook": "Outlook" })[r.label] || r.label }, h("span", { class: "la-dot" + (r.label === "Forecast improvement" ? " la-good" : ""), "aria-hidden": "true" }),
-      h("span", {}, (AHEAD[r.label] || ((v) => r.label + ": " + v))(r.value))));
+    for (const r of (o.rows || []).filter((r) => !(blurb && blurb.improvement && r.label === "Forecast improvement"))) {
+      const text = (AHEAD[r.label] || ((v) => r.label + ": " + v))(r.value), good = r.label === "Forecast improvement" ? "la-good" : "";
+      aheadSum.push({ text, dot: good });
+      ahead.push(h("li", { class: "la-i", "data-when": ({ "Forecast improvement": "Forecast", "Scheduled end": "FAA end", "FAA extension outlook": "Outlook" })[r.label] || r.label }, h("span", { class: "la-dot" + (good ? " " + good : ""), "aria-hidden": "true" }),
+        h("span", {}, text)));
+    }
     const leadEl = !separateAhead && merged && leadNotes.length ? h("div", { class: "sc-lead" }, leadNotes.map((n) => h("div", { class: "sc-lsub" }, n))) : null;
     const aheadEl = ahead.length ? h("div", { class: "sc-ahead" }, h("div", { class: "la-h" }, "Looking ahead"), h("ul", { class: "la-list" }, ahead)) : null;
     const list = blurbEl ? blurbEl : primaryProgram ? h("div", {}, faaItem(shared.programs[0], a, true, shared.current), extraReasons.length ? h("p", { class: "rline" }, extraReasons.join(" · ")) : null) : normal ? null : rs.length
@@ -2333,12 +2346,16 @@
         h("h4", {}, h("span", { class: "sc-label" }, o.label), (o.full || o.simple) && when ? h("span", { class: "sc-when in" }, when) : null)),
       !o.full && !o.simple && o.when ? h("div", { class: "sc-when" }, o.when) : null,
       delay,
+      gapEl,
       list,
       leadEl,
       o.big ? o.cur : null, // current conditions under the Now status, mid-screen where they're easy to tap
       separateAhead ? null : aheadEl,
       progLine,
       o.simple && !o.keepFacts ? null : o.facts);
+    // Looking ahead folds into the Now card: one tappable "Next: …" row under the conditions pill; tapping it expands
+    // the full list in place (neutral text; the colour belongs to the status). Its open state lives outside the DOM
+    // (o.aheadOpen / o.onAhead) so live refreshes keep it. Nothing ahead: no row.
     if (separateAhead && ahead.length) {
       const rows = ahead.map(row => {
         const dot = row.firstElementChild, content = row.lastElementChild;
@@ -2349,12 +2366,28 @@
           h("span", { class: "lg-s" }, content)));
         return row;
       });
-      card._aheadSection = section("Looking ahead", "clock", [h("ul", { class: "sh-log" }, rows)], null, { id: "lookingAhead", cls: "logcard ahead-card" });
+      let open = !!o.aheadOpen;
+      const first = aheadSum[0] || { text: "", dot: "" };
+      const listEl = h("ul", { class: "sh-log sc-la ahead-card", id: "lookingAhead", "aria-label": "Looking ahead", hidden: !open }, rows);
+      const label = h("span", { class: "sc-next-t" });
+      const btn = h("button", { type: "button", class: "sc-next", "aria-controls": "lookingAhead", onclick: () => { open = !open; sync(); o.onAhead?.(open); } },
+        h("span", { class: "la-dot" + (first.dot ? " " + first.dot : ""), "aria-hidden": "true" }), label, h("span", { class: "chev", "aria-hidden": "true" }, "›"));
+      const sync = () => {
+        btn.setAttribute("aria-expanded", String(open));
+        listEl.hidden = !open;
+        // expanded, the list itself says the first entry: the row becomes its heading (each fact once)
+        label.replaceChildren(open ? "Looking ahead" : h("span", {}, h("span", { class: "sc-next-k" }, "Next: "), first.text));
+        btn.classList.toggle("open", open);
+      };
+      sync();
+      // under the conditions pill (else under the status and its blurb)
+      const anchor = [o.big ? o.cur : null, leadEl, list, gapEl, delay].find((x) => x && x.parentNode === card);
+      if (anchor) anchor.after(btn, listEl); else card.append(btn, listEl);
     }
     return card;
   }
 
-  const outlookOpts = (a, v) => ({ now: refNow(), tz: a.tz, generated: state.data?.generated, sources: state.data?.sources, sample: state.sample, offline: state.offline, noticesDown: noticesDown(),
+  const outlookOpts = (a, v) => ({ now: refNow(), tz: a.tz, generated: state.data?.generated, sources: state.data?.sources, sample: state.sample, offline: state.offline, noticesDown: noticesDown(), noticesNote: noticesQuality().note,
     hidden: v.hiddenCats?.size, plain: (r) => plainReason(shortRaw(r), a),
     words: (d) => window.AWXDelay?.likelihood(d, { iata: a.iata, aviation: aviation() }), notable: window.AWXDelay?.notable });
   function outlook(a, at = refNow()) {
@@ -2476,6 +2509,7 @@
   }
 
   let sheetDay = 0; // 0 rolling window, 1 tomorrow
+  let aheadOpen = false; // the Now card's Looking ahead list is expanded (kept through live refreshes, reset per airport)
   function renderSheet(keepScroll) {
     const a0 = state.data && state.data.airports.find((x) => x.iata === state.openIata);
     const sheet = $("sheet");
@@ -2498,8 +2532,9 @@
     const health = AWXOutlook.health(a, outlookOpts(a, v));
     const incomplete = health.incomplete;
     const stale = health.outdated;
+    // nearby flight restrictions that couldn't be read are a minor gap: said under the status (health note), never "unknown"
     const normalNote = state.offline ? "Offline · status unconfirmed" : stale ? "Status may be outdated" : incomplete ? "No disruptions reported · some data unavailable"
-      : v.hiddenCats && v.hiddenCats.size ? "No issues in your selected categories" : noticesDown() ? "No disruptions reported · flight restrictions unavailable" : null;
+      : v.hiddenCats && v.hiddenCats.size ? "No issues in your selected categories" : null;
     // the current run: "through 3 PM, then Clear" — or, for an FAA program with no stated end, "— FAA gives no end time"
     const nowWhen = () => (sm.open ? "— " + NO_END : "through " + whenLabel(hourFloor(sm.nowEnd || lastMs, tz), tz) + (sm.next != null ? ", then " + LEVELS[sm.next].label : ""));
 
@@ -2528,12 +2563,8 @@
       weatherCause: nowO.programs.length > 0 && nowO.programs.every((f) => f.cause === "weather"), laterPeak: layout === "split", levels: sm.levels,
       events: window.AWXBrief && typeof AWXBrief.todayEvents === "function" ? (safeCall(() => AWXBrief.todayEvents(a)) || []).filter((e) => e.kind === "level") : [],
       fmt: { when: (ms) => whenLabel(ms, tz), clock: (ms) => clock(ms, tz, true), floor: (ms) => hourFloor(ms, tz) } });
-    let lookingAhead = null;
-    const restCard = options => {
-      const card = stateCard({ ...options, detachAhead: true });
-      lookingAhead = card._aheadSection || null;
-      return card;
-    };
+    // the rest card sets the footprint; its Looking ahead row expands in place (aheadOpen survives live refreshes)
+    const restCard = options => stateCard({ ...options, detachAhead: true, aheadOpen, onAhead: (v) => { aheadOpen = v; } });
     // rest state: one full-width "Now" card; a later, higher risk ("split" in CATS.restLayout) leads its Looking ahead list
     const restCards = () => {
       if (layout === "split") {
@@ -2720,14 +2751,12 @@
     const notices = [...[...(v.atcscc || [])].filter(extraAdvisory).sort((x, y) => (y.active ? 1 : 0) - (x.active ? 1 : 0)).map((x) => advItem(x, a)),
       ...planItems(aviation() ? v : { ...v, opsplan: v.opsplan ? { ...v.opsplan, items: (v.opsplan.items || []).filter((x) => x.level > 0 && !x.dup) } : null }, a)];
     add(notices.length, () => section("FAA traffic notices", "tower", notices, { key: "atcscc" }));
-    const noticeContext = { h, section, aviation: aviation(), retime: (t) => retime(t, a), hidden: isHidden, now: refNow(), sources: state.data.noticeSources || {} };
+    const noticeContext = { h, section, aviation: aviation(), retime: (t) => retime(t, a), hidden: isHidden, now: refNow(), sources: state.data.noticeSources || {}, coverageSaid: true };
     const informationalNotices = window.AWXNotices ? AWXNotices.visible(v.notices, noticeContext).some((x) => x.peak === 0 && x.cat !== "always") : false;
     const primaryNotices = v.notices ? { ...v.notices, items: (v.notices.items || []).filter((x) => x.peak !== 0 || x.cat === "always") } : null;
     if (primaryNotices) primaryNotices.count = primaryNotices.items.length + Math.max(0, (v.notices.count || 0) - (v.notices.items || []).length);
     const nts = window.AWXNotices ? safeCall(() => AWXNotices.section({ ...v, notices: primaryNotices }, a, noticeContext)) : null; // restrictions hook: material notices stay visible
-    const ntsDown = noticesDown() && !nts ? h("p", { class: "ntc-down muted" }, noticesQuality().text) : null;
-    if (nts) secs.push(nts);
-    else if (ntsDown) secs.push(ntsDown);
+    if (nts) secs.push(nts); // a coverage gap is said once, under the Now status (health note), not again here
 
     // a warning's description without its repeated title: "Severe Thunderstorm Warning issued for Cook and DuPage Counties" -> "Cook and DuPage Counties"
     const alertDesc = (x) => {
@@ -2793,7 +2822,6 @@
       h("section", { class: "sec tlsec" },
         h("div", { class: "sec-h" }, icon(ICONS.clock), h("h3", {}, tlTitle), h("span", { class: "rule", "aria-hidden": "true" }), dayBtn),
         tlHolder),
-      lookingAhead,
       sm.level >= 2 || sm.current?.programs?.length ? section("What this means for your trip", "plane", [
         h("p", { class: "trip-advice" }, AWXOutlook.travelAdvice(a, sm, AWXOutlook.health(a, outlookOpts(a, view(a))))),
       ]) : null,

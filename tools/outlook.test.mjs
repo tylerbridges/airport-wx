@@ -13,6 +13,7 @@ test("outlook: a last-known active restriction remains visible without forecast 
   assert.match(o.impacts[0].value, /Held at their departure airports/);
 });
 test("outlook: quiet status, absent forecast, missing and stale data remain distinct", () => {
+  assert.equal(O.evaluate(base(), options()).kind, "normal");
   assert.equal(O.evaluate(base(), options()).headline, "No airport-wide disruptions reported");
   assert.equal(O.evaluate(base(), options({ at: now + 24 * H })).kind, "unknown");
   assert.equal(O.evaluate(base(), options({ generated: new Date(now - H).toISOString() })).kind, "unknown");
@@ -114,10 +115,27 @@ test("outlook: no forecast improvement for a program whose cause isn't weather",
     assert.equal(O.evaluate(a, options()).recovery, null, cause);
   }
 });
-test("outlook: a quiet airport whose notices couldn't be read says so", () => {
+test("outlook: unreadable nearby flight restrictions are a minor gap — Clear with a note, never unknown", () => {
   const o = O.evaluate(base(), options({ noticesDown: true }));
-  assert.equal(o.kind, "unknown");
-  assert.equal(o.headline, "No disruptions reported · flight restrictions unavailable");
+  assert.equal(o.kind, "normal"); assert.equal(o.level, 0);
+  assert.equal(o.headline, "No airport-wide disruptions reported");
+  assert.equal(o.quality, ""); assert.equal(o.note, "Nearby flight restrictions couldn't be checked");
+  const hq = O.health(base(), options({ noticesDown: true, noticesNote: "Some nearby flight restrictions couldn't be checked" }));
+  assert.equal(hq.incomplete, false); assert.equal(hq.quality, ""); assert.equal(hq.note, "Some nearby flight restrictions couldn't be checked");
+  assert.equal(O.evaluate(base(), options()).note, "");
+  // Trips opt into the old qualification (site/trips.js noticesQualify)
+  const tq = O.health(base(), options({ noticesDown: true, noticesQualify: true }));
+  assert.equal(tq.incomplete, true); assert.equal(tq.quality, "Nearby flight restrictions unavailable");
+  assert.equal(O.health(base(), options({ noticesQualify: true })).incomplete, false);
+  // a missing FAA delay feed (or stale weather, outdated data, offline) is still never Clear, and the note stays said
+  for (const more of [{ sources: { ...sources, faa: { ok: false } } }, { generated: new Date(now - H).toISOString() }, { offline: true }, { sources: { ...sources, atcscc: { ok: false } } }]) {
+    const u = O.evaluate(base(), options({ noticesDown: true, ...more }));
+    assert.equal(u.kind, "unknown", JSON.stringify(more)); assert.equal(u.level, null); assert.equal(u.note, "Nearby flight restrictions couldn't be checked");
+  }
+  const old = base(); old.metar.obsTime = new Date(now - 3 * H).toISOString();
+  assert.equal(O.evaluate(old, options({ noticesDown: true })).kind, "unknown");
+  const noTaf = base(); noTaf.taf = null;
+  assert.equal(O.evaluate(noTaf, options({ noticesDown: true })).kind, "unknown");
 });
 
 test("airport health: missing/old airport forecasts and stale source-success timestamps qualify quiet outlooks", () => {
@@ -238,14 +256,23 @@ test("airport health: missing or stale storm sources (SIGMET, SPC, LAMP, TCF, CW
 });
 
 test("trip guidance distinguishes inbound holds, closures, future risk and incomplete coverage", () => {
-  for (const type of ["ground_stop", "ground_delay"]) {
-    const text = O.travelAdvice({}, {current:{programs:[{type}]}}, {});
-    assert.match(text, /headed to this airport.*departure airport/);
-    assert.match(text, /keep your planned airport arrival time/);
+  const all = [];
+  const say = (sm, q = {}) => { const t = O.travelAdvice({}, sm, q); all.push(t); return t; };
+  for (const type of ["ground_stop", "ground_delay"]) assert.equal(say({current:{programs:[{type}]}}), "Arrivals may be held — check your flight with the airline.");
+  assert.match(say({current:{programs:[{type:"closure"}]}}), /^Airport closed — contact your airline before heading out/);
+  assert.match(say({current:{programs:[{type:"delay"}], level:2}}), /^FAA delays reported/);
+  assert.match(say({later:true,level:3,current:{level:0}}), /^Disruption possible later/);
+  assert.match(say({later:false,level:2,current:{level:2}}), /^Disruption possible — allow extra time/);
+  assert.match(say({current:{level:0}}, {incomplete:true}), /^Some airport data is missing/);
+  assert.match(say({current:{level:0}}, {outdated:true}), /^Some airport data is missing/);
+  assert.match(say({current:{level:0}}), /^Check your flight with the airline/);
+  // a known disruption leads even when coverage is incomplete
+  assert.match(say({current:{programs:[{type:"ground_stop"}]}}, {incomplete:true}), /^Arrivals may be held/);
+  // one short sentence, no certainty words, no raw codes or "%"
+  for (const t of all) {
+    assert.ok(t.length <= 90, t); assert.equal((t.match(/[.!?](\s|$)/g) || []).length, 1, t);
+    assert.doesNotMatch(t, /%|\b(will|certain(ly)?|definitely|guarantee)\b/i, t);
   }
-  assert.match(O.travelAdvice({}, {current:{programs:[{type:"closure"}]}}, {}), /Contact your airline before heading out/);
-  assert.match(O.travelAdvice({}, {later:true,level:3,current:{}}, {}), /departure, connection or arrival overlaps/);
-  assert.match(O.travelAdvice({}, {current:{level:0}}, {incomplete:true}), /^Coverage is incomplete.*does not guarantee/);
 });
 
 test("resolved SFO scheduled end survives summary/detail split and wins over a longer advisory", () => {

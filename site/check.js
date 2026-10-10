@@ -1,4 +1,4 @@
-import "./notices.js?v=3";
+import "./notices.js?v=4";
 // Check page. check.html            -> checks the live data (data/summary.json + an airport detail file, data/wx/, airport list)
 //             check.html?mock=1     -> runs every test scenario (data/scenarios/index.json) instead
 //             &render=0             -> skip the render tests (hidden iframes)
@@ -8,7 +8,7 @@ import "./notices.js?v=3";
 import { loadAirports, rank, decodeList } from "./search.js";
 import { navChecks } from "./navcheck.js?v=6"; // nav hook
 import { tripChecks } from "./check-trips.js?v=9"; // trips hook
-import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=18"; // scenarios hook; More details page helpers
+import { dataAsserts, pageAsserts, openDetailsPage, detailsPlainText, consistencyChecks } from "./check-scenarios.js?v=19"; // scenarios hook; More details page helpers
 
 const P = new URLSearchParams(location.search);
 const MOCK = P.get("mock") === "1";
@@ -586,12 +586,12 @@ async function uiChecks(add, scenario) {
         const lay = rest.querySelector(".sc").dataset.layout;
         const got = lay === "split" && doc.querySelector("#lookingAhead .lg-entry") ? "split" : lay === "clear" ? "clear" : "single";
         counts[got]++;
-        expandable += doc.querySelectorAll("#sheet details, #sheet .morebtn, #sheet [aria-expanded]").length;
+        expandable += doc.querySelectorAll("#sheet details, #sheet .morebtn, #sheet [aria-expanded]:not(.sc-next)").length; // the Now card's Looking ahead row is the one in-place expander
         if (got !== want) wrong.push(`${x.iata} ${got} (want ${want})`);
       }
-      add(expandable ? "fail" : "pass", "Airport details have no expandable cards", `${expandable} expanders`);
+      add(expandable ? "fail" : "pass", "Airport details have no expandable cards (apart from the Now card's Looking ahead row)", `${expandable} expanders`);
       A.closeSheet();
-      add(wrong.length ? "fail" : "pass", "Sheet shows one Now card (a later, higher risk below the timeline under Looking ahead) or a normal status as the levels say", wrong.join("; ") || `split ${counts.split}, single ${counts.single}, clear ${counts.clear}`);
+      add(wrong.length ? "fail" : "pass", "Sheet shows one Now card (a later, higher risk in its Looking ahead row) or a normal status as the levels say", wrong.join("; ") || `split ${counts.split}, single ${counts.single}, clear ${counts.clear}`);
     });
 
     // iPhone first screen: at 390×700 in Traveler mode the sheet's timeline is visible without scrolling (busy + quiet airport)

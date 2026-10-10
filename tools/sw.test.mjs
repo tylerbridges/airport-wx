@@ -74,7 +74,7 @@ test("sw: the precache list follows index.html's scripts, links and their module
   assert.ok(list.every((u) => u.startsWith(SCOPE)));
   const nav = SW.scriptImports(readFileSync(join(ROOT, "site/nav.js"), "utf8"), SCOPE + "nav.js?v=1");
   assert.ok(nav.includes(SCOPE + "search.js") && nav.includes(SCOPE + "navui.js") && nav.some((u) => u.startsWith(SCOPE + "map.js?v=")));
-  const ff = SW.scriptImports(readFileSync(join(ROOT, "site/flight-features.js"), "utf8"), SCOPE + "flight-features.js?v=1");
+  const ff = SW.scriptImports(readFileSync(join(ROOT, "site/flight-features.js"), "utf8"), SCOPE + "flight-features.js?v=2");
   assert.ok(ff.some((u) => u.startsWith(SCOPE + "trips.js?v=")), "dynamic import()");
   assert.deepEqual(SW.scriptImports('import x from "https://cdn.example/x.js"; const s = "./not-an-import.js";', SCOPE + "a.js"), []);
 });

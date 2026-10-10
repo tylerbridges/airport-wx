@@ -127,6 +127,8 @@ function decorateSheet(sheet, a) {
   const A = app(), menu = sheet.querySelector(".dt-menu");
   if (!menu || !A?.detailRow) return;
   if (!todayEvents(a).length || menu.querySelector('[data-detail="today"]')) return;
+  // the sheet's "Today so far" card already opens Today's changes (its rows and "All changes ›"): no repeated menu row
+  if (sheet.querySelector('.logcard [data-detail="today"]')) return;
   const row = A.detailRow("Today’s changes", "Recent airport updates", "today", () => A.openDetails(a.iata, "today"));
   const anchor = menu.querySelector('[data-detail="technical"]');
   if (anchor) anchor.before(row); else menu.append(row); // never throw on a menu missing its More details row

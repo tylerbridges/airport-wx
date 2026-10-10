@@ -15,11 +15,13 @@
 
   /** Coverage is global: omitted geometry cannot safely be assigned to individual airports. */
   function coverage(s) {
-    if (!s) return { down: false, text: "" }; // Older builds without this optional source.
+    if (!s) return { down: false, text: "", note: "" }; // Older builds without this optional source.
     var partial = !!s.incomplete || (s.eligible == null && s.listed > s.tfrs);
+    // note: the short line under an airport's status (outlook.js health note); text: the longer coverage wording
     return { down: partial || !s.ok || !!s.error || !!s.stale, text: partial
       ? "Nearby flight restriction coverage is incomplete; some restrictions may be missing"
-      : "Nearby flight restrictions unavailable right now" };
+      : "Nearby flight restrictions unavailable right now",
+      note: partial ? "Some nearby flight restrictions couldn't be checked" : "Nearby flight restrictions couldn't be checked" };
   }
   function describe(s) {
     if (s.eligible == null) return (s.tfrs == null ? "" : s.tfrs + " details available; " + s.listed + " listed; coverage breakdown unavailable");
@@ -41,7 +43,8 @@
 
   /**
    * The "Flight restrictions" section for the airport sheet, or null when there is nothing to show.
-   * ctx: {h, section (app.js section()), aviation: bool, retime(text), hidden(cat), now (ms), sources: status.noticeSources}
+   * ctx: {h, section (app.js section()), aviation: bool, retime(text), hidden(cat), now (ms), sources: status.noticeSources,
+   *   coverageSaid: the airport sheet already states the coverage gap under its status, so the card leaves it out}
    */
   function section(v, a, ctx) {
     var n = v && v.notices;
@@ -59,7 +62,7 @@
     });
     if (more > 0) kids.push(h("div", { class: "muted small", style: "padding:8px 0 2px" }, "+" + more + " more"));
     var quality = coverage((ctx.sources || {}).tfr);
-    if (quality.down) kids.push(h("p", { class: "ntc-down muted" }, quality.text));
+    if (quality.down && !ctx.coverageSaid) kids.push(h("p", { class: "ntc-down muted" }, quality.text));
     if (ctx.aviation) {
       var s = ctx.sources || {};
       var parts = [];

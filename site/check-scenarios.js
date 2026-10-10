@@ -571,12 +571,15 @@ export async function consistencyChecks(add, w, doc, where = "") {
     if (T && A.slotText) for (const s of T.slots) {
       if ((s.kind === "now" || s.kind === "fc") && s.level > 0 && A.slotText(s, a).split(" · ").length < 3) unexplained.push(`${iata} ${new Date(s.key).toISOString().slice(11, 16)}Z level ${s.level}`);
     }
-    // The main card matches Now; Looking ahead may have a higher level.
+    // The main card matches Now; Looking ahead (folded into the Now card as a "Next: …" row) may have a higher level.
     const sh = doc.getElementById("sheet");
     if (sm.later && !sh.querySelector(`#lookingAhead [data-level="${sm.level}"]`)) levels.push(`${iata}: later risk is missing from detail Looking ahead`);
-    const ahead = sh.querySelector("#lookingAhead"), timeline = sh.querySelector(".tlsec"), log = sh.querySelector(".logcard:not(.ahead-card)");
-    if (sh.querySelector(".boxwrap .sc-ahead")) levels.push(`${iata}: future outlook remains above the timeline`);
-    if (ahead && (!timeline || !(timeline.compareDocumentPosition(ahead) & w.Node.DOCUMENT_POSITION_FOLLOWING) || log && !(ahead.compareDocumentPosition(log.parentElement) & w.Node.DOCUMENT_POSITION_FOLLOWING))) levels.push(`${iata}: Looking ahead is not between timeline and log`);
+    const ahead = sh.querySelector("#lookingAhead"), toggle = sh.querySelector(".sc-next");
+    if (sh.querySelector(".boxwrap .sc-ahead") || sh.querySelector(".ahead-card.scard, section#lookingAhead")) levels.push(`${iata}: Looking ahead is still a separate list or section`);
+    if (ahead && (!ahead.closest('.bx-layer[data-layer="rest"] .sc') || !toggle || ahead.previousElementSibling !== toggle
+      || toggle.getAttribute("aria-controls") !== "lookingAhead" || !/^(true|false)$/.test(toggle.getAttribute("aria-expanded") || "")
+      || toggle.getAttribute("aria-expanded") === String(ahead.hidden) || !/^(Next: .+|Looking ahead)$/.test(toggle.textContent.replace("›", "").trim()))) levels.push(`${iata}: Looking ahead is not a tappable row inside the Now card`);
+    if (!ahead && toggle) levels.push(`${iata}: Next row with nothing ahead`);
     const pills = [...sh.querySelectorAll('.bx-layer[data-layer="rest"] .sc-head[data-level]')].map(p => Number(p.dataset.level));
     if (pills.length) {
       compared++;

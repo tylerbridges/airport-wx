@@ -33,7 +33,17 @@
     {
       "t": "sheet",
       "iata": "MSP",
-      "re": "Nearby flight restrictions unavailable"
+      "re": "Nearby flight restrictions couldn't be checked"
+    },
+    {
+      "t": "card",
+      "iata": "MSP",
+      "re": "Unknown: No disruptions reported.*Nearby flight restrictions couldn't be checked"
+    },
+    {
+      "t": "sheet",
+      "iata": "MSP",
+      "re": "^(?![\\s\\S]*Nearby flight restrictions unavailable)"
     }
   ],
   "group": "system",

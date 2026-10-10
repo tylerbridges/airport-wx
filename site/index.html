@@ -160,7 +160,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 800; letter-spa
 .code { font-size: 40px; line-height: .95; font-weight: 800; letter-spacing: -.035em; }
 .sh-where { margin: 0 0 10px; font-size: 15px; line-height: 1.3; overflow-wrap: anywhere; }
 .sh-where .sh-aname { font-weight: 600; }
-.where { margin-top: 8px; font-size: 16px; line-height: 1.25; color: var(--muted); overflow-wrap: anywhere; }
+.where { margin-top: 1px; font-size: 16px; line-height: 1.25; color: var(--muted); overflow-wrap: anywhere; }
 .right { display: flex; align-items: center; gap: 4px; flex: none; }
 .pill {
   display: inline-block; padding: 5px 12px; border-radius: 999px; font-size: 14px; font-weight: 700; letter-spacing: .01em;
@@ -185,6 +185,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 800; letter-spa
 .timeline-context span + span { border-left: 2px solid var(--text); padding-left: 6px; }
 .trip-advice { line-height: 1.5; }
 .card-context { margin-top: 6px; }
+.card .card-gap { margin-top: 6px; line-height: 1.35; } /* missing-data qualifier / minor coverage note, right under the status */
 .card-context b { color: var(--text); font-weight: 600; }
 .badge {
   padding: 3px 8px; border-radius: 7px; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
@@ -523,6 +524,20 @@ pre.raw mark { background: color-mix(in srgb, var(--l3) 30%, transparent); color
 .sc-blurb p { margin: 0; }
 .sc-spec { color: var(--text); }
 .sc-trend { margin-top: 3px !important; color: var(--muted); }
+/* a minor coverage gap (nearby flight restrictions couldn't be checked): one small line right under the status */
+.sc-gap { margin: 3px 0 0; font-size: 13px; line-height: 1.3; }
+/* Looking ahead, folded into the Now card: one tappable "Next: …" row (44 px) that expands the list in place; neutral text */
+.sc-next { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 44px; margin: 8px 0 0; padding: 0 2px; background: transparent; border: 0; border-top: 1px solid var(--line); border-radius: 0; color: var(--text); font: inherit; font-size: 14.5px; line-height: 1.3; text-align: left; cursor: pointer; }
+.sc-next .sc-next-t { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.sc-next .sc-next-k { color: var(--muted); font-weight: 600; }
+.sc-next .chev { flex: none; color: var(--muted); font-size: 20px; line-height: 1; transition: transform .15s ease; }
+.sc-next.open .chev { transform: rotate(90deg); }
+.sc-next.open .la-dot { display: none; }
+.sc-next.open .sc-next-t { font-size: 11.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.sc-next:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.sc .sc-la { padding: 0 0 2px; }
+.sc-la[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .sc-next .chev { transition: none; } }
 /* Next 12 hours (Weather page) */
 .nx-list { list-style: none; margin: 0; padding: 0; }
 .nx-i { display: flex; flex-direction: column; gap: 2px; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; line-height: 1.35; }
@@ -1021,20 +1036,20 @@ button.awx-row:disabled { opacity: .45; cursor: default; }
 </div>
 <div class="sr" id="announce" aria-live="polite"></div>
 <script src="offline.js?v=5"></script>
-<script src="outlook.js?v=19"></script>
+<script src="outlook.js?v=20"></script>
 <script src="cats.js?v=4"></script><!-- build2b: disruption categories -->
 <script src="sheet.js?v=6"></script><!-- build2b: shared sheet drag / back / scroll lock -->
-<script src="notices.js?v=3"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
+<script src="notices.js?v=4"></script><!-- restrictions hook: the airport sheet's "Flight restrictions" card -->
 <script src="split.js?v=3"></script><!-- airport details: summary.json + data/airport/<IATA>.json -->
 <script src="wxdays.js?v=1"></script><!-- Weather page: conditions emoji + Today / Tomorrow forecast rows -->
 <script src="nowblurb.js?v=4"></script><!-- the airport sheet's Now card blurb (pure) -->
-<script src="app.js?v=104" defer></script>
+<script src="app.js?v=105" defer></script>
 <script type="module" src="searched.js?v=14"></script><!-- build2a hook -->
 <script type="module" src="delay.js?v=21"></script><!-- phase3 hook: delay chances (card line + sheet block) -->
-<script type="module" src="flight-features.js?v=1"></script><!-- trips hook -->
+<script type="module" src="flight-features.js?v=2"></script><!-- trips hook -->
 <script type="module" src="nav.js?v=27"></script><!-- nav hook: tab bar, header buttons, menu, search sheet, settings -->
 <script type="module" src="movement.js?v=6"></script><!-- movement hook: ADS-B traffic line, sheet card, airline alerts -->
-<script type="module" src="brief.js?v=12"></script><!-- brief hook: airport Today’s changes -->
+<script type="module" src="brief.js?v=13"></script><!-- brief hook: airport Today’s changes -->
 <script type="module" src="terminals.js?v=7"></script><!-- terminals hook: terminal map + lounges cards in the airport sheet -->
 <script type="module" src="radar/card.js?v=7"></script><!-- radar hook: radar loop card in the airport sheet (engine loads on demand) -->
 <script>/* service worker (site/sw.js, README "Service worker"): the installed app opens from this device's copy, then reads fresh data. ?nosw=1 and test scenarios skip it. */

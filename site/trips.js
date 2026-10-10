@@ -209,8 +209,9 @@ function airportHealth(a) {
   const st = app()?.state, data = st?.data;
   const ns = data?.noticeSources || {};
   const noticesDown = ["tfr"].some((k) => ns[k] && (!ns[k].ok || ns[k].error || ns[k].stale));
+  // noticesQualify: the airport views call unreadable nearby restrictions a minor note (still Clear); trips keep qualifying them
   return window.AWXOutlook?.health ? window.AWXOutlook.health(a, {
-    now: nowMs(), generated: data?.generated, sources: data?.sources, sample: st?.sample, noticesDown, offline: st?.offline,
+    now: nowMs(), generated: data?.generated, sources: data?.sources, sample: st?.sample, noticesDown, noticesQualify: true, offline: st?.offline,
   }) : { quality: "Some data unavailable" };
 }
 const resultOf = (trip) => tripStatus(trip, byIata, { now: nowMs(), words: delayWordsFor, health: airportHealth });

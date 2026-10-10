@@ -139,11 +139,16 @@
     const observed = ms(a.metar?.obsTime), forecastIssued = ms(a.taf?.issued);
     const missingWeather = !Number.isFinite(observed) || now - observed > 2 * HOUR || observed - now > 10 * 60000;
     const missingForecast = !a.taf || !Number.isFinite(forecastIssued) || now - forecastIssued > 12 * HOUR || forecastIssued - now > 10 * 60000;
-    const incomplete = unavailable || missingWeather || missingForecast || opts.sample || opts.offline || weatherOnly || opts.noticesDown || stormDown;
+    // Nearby flight restrictions (FAA TFRs) are a minor gap: they can't change a quiet airport's weather/FAA answer, so
+    // they never make it unknown. The gap is stated once as `note` (a small line under the status), never silently dropped.
+    // (Trips pass noticesQualify: a trip still counts them as a qualification, as before.)
+    const noticesQualify = !!(opts.noticesDown && opts.noticesQualify);
+    const incomplete = unavailable || missingWeather || missingForecast || opts.sample || opts.offline || weatherOnly || stormDown || noticesQualify;
     const quality = opts.offline ? "Offline · showing last-known airport data" : outdated ? "Data may be outdated" : missingWeather ? "Recent weather observation unavailable"
       : missingForecast ? "Airport forecast unavailable or outdated" : unavailable || opts.sample ? "Some data unavailable" : weatherOnly ? "Weather only · FAA delay coverage unavailable"
-      : stormDown ? "Storm data unavailable" : opts.hidden ? "Some disruptions hidden by your settings" : opts.noticesDown ? "Nearby flight restrictions unavailable" : "";
-    return { outdated, incomplete, quality, advisoriesAge, stormDown, checked: Number.isFinite(generated) ? generated : null,
+      : stormDown ? "Storm data unavailable" : opts.hidden ? "Some disruptions hidden by your settings" : noticesQualify ? "Nearby flight restrictions unavailable" : "";
+    const note = opts.noticesDown ? (typeof opts.noticesNote === "string" && opts.noticesNote) || "Nearby flight restrictions couldn't be checked" : "";
+    return { outdated, incomplete, quality, note, advisoriesAge, stormDown, checked: Number.isFinite(generated) ? generated : null,
       observed: Number.isFinite(observed) ? observed : null, forecastIssued: Number.isFinite(forecastIssued) ? forecastIssued : null, missingWeather, missingForecast, weatherOnly };
 
   }
@@ -200,7 +205,7 @@
     const now = opts.now ?? Date.now(), at = opts.at ?? now;
     const h = (a.hours || []).find((x) => ms(x.t) <= at && at < ms(x.t) + HOUR);
     const current = at < Math.floor(now / HOUR) * HOUR + HOUR;
-    const { outdated, incomplete, quality, stormDown } = health(a, opts);
+    const { outdated, incomplete, quality, note, stormDown } = health(a, opts);
     const programs = restrictions(a, at, now);
     const impacts = directionRows(programs, current);
     const s = score(h, opts);
@@ -219,10 +224,10 @@
       // a current hour still read from the forecast (fcNow: withObsHour couldn't use a fresh observation) says so
       headline = s.meaningful ? s.L.word.replace(/^Delays/, "Flight delays") : conditionHeadline(h, current && !h.fcNow);
     }
-    if ((outdated || incomplete) && kind === "normal") { kind = "unknown"; headline = opts.offline ? "Offline · status unconfirmed" : outdated ? "Status may be outdated" : opts.noticesDown ? "No disruptions reported · flight restrictions unavailable" : stormDown ? "No disruptions reported · storm data unavailable" : "No disruptions reported · some data unavailable"; }
+    if ((outdated || incomplete) && kind === "normal") { kind = "unknown"; headline = opts.offline ? "Offline · status unconfirmed" : outdated ? "Status may be outdated" : stormDown ? "No disruptions reported · storm data unavailable" : "No disruptions reported · some data unavailable"; }
     else if (opts.hidden && kind === "normal") headline = "No issues in your selected categories";
     if (kind === "unknown") level = null;
-    if (kind === "normal" && opts.noticesDown) headline += " · flight restrictions unavailable"; // nearby TFRs couldn't be read: never an unqualified "normal"
+    // nearby TFRs couldn't be read: the status stays as known (Clear when quiet), with `note` said under it
     const window = h ? windowFor(a, opts, at) : null;
     const end = first && ms(first.end);
     // Recovery is a forecast, never a promise tied to an FAA program's scheduled end, and only for weather: a program
@@ -252,7 +257,7 @@
       }
     }
     const reasons = uniq((h?.reasons || []).map((r) => opts.plain ? opts.plain(r, a) : r)).slice(0, 2);
-    return { kind, headline, level, at, current, quality, reasons, programs, impacts,
+    return { kind, headline, level, at, current, quality, note, reasons, programs, impacts,
       scheduledEnd: Number.isFinite(end) ? end : null,
       extension: first?.extension || null, window, recovery, eases,
       cue: s.meaningful ? s.L.cue : "", size: s.meaningful ? s.L.size : "",
@@ -343,15 +348,17 @@
     const start = ms(at), end = Number.isFinite(ms(until)) ? ms(until) : start + 1;
     return !!window && start < window.end && end > window.start;
   }
-  // Airport conditions guide preparation; never infer an individual flight's status.
+  // Airport conditions guide preparation; never infer an individual flight's status. One short sentence (≤ ~90
+  // characters) per situation; a known disruption leads, missing/outdated data is said when nothing known is.
   function travelAdvice(a, sm, quality = {}) {
     const programs = sm.current?.programs || [];
-    const coverage = quality.incomplete || quality.outdated ? "Coverage is incomplete or outdated. Confirm current conditions with your airline and refresh this outlook. " : "";
-    if (programs.some(p => p.type === "closure")) return coverage + "An airport closure may affect your trip. Contact your airline before heading out; a published reopening time may change.";
-    if (programs.some(p => p.type === "ground_stop" || p.type === "ground_delay")) return coverage + "Flights headed to this airport may be held at their departure airport. Outbound flights can also be affected by late aircraft. Check your airline before leaving; keep your planned airport arrival time unless the airline tells you otherwise.";
-    if (sm.later && sm.level >= 2) return coverage + "Conditions may worsen during the forecast window above. Check whether your departure, connection or arrival overlaps it, and recheck your airline before leaving and as that window approaches.";
-    if (sm.current?.level >= 2) return coverage + "Allow extra time and review your connection options. Check your airline before leaving and again before a connection; airport conditions cannot confirm your flight's status.";
-    return coverage + "Keep your planned airport arrival time. Recheck this outlook and your airline before leaving; a quiet airport outlook does not guarantee an on-time flight.";
+    if (programs.some(p => p.type === "closure")) return "Airport closed — contact your airline before heading out.";
+    if (programs.some(p => p.type === "ground_stop" || p.type === "ground_delay")) return "Arrivals may be held — check your flight with the airline.";
+    if (programs.some(p => p.type === "delay")) return "FAA delays reported — allow extra time and check your flight with the airline.";
+    if (sm.later && sm.level >= 2) return "Disruption possible later — check whether your flight falls in the window above.";
+    if (sm.current?.level >= 2) return "Disruption possible — allow extra time and check your flight with the airline.";
+    if (quality.incomplete || quality.outdated) return "Some airport data is missing — check your flight with the airline.";
+    return "Check your flight with the airline before leaving.";
   }
   return { travelAdvice, conditionHeadline, reasonVisibility, quietHour, health, nextChange, forecastQuality, evaluate, summary, levelAt, score, restrictions, directionRows, windowFor, overlaps, withObsHour, OBS_NEXT_MAX, PROG_LEVEL, RAISE };
 });

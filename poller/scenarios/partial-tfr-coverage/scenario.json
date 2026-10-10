@@ -2,7 +2,7 @@
   "title": "Partial flight restriction coverage",
   "at": "2026-10-02T16:30:00Z",
   "blurb": "A valid Washington VIP restriction survives a missing eligible detail; unrelated fire records are excluded.",
-  "description": "Three listed records: one valid VIP detail, one missing VIP detail and one intentionally excluded Idaho fire record. Useful restrictions remain visible, while traveler views qualify globally incomplete coverage. Counts distinguish the omission from the intentional exclusion.",
+  "description": "Three listed records: one valid VIP detail, one missing VIP detail and one intentionally excluded Idaho fire record. Useful restrictions remain visible, while traveler views note the globally incomplete coverage once, under the status (Clear stays Clear). Counts distinguish the omission from the intentional exclusion.",
   "group": "system",
   "assert": [
     {
@@ -43,15 +43,25 @@
     {
       "t": "sheet",
       "iata": "DCA",
-      "re": "Nearby flight restriction coverage is incomplete; some restrictions may be missing"
+      "re": "Some nearby flight restrictions couldn't be checked"
     },
     {
       "t": "sheet",
       "iata": "MSP",
-      "re": "Nearby flight restriction coverage is incomplete; some restrictions may be missing"
+      "re": "Some nearby flight restrictions couldn't be checked"
     },
     {
       "t": "noPercent"
+    },
+    {
+      "t": "card",
+      "iata": "MSP",
+      "re": "Clear: No airport-wide disruptions reported.*Some nearby flight restrictions couldn't be checked"
+    },
+    {
+      "t": "sheet",
+      "iata": "MSP",
+      "re": "^(?![\\s\\S]*(Unknown|coverage is incomplete|No disruptions reported ·))"
     }
   ]
 }
