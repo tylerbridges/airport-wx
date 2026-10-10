@@ -24,7 +24,7 @@ jobs:
           [ "$head" = "$base" ] || { echo "::error::Main changed; stop without publishing"; exit 1; }
           git fetch --no-tags --depth=1 origin "$base"
           git worktree add --detach candidate "$base"
-          files=(README.md poller/core.mjs poller/lib.test.mjs poller/risk.mjs poller/risk.test.mjs site/app.js site/index.html)
+          files=(README.md poller/core.mjs poller/lib.test.mjs poller/risk.mjs poller/risk.test.mjs site/app.js site/index.html poller/scenarios/vip-tfr/scenario.json)
           for f in "${files[@]}"; do git show "$GITHUB_SHA:$f" > "candidate/$f"; done
           cp tools/qa-staffing.mjs candidate/tools/qa-staffing.mjs
           cd candidate
