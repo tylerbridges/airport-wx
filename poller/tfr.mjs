@@ -8,7 +8,7 @@
 //   list    GET https://tfr.faa.gov/tfrapi/exportTfrList -> [{notam_id: "4/1234", state, type?, facility?,
 //           description?, ...}] (notam_id and state confirmed; the rest unverified, read tolerantly)
 //   detail  GET https://tfr.faa.gov/download/detail_4_1234.xml -> XNOTAM-Update > Group > Add > Not:
-//           NotUid {txtLocalName}, dateEffective, dateExpire, txtDescrTraditional, TfrNot {codeType?,
+//           NotUid {dateIndexYear, noSeqNo, txtLocalName (a label, not an ID)}, dateEffective, dateExpire, txtDescrTraditional, TfrNot {codeType?,
 //           TFRAreaGroup[] {aseTFRArea {txtName, ScheduleGroup {dateEffective, dateExpire}}, abdMergedArea {Avx[]
 //           {geoLat "38.85N", geoLong "077.04W"}}, aseShapes {Abd {Avx[] (circles: geoLatArc, geoLongArc,
 //           valRadiusArc, uomRadiusArc)}}}}. Times without a zone are UTC (NOTAM convention; unverified).
@@ -100,8 +100,14 @@ export function parseTfrDetail(xml, { typeText = "" } = {}) {
   const not = elements(s, "Not")[0];
   if (!not) return null;
   const nb = not.body;
-  const id = textOf(elements(nb, "NotUid")[0]?.body || "", "txtLocalName") || null;
+  const uid = elements(nb, "NotUid")[0]?.body || "";
   const text = decodeXml(textOf(nb, "txtDescrTraditional") || textOf(nb, "txtDescrUSNS") || "").replace(/\s+/g, " ").trim();
+  // Live XML uses names such as "261011 Sterling VIP" in txtLocalName. The FDC header
+  // identifies the NOTAM; structured year/sequence fields cover details without a header.
+  const local = textOf(uid, "txtLocalName"), year = textOf(uid, "dateIndexYear"), seq = textOf(uid, "noSeqNo");
+  const headerId = /^!?FDC\s+(\d+\/\d+)\b/i.exec(text)?.[1];
+  const structuredId = /^\d{4}$/.test(year) && /^\d+$/.test(seq) ? `${Number(year) % 10}/${seq.padStart(4, "0")}` : null;
+  const id = headerId || structuredId || (/^\d+\/\d+$/.test(local) ? local : null);
   const tfrNot = elements(nb, "TfrNot")[0]?.body || "";
   const code = textOf(tfrNot, "codeType") || textOf(nb, "codeType");
   // the Not element's own dates (area schedules are inside TfrNot)

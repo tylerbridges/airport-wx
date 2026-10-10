@@ -83,3 +83,14 @@ test("TFR permanence is explicit, not inferred from a missing end", async () => 
  assert.equal(parseTfrDetail(open).permanent,false);
  assert.equal(parseTfrDetail(open.replace("<dateExpire></dateExpire>","<dateExpire>PERM</dateExpire>")).permanent,true);
 });
+
+test("live FAA XML local names are labels; FDC header and structured fields identify the record", async () => {
+  const xml = await readFile(join(HERE, "fixtures", "tfr-live-6_8599.xml"), "utf8");
+  const d = parseTfrDetail(xml);
+  assert.equal(d.id, "6/8599"); assert.equal(d.type, "VIP"); assert.equal(d.areas.length, 1);
+  assert.equal(d.from, Date.UTC(2026, 9, 11, 11, 30));
+  assert.equal(d.to, Date.UTC(2026, 9, 12, 1, 30));
+  const noHeader = xml.replace(/<txtDescr(?:Traditional|USNS)>[\s\S]*?<\/txtDescr(?:Traditional|USNS)>/g, "");
+  assert.equal(parseTfrDetail(noHeader).id, "6/8599");
+  assert.equal(parseTfrDetail(noHeader.replace("<noSeqNo>8599</noSeqNo>", "<noSeqNo>99</noSeqNo>")).id, "6/0099");
+});

@@ -111,3 +111,12 @@ test("wrong-record XML is a failed detail rather than a notice for another recor
   });
   assert.equal(r.meta.failed, 1); assert.equal(r.tfrs, null);
 });
+test("real FAA detail labels do not cause false wrong-record failures", async () => {
+  const xml = await readFile(new URL("./fixtures/tfr-live-6_8599.xml", import.meta.url), "utf8");
+  const mock = id => ({ clock: () => 0, fetchFn: async url => new Response(url === TFR_LIST ? JSON.stringify([record(id)]) : xml) });
+  const r = await liveTfrs([], NOW, { note() {}, save() {} }, {}, mock(8599));
+  assert.equal(r.meta.parsed, 1); assert.equal(r.meta.failed, 0); assert.equal(r.meta.incomplete, false);
+  assert.equal(r.tfrs[0].id, "6/8599");
+  const wrong = await liveTfrs([], NOW, { note() {}, save() {} }, {}, mock(9999));
+  assert.equal(wrong.meta.failed, 1); assert.equal(wrong.tfrs, null);
+});
