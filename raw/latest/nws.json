@@ -10,6 +10,531 @@
     "type": "FeatureCollection",
     "features": [
         {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0-KEEPALIVE-19795",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0-KEEPALIVE-19795",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0-KEEPALIVE-19795",
+                "areaDesc": "Montgomery",
+                "geocode": {
+                    "SAME": [
+                        "024031"
+                    ],
+                    "UGC": [
+                        "MDC031"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/county/MDC031"
+                ],
+                "references": [],
+                "sent": "2026-10-19T16:55:14+00:00",
+                "effective": "2026-10-19T16:55:14+00:00",
+                "onset": null,
+                "expires": "2026-10-19T17:05:14+00:00",
+                "ends": null,
+                "status": "Test",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Unknown",
+                "certainty": "Unknown",
+                "urgency": "Unknown",
+                "event": "Test Message",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS",
+                "headline": null,
+                "description": "Monitoring message only. Please disregard.",
+                "instruction": "Monitoring message only. Please disregard.",
+                "response": "None",
+                "note": "This is only a test for monitoring of vital dissemination systems.",
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "KEPWBC"
+                    ],
+                    "WMOidentifier": [
+                        "NZUS91 KWBC 191655"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "CMAS",
+                        "EAS",
+                        "NWEM"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "TST"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.cffd811b484f52354f94a88f51b676ab8b516981.002.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.cffd811b484f52354f94a88f51b676ab8b516981.002.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.cffd811b484f52354f94a88f51b676ab8b516981.002.1",
+                "areaDesc": "Waters from Altamaha Sound GA to Fernandina Beach FL from 20 to 60 NM",
+                "geocode": {
+                    "SAME": [
+                        "075470"
+                    ],
+                    "UGC": [
+                        "AMZ470"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/AMZ470"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.4e0358c13df33a6edebc88bd796bb1161750fabf.001.2",
+                        "identifier": "urn:oid:2.49.0.1.840.0.4e0358c13df33a6edebc88bd796bb1161750fabf.001.2",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-19T05:44:00-04:00"
+                    },
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.cf70c746e0505e13cb65796d320630339c0c143c.003.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.cf70c746e0505e13cb65796d320630339c0c143c.003.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-19T08:14:00-04:00"
+                    },
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5c876cbefa8323cba18ac7e1187a281502856f51.002.2",
+                        "identifier": "urn:oid:2.49.0.1.840.0.5c876cbefa8323cba18ac7e1187a281502856f51.002.2",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-19T02:26:00-04:00"
+                    }
+                ],
+                "sent": "2026-10-19T12:19:00-04:00",
+                "effective": "2026-10-19T12:19:00-04:00",
+                "onset": "2026-10-19T12:19:00-04:00",
+                "expires": "2026-10-20T05:00:00-04:00",
+                "ends": "2026-10-22T04:00:00-04:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Small Craft Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Jacksonville FL",
+                "headline": "Small Craft Advisory issued October 19 at 12:19PM EDT until October 22 at 4:00AM EDT by NWS Jacksonville FL",
+                "description": "* WHAT...Northeast winds 15 to 25 kt with gusts up to 35 kt and\nseas 8 to 13 ft.\n\n* WHERE...Waters from Altamaha Sound GA to Fernandina Beach FL\nfrom 20 to 60 NM.\n\n* WHEN...Until 4 AM EDT Thursday.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
+                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "MWWJAX"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS72 KJAX 191619"
+                    ],
+                    "NWSheadline": [
+                        "SMALL CRAFT ADVISORY REMAINS IN EFFECT UNTIL 4 AM EDT THURSDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KJAX.SC.Y.0040.000000T0000Z-261022T0800Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-22T04:00:00-04:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "SCY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.cffd811b484f52354f94a88f51b676ab8b516981.003.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.cffd811b484f52354f94a88f51b676ab8b516981.003.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.cffd811b484f52354f94a88f51b676ab8b516981.003.1",
+                "areaDesc": "Coastal waters from Fernandina Beach to St. Augustine FL out 20 NM; Coastal waters from St. Augustine to Flagler Beach FL out 20 NM; Waters from Fernandina Beach to St. Augustine FL from 20 to 60 NM; Waters from St. Augustine to Flagler Beach FL from 20 to 60 NM",
+                "geocode": {
+                    "SAME": [
+                        "075452",
+                        "075454",
+                        "075472",
+                        "075474"
+                    ],
+                    "UGC": [
+                        "AMZ452",
+                        "AMZ454",
+                        "AMZ472",
+                        "AMZ474"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/AMZ452",
+                    "https://api.weather.gov/zones/forecast/AMZ454",
+                    "https://api.weather.gov/zones/forecast/AMZ472",
+                    "https://api.weather.gov/zones/forecast/AMZ474"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.4e0358c13df33a6edebc88bd796bb1161750fabf.002.2",
+                        "identifier": "urn:oid:2.49.0.1.840.0.4e0358c13df33a6edebc88bd796bb1161750fabf.002.2",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-19T05:44:00-04:00"
+                    },
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.cf70c746e0505e13cb65796d320630339c0c143c.001.2",
+                        "identifier": "urn:oid:2.49.0.1.840.0.cf70c746e0505e13cb65796d320630339c0c143c.001.2",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-19T08:14:00-04:00"
+                    },
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5c876cbefa8323cba18ac7e1187a281502856f51.001.2",
+                        "identifier": "urn:oid:2.49.0.1.840.0.5c876cbefa8323cba18ac7e1187a281502856f51.001.2",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-19T02:26:00-04:00"
+                    }
+                ],
+                "sent": "2026-10-19T12:19:00-04:00",
+                "effective": "2026-10-19T12:19:00-04:00",
+                "onset": "2026-10-19T12:19:00-04:00",
+                "expires": "2026-10-20T05:00:00-04:00",
+                "ends": "2026-10-22T04:00:00-04:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Small Craft Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Jacksonville FL",
+                "headline": "Small Craft Advisory issued October 19 at 12:19PM EDT until October 22 at 4:00AM EDT by NWS Jacksonville FL",
+                "description": "* WHAT...Northeast winds 15 to 25 kt with gusts up to 35 kt and\nseas 8 to 13 ft.\n\n* WHERE...All Northeast Florida coastal waters from Fernandina\nBeach FL to Flagler Beach FL out to 60 NM.\n\n* WHEN...Until 4 AM EDT Thursday.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
+                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "MWWJAX"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS72 KJAX 191619"
+                    ],
+                    "NWSheadline": [
+                        "SMALL CRAFT ADVISORY REMAINS IN EFFECT UNTIL 4 AM EDT THURSDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KJAX.SC.Y.0040.000000T0000Z-261022T0800Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-22T04:00:00-04:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "SCY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.cffd811b484f52354f94a88f51b676ab8b516981.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.cffd811b484f52354f94a88f51b676ab8b516981.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.cffd811b484f52354f94a88f51b676ab8b516981.001.1",
+                "areaDesc": "Coastal waters from Altamaha Sound to Fernandina Beach FL out 20 NM",
+                "geocode": {
+                    "SAME": [
+                        "075450"
+                    ],
+                    "UGC": [
+                        "AMZ450"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/AMZ450"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.4e0358c13df33a6edebc88bd796bb1161750fabf.003.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.4e0358c13df33a6edebc88bd796bb1161750fabf.003.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-19T05:44:00-04:00"
+                    },
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.cf70c746e0505e13cb65796d320630339c0c143c.002.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.cf70c746e0505e13cb65796d320630339c0c143c.002.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-19T08:14:00-04:00"
+                    },
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5c876cbefa8323cba18ac7e1187a281502856f51.003.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.5c876cbefa8323cba18ac7e1187a281502856f51.003.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-19T02:26:00-04:00"
+                    }
+                ],
+                "sent": "2026-10-19T12:19:00-04:00",
+                "effective": "2026-10-19T12:19:00-04:00",
+                "onset": "2026-10-19T12:19:00-04:00",
+                "expires": "2026-10-20T05:00:00-04:00",
+                "ends": "2026-10-20T20:00:00-04:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Small Craft Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Jacksonville FL",
+                "headline": "Small Craft Advisory issued October 19 at 12:19PM EDT until October 20 at 8:00PM EDT by NWS Jacksonville FL",
+                "description": "* WHAT...North winds 15 to 20 kt with gusts up to 30 kt and seas\n7 to 10 ft.\n\n* WHERE...Coastal waters from Altamaha Sound to Fernandina Beach\nFL out 20 NM.\n\n* WHEN...Until 8 PM EDT Tuesday.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
+                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "MWWJAX"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS72 KJAX 191619"
+                    ],
+                    "NWSheadline": [
+                        "SMALL CRAFT ADVISORY REMAINS IN EFFECT UNTIL 8 PM EDT TUESDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KJAX.SC.Y.0040.000000T0000Z-261021T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-20T20:00:00-04:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.a4fc4d57735bae54242ef7fbf8a14dfaa610b33f.001.2,2026-10-18T18:58:00-04:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "SCY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.d137cbd3650b70b7c9237bab73209c0eeea6753d.001.1",
+            "type": "Feature",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            -150.22,
+                            61.17
+                        ],
+                        [
+                            -149.9,
+                            61.22
+                        ],
+                        [
+                            -149.81,
+                            61.31
+                        ],
+                        [
+                            -149.72,
+                            61.33
+                        ],
+                        [
+                            -149.7,
+                            61.38
+                        ],
+                        [
+                            -149.54,
+                            61.41
+                        ],
+                        [
+                            -149.39,
+                            61.47
+                        ],
+                        [
+                            -149.24,
+                            61.48
+                        ],
+                        [
+                            -149.24,
+                            61.46
+                        ],
+                        [
+                            -149.33,
+                            61.46
+                        ],
+                        [
+                            -149.56,
+                            61.33
+                        ],
+                        [
+                            -149.57,
+                            61.29
+                        ],
+                        [
+                            -149.77,
+                            61.14
+                        ],
+                        [
+                            -149.77,
+                            61.06
+                        ],
+                        [
+                            -150.08,
+                            61.16
+                        ],
+                        [
+                            -150.16,
+                            61.17
+                        ],
+                        [
+                            -150.24,
+                            61.14
+                        ],
+                        [
+                            -150.22,
+                            61.17
+                        ]
+                    ]
+                ]
+            },
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.d137cbd3650b70b7c9237bab73209c0eeea6753d.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.d137cbd3650b70b7c9237bab73209c0eeea6753d.001.1",
+                "areaDesc": "Anchorage",
+                "geocode": {
+                    "SAME": [
+                        "002020"
+                    ],
+                    "UGC": [
+                        "AKZ701"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/AKZ701"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.8de3fcd5ab62452569525dc4edd5c35760af0980.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.8de3fcd5ab62452569525dc4edd5c35760af0980.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-19T06:10:00-08:00"
+                    }
+                ],
+                "sent": "2026-10-19T08:01:00-08:00",
+                "effective": "2026-10-19T08:01:00-08:00",
+                "onset": "2026-10-19T08:01:00-08:00",
+                "expires": "2026-10-19T12:00:00-08:00",
+                "ends": "2026-10-19T12:00:00-08:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Flood Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Anchorage AK",
+                "headline": "Flood Advisory issued October 19 at 8:01AM AKDT until October 19 at 12:00PM AKDT by NWS Anchorage AK",
+                "description": "* WHAT...Flooding caused by excessive rainfall is expected.\n\n* WHERE...Anchorage and Eagle River\n\n* WHEN...Until noon AKDT.\n\n* IMPACTS...Minor flooding in low-lying and poor drainage areas.\nStorm drains and ditches may become clogged with debris. Ponding of\nwater on area roadways and low-lying areas is occurring or is\nimminent.\n\n* ADDITIONAL DETAILS...\n- At 746 AM AKDT, Doppler radar and automated rain gauges indicated\nheavy rain across the advisory area. Between 0.2 and 0.4 inches\nof rain have fallen. Additional rainfall amounts of 0.1 to 0.3\ninches are possible.\n- Heavy rain will continue through late this morning. Heavy rain\nmay lead to ponding of water on roadways and low-lying areas. Use\ncaution and slow down when driving through heavy rain. Water\nlevels along small waterways are expected to be at or above\nbankfull through Wednesday morning.\n\n\n- Http://www.weather.gov/safety/flood",
+                "instruction": "Stay tuned to further developments by listening to your local radio,\ntelevision, or NOAA Weather Radio for further information.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "FLSAFC"
+                    ],
+                    "WMOidentifier": [
+                        "WGAK88 PAFC 191601"
+                    ],
+                    "NWSheadline": [
+                        "FLOOD ADVISORY REMAINS IN EFFECT UNTIL NOON AKDT TODAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.PAFC.FA.Y.0020.000000T0000Z-261019T2000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-19T12:00:00-08:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FAY"
+                    ]
+                }
+            }
+        },
+        {
             "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.1f3c35c758acd7f30461d16074e94f243d9ee2b2.002.1",
             "type": "Feature",
             "geometry": null,
@@ -177,73 +702,6 @@
                     ],
                     "NationalWeatherService": [
                         "SCY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0-KEEPALIVE-27681",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0-KEEPALIVE-27681",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0-KEEPALIVE-27681",
-                "areaDesc": "Montgomery",
-                "geocode": {
-                    "SAME": [
-                        "024031"
-                    ],
-                    "UGC": [
-                        "MDC031"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/county/MDC031"
-                ],
-                "references": [],
-                "sent": "2026-10-19T15:55:14+00:00",
-                "effective": "2026-10-19T15:55:14+00:00",
-                "onset": null,
-                "expires": "2026-10-19T16:05:14+00:00",
-                "ends": null,
-                "status": "Test",
-                "messageType": "Alert",
-                "category": "Met",
-                "severity": "Unknown",
-                "certainty": "Unknown",
-                "urgency": "Unknown",
-                "event": "Test Message",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS",
-                "headline": null,
-                "description": "Monitoring message only. Please disregard.",
-                "instruction": "Monitoring message only. Please disregard.",
-                "response": "None",
-                "note": "This is only a test for monitoring of vital dissemination systems.",
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "KEPWBC"
-                    ],
-                    "WMOidentifier": [
-                        "NZUS91 KWBC 191555"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "CMAS",
-                        "EAS",
-                        "NWEM"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "TST"
                     ]
                 }
             }
@@ -1998,164 +2456,6 @@
             }
         },
         {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.8de3fcd5ab62452569525dc4edd5c35760af0980.001.1",
-            "type": "Feature",
-            "geometry": {
-                "type": "Polygon",
-                "coordinates": [
-                    [
-                        [
-                            -150.22,
-                            61.17
-                        ],
-                        [
-                            -150.07,
-                            61.16
-                        ],
-                        [
-                            -150.02,
-                            61.2
-                        ],
-                        [
-                            -149.9,
-                            61.22
-                        ],
-                        [
-                            -149.81,
-                            61.32
-                        ],
-                        [
-                            -149.72,
-                            61.33
-                        ],
-                        [
-                            -149.71,
-                            61.38
-                        ],
-                        [
-                            -149.39,
-                            61.47
-                        ],
-                        [
-                            -149.24,
-                            61.48
-                        ],
-                        [
-                            -149.24,
-                            61.46
-                        ],
-                        [
-                            -149.33,
-                            61.46
-                        ],
-                        [
-                            -149.56,
-                            61.33
-                        ],
-                        [
-                            -149.57,
-                            61.29
-                        ],
-                        [
-                            -149.77,
-                            61.14
-                        ],
-                        [
-                            -149.77,
-                            61.06
-                        ],
-                        [
-                            -150.07,
-                            61.15
-                        ],
-                        [
-                            -150.16,
-                            61.16
-                        ],
-                        [
-                            -150.28,
-                            61.13
-                        ],
-                        [
-                            -150.22,
-                            61.17
-                        ]
-                    ]
-                ]
-            },
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.8de3fcd5ab62452569525dc4edd5c35760af0980.001.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.8de3fcd5ab62452569525dc4edd5c35760af0980.001.1",
-                "areaDesc": "Anchorage",
-                "geocode": {
-                    "SAME": [
-                        "002020"
-                    ],
-                    "UGC": [
-                        "AKZ701"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/AKZ701"
-                ],
-                "references": [],
-                "sent": "2026-10-19T06:10:00-08:00",
-                "effective": "2026-10-19T06:10:00-08:00",
-                "onset": "2026-10-19T06:10:00-08:00",
-                "expires": "2026-10-19T12:00:00-08:00",
-                "ends": "2026-10-19T12:00:00-08:00",
-                "status": "Actual",
-                "messageType": "Alert",
-                "category": "Met",
-                "severity": "Minor",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Flood Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Anchorage AK",
-                "headline": "Flood Advisory issued October 19 at 6:10AM AKDT until October 19 at 12:00PM AKDT by NWS Anchorage AK",
-                "description": "* WHAT...Flooding caused by excessive rainfall is expected.\n\n* WHERE...Anchorage and Eagle River\n\n* WHEN...Until noon AKDT.\n\n* IMPACTS...Minor flooding in low-lying and poor drainage areas.\nStorm drains and ditches may become clogged with debris. Ponding of\nwater on area roadways and low-lying areas is occurring or is\nimminent.\n\n* ADDITIONAL DETAILS...\n- At 605 AM AKDT, river gauge reports indicate rises in water\nlevels from heavy rain across the advisory area. Minor flooding\nis ongoing or expected to begin shortly. Between 0.2 and 0.4\ninches of rain have fallen. Additional rainfall amounts of 0.2 to\n0.4 inches are possible.\n- Heavy rain will continue through late this morning. Heavy rain\nmay lead to ponding of water on area roadways. Use caution and\nslow down when driving through heavy rain. -\n- For Chester Creek at Arctic Blvd:\nAt 5:45am the stage was 3.3 feet.\nFlood Stage is 4.0 feet.\nForecast: A crest around 3.8 feet is expected by 10:00am Monday.\n\n\n- Http://www.weather.gov/safety/flood",
-                "instruction": "Stay tuned to further developments by listening to your local radio,\ntelevision, or NOAA Weather Radio for further information.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "FLSAFC"
-                    ],
-                    "WMOidentifier": [
-                        "WGAK88 PAFC 191410"
-                    ],
-                    "NWSheadline": [
-                        "FLOOD ADVISORY IN EFFECT UNTIL NOON AKDT TODAY"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.NEW.PAFC.FA.Y.0020.261019T1410Z-261019T2000Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-19T12:00:00-08:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "FAY"
-                    ]
-                }
-            }
-        },
-        {
             "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.9c8e62b89b99a0fb39fc0fde209cab335a54ab76.001.1",
             "type": "Feature",
             "geometry": null,
@@ -3177,193 +3477,4 @@
                         "WHUS42 KMHX 191405"
                     ],
                     "NWSheadline": [
-                        "COASTAL FLOOD ADVISORY NOW IN EFFECT UNTIL 8 PM EDT WEDNESDAY... ...HIGH SURF ADVISORY REMAINS IN EFFECT UNTIL 6 AM EDT THURSDAY... ...BEACH HAZARDS STATEMENT REMAINS IN EFFECT UNTIL 8 PM EDT THIS EVENING"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.KMHX.BH.S.0072.000000T0000Z-261020T0000Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-19T20:00:00-04:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.a71a9dc5710c7eae23f815e464cd23dd69db989e.003.1,2026-10-18T20:56:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "BHS"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.005.2",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.005.2",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.005.2",
-                "areaDesc": "East Carteret",
-                "geocode": {
-                    "SAME": [
-                        "037031"
-                    ],
-                    "UGC": [
-                        "NCZ196"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/NCZ196"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.004.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.004.1",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-19T02:38:00-04:00"
-                    }
-                ],
-                "sent": "2026-10-19T10:05:00-04:00",
-                "effective": "2026-10-19T10:05:00-04:00",
-                "onset": "2026-10-19T10:05:00-04:00",
-                "expires": "2026-10-19T22:15:00-04:00",
-                "ends": "2026-10-19T20:00:00-04:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Minor",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Coastal Flood Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Newport/Morehead City NC",
-                "headline": "Coastal Flood Advisory issued October 19 at 10:05AM EDT until October 19 at 8:00PM EDT by NWS Newport/Morehead City NC",
-                "description": "* WHAT...For the Coastal Flood Advisory, up to 1 to 3 feet of\ninundation above ground level in low-lying areas near shorelines\nand tidal waterways. For the High Surf Advisory, large breaking\nwaves of 8 to 10 feet in the surf zone. For the Beach Hazards\nStatement, dangerous rip currents, large breaking waves\nexpected, and strong longshore currents in the surf zone.\n\n* WHERE...East Carteret County.\n\n* WHEN...For the High Surf Advisory, until 8 AM EDT Wednesday.\nFor the Coastal Flood Advisory, until 8 PM EDT this evening.\nFor the Beach Hazards Statement, until 8 PM EDT this evening.\n\n* IMPACTS...Up to 1 to 3 feet of inundation above ground level is\nexpected in low-lying areas near shorelines and tidal waterways\nresulting in a low threat of property damage. Some roads and\nlow lying property including parking lots, parks, lawns, and\nhomes adjacent to the waterfront will experience shallow\nflooding. Dangerous swimming and surfing conditions and\nlocalized beach erosion. Rip currents can sweep even the best\nswimmers away from shore into deeper water. Dangerous shore\nbreak can throw a swimmer or surfer head first into the bottom\ncausing neck and back injuries. Strong longshore currents will\ncreate dangerous swimming conditions.",
-                "instruction": "If travel is required, allow extra time as some roads may be\nclosed. Do not drive around barricades or through water of\nunknown depth. Take the necessary actions to protect flood-prone\nproperty.\n\nInexperienced swimmers should remain out of the water due to\ndangerous surf conditions.\n\nLife-threatening rip currents. If caught in a rip current, remain\ncalm. Swim in a direction following the shoreline. If tired,\nfloat or tread water until out of the rip current. If unable to\nescape, face the shore and call or wave for help.\n\nShore break occurs when waves break directly on the beach. It is\nextremely important to protect your head and neck whenever you\nare in breaking waves by keeping your hands in front of you at\nall times.\n\nStrong longshore currents can sweep swimmers and surfers into rip\ncurrents, piers, jetties and other hazardous areas. In many\ncases, the longshore current is strong enough to prevent swimmers\nfrom being able to keep their feet on the bottom making it\ndifficult to return to shore.",
-                "response": "Monitor",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "CFWMHX"
-                    ],
-                    "WMOidentifier": [
-                        "WHUS42 KMHX 191405"
-                    ],
-                    "NWSheadline": [
-                        "HIGH SURF ADVISORY NOW IN EFFECT UNTIL 8 AM EDT WEDNESDAY... ...COASTAL FLOOD ADVISORY REMAINS IN EFFECT UNTIL 8 PM EDT THIS EVENING... ...BEACH HAZARDS STATEMENT REMAINS IN EFFECT UNTIL 8 PM EDT THIS EVENING"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.KMHX.CF.Y.0007.000000T0000Z-261020T0000Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-19T20:00:00-04:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.a71a9dc5710c7eae23f815e464cd23dd69db989e.004.2,2026-10-18T20:56:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.cb161830b749cbd0e733cc365ccc1a651272c8dc.004.2,2026-10-18T16:04:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.0fa2b1cf35c0ffa63c715482f0e3077ecdd92f31.004.1,2026-10-18T11:02:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.523cfd40838f89a4c2dee3d1c22dbaad7c188f65.004.1,2026-10-18T03:24:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.13ae7e1da47230cfff91b99011363c9ace051d59.004.1,2026-10-17T20:33:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.1c2331befea2bbe6962538ac28872fa4c0a0a9d8.004.3,2026-10-17T19:40:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.b0ace643ad96eb8e139c9106400a2f229ef03ece.005.1,2026-10-17T15:46:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.f462365b1bb348e8cba6bfb4b4def2f6f738643a.004.1,2026-10-17T05:02:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.c636071d8131427853ca9202fcfbad16464ef59f.004.1,2026-10-17T03:35:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bd086668dcc450b9de3b2a93bb1d3ce9dc7dfd77.002.2,2026-10-16T20:46:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.58f085d78222bc390b55f288f2220f5d358a6dcf.002.1,2026-10-16T14:55:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "CFY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.002.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.002.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.002.1",
-                "areaDesc": "Hatteras Island",
-                "geocode": {
-                    "SAME": [
-                        "037055"
-                    ],
-                    "UGC": [
-                        "NCZ205"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/NCZ205"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.001.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.001.1",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-19T02:38:00-04:00"
-                    }
-                ],
-                "sent": "2026-10-19T10:05:00-04:00",
-                "effective": "2026-10-19T10:05:00-04:00",
-                "onset": "2026-10-19T10:05:00-04:00",
-                "expires": "2026-10-19T22:15:00-04:00",
-                "ends": "2026-10-21T20:00:00-04:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Severe",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Coastal Flood Warning",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Newport/Morehead City NC",
-                "headline": "Coastal Flood Warning issued October 19 at 10:05AM EDT until October 21 at 8:00PM EDT by NWS Newport/Morehead City NC",
-                "description": "* WHAT...For the Coastal Flood Warning, 2 to 4 feet of inundation\nabove ground level in low-lying areas near shorelines and tidal\nwaterways. For the High Surf Advisory, large breaking waves of\n10 to 14 feet in the surf zone. For the Beach Hazards\nStatement, dangerous rip currents, large breaking waves\nexpected, and strong longshore currents in the surf zone.\n\n* WHERE...Hatteras Island.\n\n* WHEN...For the Coastal Flood Warning, until 8 PM EDT\nWednesday. For the High Surf Advisory, until 6 AM EDT\nThursday. For the Beach Hazards Statement, until 8 PM EDT this\nevening.\n\n* IMPACTS...Up to 2 to 4 feet of inundation above ground level\nis expected in some areas near shorelines and tidal waterways\nresulting in an elevated threat of property damage. Flooding\nwill extend inland from the waterfront threatening some homes\nand businesses. Numerous road closures and flooding of\nvehicles will be possible. Vulnerable portions of NC-12 may be\ninundated, especially around high tide. There is a possibility\nof being stranded on Hatteras Island for multiple days. This\ncould be life threatening if you have an emergency. Dangerous\nswimming and surfing conditions and localized beach erosion.\nRip currents can sweep even the best swimmers away from shore\ninto deeper water. Dangerous shore break can throw a swimmer\nor surfer head first into the bottom causing neck and back\ninjuries. Strong longshore currents will create dangerous\nswimming conditions.\n\n* ADDITIONAL DETAILS...This is a long duration event with\nuncertainty on when conditions will improve. Significant ocean\noverwash impacts are expected at vulnerable oceanside areas\nthrough multiple high tide cycles into mid week. Minor\nsoundside water level rises will also be possible.",
-                "instruction": "Take the necessary actions to protect flood-prone property. If\ntravel is required, do not drive around barricades or through\nwater of unknown depth.\n\nInexperienced swimmers should remain out of the water due to\ndangerous surf conditions.\n\nLife-threatening rip currents. If caught in a rip current, remain\ncalm. Swim in a direction following the shoreline. If tired,\nfloat or tread water until out of the rip current. If unable to\nescape, face the shore and call or wave for help.\n\nShore break occurs when waves break directly on the beach. It is\nextremely important to protect your head and neck whenever you\nare in breaking waves by keeping your hands in front of you at\nall times.\n\nStrong longshore currents can sweep swimmers and surfers into rip\ncurrents, piers, jetties and other hazardous areas. In many\ncases, the longshore current is strong enough to prevent swimmers\nfrom being able to keep their feet on the bottom making it\ndifficult to return to shore.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "CFWMHX"
-                    ],
-                    "WMOidentifier": [
-                        "WHUS42 KMHX 191405"
-                    ],
-                    "NWSheadline": [
-                        "COASTAL FLOOD WARNING NOW IN EFFECT UNTIL 8 PM EDT WEDNESDAY... ...HIGH SURF ADVISORY REMAINS IN EFFECT UNTIL 6 AM EDT THURSDAY... ...BEACH HAZARDS STATEMENT REMAINS IN EFFECT UNTIL 8 PM EDT THIS EVENING"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "EAS-ORG": [
-                        "WXR"
-                    ],
-                    "VTEC": [
-                        "/O.EXT.KMHX.CF.W.0003.000000T0000Z-261022T0000Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-21T20:00:00-04:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.a71a9dc5710c7eae23f815e464cd23dd69db989e.001.2,2026-10-18T20:56:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.cb161830b749cbd0e733cc365ccc1a651272c8dc.001.2,2026-10-18T16:04:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.0fa2b1cf35c0ffa63c715482f0e3077ecdd92f31.001.1,2026-10-18T11:02:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.523cfd40838f89a4c2dee3d1c22dbaad7c188f65.001.1,2026-10-18T03:24:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0
+                        "COASTAL FLOOD ADVISORY NOW I
