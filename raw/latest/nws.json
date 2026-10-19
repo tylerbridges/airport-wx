@@ -10,61 +10,70 @@
     "type": "FeatureCollection",
     "features": [
         {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ae773ed307a213a4b3dbfb4011f8c123704eb76d.003.1",
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.31178344fd54d631db609b727afd5d344a4a740e.001.1",
             "type": "Feature",
             "geometry": null,
             "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ae773ed307a213a4b3dbfb4011f8c123704eb76d.003.1",
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.31178344fd54d631db609b727afd5d344a4a740e.001.1",
                 "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.ae773ed307a213a4b3dbfb4011f8c123704eb76d.003.1",
-                "areaDesc": "S of Cape Lookout NC to Surf City NC out to 20 NM",
+                "id": "urn:oid:2.49.0.1.840.0.31178344fd54d631db609b727afd5d344a4a740e.001.1",
+                "areaDesc": "Coastal waters from Florence to Cape Blanco OR out 10 nm; Coastal waters from Cape Blanco OR to Pt. St. George CA out 10 nm",
                 "geocode": {
                     "SAME": [
-                        "075158"
+                        "057350",
+                        "057356"
                     ],
                     "UGC": [
-                        "AMZ158"
+                        "PZZ350",
+                        "PZZ356"
                     ]
                 },
                 "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/AMZ158"
+                    "https://api.weather.gov/zones/forecast/PZZ350",
+                    "https://api.weather.gov/zones/forecast/PZZ356"
                 ],
                 "references": [
                     {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5257920adef9759385722561f0ce06362cd0dbf3.001.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.5257920adef9759385722561f0ce06362cd0dbf3.001.1",
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.6597dbfc8d28b49b9fb875f4acc7aa609c18b2ca.002.2",
+                        "identifier": "urn:oid:2.49.0.1.840.0.6597dbfc8d28b49b9fb875f4acc7aa609c18b2ca.002.2",
                         "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-18T15:03:00-04:00"
+                        "sent": "2026-10-18T13:34:00-07:00"
+                    },
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.1e468bc9f5b8123e1a5e9218d4aca34c7648f4e4.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.1e468bc9f5b8123e1a5e9218d4aca34c7648f4e4.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-18T20:44:00-07:00"
                     }
                 ],
-                "sent": "2026-10-19T02:56:00-04:00",
-                "effective": "2026-10-19T02:56:00-04:00",
-                "onset": "2026-10-19T02:56:00-04:00",
-                "expires": "2026-10-19T15:00:00-04:00",
-                "ends": "2026-10-20T00:00:00-04:00",
+                "sent": "2026-10-19T00:59:00-07:00",
+                "effective": "2026-10-19T00:59:00-07:00",
+                "onset": "2026-10-19T17:00:00-07:00",
+                "expires": "2026-10-19T14:00:00-07:00",
+                "ends": "2026-10-20T11:00:00-07:00",
                 "status": "Actual",
                 "messageType": "Update",
                 "category": "Met",
-                "severity": "Moderate",
+                "severity": "Minor",
                 "certainty": "Likely",
                 "urgency": "Expected",
-                "event": "Gale Warning",
+                "event": "Small Craft Advisory",
                 "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Newport/Morehead City NC",
-                "headline": "Gale Warning issued October 19 at 2:56AM EDT until October 20 at 12:00AM EDT by NWS Newport/Morehead City NC",
-                "description": "* WHAT...North winds 20 to 30 kt with gusts up to 40 kt and seas\n6 to 11 ft.\n\n* WHERE...The coastal waters from Cape Lookout to Surf City.\n\n* WHEN...Until midnight EDT tonight.\n\n* IMPACTS...Strong winds will cause hazardous seas which could\ncapsize or damage vessels and reduce visibility.",
-                "instruction": "Mariners should alter plans to avoid these hazardous conditions.\nRemain in port, seek safe harbor, alter course, and/or secure the\nvessel for hazardous conditions.",
+                "senderName": "NWS Medford OR",
+                "headline": "Small Craft Advisory issued October 19 at 12:59AM PDT until October 20 at 11:00AM PDT by NWS Medford OR",
+                "description": "* WHAT...Seas 8 to 10 ft at 12 seconds expected.\n\n* WHERE...All areas.\n\n* WHEN...From 5 PM this afternoon to 11 AM PDT Tuesday.\n\n* IMPACTS...Gusty winds and/or steep seas could capsize or\ndamage smaller vessels.\n\n* View the hazard area in detail at https://go.usa.gov/x6hks",
+                "instruction": "Inexperienced mariners and those operating smaller vessels should\nremain in port and avoid the area of hazardous conditions.",
                 "response": "Avoid",
                 "note": null,
                 "parameters": {
                     "AWIPSidentifier": [
-                        "MWWMHX"
+                        "MWWMFR"
                     ],
                     "WMOidentifier": [
-                        "WHUS72 KMHX 190656"
+                        "WHUS76 KMFR 190759"
                     ],
                     "NWSheadline": [
-                        "GALE WARNING REMAINS IN EFFECT UNTIL MIDNIGHT EDT TONIGHT"
+                        "SMALL CRAFT ADVISORY NOW IN EFFECT FROM 5 PM THIS AFTERNOON TO 11 AM PDT TUESDAY"
                     ],
                     "BLOCKCHANNEL": [
                         "EAS",
@@ -72,13 +81,10 @@
                         "CMAS"
                     ],
                     "VTEC": [
-                        "/O.CON.KMHX.GL.W.0028.000000T0000Z-261020T0400Z/"
+                        "/O.EXT.KMFR.SC.Y.0084.261020T0000Z-261020T1800Z/"
                     ],
                     "eventEndingTime": [
-                        "2026-10-20T00:00:00-04:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.7ae56c027956273bfe9ea76feee101c23236890b.002.1,2026-10-18T07:45:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.b869e0e809c5ffd38e6f9a21508248d75f7ed202.001.1,2026-10-18T02:43:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.438ee70a6fb76ebffd09f90cf233d0b741584136.001.1,2026-10-17T20:21:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.86af260f3d29574de1c51fd1cbb375988faf20b4.002.1,2026-10-17T15:03:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.619d4ba92f9e6fe91d7712940311337fbd0b3c3f.003.1,2026-10-17T13:11:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.446e1ab62f8cc1ac6e89ab7c82dcfb7d4c3076f9.003.1,2026-10-17T03:04:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.97338fb0294bf0fa13c04c4db17a4aef48f59f9f.005.1,2026-10-16T14:29:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.84f79f1d89898f9c69896edd7b5fec842029ca23.003.1,2026-10-16T09:04:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.6c48c96a58aa8d8e0e2796ad94d79df30c984fcd.002.1,2026-10-16T04:34:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.ad2e110385a3453557c41453205b7590d0f80add.002.2,2026-10-16T02:48:00-04:00"
+                        "2026-10-20T11:00:00-07:00"
                     ]
                 },
                 "scope": "Public",
@@ -90,7 +96,1514 @@
                         "NWS"
                     ],
                     "NationalWeatherService": [
-                        "GLW"
+                        "SCY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.31178344fd54d631db609b727afd5d344a4a740e.002.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.31178344fd54d631db609b727afd5d344a4a740e.002.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.31178344fd54d631db609b727afd5d344a4a740e.002.1",
+                "areaDesc": "Waters from Florence to Cape Blanco OR from 10 to 60 nm; Waters from Cape Blanco OR to Pt. St. George CA from 10 to 60 nm",
+                "geocode": {
+                    "SAME": [
+                        "057370",
+                        "057376"
+                    ],
+                    "UGC": [
+                        "PZZ370",
+                        "PZZ376"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/PZZ370",
+                    "https://api.weather.gov/zones/forecast/PZZ376"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.6597dbfc8d28b49b9fb875f4acc7aa609c18b2ca.001.3",
+                        "identifier": "urn:oid:2.49.0.1.840.0.6597dbfc8d28b49b9fb875f4acc7aa609c18b2ca.001.3",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-18T13:34:00-07:00"
+                    },
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.6597dbfc8d28b49b9fb875f4acc7aa609c18b2ca.002.2",
+                        "identifier": "urn:oid:2.49.0.1.840.0.6597dbfc8d28b49b9fb875f4acc7aa609c18b2ca.002.2",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-18T13:34:00-07:00"
+                    },
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.1e468bc9f5b8123e1a5e9218d4aca34c7648f4e4.002.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.1e468bc9f5b8123e1a5e9218d4aca34c7648f4e4.002.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-18T20:44:00-07:00"
+                    }
+                ],
+                "sent": "2026-10-19T00:59:00-07:00",
+                "effective": "2026-10-19T00:59:00-07:00",
+                "onset": "2026-10-19T17:00:00-07:00",
+                "expires": "2026-10-19T14:00:00-07:00",
+                "ends": "2026-10-20T20:00:00-07:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Small Craft Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Medford OR",
+                "headline": "Small Craft Advisory issued October 19 at 12:59AM PDT until October 20 at 8:00PM PDT by NWS Medford OR",
+                "description": "* WHAT...Seas 7 to 12 ft at 13 seconds expected.\n\n* WHERE...All areas through Tuesday morning. Then for areas south\nof Cape Arago and beyond 15 nm from shore through Tuesday\nevening.\n\n* WHEN...From 5 PM this afternoon to 8 PM PDT Tuesday.\n\n* IMPACTS...Gusty winds and/or steep seas could capsize or\ndamage smaller vessels.\n\n* View the hazard area in detail at https://go.usa.gov/x6hks",
+                "instruction": "Inexperienced mariners and those operating smaller vessels should\nremain in port and avoid the area of hazardous conditions.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "MWWMFR"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS76 KMFR 190759"
+                    ],
+                    "NWSheadline": [
+                        "SMALL CRAFT ADVISORY NOW IN EFFECT FROM 5 PM THIS AFTERNOON TO 8 PM PDT TUESDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.EXT.KMFR.SC.Y.0084.261020T0000Z-261021T0300Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-20T20:00:00-07:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "SCY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0-KEEPALIVE-47824",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0-KEEPALIVE-47824",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0-KEEPALIVE-47824",
+                "areaDesc": "Montgomery",
+                "geocode": {
+                    "SAME": [
+                        "024031"
+                    ],
+                    "UGC": [
+                        "MDC031"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/county/MDC031"
+                ],
+                "references": [],
+                "sent": "2026-10-19T07:55:14+00:00",
+                "effective": "2026-10-19T07:55:14+00:00",
+                "onset": null,
+                "expires": "2026-10-19T08:05:14+00:00",
+                "ends": null,
+                "status": "Test",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Unknown",
+                "certainty": "Unknown",
+                "urgency": "Unknown",
+                "event": "Test Message",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS",
+                "headline": null,
+                "description": "Monitoring message only. Please disregard.",
+                "instruction": "Monitoring message only. Please disregard.",
+                "response": "None",
+                "note": "This is only a test for monitoring of vital dissemination systems.",
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "KEPWBC"
+                    ],
+                    "WMOidentifier": [
+                        "NZUS91 KWBC 190755"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "CMAS",
+                        "EAS",
+                        "NWEM"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "TST"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.9a84fb3745aeb0aa7369dc2029c58bb6eac41872.002.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.9a84fb3745aeb0aa7369dc2029c58bb6eac41872.002.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.9a84fb3745aeb0aa7369dc2029c58bb6eac41872.002.1",
+                "areaDesc": "Manistee to Point Betsie MI",
+                "geocode": {
+                    "SAME": [
+                        "092346"
+                    ],
+                    "UGC": [
+                        "LMZ346"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/LMZ346"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.03397bdeae28a8081af3bf9f6bc8f936b2bb1cfc.005.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.03397bdeae28a8081af3bf9f6bc8f936b2bb1cfc.005.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-18T22:21:00-04:00"
+                    }
+                ],
+                "sent": "2026-10-19T03:18:00-04:00",
+                "effective": "2026-10-19T03:18:00-04:00",
+                "onset": "2026-10-19T03:18:00-04:00",
+                "expires": "2026-10-19T11:00:00-04:00",
+                "ends": "2026-10-19T11:00:00-04:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Small Craft Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Gaylord MI",
+                "headline": "Small Craft Advisory issued October 19 at 3:18AM EDT until October 19 at 11:00AM EDT by NWS Gaylord MI",
+                "description": "* WHAT...Highest gusts up to 25 kts from the southwest and\nhighest waves around 7 feet.\n\n* WHERE...Manistee to Point Betsie MI.\n\n* WHEN...Until 11 AM EDT this morning.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
+                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "MWWAPX"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS73 KAPX 190718"
+                    ],
+                    "NWSheadline": [
+                        "SMALL CRAFT ADVISORY NOW IN EFFECT UNTIL 11 AM EDT THIS MORNING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.EXT.KAPX.SC.Y.0094.000000T0000Z-261019T1500Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-19T11:00:00-04:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.73d9bad66cee202c00bd09e0937972e62fc8f7a2.005.1,2026-10-18T14:29:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.91b1130239142c44d6c7aaae03230b4a718f8ca2.005.1,2026-10-18T11:41:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.49e3190e09ac4b3796ff2fd226acc098094682c2.005.1,2026-10-18T03:56:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bf9688f96d3a603aafc0e3a93da62d9a86d22713.005.1,2026-10-18T00:29:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.83b01e59a1f5db7b8c5e89b95a16dda23afc20da.006.1,2026-10-17T22:05:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.5ec5418bd7bec0f2de03de13b4e00cb728855a8d.006.1,2026-10-17T14:09:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.433f4f9edc865238a088e4d3da9639a3c8d1abe7.006.1,2026-10-17T12:17:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.2850de9f5cc1bb76c63ee2fc234947559cc2f044.005.1,2026-10-17T04:43:00-04:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "SCY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.9a84fb3745aeb0aa7369dc2029c58bb6eac41872.003.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.9a84fb3745aeb0aa7369dc2029c58bb6eac41872.003.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.9a84fb3745aeb0aa7369dc2029c58bb6eac41872.003.1",
+                "areaDesc": "Straits of Mackinac within 5 nm of Mackinac Bridge including Mackinac Island; St Ignace to False Detour Channel",
+                "geocode": {
+                    "SAME": [
+                        "093345",
+                        "093346"
+                    ],
+                    "UGC": [
+                        "LHZ345",
+                        "LHZ346"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/LHZ345",
+                    "https://api.weather.gov/zones/forecast/LHZ346"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.03397bdeae28a8081af3bf9f6bc8f936b2bb1cfc.001.2",
+                        "identifier": "urn:oid:2.49.0.1.840.0.03397bdeae28a8081af3bf9f6bc8f936b2bb1cfc.001.2",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-18T22:21:00-04:00"
+                    }
+                ],
+                "sent": "2026-10-19T03:18:00-04:00",
+                "effective": "2026-10-19T03:18:00-04:00",
+                "onset": "2026-10-19T03:18:00-04:00",
+                "expires": "2026-10-19T05:00:00-04:00",
+                "ends": "2026-10-19T05:00:00-04:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Small Craft Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Gaylord MI",
+                "headline": "Small Craft Advisory issued October 19 at 3:18AM EDT until October 19 at 5:00AM EDT by NWS Gaylord MI",
+                "description": "* WHAT...Highest gusts up to 30 kts from the southwest and\nhighest waves around 5 feet.\n\n* WHERE...Straits of Mackinac within 5 nm of Mackinac Bridge\nincluding Mackinac Island and St Ignace to False Detour\nChannel.\n\n* WHEN...Until 5 AM EDT early this morning.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
+                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "MWWAPX"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS73 KAPX 190718"
+                    ],
+                    "NWSheadline": [
+                        "SMALL CRAFT ADVISORY REMAINS IN EFFECT UNTIL 5 AM EDT EARLY THIS MORNING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KAPX.SC.Y.0094.000000T0000Z-261019T0900Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-19T05:00:00-04:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.83b01e59a1f5db7b8c5e89b95a16dda23afc20da.001.1,2026-10-17T22:05:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bf9688f96d3a603aafc0e3a93da62d9a86d22713.001.1,2026-10-18T00:29:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.5ec5418bd7bec0f2de03de13b4e00cb728855a8d.001.1,2026-10-17T14:09:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.433f4f9edc865238a088e4d3da9639a3c8d1abe7.001.1,2026-10-17T12:17:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.2850de9f5cc1bb76c63ee2fc234947559cc2f044.001.2,2026-10-17T04:43:00-04:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "SCY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.9a84fb3745aeb0aa7369dc2029c58bb6eac41872.004.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.9a84fb3745aeb0aa7369dc2029c58bb6eac41872.004.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.9a84fb3745aeb0aa7369dc2029c58bb6eac41872.004.1",
+                "areaDesc": "5NM East of Mackinac Bridge to Presque Isle Light MI including Bois Blanc Island; Presque Isle Light to Sturgeon Pt MI Including Thunder Bay National Marine Sanctuary",
+                "geocode": {
+                    "SAME": [
+                        "093347",
+                        "093348"
+                    ],
+                    "UGC": [
+                        "LHZ347",
+                        "LHZ348"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/LHZ347",
+                    "https://api.weather.gov/zones/forecast/LHZ348"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.03397bdeae28a8081af3bf9f6bc8f936b2bb1cfc.003.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.03397bdeae28a8081af3bf9f6bc8f936b2bb1cfc.003.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-18T22:21:00-04:00"
+                    }
+                ],
+                "sent": "2026-10-19T03:18:00-04:00",
+                "effective": "2026-10-19T03:18:00-04:00",
+                "onset": "2026-10-19T03:18:00-04:00",
+                "expires": "2026-10-19T05:00:00-04:00",
+                "ends": "2026-10-19T05:00:00-04:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Small Craft Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Gaylord MI",
+                "headline": "Small Craft Advisory issued October 19 at 3:18AM EDT until October 19 at 5:00AM EDT by NWS Gaylord MI",
+                "description": "* WHAT...Highest gusts up to 25 kts from the southwest and\nhighest waves around 3 feet.\n\n* WHERE...5NM East of Mackinac Bridge to Presque Isle Light MI\nincluding Bois Blanc Island and Presque Isle Light to Sturgeon\nPt MI Including Thunder Bay National Marine Sanctuary.\n\n* WHEN...Until 5 AM EDT early this morning.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
+                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "MWWAPX"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS73 KAPX 190718"
+                    ],
+                    "NWSheadline": [
+                        "SMALL CRAFT ADVISORY REMAINS IN EFFECT UNTIL 5 AM EDT EARLY THIS MORNING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KAPX.SC.Y.0094.000000T0000Z-261019T0900Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-19T05:00:00-04:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.73d9bad66cee202c00bd09e0937972e62fc8f7a2.003.1,2026-10-18T14:29:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.91b1130239142c44d6c7aaae03230b4a718f8ca2.003.1,2026-10-18T11:41:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.49e3190e09ac4b3796ff2fd226acc098094682c2.003.1,2026-10-18T03:56:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bf9688f96d3a603aafc0e3a93da62d9a86d22713.003.1,2026-10-18T00:29:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.83b01e59a1f5db7b8c5e89b95a16dda23afc20da.004.1,2026-10-17T22:05:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.5ec5418bd7bec0f2de03de13b4e00cb728855a8d.004.1,2026-10-17T14:09:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.433f4f9edc865238a088e4d3da9639a3c8d1abe7.004.1,2026-10-17T12:17:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.2850de9f5cc1bb76c63ee2fc234947559cc2f044.002.2,2026-10-17T04:43:00-04:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "SCY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.9a84fb3745aeb0aa7369dc2029c58bb6eac41872.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.9a84fb3745aeb0aa7369dc2029c58bb6eac41872.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.9a84fb3745aeb0aa7369dc2029c58bb6eac41872.001.1",
+                "areaDesc": "Grand Traverse Bay south of a line Grand Traverse Light to Norwood MI; Seul Choix Point to 5NM West of Mackinac Bridge; Norwood MI to 5NM West of Mackinac Bridge including Little Traverse Bay; Sleeping Bear Point to Grand Traverse Light MI; Point Betsie to Sleeping Bear Point MI",
+                "geocode": {
+                    "SAME": [
+                        "092323",
+                        "092341",
+                        "092342",
+                        "092344",
+                        "092345"
+                    ],
+                    "UGC": [
+                        "LMZ323",
+                        "LMZ341",
+                        "LMZ342",
+                        "LMZ344",
+                        "LMZ345"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/LMZ323",
+                    "https://api.weather.gov/zones/forecast/LMZ341",
+                    "https://api.weather.gov/zones/forecast/LMZ342",
+                    "https://api.weather.gov/zones/forecast/LMZ344",
+                    "https://api.weather.gov/zones/forecast/LMZ345"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.03397bdeae28a8081af3bf9f6bc8f936b2bb1cfc.001.2",
+                        "identifier": "urn:oid:2.49.0.1.840.0.03397bdeae28a8081af3bf9f6bc8f936b2bb1cfc.001.2",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-18T22:21:00-04:00"
+                    }
+                ],
+                "sent": "2026-10-19T03:18:00-04:00",
+                "effective": "2026-10-19T03:18:00-04:00",
+                "onset": "2026-10-19T03:18:00-04:00",
+                "expires": "2026-10-19T11:00:00-04:00",
+                "ends": "2026-10-19T11:00:00-04:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Small Craft Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Gaylord MI",
+                "headline": "Small Craft Advisory issued October 19 at 3:18AM EDT until October 19 at 11:00AM EDT by NWS Gaylord MI",
+                "description": "* WHAT...Highest gusts up to 30 kts from the west and highest\nwaves around 8 feet.\n\n* WHERE...Grand Traverse Bay south of a line Grand Traverse\nLight to Norwood MI, Seul Choix Point to 5NM West of Mackinac\nBridge, Norwood MI to 5NM West of Mackinac Bridge including\nLittle Traverse Bay, Sleeping Bear Point to Grand Traverse\nLight MI and Point Betsie to Sleeping Bear Point MI.\n\n* WHEN...Until 11 AM EDT this morning.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
+                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "MWWAPX"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS73 KAPX 190718"
+                    ],
+                    "NWSheadline": [
+                        "SMALL CRAFT ADVISORY NOW IN EFFECT UNTIL 11 AM EDT THIS MORNING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.EXT.KAPX.SC.Y.0094.000000T0000Z-261019T1500Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-19T11:00:00-04:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.83b01e59a1f5db7b8c5e89b95a16dda23afc20da.002.1,2026-10-17T22:05:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bf9688f96d3a603aafc0e3a93da62d9a86d22713.001.1,2026-10-18T00:29:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.5ec5418bd7bec0f2de03de13b4e00cb728855a8d.002.1,2026-10-17T14:09:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.433f4f9edc865238a088e4d3da9639a3c8d1abe7.002.1,2026-10-17T12:17:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.2850de9f5cc1bb76c63ee2fc234947559cc2f044.003.1,2026-10-17T04:43:00-04:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "SCY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.9a84fb3745aeb0aa7369dc2029c58bb6eac41872.005.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.9a84fb3745aeb0aa7369dc2029c58bb6eac41872.005.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.9a84fb3745aeb0aa7369dc2029c58bb6eac41872.005.1",
+                "areaDesc": "Sturgeon Pt to Alabaster MI",
+                "geocode": {
+                    "SAME": [
+                        "093349"
+                    ],
+                    "UGC": [
+                        "LHZ349"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/LHZ349"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.03397bdeae28a8081af3bf9f6bc8f936b2bb1cfc.004.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.03397bdeae28a8081af3bf9f6bc8f936b2bb1cfc.004.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-18T22:21:00-04:00"
+                    }
+                ],
+                "sent": "2026-10-19T03:18:00-04:00",
+                "effective": "2026-10-19T03:18:00-04:00",
+                "onset": "2026-10-19T03:18:00-04:00",
+                "expires": "2026-10-19T05:00:00-04:00",
+                "ends": "2026-10-19T05:00:00-04:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Small Craft Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Gaylord MI",
+                "headline": "Small Craft Advisory issued October 19 at 3:18AM EDT until October 19 at 5:00AM EDT by NWS Gaylord MI",
+                "description": "* WHAT...Highest gusts up to 25 kts from the southwest and\nhighest waves around 4 feet.\n\n* WHERE...Sturgeon Pt to Alabaster MI.\n\n* WHEN...Until 5 AM EDT early this morning.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
+                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "MWWAPX"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS73 KAPX 190718"
+                    ],
+                    "NWSheadline": [
+                        "SMALL CRAFT ADVISORY REMAINS IN EFFECT UNTIL 5 AM EDT EARLY THIS MORNING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KAPX.SC.Y.0093.000000T0000Z-261019T0900Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-19T05:00:00-04:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.73d9bad66cee202c00bd09e0937972e62fc8f7a2.004.1,2026-10-18T14:29:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.91b1130239142c44d6c7aaae03230b4a718f8ca2.004.1,2026-10-18T11:41:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.49e3190e09ac4b3796ff2fd226acc098094682c2.004.1,2026-10-18T03:56:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bf9688f96d3a603aafc0e3a93da62d9a86d22713.004.1,2026-10-18T00:29:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.83b01e59a1f5db7b8c5e89b95a16dda23afc20da.005.1,2026-10-17T22:05:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.5ec5418bd7bec0f2de03de13b4e00cb728855a8d.005.1,2026-10-17T14:09:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.433f4f9edc865238a088e4d3da9639a3c8d1abe7.005.1,2026-10-17T12:17:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.2850de9f5cc1bb76c63ee2fc234947559cc2f044.006.1,2026-10-17T04:43:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bd60dffc26cee87cc2df97e8919b30b4f6de1b7c.002.2,2026-10-16T22:21:00-04:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "SCY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.66bc2aaecd1c83ca9ba359bb5dbfc23fec6534ed.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.66bc2aaecd1c83ca9ba359bb5dbfc23fec6534ed.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.66bc2aaecd1c83ca9ba359bb5dbfc23fec6534ed.001.1",
+                "areaDesc": "Prince of Wales Island",
+                "geocode": {
+                    "SAME": [
+                        "002198"
+                    ],
+                    "UGC": [
+                        "AKZ328"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/AKZ328"
+                ],
+                "references": [],
+                "sent": "2026-10-18T23:17:00-08:00",
+                "effective": "2026-10-18T23:17:00-08:00",
+                "onset": "2026-10-18T23:17:00-08:00",
+                "expires": "2026-10-19T07:30:00-08:00",
+                "ends": "2026-10-19T10:00:00-08:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Dense Fog Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Juneau AK",
+                "headline": "Dense Fog Advisory issued October 18 at 11:17PM AKDT until October 19 at 10:00AM AKDT by NWS Juneau AK",
+                "description": "* WHAT...Visibility reduced to a quarter mile or less in dense fog.\n\n* WHERE...Interior Prince of Wales Island and Klawock\n\n* WHEN...Until 10 AM AKDT Monday.\n\n* IMPACTS...Low visibility could make travel conditions hazardous.",
+                "instruction": "If driving, slow down, use your headlights, and leave plenty of\ndistance ahead of you.",
+                "response": "Execute",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "NPWAJK"
+                    ],
+                    "WMOidentifier": [
+                        "WWAK77 PAJK 190717"
+                    ],
+                    "NWSheadline": [
+                        "DENSE FOG ADVISORY IN EFFECT UNTIL 10 AM AKDT MONDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.NEW.PAJK.FG.Y.0040.261019T0717Z-261019T1800Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-19T10:00:00-08:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FGY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.66bc2aaecd1c83ca9ba359bb5dbfc23fec6534ed.005.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.66bc2aaecd1c83ca9ba359bb5dbfc23fec6534ed.005.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.66bc2aaecd1c83ca9ba359bb5dbfc23fec6534ed.005.1",
+                "areaDesc": "City and Borough of Sitka; Admiralty Island; Western Kupreanof and Kuiu Island",
+                "geocode": {
+                    "SAME": [
+                        "002220",
+                        "002105",
+                        "002198"
+                    ],
+                    "UGC": [
+                        "AKZ323",
+                        "AKZ324",
+                        "AKZ327"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/AKZ323",
+                    "https://api.weather.gov/zones/forecast/AKZ324",
+                    "https://api.weather.gov/zones/forecast/AKZ327"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.706367ef2b71fc62f46ca3e380ff6e65a844e2f5.004.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.706367ef2b71fc62f46ca3e380ff6e65a844e2f5.004.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-18T20:47:00-08:00"
+                    }
+                ],
+                "sent": "2026-10-18T23:17:00-08:00",
+                "effective": "2026-10-18T23:17:00-08:00",
+                "onset": "2026-10-20T01:00:00-08:00",
+                "expires": "2026-10-19T07:30:00-08:00",
+                "ends": "2026-10-21T04:00:00-08:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Wind Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Juneau AK",
+                "headline": "Wind Advisory issued October 18 at 11:17PM AKDT until October 21 at 4:00AM AKDT by NWS Juneau AK",
+                "description": "* WHAT...Southeast winds 15 to 30 mph with gusts up to 50 mph\nexpected.\n\n* WHERE...Admiralty Island, City and Borough of Sitka, and Western\nKupreanof Island and Kuiu Island.\n\n* WHEN...From 1 AM Tuesday to 4 AM AKDT Wednesday.\n\n* IMPACTS...Gusty winds will blow around unsecured objects. Tree\nlimbs could be blown down.\n\n* ADDITIONAL DETAILS...Winds will quickly increase overnight Monday\ninto Tuesday morning, with the strongest gusts peaking through\nmidday and decreasing into Wednesday.",
+                "instruction": "Winds this strong can make travel difficult. Use extra caution.\nEnsure boats and vessels are secure.",
+                "response": "Execute",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "NPWAJK"
+                    ],
+                    "WMOidentifier": [
+                        "WWAK77 PAJK 190717"
+                    ],
+                    "NWSheadline": [
+                        "WIND ADVISORY REMAINS IN EFFECT FROM 1 AM TUESDAY TO 4 AM AKDT WEDNESDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.PAJK.WI.Y.0055.261020T0900Z-261021T1200Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-21T04:00:00-08:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.906974e8af1f5c1130bd037bce2930d3ecbeabcd.004.1,2026-10-18T14:18:00-08:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.7d13abb9980855690b7b0c4b9033bd6db0bc0f3d.002.1,2026-10-18T13:41:00-08:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "WIY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.66bc2aaecd1c83ca9ba359bb5dbfc23fec6534ed.007.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.66bc2aaecd1c83ca9ba359bb5dbfc23fec6534ed.007.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.66bc2aaecd1c83ca9ba359bb5dbfc23fec6534ed.007.1",
+                "areaDesc": "Municipality of Skagway",
+                "geocode": {
+                    "SAME": [
+                        "002230"
+                    ],
+                    "UGC": [
+                        "AKZ318"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/AKZ318"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.706367ef2b71fc62f46ca3e380ff6e65a844e2f5.006.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.706367ef2b71fc62f46ca3e380ff6e65a844e2f5.006.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-18T20:47:00-08:00"
+                    }
+                ],
+                "sent": "2026-10-18T23:17:00-08:00",
+                "effective": "2026-10-18T23:17:00-08:00",
+                "onset": "2026-10-19T19:00:00-08:00",
+                "expires": "2026-10-19T07:30:00-08:00",
+                "ends": "2026-10-21T16:00:00-08:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Possible",
+                "urgency": "Future",
+                "event": "High Wind Watch",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Juneau AK",
+                "headline": "High Wind Watch issued October 18 at 11:17PM AKDT until October 21 at 4:00PM AKDT by NWS Juneau AK",
+                "description": "* WHAT...South winds 30 to 40 mph with gusts up to 60 mph possible.\n\n* WHERE...Municipality of Skagway.\n\n* WHEN...From Monday evening through Wednesday afternoon.\n\n* IMPACTS...High winds could blow around unsecured objects and damage\nproperty. Travel could be difficult.\n\n* ADDITIONAL DETAILS...Winds will quickly increase overnight Monday\ninto Tuesday morning, with the strongest gusts peaking through\nmidday. Winds will begin to decrease through Wednesday afternoon.",
+                "instruction": "Winds this strong can make travel difficult. Use extra caution.\nEnsure boats and vessels are secure.",
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "NPWAJK"
+                    ],
+                    "WMOidentifier": [
+                        "WWAK77 PAJK 190717"
+                    ],
+                    "NWSheadline": [
+                        "HIGH WIND WATCH REMAINS IN EFFECT FROM MONDAY EVENING THROUGH WEDNESDAY AFTERNOON"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "EAS-ORG": [
+                        "WXR"
+                    ],
+                    "VTEC": [
+                        "/O.CON.PAJK.HW.A.0008.261020T0300Z-261022T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-21T16:00:00-08:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.906974e8af1f5c1130bd037bce2930d3ecbeabcd.006.1,2026-10-18T14:18:00-08:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.7d13abb9980855690b7b0c4b9033bd6db0bc0f3d.006.1,2026-10-18T13:41:00-08:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "HWA"
+                    ],
+                    "NationalWeatherService": [
+                        "HWA"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.66bc2aaecd1c83ca9ba359bb5dbfc23fec6534ed.003.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.66bc2aaecd1c83ca9ba359bb5dbfc23fec6534ed.003.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.66bc2aaecd1c83ca9ba359bb5dbfc23fec6534ed.003.1",
+                "areaDesc": "Haines Borough and Klukwan",
+                "geocode": {
+                    "SAME": [
+                        "002100"
+                    ],
+                    "UGC": [
+                        "AKZ319"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/AKZ319"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.706367ef2b71fc62f46ca3e380ff6e65a844e2f5.002.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.706367ef2b71fc62f46ca3e380ff6e65a844e2f5.002.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-18T20:47:00-08:00"
+                    }
+                ],
+                "sent": "2026-10-18T23:17:00-08:00",
+                "effective": "2026-10-18T23:17:00-08:00",
+                "onset": "2026-10-19T16:00:00-08:00",
+                "expires": "2026-10-19T07:30:00-08:00",
+                "ends": "2026-10-21T04:00:00-08:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Wind Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Juneau AK",
+                "headline": "Wind Advisory issued October 18 at 11:17PM AKDT until October 21 at 4:00AM AKDT by NWS Juneau AK",
+                "description": "* WHAT...Southeast winds 15 to 30 mph with gusts up to 50 mph\nexpected.\n\n* WHERE...Haines Borough and Klukwan.\n\n* WHEN...From 4 PM Monday to 4 AM AKDT Wednesday.\n\n* IMPACTS...Gusty winds will blow around unsecured objects. Tree\nlimbs could be blown down.\n\n* ADDITIONAL DETAILS...Winds will quickly increase overnight Monday\ninto Tuesday morning, with the strongest gusts peaking through\nmidday. Winds will decrease slightly, but still stay relatively\nelevated into Wednesday.",
+                "instruction": "Winds this strong can make travel difficult. Use extra caution.\nEnsure boats and vessels are secure.",
+                "response": "Execute",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "NPWAJK"
+                    ],
+                    "WMOidentifier": [
+                        "WWAK77 PAJK 190717"
+                    ],
+                    "NWSheadline": [
+                        "WIND ADVISORY REMAINS IN EFFECT FROM 4 PM MONDAY TO 4 AM AKDT WEDNESDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.PAJK.WI.Y.0055.261020T0000Z-261021T1200Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-21T04:00:00-08:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.906974e8af1f5c1130bd037bce2930d3ecbeabcd.001.1,2026-10-18T14:18:00-08:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.7d13abb9980855690b7b0c4b9033bd6db0bc0f3d.004.1,2026-10-18T13:41:00-08:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "WIY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.66bc2aaecd1c83ca9ba359bb5dbfc23fec6534ed.002.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.66bc2aaecd1c83ca9ba359bb5dbfc23fec6534ed.002.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.66bc2aaecd1c83ca9ba359bb5dbfc23fec6534ed.002.1",
+                "areaDesc": "City and Borough of Yakutat",
+                "geocode": {
+                    "SAME": [
+                        "002282"
+                    ],
+                    "UGC": [
+                        "AKZ317"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/AKZ317"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.706367ef2b71fc62f46ca3e380ff6e65a844e2f5.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.706367ef2b71fc62f46ca3e380ff6e65a844e2f5.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-18T20:47:00-08:00"
+                    }
+                ],
+                "sent": "2026-10-18T23:17:00-08:00",
+                "effective": "2026-10-18T23:17:00-08:00",
+                "onset": "2026-10-19T16:00:00-08:00",
+                "expires": "2026-10-19T07:30:00-08:00",
+                "ends": "2026-10-20T22:00:00-08:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Wind Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Juneau AK",
+                "headline": "Wind Advisory issued October 18 at 11:17PM AKDT until October 20 at 10:00PM AKDT by NWS Juneau AK",
+                "description": "* WHAT...Southeast winds 20 to 30 mph with gusts up to 55 mph\nexpected.\n\n* WHERE...City and Borough of Yakutat.\n\n* WHEN...From 4 PM Monday to 10 PM AKDT Tuesday.\n\n* IMPACTS...Gusty winds will blow around unsecured objects. Tree\nlimbs could be blown down and a few power outages may result.",
+                "instruction": "Winds this strong can make travel difficult. Use extra caution.",
+                "response": "Execute",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "NPWAJK"
+                    ],
+                    "WMOidentifier": [
+                        "WWAK77 PAJK 190717"
+                    ],
+                    "NWSheadline": [
+                        "WIND ADVISORY REMAINS IN EFFECT FROM 4 PM MONDAY TO 10 PM AKDT TUESDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.PAJK.WI.Y.0055.261020T0000Z-261021T0600Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-20T22:00:00-08:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.906974e8af1f5c1130bd037bce2930d3ecbeabcd.002.1,2026-10-18T14:18:00-08:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.7d13abb9980855690b7b0c4b9033bd6db0bc0f3d.005.1,2026-10-18T13:41:00-08:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.ad0f69139b5ec8ef419a1f2d373370a59e9a47de.001.1,2026-10-18T05:42:00-08:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "WIY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.66bc2aaecd1c83ca9ba359bb5dbfc23fec6534ed.006.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.66bc2aaecd1c83ca9ba359bb5dbfc23fec6534ed.006.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.66bc2aaecd1c83ca9ba359bb5dbfc23fec6534ed.006.1",
+                "areaDesc": "Ketchikan Gateway Borough; Annette Island",
+                "geocode": {
+                    "SAME": [
+                        "002130",
+                        "002198"
+                    ],
+                    "UGC": [
+                        "AKZ330",
+                        "AKZ332"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/AKZ330",
+                    "https://api.weather.gov/zones/forecast/AKZ332"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.706367ef2b71fc62f46ca3e380ff6e65a844e2f5.005.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.706367ef2b71fc62f46ca3e380ff6e65a844e2f5.005.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-18T20:47:00-08:00"
+                    }
+                ],
+                "sent": "2026-10-18T23:17:00-08:00",
+                "effective": "2026-10-18T23:17:00-08:00",
+                "onset": "2026-10-20T10:00:00-08:00",
+                "expires": "2026-10-19T07:30:00-08:00",
+                "ends": "2026-10-21T04:00:00-08:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Wind Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Juneau AK",
+                "headline": "Wind Advisory issued October 18 at 11:17PM AKDT until October 21 at 4:00AM AKDT by NWS Juneau AK",
+                "description": "* WHAT...Southeast winds 15 to 30 mph with gusts up to 50 mph\nexpected.\n\n* WHERE...Annette Island and Ketchikan Gateway Borough.\n\n* WHEN...From 10 AM Tuesday to 4 AM AKDT Wednesday.\n\n* IMPACTS...Gusty winds will blow around unsecured objects. Tree\nlimbs could be blown down.\n\n* ADDITIONAL DETAILS...Winds will quickly increase through Tuesday\nmorning, with the strongest gusts peaking through Tuesday evening\nand decreasing into Wednesday.",
+                "instruction": "Winds this strong can make travel difficult. Use extra caution.\nEnsure boats and vessels are secure.",
+                "response": "Execute",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "NPWAJK"
+                    ],
+                    "WMOidentifier": [
+                        "WWAK77 PAJK 190717"
+                    ],
+                    "NWSheadline": [
+                        "WIND ADVISORY REMAINS IN EFFECT FROM 10 AM TUESDAY TO 4 AM AKDT WEDNESDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.PAJK.WI.Y.0055.261020T1800Z-261021T1200Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-21T04:00:00-08:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.906974e8af1f5c1130bd037bce2930d3ecbeabcd.005.1,2026-10-18T14:18:00-08:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.7d13abb9980855690b7b0c4b9033bd6db0bc0f3d.003.1,2026-10-18T13:41:00-08:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "WIY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.66bc2aaecd1c83ca9ba359bb5dbfc23fec6534ed.004.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.66bc2aaecd1c83ca9ba359bb5dbfc23fec6534ed.004.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.66bc2aaecd1c83ca9ba359bb5dbfc23fec6534ed.004.1",
+                "areaDesc": "Glacier Bay; Eastern Chichagof Island; Cape Fairweather to Lisianski Strait; City and Borough of Juneau",
+                "geocode": {
+                    "SAME": [
+                        "002105",
+                        "002110"
+                    ],
+                    "UGC": [
+                        "AKZ320",
+                        "AKZ321",
+                        "AKZ322",
+                        "AKZ325"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/AKZ320",
+                    "https://api.weather.gov/zones/forecast/AKZ321",
+                    "https://api.weather.gov/zones/forecast/AKZ322",
+                    "https://api.weather.gov/zones/forecast/AKZ325"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.706367ef2b71fc62f46ca3e380ff6e65a844e2f5.003.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.706367ef2b71fc62f46ca3e380ff6e65a844e2f5.003.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-18T20:47:00-08:00"
+                    }
+                ],
+                "sent": "2026-10-18T23:17:00-08:00",
+                "effective": "2026-10-18T23:17:00-08:00",
+                "onset": "2026-10-19T21:00:00-08:00",
+                "expires": "2026-10-19T07:30:00-08:00",
+                "ends": "2026-10-21T04:00:00-08:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Wind Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Juneau AK",
+                "headline": "Wind Advisory issued October 18 at 11:17PM AKDT until October 21 at 4:00AM AKDT by NWS Juneau AK",
+                "description": "* WHAT...Southeast winds 15 to 30 mph with gusts up to 50 mph\nexpected.\n\n* WHERE...Cape Fairweather to Lisianski Strait, City and Borough of\nJuneau, Eastern Chichagof Island, and Glacier Bay.\n\n* WHEN...From 9 PM Monday to 4 AM AKDT Wednesday.\n\n* IMPACTS...Gusty winds will blow around unsecured objects. Tree\nlimbs could be blown down.\n\n* ADDITIONAL DETAILS...Winds will quickly increase overnight Monday\ninto Tuesday morning, with the strongest gusts peaking through\nmidday and decreasing into Wednesday.",
+                "instruction": "Winds this strong can make travel difficult. Use extra caution.\nEnsure boats and vessels are secure.",
+                "response": "Execute",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "NPWAJK"
+                    ],
+                    "WMOidentifier": [
+                        "WWAK77 PAJK 190717"
+                    ],
+                    "NWSheadline": [
+                        "WIND ADVISORY REMAINS IN EFFECT FROM 9 PM MONDAY TO 4 AM AKDT WEDNESDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.PAJK.WI.Y.0055.261020T0500Z-261021T1200Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-21T04:00:00-08:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.906974e8af1f5c1130bd037bce2930d3ecbeabcd.003.1,2026-10-18T14:18:00-08:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.7d13abb9980855690b7b0c4b9033bd6db0bc0f3d.001.1,2026-10-18T13:41:00-08:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "WIY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.e538be7059b750b70c7dacb538cb16e30fef81ec.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.e538be7059b750b70c7dacb538cb16e30fef81ec.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.e538be7059b750b70c7dacb538cb16e30fef81ec.001.1",
+                "areaDesc": "Seul Choix Point to Point Detour MI; 5NM East of a line from Fairport MI to Rock Island Passage",
+                "geocode": {
+                    "SAME": [
+                        "092248",
+                        "092250"
+                    ],
+                    "UGC": [
+                        "LMZ248",
+                        "LMZ250"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/LMZ248",
+                    "https://api.weather.gov/zones/forecast/LMZ250"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.1cad102d4cd61ac8bc428452eef4928fba153e77.002.2",
+                        "identifier": "urn:oid:2.49.0.1.840.0.1cad102d4cd61ac8bc428452eef4928fba153e77.002.2",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-18T15:35:00-04:00"
+                    }
+                ],
+                "sent": "2026-10-19T03:07:00-04:00",
+                "effective": "2026-10-19T03:07:00-04:00",
+                "onset": "2026-10-19T03:07:00-04:00",
+                "expires": "2026-10-19T08:00:00-04:00",
+                "ends": "2026-10-19T08:00:00-04:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Small Craft Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Marquette MI",
+                "headline": "Small Craft Advisory issued October 19 at 3:07AM EDT until October 19 at 8:00AM EDT by NWS Marquette MI",
+                "description": "* WHAT...West winds 10 to 20 kt with gusts up to 25 kt and waves\n4 to 7 ft occurring.\n\n* WHERE...Seul Choix Point to Point Detour MI and 5NM East of a\nline from Fairport MI to Rock Island Passage.\n\n* WHEN...Until 8 AM EDT this morning.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
+                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "MWWMQT"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS73 KMQT 190707"
+                    ],
+                    "NWSheadline": [
+                        "SMALL CRAFT ADVISORY REMAINS IN EFFECT UNTIL 8 AM EDT THIS MORNING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KMQT.SC.Y.0162.000000T0000Z-261019T1200Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-19T08:00:00-04:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "SCY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.72c8008ef12ae0589125e270efea5788dc432571.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.72c8008ef12ae0589125e270efea5788dc432571.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.72c8008ef12ae0589125e270efea5788dc432571.001.1",
+                "areaDesc": "Carroll; Warren; Tippecanoe; Clinton; Howard; Fountain; Montgomery; Boone; Tipton; Hamilton; Madison; Delaware; Randolph; Vermillion; Parke; Putnam; Hendricks; Marion; Hancock; Henry; Vigo; Clay; Owen; Morgan; Johnson; Shelby; Rush; Sullivan; Greene; Monroe; Brown; Bartholomew; Decatur; Knox; Daviess; Martin; Lawrence; Jackson; Jennings",
+                "geocode": {
+                    "SAME": [
+                        "018015",
+                        "018171",
+                        "018157",
+                        "018023",
+                        "018067",
+                        "018045",
+                        "018107",
+                        "018011",
+                        "018159",
+                        "018057",
+                        "018095",
+                        "018035",
+                        "018135",
+                        "018165",
+                        "018121",
+                        "018133",
+                        "018063",
+                        "018097",
+                        "018059",
+                        "018065",
+                        "018167",
+                        "018021",
+                        "018119",
+                        "018109",
+                        "018081",
+                        "018145",
+                        "018139",
+                        "018153",
+                        "018055",
+                        "018105",
+                        "018013",
+                        "018005",
+                        "018031",
+                        "018083",
+                        "018027",
+                        "018101",
+                        "018093",
+                        "018071",
+                        "018079"
+                    ],
+                    "UGC": [
+                        "INZ021",
+                        "INZ028",
+                        "INZ029",
+                        "INZ030",
+                        "INZ031",
+                        "INZ035",
+                        "INZ036",
+                        "INZ037",
+                        "INZ038",
+                        "INZ039",
+                        "INZ040",
+                        "INZ041",
+                        "INZ042",
+                        "INZ043",
+                        "INZ044",
+                        "INZ045",
+                        "INZ046",
+                        "INZ047",
+                        "INZ048",
+                        "INZ049",
+                        "INZ051",
+                        "INZ052",
+                        "INZ053",
+                        "INZ054",
+                        "INZ055",
+                        "INZ056",
+                        "INZ057",
+                        "INZ060",
+                        "INZ061",
+                        "INZ062",
+                        "INZ063",
+                        "INZ064",
+                        "INZ065",
+                        "INZ067",
+                        "INZ068",
+                        "INZ069",
+                        "INZ070",
+                        "INZ071",
+                        "INZ072"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/INZ021",
+                    "https://api.weather.gov/zones/forecast/INZ028",
+                    "https://api.weather.gov/zones/forecast/INZ029",
+                    "https://api.weather.gov/zones/forecast/INZ030",
+                    "https://api.weather.gov/zones/forecast/INZ031",
+                    "https://api.weather.gov/zones/forecast/INZ035",
+                    "https://api.weather.gov/zones/forecast/INZ036",
+                    "https://api.weather.gov/zones/forecast/INZ037",
+                    "https://api.weather.gov/zones/forecast/INZ038",
+                    "https://api.weather.gov/zones/forecast/INZ039",
+                    "https://api.weather.gov/zones/forecast/INZ040",
+                    "https://api.weather.gov/zones/forecast/INZ041",
+                    "https://api.weather.gov/zones/forecast/INZ042",
+                    "https://api.weather.gov/zones/forecast/INZ043",
+                    "https://api.weather.gov/zones/forecast/INZ044",
+                    "https://api.weather.gov/zones/forecast/INZ045",
+                    "https://api.weather.gov/zones/forecast/INZ046",
+                    "https://api.weather.gov/zones/forecast/INZ047",
+                    "https://api.weather.gov/zones/forecast/INZ048",
+                    "https://api.weather.gov/zones/forecast/INZ049",
+                    "https://api.weather.gov/zones/forecast/INZ051",
+                    "https://api.weather.gov/zones/forecast/INZ052",
+                    "https://api.weather.gov/zones/forecast/INZ053",
+                    "https://api.weather.gov/zones/forecast/INZ054",
+                    "https://api.weather.gov/zones/forecast/INZ055",
+                    "https://api.weather.gov/zones/forecast/INZ056",
+                    "https://api.weather.gov/zones/forecast/INZ057",
+                    "https://api.weather.gov/zones/forecast/INZ060",
+                    "https://api.weather.gov/zones/forecast/INZ061",
+                    "https://api.weather.gov/zones/forecast/INZ062",
+                    "https://api.weather.gov/zones/forecast/INZ063",
+                    "https://api.weather.gov/zones/forecast/INZ064",
+                    "https://api.weather.gov/zones/forecast/INZ065",
+                    "https://api.weather.gov/zones/forecast/INZ067",
+                    "https://api.weather.gov/zones/forecast/INZ068",
+                    "https://api.weather.gov/zones/forecast/INZ069",
+                    "https://api.weather.gov/zones/forecast/INZ070",
+                    "https://api.weather.gov/zones/forecast/INZ071",
+                    "https://api.weather.gov/zones/forecast/INZ072"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ec6f339bcf36e84b45e016805da636d047f54ebd.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.ec6f339bcf36e84b45e016805da636d047f54ebd.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-18T14:32:00-04:00"
+                    }
+                ],
+                "sent": "2026-10-19T03:01:00-04:00",
+                "effective": "2026-10-19T03:01:00-04:00",
+                "onset": "2026-10-19T03:01:00-04:00",
+                "expires": "2026-10-19T09:00:00-04:00",
+                "ends": "2026-10-19T09:00:00-04:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Frost Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Indianapolis IN",
+                "headline": "Frost Advisory issued October 19 at 3:01AM EDT until October 19 at 9:00AM EDT by NWS Indianapolis IN",
+                "description": "* WHAT...Temperatures as low as 35 will result in patchy to scattered\nfrost formation.\n\n* WHERE...Central Indiana.\n\n* WHEN...Until 9 AM EDT this morning.\n\n* IMPACTS...Frost could harm sensitive outdoor vegetation. Sensitive\noutdoor plants may be killed if left uncovered.",
+                "instruction": "Take steps now to protect tender plants from the cold.",
+                "response": "Prepare",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "NPWIND"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS73 KIND 190701"
+                    ],
+                    "NWSheadline": [
+                        "FROST ADVISORY REMAINS IN EFFECT UNTIL 9 AM EDT THIS MORNING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KIND.FR.Y.0007.000000T0000Z-261019T1300Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-19T09:00:00-04:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FRY"
                     ]
                 }
             }
@@ -168,6 +1681,92 @@
                     ],
                     "expiredReferences": [
                         "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.7ae56c027956273bfe9ea76feee101c23236890b.007.1,2026-10-18T07:45:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.b869e0e809c5ffd38e6f9a21508248d75f7ed202.006.1,2026-10-18T02:43:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.438ee70a6fb76ebffd09f90cf233d0b741584136.006.1,2026-10-17T20:21:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.86af260f3d29574de1c51fd1cbb375988faf20b4.007.1,2026-10-17T15:03:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.619d4ba92f9e6fe91d7712940311337fbd0b3c3f.008.1,2026-10-17T13:11:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.446e1ab62f8cc1ac6e89ab7c82dcfb7d4c3076f9.007.1,2026-10-17T03:04:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.97338fb0294bf0fa13c04c4db17a4aef48f59f9f.009.1,2026-10-16T14:29:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.84f79f1d89898f9c69896edd7b5fec842029ca23.007.1,2026-10-16T09:04:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.6c48c96a58aa8d8e0e2796ad94d79df30c984fcd.006.1,2026-10-16T04:34:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.ad2e110385a3453557c41453205b7590d0f80add.006.2,2026-10-16T02:48:00-04:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "GLW"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ae773ed307a213a4b3dbfb4011f8c123704eb76d.003.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ae773ed307a213a4b3dbfb4011f8c123704eb76d.003.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.ae773ed307a213a4b3dbfb4011f8c123704eb76d.003.1",
+                "areaDesc": "S of Cape Lookout NC to Surf City NC out to 20 NM",
+                "geocode": {
+                    "SAME": [
+                        "075158"
+                    ],
+                    "UGC": [
+                        "AMZ158"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/AMZ158"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5257920adef9759385722561f0ce06362cd0dbf3.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.5257920adef9759385722561f0ce06362cd0dbf3.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-18T15:03:00-04:00"
+                    }
+                ],
+                "sent": "2026-10-19T02:56:00-04:00",
+                "effective": "2026-10-19T02:56:00-04:00",
+                "onset": "2026-10-19T02:56:00-04:00",
+                "expires": "2026-10-19T15:00:00-04:00",
+                "ends": "2026-10-20T00:00:00-04:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Gale Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Newport/Morehead City NC",
+                "headline": "Gale Warning issued October 19 at 2:56AM EDT until October 20 at 12:00AM EDT by NWS Newport/Morehead City NC",
+                "description": "* WHAT...North winds 20 to 30 kt with gusts up to 40 kt and seas\n6 to 11 ft.\n\n* WHERE...The coastal waters from Cape Lookout to Surf City.\n\n* WHEN...Until midnight EDT tonight.\n\n* IMPACTS...Strong winds will cause hazardous seas which could\ncapsize or damage vessels and reduce visibility.",
+                "instruction": "Mariners should alter plans to avoid these hazardous conditions.\nRemain in port, seek safe harbor, alter course, and/or secure the\nvessel for hazardous conditions.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "MWWMHX"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS72 KMHX 190656"
+                    ],
+                    "NWSheadline": [
+                        "GALE WARNING REMAINS IN EFFECT UNTIL MIDNIGHT EDT TONIGHT"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KMHX.GL.W.0028.000000T0000Z-261020T0400Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-20T00:00:00-04:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.7ae56c027956273bfe9ea76feee101c23236890b.002.1,2026-10-18T07:45:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.b869e0e809c5ffd38e6f9a21508248d75f7ed202.001.1,2026-10-18T02:43:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.438ee70a6fb76ebffd09f90cf233d0b741584136.001.1,2026-10-17T20:21:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.86af260f3d29574de1c51fd1cbb375988faf20b4.002.1,2026-10-17T15:03:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.619d4ba92f9e6fe91d7712940311337fbd0b3c3f.003.1,2026-10-17T13:11:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.446e1ab62f8cc1ac6e89ab7c82dcfb7d4c3076f9.003.1,2026-10-17T03:04:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.97338fb0294bf0fa13c04c4db17a4aef48f59f9f.005.1,2026-10-16T14:29:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.84f79f1d89898f9c69896edd7b5fec842029ca23.003.1,2026-10-16T09:04:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.6c48c96a58aa8d8e0e2796ad94d79df30c984fcd.002.1,2026-10-16T04:34:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.ad2e110385a3453557c41453205b7590d0f80add.002.2,2026-10-16T02:48:00-04:00"
                     ]
                 },
                 "scope": "Public",
@@ -800,73 +2399,6 @@
                     ],
                     "NationalWeatherService": [
                         "GLW"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0-KEEPALIVE-2854",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0-KEEPALIVE-2854",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0-KEEPALIVE-2854",
-                "areaDesc": "Montgomery",
-                "geocode": {
-                    "SAME": [
-                        "024031"
-                    ],
-                    "UGC": [
-                        "MDC031"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/county/MDC031"
-                ],
-                "references": [],
-                "sent": "2026-10-19T06:55:14+00:00",
-                "effective": "2026-10-19T06:55:14+00:00",
-                "onset": null,
-                "expires": "2026-10-19T07:05:14+00:00",
-                "ends": null,
-                "status": "Test",
-                "messageType": "Alert",
-                "category": "Met",
-                "severity": "Unknown",
-                "certainty": "Unknown",
-                "urgency": "Unknown",
-                "event": "Test Message",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS",
-                "headline": null,
-                "description": "Monitoring message only. Please disregard.",
-                "instruction": "Monitoring message only. Please disregard.",
-                "response": "None",
-                "note": "This is only a test for monitoring of vital dissemination systems.",
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "KEPWBC"
-                    ],
-                    "WMOidentifier": [
-                        "NZUS91 KWBC 190655"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "CMAS",
-                        "EAS",
-                        "NWEM"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "TST"
                     ]
                 }
             }
@@ -1896,104 +3428,6 @@
             }
         },
         {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ddc7aaade0004ea442fd2cd41317d59c074a7b87.010.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ddc7aaade0004ea442fd2cd41317d59c074a7b87.010.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.ddc7aaade0004ea442fd2cd41317d59c074a7b87.010.1",
-                "areaDesc": "Rappahannock River from Urbanna to Windmill Point; York River; James River from Jamestown to the James River Bridge",
-                "geocode": {
-                    "SAME": [
-                        "073635",
-                        "073636",
-                        "073637"
-                    ],
-                    "UGC": [
-                        "ANZ635",
-                        "ANZ636",
-                        "ANZ637"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/ANZ635",
-                    "https://api.weather.gov/zones/forecast/ANZ636",
-                    "https://api.weather.gov/zones/forecast/ANZ637"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.3c163dad767012b0373f19ed108b653645d2ee04.010.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.3c163dad767012b0373f19ed108b653645d2ee04.010.1",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-18T21:33:00-04:00"
-                    },
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.52875acea6a9499f7e9cf079d3bba27431ffde61.010.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.52875acea6a9499f7e9cf079d3bba27431ffde61.010.1",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-18T21:52:00-04:00"
-                    }
-                ],
-                "sent": "2026-10-19T02:47:00-04:00",
-                "effective": "2026-10-19T02:47:00-04:00",
-                "onset": "2026-10-19T02:47:00-04:00",
-                "expires": "2026-10-19T11:00:00-04:00",
-                "ends": "2026-10-21T07:00:00-04:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Minor",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Small Craft Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Wakefield VA",
-                "headline": "Small Craft Advisory issued October 19 at 2:47AM EDT until October 21 at 7:00AM EDT by NWS Wakefield VA",
-                "description": "* WHAT...North winds 15 to 20 kt with gusts up to 30 kt and\nwaves 2 to 3 ft.\n\n* WHERE...Rappahannock River from Urbanna to Windmill Point,\nYork River and James River from Jamestown to the James River\nBridge.\n\n* WHEN...Until 7 AM EDT Wednesday.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
-                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "MWWAKQ"
-                    ],
-                    "WMOidentifier": [
-                        "WHUS71 KAKQ 190647"
-                    ],
-                    "NWSheadline": [
-                        "SMALL CRAFT ADVISORY REMAINS IN EFFECT UNTIL 7 AM EDT WEDNESDAY"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.KAKQ.SC.Y.0103.000000T0000Z-261021T1100Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-21T07:00:00-04:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.b613087d3f8a0e23161d111a5be81640b520609b.010.1,2026-10-18T14:45:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.b9c04c922073273d8fc5e0c3abd6042783eb2684.010.1,2026-10-18T06:52:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bf76e91c8d7a7ccaa2d8c34937f7ca44f2e958db.010.1,2026-10-18T03:12:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.306d3cee752a4fac0a6cf93d61634a64dce122c8.001.2,2026-10-17T20:08:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "SCY"
-                    ]
-                }
-            }
-        },
-        {
             "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ddc7aaade0004ea442fd2cd41317d59c074a7b87.001.3",
             "type": "Feature",
             "geometry": null,
@@ -2073,35 +3507,41 @@
             }
         },
         {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ddc7aaade0004ea442fd2cd41317d59c074a7b87.003.1",
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ddc7aaade0004ea442fd2cd41317d59c074a7b87.010.1",
             "type": "Feature",
             "geometry": null,
             "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ddc7aaade0004ea442fd2cd41317d59c074a7b87.003.1",
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ddc7aaade0004ea442fd2cd41317d59c074a7b87.010.1",
                 "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.ddc7aaade0004ea442fd2cd41317d59c074a7b87.003.1",
-                "areaDesc": "Coastal waters from Fenwick Island DE to Chincoteague VA out 20 NM",
+                "id": "urn:oid:2.49.0.1.840.0.ddc7aaade0004ea442fd2cd41317d59c074a7b87.010.1",
+                "areaDesc": "Rappahannock River from Urbanna to Windmill Point; York River; James River from Jamestown to the James River Bridge",
                 "geocode": {
                     "SAME": [
-                        "073650"
+                        "073635",
+                        "073636",
+                        "073637"
                     ],
                     "UGC": [
-                        "ANZ650"
+                        "ANZ635",
+                        "ANZ636",
+                        "ANZ637"
                     ]
                 },
                 "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/ANZ650"
+                    "https://api.weather.gov/zones/forecast/ANZ635",
+                    "https://api.weather.gov/zones/forecast/ANZ636",
+                    "https://api.weather.gov/zones/forecast/ANZ637"
                 ],
                 "references": [
                     {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.3c163dad767012b0373f19ed108b653645d2ee04.001.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.3c163dad767012b0373f19ed108b653645d2ee04.001.1",
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.3c163dad767012b0373f19ed108b653645d2ee04.010.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.3c163dad767012b0373f19ed108b653645d2ee04.010.1",
                         "sender": "w-nws.webmaster@noaa.gov",
                         "sent": "2026-10-18T21:33:00-04:00"
                     },
                     {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.52875acea6a9499f7e9cf079d3bba27431ffde61.002.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.52875acea6a9499f7e9cf079d3bba27431ffde61.002.1",
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.52875acea6a9499f7e9cf079d3bba27431ffde61.010.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.52875acea6a9499f7e9cf079d3bba27431ffde61.010.1",
                         "sender": "w-nws.webmaster@noaa.gov",
                         "sent": "2026-10-18T21:52:00-04:00"
                     }
@@ -2110,7 +3550,7 @@
                 "effective": "2026-10-19T02:47:00-04:00",
                 "onset": "2026-10-19T02:47:00-04:00",
                 "expires": "2026-10-19T11:00:00-04:00",
-                "ends": "2026-10-19T06:00:00-04:00",
+                "ends": "2026-10-21T07:00:00-04:00",
                 "status": "Actual",
                 "messageType": "Update",
                 "category": "Met",
@@ -2120,9 +3560,9 @@
                 "event": "Small Craft Advisory",
                 "sender": "w-nws.webmaster@noaa.gov",
                 "senderName": "NWS Wakefield VA",
-                "headline": "Small Craft Advisory issued October 19 at 2:47AM EDT until October 19 at 6:00AM EDT by NWS Wakefield VA",
-                "description": "* WHAT...For the Small Craft Advisory, northeast winds 15 to 25 kt\nwith gusts up to 30 kt and seas 7 to 10 ft. For the Gale\nWarning, north to northeast winds 25 to 35 kt with gusts up to\n40 kt and seas 8 to 13 ft expected.\n\n* WHERE...Coastal waters from Fenwick Island DE to Chincoteague\nVA out 20 NM.\n\n* WHEN...For the Small Craft Advisory, until 6 AM EDT early this\nmorning. For the Gale Warning, from 6 AM this morning to 7 PM\nEDT Wednesday.\n\n* IMPACTS...Strong winds will cause hazardous seas which could\ncapsize or damage vessels and reduce visibility.",
-                "instruction": "Mariners should alter plans to avoid these hazardous conditions.\nRemain in port, seek safe harbor, alter course, and/or secure the\nvessel for hazardous conditions.",
+                "headline": "Small Craft Advisory issued October 19 at 2:47AM EDT until October 21 at 7:00AM EDT by NWS Wakefield VA",
+                "description": "* WHAT...North winds 15 to 20 kt with gusts up to 30 kt and\nwaves 2 to 3 ft.\n\n* WHERE...Rappahannock River from Urbanna to Windmill Point,\nYork River and James River from Jamestown to the James River\nBridge.\n\n* WHEN...Until 7 AM EDT Wednesday.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
+                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
                 "response": "Avoid",
                 "note": null,
                 "parameters": {
@@ -2130,1332 +3570,4 @@
                         "MWWAKQ"
                     ],
                     "WMOidentifier": [
-                        "WHUS71 KAKQ 190647"
-                    ],
-                    "NWSheadline": [
-                        "SMALL CRAFT ADVISORY REMAINS IN EFFECT UNTIL 6 AM EDT EARLY THIS MORNING... ...GALE WARNING NOW IN EFFECT FROM 6 AM THIS MORNING TO 7 PM EDT WEDNESDAY"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.KAKQ.SC.Y.0103.000000T0000Z-261019T1000Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-19T06:00:00-04:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.b613087d3f8a0e23161d111a5be81640b520609b.001.1,2026-10-18T14:45:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.b9c04c922073273d8fc5e0c3abd6042783eb2684.001.2,2026-10-18T06:52:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "SCY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.c415bd551ffed618709b44fa8955052ad41ad041.001.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.c415bd551ffed618709b44fa8955052ad41ad041.001.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.c415bd551ffed618709b44fa8955052ad41ad041.001.1",
-                "areaDesc": "Coastal Waters from Stonington, ME to Port Clyde, ME out 25 NM; Coastal Waters from Port Clyde, ME to Cape Elizabeth, ME out 25 NM; Coastal Waters from Cape Elizabeth, ME to Merrimack River, MA out 25 NM",
-                "geocode": {
-                    "SAME": [
-                        "073150",
-                        "073152",
-                        "073154"
-                    ],
-                    "UGC": [
-                        "ANZ150",
-                        "ANZ152",
-                        "ANZ154"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/ANZ150",
-                    "https://api.weather.gov/zones/forecast/ANZ152",
-                    "https://api.weather.gov/zones/forecast/ANZ154"
-                ],
-                "references": [],
-                "sent": "2026-10-19T02:46:00-04:00",
-                "effective": "2026-10-19T02:46:00-04:00",
-                "onset": "2026-10-20T06:00:00-04:00",
-                "expires": "2026-10-19T17:00:00-04:00",
-                "ends": "2026-10-21T18:00:00-04:00",
-                "status": "Actual",
-                "messageType": "Alert",
-                "category": "Met",
-                "severity": "Minor",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Small Craft Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Gray ME",
-                "headline": "Small Craft Advisory issued October 19 at 2:46AM EDT until October 21 at 6:00PM EDT by NWS Gray ME",
-                "description": "* WHAT...Northeast winds 10 to 20 kt with gusts up to 30 kt and\nseas 4 to 7 ft expected.\n\n* WHERE...Coastal Waters from Stonington, ME to Port Clyde, ME\nout 25 NM, Coastal Waters from Port Clyde, ME to Cape\nElizabeth, ME out 25 NM and Coastal Waters from Cape\nElizabeth, ME to Merrimack River, MA out 25 NM.\n\n* WHEN...From 6 AM Tuesday to 6 PM EDT Wednesday.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
-                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "MWWGYX"
-                    ],
-                    "WMOidentifier": [
-                        "WHUS71 KGYX 190646"
-                    ],
-                    "NWSheadline": [
-                        "SMALL CRAFT ADVISORY IN EFFECT FROM 6 AM TUESDAY TO 6 PM EDT WEDNESDAY"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.NEW.KGYX.SC.Y.0082.261020T1000Z-261021T2200Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-21T18:00:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "SCY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.442f0064fdbf9ce05cf96f8e7e3992b89dbe14b8.001.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.442f0064fdbf9ce05cf96f8e7e3992b89dbe14b8.001.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.442f0064fdbf9ce05cf96f8e7e3992b89dbe14b8.001.1",
-                "areaDesc": "Fannin; Gilmer; Union; Towns; Chattooga; Gordon; Pickens; Dawson; Lumpkin; White; Floyd; Bartow; Cherokee; Forsyth; Hall; Banks; Jackson; Madison; Polk; Paulding; Cobb; North Fulton; Gwinnett; Barrow; Clarke; Oconee; Oglethorpe; Wilkes; Haralson; Carroll; Douglas; South Fulton; DeKalb; Rockdale; Walton; Newton; Morgan; Greene; Taliaferro; Heard; Coweta; Fayette; Clayton; Henry",
-                "geocode": {
-                    "SAME": [
-                        "013111",
-                        "013123",
-                        "013291",
-                        "013281",
-                        "013055",
-                        "013129",
-                        "013227",
-                        "013085",
-                        "013187",
-                        "013311",
-                        "013115",
-                        "013015",
-                        "013057",
-                        "013117",
-                        "013139",
-                        "013011",
-                        "013157",
-                        "013195",
-                        "013233",
-                        "013223",
-                        "013067",
-                        "013121",
-                        "013135",
-                        "013013",
-                        "013059",
-                        "013219",
-                        "013221",
-                        "013317",
-                        "013143",
-                        "013045",
-                        "013097",
-                        "013089",
-                        "013247",
-                        "013297",
-                        "013217",
-                        "013211",
-                        "013133",
-                        "013265",
-                        "013149",
-                        "013077",
-                        "013113",
-                        "013063",
-                        "013151"
-                    ],
-                    "UGC": [
-                        "GAZ006",
-                        "GAZ007",
-                        "GAZ008",
-                        "GAZ009",
-                        "GAZ011",
-                        "GAZ012",
-                        "GAZ013",
-                        "GAZ014",
-                        "GAZ015",
-                        "GAZ016",
-                        "GAZ019",
-                        "GAZ020",
-                        "GAZ021",
-                        "GAZ022",
-                        "GAZ023",
-                        "GAZ024",
-                        "GAZ025",
-                        "GAZ027",
-                        "GAZ030",
-                        "GAZ031",
-                        "GAZ032",
-                        "GAZ033",
-                        "GAZ034",
-                        "GAZ035",
-                        "GAZ036",
-                        "GAZ037",
-                        "GAZ038",
-                        "GAZ039",
-                        "GAZ041",
-                        "GAZ042",
-                        "GAZ043",
-                        "GAZ044",
-                        "GAZ045",
-                        "GAZ046",
-                        "GAZ047",
-                        "GAZ048",
-                        "GAZ049",
-                        "GAZ050",
-                        "GAZ051",
-                        "GAZ052",
-                        "GAZ053",
-                        "GAZ054",
-                        "GAZ055",
-                        "GAZ057"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/GAZ006",
-                    "https://api.weather.gov/zones/forecast/GAZ007",
-                    "https://api.weather.gov/zones/forecast/GAZ008",
-                    "https://api.weather.gov/zones/forecast/GAZ009",
-                    "https://api.weather.gov/zones/forecast/GAZ011",
-                    "https://api.weather.gov/zones/forecast/GAZ012",
-                    "https://api.weather.gov/zones/forecast/GAZ013",
-                    "https://api.weather.gov/zones/forecast/GAZ014",
-                    "https://api.weather.gov/zones/forecast/GAZ015",
-                    "https://api.weather.gov/zones/forecast/GAZ016",
-                    "https://api.weather.gov/zones/forecast/GAZ019",
-                    "https://api.weather.gov/zones/forecast/GAZ020",
-                    "https://api.weather.gov/zones/forecast/GAZ021",
-                    "https://api.weather.gov/zones/forecast/GAZ022",
-                    "https://api.weather.gov/zones/forecast/GAZ023",
-                    "https://api.weather.gov/zones/forecast/GAZ024",
-                    "https://api.weather.gov/zones/forecast/GAZ025",
-                    "https://api.weather.gov/zones/forecast/GAZ027",
-                    "https://api.weather.gov/zones/forecast/GAZ030",
-                    "https://api.weather.gov/zones/forecast/GAZ031",
-                    "https://api.weather.gov/zones/forecast/GAZ032",
-                    "https://api.weather.gov/zones/forecast/GAZ033",
-                    "https://api.weather.gov/zones/forecast/GAZ034",
-                    "https://api.weather.gov/zones/forecast/GAZ035",
-                    "https://api.weather.gov/zones/forecast/GAZ036",
-                    "https://api.weather.gov/zones/forecast/GAZ037",
-                    "https://api.weather.gov/zones/forecast/GAZ038",
-                    "https://api.weather.gov/zones/forecast/GAZ039",
-                    "https://api.weather.gov/zones/forecast/GAZ041",
-                    "https://api.weather.gov/zones/forecast/GAZ042",
-                    "https://api.weather.gov/zones/forecast/GAZ043",
-                    "https://api.weather.gov/zones/forecast/GAZ044",
-                    "https://api.weather.gov/zones/forecast/GAZ045",
-                    "https://api.weather.gov/zones/forecast/GAZ046",
-                    "https://api.weather.gov/zones/forecast/GAZ047",
-                    "https://api.weather.gov/zones/forecast/GAZ048",
-                    "https://api.weather.gov/zones/forecast/GAZ049",
-                    "https://api.weather.gov/zones/forecast/GAZ050",
-                    "https://api.weather.gov/zones/forecast/GAZ051",
-                    "https://api.weather.gov/zones/forecast/GAZ052",
-                    "https://api.weather.gov/zones/forecast/GAZ053",
-                    "https://api.weather.gov/zones/forecast/GAZ054",
-                    "https://api.weather.gov/zones/forecast/GAZ055",
-                    "https://api.weather.gov/zones/forecast/GAZ057"
-                ],
-                "references": [],
-                "sent": "2026-10-19T02:44:00-04:00",
-                "effective": "2026-10-19T02:44:00-04:00",
-                "onset": "2026-10-19T02:44:00-04:00",
-                "expires": "2026-10-19T14:45:00-04:00",
-                "ends": null,
-                "status": "Actual",
-                "messageType": "Alert",
-                "category": "Met",
-                "severity": "Moderate",
-                "certainty": "Observed",
-                "urgency": "Expected",
-                "event": "Special Weather Statement",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Peachtree City GA",
-                "headline": "Special Weather Statement issued October 19 at 2:44AM EDT by NWS Peachtree City GA",
-                "description": "Relative Humidities of 30 percent or less can be expected for 4\nor more hours this afternoon into the evening. Winds will be\nnortheast at 5 to 10 MPH.\n\nWith dry fuels, high fire danger conditions can be expected.\n\nPlease refer to your local burn permitting authorities\nwhether you may burn outdoors.  If you do burn outside,\nuse extreme caution.",
-                "instruction": null,
-                "response": "Execute",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "SPSFFC"
-                    ],
-                    "WMOidentifier": [
-                        "WWUS82 KFFC 190644"
-                    ],
-                    "NWSheadline": [
-                        "HIGH FIRE DANGER CONDITIONS THIS AFTERNOON INTO THE EVENING FOR PARTS OF NORTH GEORGIA DUE TO LOW RELATIVE HUMIDITIES"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "EAS-ORG": [
-                        "WXR"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "SPS"
-                    ],
-                    "NationalWeatherService": [
-                        "SPS"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.6f429cdc8b2189854ace931a7e0e9d71313f798e.001.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.6f429cdc8b2189854ace931a7e0e9d71313f798e.001.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.6f429cdc8b2189854ace931a7e0e9d71313f798e.001.1",
-                "areaDesc": "Koror Palau Coastal Waters",
-                "geocode": {
-                    "SAME": [
-                        "065161"
-                    ],
-                    "UGC": [
-                        "PMZ161"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/PMZ161"
-                ],
-                "references": [],
-                "sent": "2026-10-19T16:42:00+10:00",
-                "effective": "2026-10-19T16:42:00+10:00",
-                "onset": "2026-10-19T16:42:00+10:00",
-                "expires": "2026-10-20T08:00:00+10:00",
-                "ends": "2026-10-20T18:00:00+10:00",
-                "status": "Actual",
-                "messageType": "Alert",
-                "category": "Met",
-                "severity": "Minor",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Small Craft Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Tiyan GU",
-                "headline": "Small Craft Advisory issued October 19 at 4:42PM ChST until October 20 at 6:00PM ChST by NWS Tiyan GU",
-                "description": "* WHAT...Southwest winds 15 to 20 kt with frequent gusts up to 25 kt.\n\n* WHERE...Palau Coastal Waters.\n\n* WHEN...Until 6 PM ChST Tuesday.\n\n* IMPACTS...Conditions will be hazardous to small craft.\n\n* ADDITIONAL DETAILS...As Super Typhoon Champi moves west through the\nPhilippine Sea, it will help to generate a strong monsoon surge\nacross Palau, including moderate to fresh winds with gusts up to\nstrong. Seas will also be very choppy. As Champi moves far enough\nwest, winds will fall below Small Craft Advisory levels.",
-                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid boating in hazardous conditions.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "MWWPQ2"
-                    ],
-                    "WMOidentifier": [
-                        "WHGM72 PGUM 190642"
-                    ],
-                    "NWSheadline": [
-                        "SMALL CRAFT ADVISORY IN EFFECT UNTIL 6 PM CHST TUESDAY"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.EXA.PGUM.SC.Y.0077.000000T0000Z-261020T0800Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-20T18:00:00+10:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "SCY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.6f429cdc8b2189854ace931a7e0e9d71313f798e.002.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.6f429cdc8b2189854ace931a7e0e9d71313f798e.002.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.6f429cdc8b2189854ace931a7e0e9d71313f798e.002.1",
-                "areaDesc": "Yap Coastal Waters",
-                "geocode": {
-                    "SAME": [
-                        "065171"
-                    ],
-                    "UGC": [
-                        "PMZ171"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/PMZ171"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.e8dbe91828b9536d34306c0af4d09a91f007cc22.001.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.e8dbe91828b9536d34306c0af4d09a91f007cc22.001.1",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-19T04:25:00+10:00"
-                    }
-                ],
-                "sent": "2026-10-19T16:42:00+10:00",
-                "effective": "2026-10-19T16:42:00+10:00",
-                "onset": "2026-10-19T16:42:00+10:00",
-                "expires": "2026-10-20T08:00:00+10:00",
-                "ends": "2026-10-20T18:00:00+10:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Minor",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Small Craft Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Tiyan GU",
-                "headline": "Small Craft Advisory issued October 19 at 4:42PM ChST until October 20 at 6:00PM ChST by NWS Tiyan GU",
-                "description": "* WHAT...Southwest winds 20 to 25 kt with frequent gusts up to 30 kt\nand seas 9 to 11 feet.\n\n* WHERE...Yap Coastal Waters.\n\n* WHEN...Until 6 PM ChST Tuesday.\n\n* IMPACTS...Conditions will be hazardous to small craft.\n\n* ADDITIONAL DETAILS...As Super Typhoon Champi moves west through the\nPhilippine Sea, it will help to generate a strong monsoon surge\nacross Yap. Champi will also generate a large northwest swell that\nwill interact with a secondary southwest to west swell and large\nwind waves to produce seas around 10 feet. As Champi moves far\nenough west, seas and winds will fall below Small Craft Advisory\nlevels.",
-                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid boating in hazardous conditions.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "MWWPQ2"
-                    ],
-                    "WMOidentifier": [
-                        "WHGM72 PGUM 190642"
-                    ],
-                    "NWSheadline": [
-                        "SMALL CRAFT ADVISORY REMAINS IN EFFECT UNTIL 6 PM CHST TUESDAY"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.PGUM.SC.Y.0077.000000T0000Z-261020T0800Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-20T18:00:00+10:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.6828261ef0c9f33c3d72f248241df722d111ddb2.001.1,2026-10-18T17:19:00+10:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "SCY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.adf197e95c21b4ccb4dfb42912f1f74814265f2c.001.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.adf197e95c21b4ccb4dfb42912f1f74814265f2c.001.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.adf197e95c21b4ccb4dfb42912f1f74814265f2c.001.1",
-                "areaDesc": "Yap",
-                "geocode": {
-                    "SAME": [
-                        "064060"
-                    ],
-                    "UGC": [
-                        "FMZ037"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/FMZ037"
-                ],
-                "references": [],
-                "sent": "2026-10-19T16:42:00+10:00",
-                "effective": "2026-10-19T16:42:00+10:00",
-                "onset": "2026-10-19T16:42:00+10:00",
-                "expires": "2026-10-20T08:00:00+10:00",
-                "ends": "2026-10-20T18:00:00+10:00",
-                "status": "Actual",
-                "messageType": "Alert",
-                "category": "Met",
-                "severity": "Minor",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "High Surf Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Tiyan GU",
-                "headline": "High Surf Advisory issued October 19 at 4:42PM ChST until October 20 at 6:00PM ChST by NWS Tiyan GU",
-                "description": "* WHAT...Large breaking waves of 8 to 10 feet.\n\n* WHERE...North facing reefs of Yap.\n\n* WHEN...Until 6 PM ChST Tuesday.\n\n* IMPACTS...Dangerous swimming and surfing conditions and\nlocalized beach erosion.\n\n* ADDITIONAL DETAILS...Super Typhoon Champi is producing high surf\nalong north facing reefs. As Champi moves further into the\nPhilippine Sea over the next few days, surf is expected to\ndiminish.",
-                "instruction": "Inexperienced swimmers should remain out of the water due to\ndangerous surf conditions.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "CFWPQ2"
-                    ],
-                    "WMOidentifier": [
-                        "WHPQ42 PGUM 190642"
-                    ],
-                    "NWSheadline": [
-                        "HIGH SURF ADVISORY IN EFFECT UNTIL 6 PM CHST TUESDAY"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.NEW.PGUM.SU.Y.0059.261019T0642Z-261020T0800Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-20T18:00:00+10:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "SUY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.4007570611e7bb50e68c4414f8050c3f0470d76d.001.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.4007570611e7bb50e68c4414f8050c3f0470d76d.001.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.4007570611e7bb50e68c4414f8050c3f0470d76d.001.1",
-                "areaDesc": "Wayne; Fayette; Union; Franklin; Ripley; Dearborn; Ohio; Switzerland; Carroll; Gallatin; Boone; Kenton; Campbell; Owen; Grant; Pendleton; Bracken; Robertson; Mason; Lewis; Hardin; Mercer; Auglaize; Darke; Shelby; Logan; Union; Delaware; Miami; Champaign; Clark; Madison; Franklin; Licking; Preble; Montgomery; Greene; Fayette; Pickaway; Fairfield; Butler; Warren; Clinton; Ross; Hocking; Hamilton; Clermont; Brown; Highland; Adams; Pike; Scioto",
-                "geocode": {
-                    "SAME": [
-                        "018177",
-                        "018041",
-                        "018161",
-                        "018047",
-                        "018137",
-                        "018029",
-                        "018115",
-                        "018155",
-                        "021041",
-                        "021077",
-                        "021015",
-                        "021117",
-                        "021037",
-                        "021187",
-                        "021081",
-                        "021191",
-                        "021023",
-                        "021201",
-                        "021161",
-                        "021135",
-                        "039065",
-                        "039107",
-                        "039011",
-                        "039037",
-                        "039149",
-                        "039091",
-                        "039159",
-                        "039041",
-                        "039109",
-                        "039021",
-                        "039023",
-                        "039097",
-                        "039049",
-                        "039089",
-                        "039135",
-                        "039113",
-                        "039057",
-                        "039047",
-                        "039129",
-                        "039045",
-                        "039017",
-                        "039165",
-                        "039027",
-                        "039141",
-                        "039073",
-                        "039061",
-                        "039025",
-                        "039015",
-                        "039071",
-                        "039001",
-                        "039131",
-                        "039145"
-                    ],
-                    "UGC": [
-                        "INZ050",
-                        "INZ058",
-                        "INZ059",
-                        "INZ066",
-                        "INZ073",
-                        "INZ074",
-                        "INZ075",
-                        "INZ080",
-                        "KYZ089",
-                        "KYZ090",
-                        "KYZ091",
-                        "KYZ092",
-                        "KYZ093",
-                        "KYZ094",
-                        "KYZ095",
-                        "KYZ096",
-                        "KYZ097",
-                        "KYZ098",
-                        "KYZ099",
-                        "KYZ100",
-                        "OHZ026",
-                        "OHZ034",
-                        "OHZ035",
-                        "OHZ042",
-                        "OHZ043",
-                        "OHZ044",
-                        "OHZ045",
-                        "OHZ046",
-                        "OHZ051",
-                        "OHZ052",
-                        "OHZ053",
-                        "OHZ054",
-                        "OHZ055",
-                        "OHZ056",
-                        "OHZ060",
-                        "OHZ061",
-                        "OHZ062",
-                        "OHZ063",
-                        "OHZ064",
-                        "OHZ065",
-                        "OHZ070",
-                        "OHZ071",
-                        "OHZ072",
-                        "OHZ073",
-                        "OHZ074",
-                        "OHZ077",
-                        "OHZ078",
-                        "OHZ079",
-                        "OHZ080",
-                        "OHZ081",
-                        "OHZ082",
-                        "OHZ088"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/INZ050",
-                    "https://api.weather.gov/zones/forecast/INZ058",
-                    "https://api.weather.gov/zones/forecast/INZ059",
-                    "https://api.weather.gov/zones/forecast/INZ066",
-                    "https://api.weather.gov/zones/forecast/INZ073",
-                    "https://api.weather.gov/zones/forecast/INZ074",
-                    "https://api.weather.gov/zones/forecast/INZ075",
-                    "https://api.weather.gov/zones/forecast/INZ080",
-                    "https://api.weather.gov/zones/forecast/KYZ089",
-                    "https://api.weather.gov/zones/forecast/KYZ090",
-                    "https://api.weather.gov/zones/forecast/KYZ091",
-                    "https://api.weather.gov/zones/forecast/KYZ092",
-                    "https://api.weather.gov/zones/forecast/KYZ093",
-                    "https://api.weather.gov/zones/forecast/KYZ094",
-                    "https://api.weather.gov/zones/forecast/KYZ095",
-                    "https://api.weather.gov/zones/forecast/KYZ096",
-                    "https://api.weather.gov/zones/forecast/KYZ097",
-                    "https://api.weather.gov/zones/forecast/KYZ098",
-                    "https://api.weather.gov/zones/forecast/KYZ099",
-                    "https://api.weather.gov/zones/forecast/KYZ100",
-                    "https://api.weather.gov/zones/forecast/OHZ026",
-                    "https://api.weather.gov/zones/forecast/OHZ034",
-                    "https://api.weather.gov/zones/forecast/OHZ035",
-                    "https://api.weather.gov/zones/forecast/OHZ042",
-                    "https://api.weather.gov/zones/forecast/OHZ043",
-                    "https://api.weather.gov/zones/forecast/OHZ044",
-                    "https://api.weather.gov/zones/forecast/OHZ045",
-                    "https://api.weather.gov/zones/forecast/OHZ046",
-                    "https://api.weather.gov/zones/forecast/OHZ051",
-                    "https://api.weather.gov/zones/forecast/OHZ052",
-                    "https://api.weather.gov/zones/forecast/OHZ053",
-                    "https://api.weather.gov/zones/forecast/OHZ054",
-                    "https://api.weather.gov/zones/forecast/OHZ055",
-                    "https://api.weather.gov/zones/forecast/OHZ056",
-                    "https://api.weather.gov/zones/forecast/OHZ060",
-                    "https://api.weather.gov/zones/forecast/OHZ061",
-                    "https://api.weather.gov/zones/forecast/OHZ062",
-                    "https://api.weather.gov/zones/forecast/OHZ063",
-                    "https://api.weather.gov/zones/forecast/OHZ064",
-                    "https://api.weather.gov/zones/forecast/OHZ065",
-                    "https://api.weather.gov/zones/forecast/OHZ070",
-                    "https://api.weather.gov/zones/forecast/OHZ071",
-                    "https://api.weather.gov/zones/forecast/OHZ072",
-                    "https://api.weather.gov/zones/forecast/OHZ073",
-                    "https://api.weather.gov/zones/forecast/OHZ074",
-                    "https://api.weather.gov/zones/forecast/OHZ077",
-                    "https://api.weather.gov/zones/forecast/OHZ078",
-                    "https://api.weather.gov/zones/forecast/OHZ079",
-                    "https://api.weather.gov/zones/forecast/OHZ080",
-                    "https://api.weather.gov/zones/forecast/OHZ081",
-                    "https://api.weather.gov/zones/forecast/OHZ082",
-                    "https://api.weather.gov/zones/forecast/OHZ088"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.7e24bacf3708ccfe3661885e8a7d1e4822a1dc8c.001.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.7e24bacf3708ccfe3661885e8a7d1e4822a1dc8c.001.1",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-18T13:22:00-04:00"
-                    }
-                ],
-                "sent": "2026-10-19T02:40:00-04:00",
-                "effective": "2026-10-19T02:40:00-04:00",
-                "onset": "2026-10-19T02:40:00-04:00",
-                "expires": "2026-10-19T09:00:00-04:00",
-                "ends": "2026-10-19T09:00:00-04:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Minor",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Frost Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Wilmington OH",
-                "headline": "Frost Advisory issued October 19 at 2:40AM EDT until October 19 at 9:00AM EDT by NWS Wilmington OH",
-                "description": "* WHAT...Temperatures as low as 37 will result in frost formation.\n\n* WHERE...Portions of east central and southeast Indiana, northeast\nand northern Kentucky, and central, south central, southwest, and\nwest central Ohio.\n\n* WHEN...Until 9 AM EDT this morning.\n\n* IMPACTS...Frost could harm sensitive outdoor vegetation. Sensitive\noutdoor plants may be killed if left uncovered.",
-                "instruction": "Take steps now to protect tender plants from the cold.",
-                "response": "Prepare",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "NPWILN"
-                    ],
-                    "WMOidentifier": [
-                        "WWUS71 KILN 190640"
-                    ],
-                    "NWSheadline": [
-                        "FROST ADVISORY REMAINS IN EFFECT UNTIL 9 AM EDT THIS MORNING"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.KILN.FR.Y.0008.000000T0000Z-261019T1300Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-19T09:00:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "FRY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.edebe3e349ead2dbc03a40b96fca4d2564a625d8.001.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.edebe3e349ead2dbc03a40b96fca4d2564a625d8.001.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.edebe3e349ead2dbc03a40b96fca4d2564a625d8.001.1",
-                "areaDesc": "Eastern Currituck",
-                "geocode": {
-                    "SAME": [
-                        "037053"
-                    ],
-                    "UGC": [
-                        "NCZ102"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/NCZ102"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.7cf33fedc71fd0b0a7661c1fd17f291d46458d69.001.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.7cf33fedc71fd0b0a7661c1fd17f291d46458d69.001.1",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-18T18:56:00-04:00"
-                    }
-                ],
-                "sent": "2026-10-19T02:38:00-04:00",
-                "effective": "2026-10-19T02:38:00-04:00",
-                "onset": "2026-10-19T02:38:00-04:00",
-                "expires": "2026-10-19T14:00:00-04:00",
-                "ends": "2026-10-20T01:00:00-04:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Moderate",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Wind Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Wakefield VA",
-                "headline": "Wind Advisory issued October 19 at 2:38AM EDT until October 20 at 1:00AM EDT by NWS Wakefield VA",
-                "description": "* WHAT...North to northeast winds 25 to 35 mph with gusts up to 50\nmph.\n\n* WHERE...Eastern Currituck County.\n\n* WHEN...Until 1 AM EDT Tuesday.\n\n* IMPACTS...Gusty winds will blow around unsecured objects. Tree\nlimbs could be blown down and a few power outages may result.",
-                "instruction": "Winds this strong can make driving difficult, especially for high\nprofile vehicles. Use extra caution.",
-                "response": "Execute",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "NPWAKQ"
-                    ],
-                    "WMOidentifier": [
-                        "WWUS71 KAKQ 190638"
-                    ],
-                    "NWSheadline": [
-                        "WIND ADVISORY REMAINS IN EFFECT UNTIL 1 AM EDT TUESDAY"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.KAKQ.WI.Y.0007.000000T0000Z-261020T0500Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-20T01:00:00-04:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.8d9ee8d0cdd45aae6243b8bdb9da865a5d3612ce.001.1,2026-10-18T10:07:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.89c8875c19a8fcdfa559785b9835989ae34cc7fd.002.1,2026-10-18T02:56:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.2c5c05002e304b0f63528457f9a7ff8be461d75e.002.1,2026-10-17T21:45:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.d1f2dd5bfbf12d672b10b1f7ac6f35ccd24bfe6f.002.1,2026-10-17T21:29:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.782df16244e5802dd5c4f7f179b18b21687e02d4.002.1,2026-10-17T10:15:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.263705a8812b0e1590e4c508a9be88115abdcdd1.002.1,2026-10-17T03:00:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.606c5197e7afd55a40944f115b9edf63ee193626.001.1,2026-10-16T21:16:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.9f9d8e53714c8c288141f632ccb032c2d8a95196.001.1,2026-10-16T13:11:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "WIY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.edebe3e349ead2dbc03a40b96fca4d2564a625d8.002.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.edebe3e349ead2dbc03a40b96fca4d2564a625d8.002.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.edebe3e349ead2dbc03a40b96fca4d2564a625d8.002.1",
-                "areaDesc": "Virginia Beach",
-                "geocode": {
-                    "SAME": [
-                        "051810"
-                    ],
-                    "UGC": [
-                        "VAZ098"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/VAZ098"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.7cf33fedc71fd0b0a7661c1fd17f291d46458d69.002.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.7cf33fedc71fd0b0a7661c1fd17f291d46458d69.002.1",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-18T18:56:00-04:00"
-                    }
-                ],
-                "sent": "2026-10-19T02:38:00-04:00",
-                "effective": "2026-10-19T02:38:00-04:00",
-                "onset": "2026-10-19T10:00:00-04:00",
-                "expires": "2026-10-19T14:00:00-04:00",
-                "ends": "2026-10-19T22:00:00-04:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Moderate",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Wind Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Wakefield VA",
-                "headline": "Wind Advisory issued October 19 at 2:38AM EDT until October 19 at 10:00PM EDT by NWS Wakefield VA",
-                "description": "* WHAT...North to northeast winds 25 to 30 mph with gusts up to 45\nmph expected.\n\n* WHERE...Virginia Beach.\n\n* WHEN...From 10 AM this morning to 10 PM EDT this evening.\n\n* IMPACTS...Gusty winds will blow around unsecured objects. Tree\nlimbs could be blown down and a few power outages may result.",
-                "instruction": "Winds this strong can make driving difficult, especially for high\nprofile vehicles. Use extra caution.",
-                "response": "Execute",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "NPWAKQ"
-                    ],
-                    "WMOidentifier": [
-                        "WWUS71 KAKQ 190638"
-                    ],
-                    "NWSheadline": [
-                        "WIND ADVISORY REMAINS IN EFFECT FROM 10 AM THIS MORNING TO 10 PM EDT THIS EVENING"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.KAKQ.WI.Y.0008.261019T1400Z-261020T0200Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-19T22:00:00-04:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.8d9ee8d0cdd45aae6243b8bdb9da865a5d3612ce.002.1,2026-10-18T10:07:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.89c8875c19a8fcdfa559785b9835989ae34cc7fd.001.1,2026-10-18T02:56:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "WIY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.003.2",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.003.2",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.003.2",
-                "areaDesc": "Northern Outer Banks",
-                "geocode": {
-                    "SAME": [
-                        "037055"
-                    ],
-                    "UGC": [
-                        "NCZ203"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/NCZ203"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.cb161830b749cbd0e733cc365ccc1a651272c8dc.003.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.cb161830b749cbd0e733cc365ccc1a651272c8dc.003.1",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-18T16:04:00-04:00"
-                    },
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.a71a9dc5710c7eae23f815e464cd23dd69db989e.003.3",
-                        "identifier": "urn:oid:2.49.0.1.840.0.a71a9dc5710c7eae23f815e464cd23dd69db989e.003.3",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-18T20:56:00-04:00"
-                    }
-                ],
-                "sent": "2026-10-19T02:38:00-04:00",
-                "effective": "2026-10-19T02:38:00-04:00",
-                "onset": "2026-10-19T02:38:00-04:00",
-                "expires": "2026-10-19T15:00:00-04:00",
-                "ends": "2026-10-22T06:00:00-04:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Minor",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "High Surf Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Newport/Morehead City NC",
-                "headline": "High Surf Advisory issued October 19 at 2:38AM EDT until October 22 at 6:00AM EDT by NWS Newport/Morehead City NC",
-                "description": "* WHAT...For the Coastal Flood Advisory, up to 1 to 3 feet of\ninundation above ground level in low-lying areas near\nshorelines and tidal waterways. For the High Surf Advisory,\nlarge breaking waves of 9 to 12 feet in the surf zone. For the\nBeach Hazards Statement, dangerous rip currents, large\nbreaking waves expected, and strong longshore currents in the\nsurf zone.\n\n* WHERE...Northern Outer Banks.\n\n* WHEN...For the Coastal Flood Advisory, until 5 PM EDT Tuesday.\nFor the High Surf Advisory, until 6 AM EDT Thursday. For the\nBeach Hazards Statement, from 8 AM EDT this morning through\nthis evening.\n\n* IMPACTS...Up to 1 to 3 feet of inundation above ground level is\nexpected in low-lying areas near shorelines and tidal waterways\nresulting in a low threat of property damage. Some roads and low\nlying property including parking lots, parks, lawns, and homes\nadjacent to the waterfront will experience shallow flooding.\nDangerous swimming and surfing conditions and localized beach\nerosion. Rip currents can sweep even the best swimmers away from\nshore into deeper water. Dangerous shore break can throw a\nswimmer or surfer head first into the bottom causing neck and\nback injuries. Strong longshore currents will create dangerous\nswimming conditions.",
-                "instruction": "If travel is required, allow extra time as some roads may be\nclosed. Do not drive around barricades or through water of\nunknown depth. Take the necessary actions to protect flood-prone\nproperty.\n\nSwimmers should remain out of the water due to dangerous surf\nconditions.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "CFWMHX"
-                    ],
-                    "WMOidentifier": [
-                        "WHUS42 KMHX 190638"
-                    ],
-                    "NWSheadline": [
-                        "COASTAL FLOOD ADVISORY REMAINS IN EFFECT UNTIL 5 PM EDT TUESDAY... ...HIGH SURF ADVISORY REMAINS IN EFFECT UNTIL 6 AM EDT THURSDAY... ...BEACH HAZARDS STATEMENT REMAINS IN EFFECT FROM 8 AM EDT THIS MORNING THROUGH THIS EVENING"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.KMHX.SU.Y.0008.000000T0000Z-261022T1000Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-22T06:00:00-04:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.0fa2b1cf35c0ffa63c715482f0e3077ecdd92f31.003.2,2026-10-18T11:02:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.523cfd40838f89a4c2dee3d1c22dbaad7c188f65.003.2,2026-10-18T03:24:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.13ae7e1da47230cfff91b99011363c9ace051d59.003.2,2026-10-17T20:33:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.1c2331befea2bbe6962538ac28872fa4c0a0a9d8.003.4,2026-10-17T19:40:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.b0ace643ad96eb8e139c9106400a2f229ef03ece.004.1,2026-10-17T15:46:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.f462365b1bb348e8cba6bfb4b4def2f6f738643a.003.1,2026-10-17T05:02:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.c636071d8131427853ca9202fcfbad16464ef59f.003.1,2026-10-17T03:35:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bd086668dcc450b9de3b2a93bb1d3ce9dc7dfd77.001.2,2026-10-16T20:46:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.58f085d78222bc390b55f288f2220f5d358a6dcf.001.2,2026-10-16T14:55:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.f04e99941c5b8f280ffa4010dcd7be8b76c6af57.001.1,2026-10-15T20:00:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.673fe66b2c426d27dc74f263d8d16faea760c744.001.1,2026-10-16T02:51:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "SUY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.002.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.002.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.002.1",
-                "areaDesc": "Ocracoke Island",
-                "geocode": {
-                    "SAME": [
-                        "037095"
-                    ],
-                    "UGC": [
-                        "NCZ204"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/NCZ204"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.cb161830b749cbd0e733cc365ccc1a651272c8dc.002.2",
-                        "identifier": "urn:oid:2.49.0.1.840.0.cb161830b749cbd0e733cc365ccc1a651272c8dc.002.2",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-18T16:04:00-04:00"
-                    },
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.a71a9dc5710c7eae23f815e464cd23dd69db989e.002.2",
-                        "identifier": "urn:oid:2.49.0.1.840.0.a71a9dc5710c7eae23f815e464cd23dd69db989e.002.2",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-18T20:56:00-04:00"
-                    }
-                ],
-                "sent": "2026-10-19T02:38:00-04:00",
-                "effective": "2026-10-19T02:38:00-04:00",
-                "onset": "2026-10-19T02:38:00-04:00",
-                "expires": "2026-10-19T15:00:00-04:00",
-                "ends": "2026-10-20T17:00:00-04:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Severe",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Coastal Flood Warning",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Newport/Morehead City NC",
-                "headline": "Coastal Flood Warning issued October 19 at 2:38AM EDT until October 20 at 5:00PM EDT by NWS Newport/Morehead City NC",
-                "description": "* WHAT...For the Coastal Flood Warning, up to 2 to 4 feet of\ninundation above ground level in low-lying areas near shorelines\nand tidal waterways. For the High Surf Advisory, large breaking\nwaves of 6 to 9 feet in the surf zone. For the Beach Hazards\nStatement, dangerous rip currents, large breaking waves\nexpected, and strong longshore currents in the surf zone.\n\n* WHERE...Ocracoke Island.\n\n* WHEN...For the Coastal Flood Warning, until 5 PM EDT Tuesday.\nFor the Beach Hazards Statement, from 8 AM EDT this morning\nthrough this evening.\n\n* IMPACTS...Up to 2 to 4 feet of inundation above ground level is\nexpected in some areas near shorelines and tidal waterways\nresulting in an elevated threat of property damage. Flooding\nwill extend inland from the waterfront threatening some homes\nand businesses. Numerous road closures and flooding of vehicles\nwill be possible. Vulnerable portions of NC-12 may be inundated,\nespecially around high tide. There is a possibility of being\nstranded on Ocracoke for multiple days. This could be life\nthreatening if you have an emergency. Dangerous swimming and\nsurfing conditions and localized beach erosion. Rip currents can\nsweep even the best swimmers away from shore into deeper water.\nDangerous shore break can throw a swimmer or surfer head first\ninto the bottom causing neck and back injuries. Strong longshore\ncurrents will create dangerous swimming conditions.\n\n* ADDITIONAL DETAILS...This is a long duration event with\nuncertainty on when conditions will improve. Significant ocean\noverwash impacts are expected at vulnerable oceanside areas\nthrough multiple high tide cycles into the work week. Minor\nsoundside water level rises will also be possible.",
-                "instruction": "Take the necessary actions to protect flood-prone property. If\ntravel is required, do not drive around barricades or through\nwater of unknown depth.\n\nSwimmers should remain out of the water due to dangerous surf\nconditions.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "CFWMHX"
-                    ],
-                    "WMOidentifier": [
-                        "WHUS42 KMHX 190638"
-                    ],
-                    "NWSheadline": [
-                        "COASTAL FLOOD WARNING REMAINS IN EFFECT UNTIL 5 PM EDT TUESDAY... ...HIGH SURF ADVISORY REMAINS IN EFFECT UNTIL 5 PM EDT TUESDAY... ...BEACH HAZARDS STATEMENT REMAINS IN EFFECT FROM 8 AM EDT THIS MORNING THROUGH THIS EVENING"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "EAS-ORG": [
-                        "WXR"
-                    ],
-                    "VTEC": [
-                        "/O.CON.KMHX.CF.W.0003.000000T0000Z-261020T2100Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-20T17:00:00-04:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.0fa2b1cf35c0ffa63c715482f0e3077ecdd92f31.002.1,2026-10-18T11:02:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.523cfd40838f89a4c2dee3d1c22dbaad7c188f65.002.1,2026-10-18T03:24:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.13ae7e1da47230cfff91b99011363c9ace051d59.002.1,2026-10-17T20:33:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.1c2331befea2bbe6962538ac28872fa4c0a0a9d8.002.3,2026-10-17T19:40:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.b0ace643ad96eb8e139c9106400a2f229ef03ece.003.1,2026-10-17T15:46:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.f462365b1bb348e8cba6bfb4b4def2f6f738643a.002.1,2026-10-17T05:02:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.c636071d8131427853ca9202fcfbad16464ef59f.002.2,2026-10-17T03:35:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "CFW"
-                    ],
-                    "NationalWeatherService": [
-                        "CFW"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.002.2",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.002.2",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.002.2",
-                "areaDesc": "Ocracoke Island",
-                "geocode": {
-                    "SAME": [
-                        "037095"
-                    ],
-                    "UGC": [
-                        "NCZ204"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/NCZ204"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.cb161830b749cbd0e733cc365ccc1a651272c8dc.002.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.cb161830b749cbd0e733cc365ccc1a651272c8dc.002.1",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-18T16:04:00-04:00"
-                    },
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.a71a9dc5710c7eae23f815e464cd23dd69db989e.002.3",
-                        "identifier": "urn:oid:2.49.0.1.840.0.a71a9dc5710c7eae23f815e464cd23dd69db989e.002.3",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-18T20:56:00-04:00"
-                    }
-                ],
-                "sent": "2026-10-19T02:38:00-04:00",
-                "effective": "2026-10-19T02:38:00-04:00",
-                "onset": "2026-10-19T02:38:00-04:00",
-                "expires": "2026-10-19T15:00:00-04:00",
-                "ends": "2026-10-20T17:00:00-04:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Minor",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "High Surf Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Newport/Morehead City NC",
-                "headline": "High Surf Advisory issued October 19 at 2:38AM EDT until October 20 at 5:00PM EDT by NWS Newport/Morehead City NC",
-                "description": "* WHAT...For the Coastal Flood Warning, up to 2 to 4 feet of\ninundation above ground level in low-lying areas near shorelines\nand tidal waterways. For the High Surf Advisory, large breaking\nwaves of 6 to 9 feet in the surf zone. For the Beach Hazards\nStatement, dangerous rip currents, large breaking waves\nexpected, and strong longshore currents in the surf zone.\n\n* WHERE...Ocracoke Island.\n\n* WHEN...For the Coastal Flood Warning, until 5 PM EDT Tuesday.\nFor the Beach Hazards Statement, from 8 AM EDT this morning\nthrough this evening.\n\n* IMPACTS...Up to 2 to 4 feet of inundation above ground level is\nexpected in some areas near shorelines and tidal waterways\nresulting in an elevated threat of property damage. Flooding\nwill extend inland from the waterfront threatening some homes\nand businesses. Numerous road closures and flooding of vehicles\nwill be possible. Vulnerable portions of NC-12 may be inundated,\nespecially around high tide. There is a possibility of being\nstranded on Ocracoke for multiple days. This could be life\nthreatening if you have an emergency. Dangerous swimming and\nsurfing conditions and localized beach erosion. Rip currents can\nsweep even the best swimmers away from shore into deeper water.\nDangerous shore break can throw a swimmer or surfer head first\ninto the bottom causing neck and back injuries. Strong longshore\ncurrents will create dangerous swimming conditions.\n\n* ADDITIONAL DETAILS...This is a long duration event with\nuncertainty on when conditions will improve. Significant ocean\noverwash impacts are expected at vulnerable oceanside areas\nthrough multiple high tide cycles into the work week. Minor\nsoundside water level rises will also be possible.",
-                "instruction": "Take the necessary actions to protect flood-prone property. If\ntravel is required, do not drive around barricades or through\nwater of unknown depth.\n\nSwimmers should remain out of the water due to dangerous surf\nconditions.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "CFWMHX"
-                    ],
-                    "WMOidentifier": [
-                        "WHUS42 KMHX 190638"
-                    ],
-                    "NWSheadline": [
-                        "COASTAL FLOOD WARNING REMAINS IN EFFECT UNTIL 5 PM EDT TUESDAY... ...HIGH SURF ADVISORY REMAINS IN EFFECT UNTIL 5 PM EDT TUESDAY... ...BEACH HAZARDS STATEMENT REMAINS IN EFFECT FROM 8 AM EDT THIS MORNING THROUGH THIS EVENING"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.KMHX.SU.Y.0008.000000T0000Z-261020T2100Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-20T17:00:00-04:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.0fa2b1cf35c0ffa63c715482f0e3077ecdd92f31.002.2,2026-10-18T11:02:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.523cfd40838f89a4c2dee3d1c22dbaad7c188f65.002.2,2026-10-18T03:24:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.13ae7e1da47230cfff91b99011363c9ace051d59.002.2,2026-10-17T20:33:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.1c2331befea2bbe6962538ac28872fa4c0a0a9d8.002.4,2026-10-17T19:40:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.b0ace643ad96eb8e139c9106400a2f229ef03ece.003.2,2026-10-17T15:46:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.f462365b1bb348e8cba6bfb4b4def2f6f738643a.002.2,2026-10-17T05:02:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.c636071d8131427853ca9202fcfbad16464ef59f.002.3,2026-10-17T03:35:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bd086668dcc450b9de3b2a93bb1d3ce9dc7dfd77.004.2,2026-10-16T20:46:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.58f085d78222bc390b55f288f2220f5d358a6dcf.005.2,2026-10-16T14:55:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "SUY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.002.3",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.002.3",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.002.3",
-                "areaDesc": "Ocracoke Island",
-                "geocode": {
-                    "SAME": [
-                        "037095"
-                    ],
-                    "UGC": [
-                        "NCZ204"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/NCZ204"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.a71a9dc5710c7eae23f815e464cd23dd69db989e.002.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.a71a9dc5710c7eae23f815e464cd23dd69db989e.002.1",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-18T20:56:00-04:00"
-                    }
-                ],
-                "sent": "2026-10-19T02:38:00-04:00",
-                "effective": "2026-10-19T02:38:00-04:00",
-                "onset": "2026-10-19T08:00:00-04:00",
-                "expires": "2026-10-19T15:00:00-04:00",
-                "ends": "2026-10-19T20:00:00-04:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Moderate",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Beach Hazards Statement",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Newport/Morehead City NC",
-                "headline": "Beach Hazards Statement issued October 19 at 2:38AM EDT until October 19 at 8:00PM EDT by NWS Newport/Morehead City NC",
-                "description": "* WHAT...For the Coastal Flood Warning, up to 2 to 4 feet of\ninundation above ground level in low-lying areas near shorelines\nand tidal waterways. For the High Surf Advisory, large breaking\nwaves of 6 to 9 feet in the surf zone. For the Beach Hazards\nStatement, dangerous rip currents, large breaking waves\nexpected, and strong longshore currents in the surf zone.\n\n* WHERE...Ocracoke Island.\n\n* WHEN...For the Coastal Flood Warning, until 5 PM EDT Tuesday.\nFor the Beach Hazards Statement, from 8 AM EDT this morning\nthrough this evening.\n\n* IMPACTS...Up to 2 to 4 feet of inundation above ground level is\nexpected in some areas near shorelines and tidal waterways\nresulting in an elevated threat of property damage. Flooding\nwill extend inland from the waterfront threatening some homes\nand businesses. Numerous road closures and flooding of vehicles\nwill be possible. Vulnerable portions of NC-12 may be inundated,\nespecially around high tide. There is a possibility of being\nstranded on Ocracoke for multiple days. This could be life\nthreatening if you have an emergency. Dangerous swimming and\nsurfing conditions and localized beach erosion. Rip currents can\nsweep even the best swimmers away from shore into deeper water.\nDangerous shore break can throw a swimmer or surfer head first\ninto the bottom causing neck and back injuries. Strong longshore\ncurrents will create dangerous swimming conditions.\n\n* ADDITIONAL DETAILS...This is a long duration event with\nuncertainty on when conditions will improve. Significant ocean\noverwash impacts are expected at vulnerable oceanside areas\nthrough multiple high tide cycles into the work week. Minor\nsoundside water level rises will also be possible.",
-                "instruction": "Take the necessary actions to protect flood-prone property. If\ntravel is required, do not drive around barricades or through\nwater of unknown depth.\n\nSwimmers should remain out of the water due to dangerous surf\nconditions.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "CFWMHX"
-                    ],
-                    "WMOidentifier": [
-                        "WHUS42 KMHX 190638"
-                    ],
-                    "NWSheadline": [
-                        "COASTAL FLOOD WARNING REMAINS IN EFFECT UNTIL 5 PM EDT TUESDAY... ...HIGH SURF ADVISORY REMAINS IN EFFECT UNTIL 5 PM EDT TUESDAY... ...BEACH HAZARDS STATEMENT REMAINS IN EFFECT FROM 8 AM EDT THIS MORNING THROUGH THIS EVENING"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.KMHX.BH.S.0072.261019T1200Z-261020T0000Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-19T20:00:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "BHS"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.004.1",
-            "type": "Feature",
-            "geome
+                        "WHUS7
