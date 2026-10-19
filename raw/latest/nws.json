@@ -10,13 +10,108 @@
     "type": "FeatureCollection",
     "features": [
         {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0-KEEPALIVE-19795",
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.820cf674a59368d6c98fc9cab5c5fa52051f3271.001.1",
             "type": "Feature",
             "geometry": null,
             "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0-KEEPALIVE-19795",
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.820cf674a59368d6c98fc9cab5c5fa52051f3271.001.1",
                 "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0-KEEPALIVE-19795",
+                "id": "urn:oid:2.49.0.1.840.0.820cf674a59368d6c98fc9cab5c5fa52051f3271.001.1",
+                "areaDesc": "Central and Southeast Phillips; Central and Southern Valley; Petroleum; Garfield; McCone",
+                "geocode": {
+                    "SAME": [
+                        "030071",
+                        "030105",
+                        "030069",
+                        "030033",
+                        "030055"
+                    ],
+                    "UGC": [
+                        "MTZ016",
+                        "MTZ017",
+                        "MTZ021",
+                        "MTZ022",
+                        "MTZ023"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/MTZ016",
+                    "https://api.weather.gov/zones/forecast/MTZ017",
+                    "https://api.weather.gov/zones/forecast/MTZ021",
+                    "https://api.weather.gov/zones/forecast/MTZ022",
+                    "https://api.weather.gov/zones/forecast/MTZ023"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b501197c81d1d9e414f6092f4218f81b06252be6.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.b501197c81d1d9e414f6092f4218f81b06252be6.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-18T11:53:00-06:00"
+                    }
+                ],
+                "sent": "2026-10-19T11:58:00-06:00",
+                "effective": "2026-10-19T11:58:00-06:00",
+                "onset": "2026-10-19T11:58:00-06:00",
+                "expires": "2026-10-19T18:00:00-06:00",
+                "ends": "2026-10-19T18:00:00-06:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Lake Wind Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Glasgow MT",
+                "headline": "Lake Wind Advisory issued October 19 at 11:58AM MDT until October 19 at 6:00PM MDT by NWS Glasgow MT",
+                "description": "* WHAT...Southeast winds 15 to 25 mph with gusts up to 30 mph\nexpected.\n\n* WHERE...Fort Peck Lake.\n\n* WHEN...Until 6 PM MDT this evening.\n\n* IMPACTS...Strong winds and rough waves on area lakes will create\nhazardous conditions for small craft.\n\n* ADDITIONAL DETAILS...Wave heights up to 5 feet are possible.",
+                "instruction": "Boaters on Fort Peck Lake should use extra caution since strong winds\nand rough waves can overturn small craft.",
+                "response": "Execute",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "NPWGGW"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS75 KGGW 191758"
+                    ],
+                    "NWSheadline": [
+                        "LAKE WIND ADVISORY NOW IN EFFECT UNTIL 6 PM MDT THIS EVENING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.EXT.KGGW.LW.Y.0051.000000T0000Z-261020T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-19T18:00:00-06:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "LWY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0-KEEPALIVE-35456",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0-KEEPALIVE-35456",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0-KEEPALIVE-35456",
                 "areaDesc": "Montgomery",
                 "geocode": {
                     "SAME": [
@@ -30,10 +125,10 @@
                     "https://api.weather.gov/zones/county/MDC031"
                 ],
                 "references": [],
-                "sent": "2026-10-19T16:55:14+00:00",
-                "effective": "2026-10-19T16:55:14+00:00",
+                "sent": "2026-10-19T17:55:14+00:00",
+                "effective": "2026-10-19T17:55:14+00:00",
                 "onset": null,
-                "expires": "2026-10-19T17:05:14+00:00",
+                "expires": "2026-10-19T18:05:14+00:00",
                 "ends": null,
                 "status": "Test",
                 "messageType": "Alert",
@@ -54,7 +149,7 @@
                         "KEPWBC"
                     ],
                     "WMOidentifier": [
-                        "NZUS91 KWBC 191655"
+                        "NZUS91 KWBC 191755"
                     ],
                     "BLOCKCHANNEL": [
                         "CMAS",
@@ -72,6 +167,965 @@
                     ],
                     "NationalWeatherService": [
                         "TST"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.85a98ff864cd29d07b779f81349df8576f1bc14c.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.85a98ff864cd29d07b779f81349df8576f1bc14c.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.85a98ff864cd29d07b779f81349df8576f1bc14c.001.1",
+                "areaDesc": "Waters from Intracoastal City to Cameron LA from 20 to 60 NM; Waters from Lower Atchafalaya River to Intracoastal City LA from 20 to 60 NM",
+                "geocode": {
+                    "SAME": [
+                        "077472",
+                        "077475"
+                    ],
+                    "UGC": [
+                        "GMZ472",
+                        "GMZ475"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/GMZ472",
+                    "https://api.weather.gov/zones/forecast/GMZ475"
+                ],
+                "references": [],
+                "sent": "2026-10-19T12:47:00-05:00",
+                "effective": "2026-10-19T12:47:00-05:00",
+                "onset": "2026-10-20T01:00:00-05:00",
+                "expires": "2026-10-20T13:00:00-05:00",
+                "ends": "2026-10-20T13:00:00-05:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Small Craft Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Lake Charles LA",
+                "headline": "Small Craft Advisory issued October 19 at 12:47PM CDT until October 20 at 1:00PM CDT by NWS Lake Charles LA",
+                "description": "* WHAT...East winds 15 to 25 kt and seas 5 to 8 ft expected.\n\n* WHERE...Coastal waters from Intracoastal City to Cameron LA\nfrom 20 to 60 NM and Coastal waters from Lower Atchafalaya\nRiver to Intracoastal City LA from 20 to 60 NM.\n\n* WHEN...From 1 AM to 1 PM CDT Tuesday.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
+                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "MWWLCH"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS74 KLCH 191747"
+                    ],
+                    "NWSheadline": [
+                        "SMALL CRAFT ADVISORY IN EFFECT FROM 1 AM TO 1 PM CDT TUESDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.NEW.KLCH.SC.Y.0034.261020T0600Z-261020T1800Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-20T13:00:00-05:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "SCY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.f792144e9e580282e010855080b5368a3d7bacdc.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.f792144e9e580282e010855080b5368a3d7bacdc.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.f792144e9e580282e010855080b5368a3d7bacdc.001.1",
+                "areaDesc": "Fleming; Montgomery; Bath; Rowan; Estill; Powell; Menifee; Jackson; Laurel; McCreary; Whitley; Knox; Bell; Harlan; Elliott; Morgan; Johnson; Wolfe; Magoffin; Floyd; Lee; Breathitt; Knott; Owsley; Perry; Clay; Leslie; Letcher; Martin; Pike",
+                "geocode": {
+                    "SAME": [
+                        "021069",
+                        "021173",
+                        "021011",
+                        "021205",
+                        "021065",
+                        "021197",
+                        "021165",
+                        "021109",
+                        "021125",
+                        "021147",
+                        "021235",
+                        "021121",
+                        "021013",
+                        "021095",
+                        "021063",
+                        "021175",
+                        "021115",
+                        "021237",
+                        "021153",
+                        "021071",
+                        "021129",
+                        "021025",
+                        "021119",
+                        "021189",
+                        "021193",
+                        "021051",
+                        "021131",
+                        "021133",
+                        "021159",
+                        "021195"
+                    ],
+                    "UGC": [
+                        "KYZ044",
+                        "KYZ050",
+                        "KYZ051",
+                        "KYZ052",
+                        "KYZ058",
+                        "KYZ059",
+                        "KYZ060",
+                        "KYZ069",
+                        "KYZ080",
+                        "KYZ084",
+                        "KYZ085",
+                        "KYZ086",
+                        "KYZ087",
+                        "KYZ088",
+                        "KYZ104",
+                        "KYZ106",
+                        "KYZ107",
+                        "KYZ108",
+                        "KYZ109",
+                        "KYZ110",
+                        "KYZ111",
+                        "KYZ112",
+                        "KYZ113",
+                        "KYZ114",
+                        "KYZ115",
+                        "KYZ116",
+                        "KYZ117",
+                        "KYZ118",
+                        "KYZ119",
+                        "KYZ120"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/KYZ044",
+                    "https://api.weather.gov/zones/forecast/KYZ050",
+                    "https://api.weather.gov/zones/forecast/KYZ051",
+                    "https://api.weather.gov/zones/forecast/KYZ052",
+                    "https://api.weather.gov/zones/forecast/KYZ058",
+                    "https://api.weather.gov/zones/forecast/KYZ059",
+                    "https://api.weather.gov/zones/forecast/KYZ060",
+                    "https://api.weather.gov/zones/forecast/KYZ069",
+                    "https://api.weather.gov/zones/forecast/KYZ080",
+                    "https://api.weather.gov/zones/forecast/KYZ084",
+                    "https://api.weather.gov/zones/forecast/KYZ085",
+                    "https://api.weather.gov/zones/forecast/KYZ086",
+                    "https://api.weather.gov/zones/forecast/KYZ087",
+                    "https://api.weather.gov/zones/forecast/KYZ088",
+                    "https://api.weather.gov/zones/forecast/KYZ104",
+                    "https://api.weather.gov/zones/forecast/KYZ106",
+                    "https://api.weather.gov/zones/forecast/KYZ107",
+                    "https://api.weather.gov/zones/forecast/KYZ108",
+                    "https://api.weather.gov/zones/forecast/KYZ109",
+                    "https://api.weather.gov/zones/forecast/KYZ110",
+                    "https://api.weather.gov/zones/forecast/KYZ111",
+                    "https://api.weather.gov/zones/forecast/KYZ112",
+                    "https://api.weather.gov/zones/forecast/KYZ113",
+                    "https://api.weather.gov/zones/forecast/KYZ114",
+                    "https://api.weather.gov/zones/forecast/KYZ115",
+                    "https://api.weather.gov/zones/forecast/KYZ116",
+                    "https://api.weather.gov/zones/forecast/KYZ117",
+                    "https://api.weather.gov/zones/forecast/KYZ118",
+                    "https://api.weather.gov/zones/forecast/KYZ119",
+                    "https://api.weather.gov/zones/forecast/KYZ120"
+                ],
+                "references": [],
+                "sent": "2026-10-19T13:40:00-04:00",
+                "effective": "2026-10-19T13:40:00-04:00",
+                "onset": "2026-10-19T13:40:00-04:00",
+                "expires": "2026-10-19T19:45:00-04:00",
+                "ends": null,
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Observed",
+                "urgency": "Expected",
+                "event": "Special Weather Statement",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Jackson KY",
+                "headline": "Special Weather Statement issued October 19 at 1:40PM EDT by NWS Jackson KY",
+                "description": "Clear skies and light winds will allow temperatures to fall into\nthe upper 30s to lower 40s in most locations late tonight, except\ninto the mid 30s through the sheltered rural valleys. In the\nsheltered rural valleys, these temperatures will be cold enough\nfor patchy frost formation. Cold-sensitive vegetation may be\ndamaged.",
+                "instruction": null,
+                "response": "Execute",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "SPSJKL"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS83 KJKL 191740"
+                    ],
+                    "NWSheadline": [
+                        "Patchy Frost Late Tonight into Tuesday Morning in Sheltered Rural Valleys"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "EAS-ORG": [
+                        "WXR"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "SPS"
+                    ],
+                    "NationalWeatherService": [
+                        "SPS"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.eac394401053d868088711731e9bd37943005817.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.eac394401053d868088711731e9bd37943005817.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.eac394401053d868088711731e9bd37943005817.001.1",
+                "areaDesc": "Coastal Waters from Eastport, ME to Schoodic Point, ME out 25 NM; Coastal Waters from Schoodic Point, ME to Stonington, ME out 25 NM",
+                "geocode": {
+                    "SAME": [
+                        "073050",
+                        "073051"
+                    ],
+                    "UGC": [
+                        "ANZ050",
+                        "ANZ051"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/ANZ050",
+                    "https://api.weather.gov/zones/forecast/ANZ051"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.3eb4de648ed9bb8fe12fdfd9b7789e7b6e3e96a0.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.3eb4de648ed9bb8fe12fdfd9b7789e7b6e3e96a0.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-19T01:44:00-04:00"
+                    }
+                ],
+                "sent": "2026-10-19T13:36:00-04:00",
+                "effective": "2026-10-19T13:36:00-04:00",
+                "onset": "2026-10-20T08:00:00-04:00",
+                "expires": "2026-10-19T21:45:00-04:00",
+                "ends": "2026-10-21T06:00:00-04:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Small Craft Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Caribou ME",
+                "headline": "Small Craft Advisory issued October 19 at 1:36PM EDT until October 21 at 6:00AM EDT by NWS Caribou ME",
+                "description": "* WHAT...North winds 10 to 20 kt with gusts up to 30 kt and seas\n3 to 5 ft expected.\n\n* WHERE...Coastal Waters from Eastport, ME to Schoodic Point, ME\nout 25 NM and Coastal Waters from Schoodic Point, ME to\nStonington, ME out 25 NM.\n\n* WHEN...From 8 AM Tuesday to 6 AM EDT Wednesday.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
+                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "MWWCAR"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS71 KCAR 191736"
+                    ],
+                    "NWSheadline": [
+                        "SMALL CRAFT ADVISORY REMAINS IN EFFECT FROM 8 AM TUESDAY TO 6 AM EDT WEDNESDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KCAR.SC.Y.0076.261020T1200Z-261021T1000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-21T06:00:00-04:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "SCY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.12896c7841cc2a25b996930748abf73f55a0d25d.001.1",
+            "type": "Feature",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            -66.14,
+                            18.36
+                        ],
+                        [
+                            -66.12,
+                            18.38
+                        ],
+                        [
+                            -66.11,
+                            18.43
+                        ],
+                        [
+                            -66.08,
+                            18.44
+                        ],
+                        [
+                            -66.08,
+                            18.43
+                        ],
+                        [
+                            -66.09,
+                            18.42
+                        ],
+                        [
+                            -66.04,
+                            18.43
+                        ],
+                        [
+                            -66.08,
+                            18.45
+                        ],
+                        [
+                            -66.08,
+                            18.46
+                        ],
+                        [
+                            -66.09,
+                            18.47
+                        ],
+                        [
+                            -65.91,
+                            18.38
+                        ],
+                        [
+                            -65.92,
+                            18.37
+                        ],
+                        [
+                            -65.95,
+                            18.32
+                        ],
+                        [
+                            -66.14,
+                            18.34
+                        ],
+                        [
+                            -66.14,
+                            18.36
+                        ]
+                    ]
+                ]
+            },
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.12896c7841cc2a25b996930748abf73f55a0d25d.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.12896c7841cc2a25b996930748abf73f55a0d25d.001.1",
+                "areaDesc": "Carolina, PR; Guaynabo, PR; San Juan, PR; Trujillo Alto, PR",
+                "geocode": {
+                    "SAME": [
+                        "072031",
+                        "072061",
+                        "072127",
+                        "072139"
+                    ],
+                    "UGC": [
+                        "PRC031",
+                        "PRC061",
+                        "PRC127",
+                        "PRC139"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/county/PRC031",
+                    "https://api.weather.gov/zones/county/PRC061",
+                    "https://api.weather.gov/zones/county/PRC127",
+                    "https://api.weather.gov/zones/county/PRC139"
+                ],
+                "references": [],
+                "sent": "2026-10-19T13:28:00-04:00",
+                "effective": "2026-10-19T13:28:00-04:00",
+                "onset": "2026-10-19T13:28:00-04:00",
+                "expires": "2026-10-19T16:15:00-04:00",
+                "ends": "2026-10-19T16:15:00-04:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Immediate",
+                "event": "Flash Flood Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS San Juan PR",
+                "headline": "Flash Flood Warning issued October 19 at 1:28PM AST until October 19 at 4:15PM AST by NWS San Juan PR",
+                "description": "FFWSJU\n\nThe National Weather Service in San Juan has issued a\n\n* Flash Flood Warning for...\nNorthern Carolina in Puerto Rico...\nNorthern Guaynabo in Puerto Rico...\nSan Juan in Puerto Rico...\nTrujillo Alto in Puerto Rico...\n\n* Until 415 PM AST.\n\n* At 128 PM AST, Doppler radar indicated thunderstorms producing\nheavy rain across the warned area. Between 1 and 2 inches of rain\nhave fallen. Additional rainfall amounts of 1 to 2 inches are\npossible in the warned area. Flash flooding is ongoing or expected\nto begin shortly.\n\nHAZARD...Flash flooding caused by thunderstorms.\n\nSOURCE...Radar indicated.\n\nIMPACT...Flash flooding of small creeks and streams, urban areas,\nhighways, streets and underpasses as well as other poor\ndrainage and low-lying areas.",
+                "instruction": "Turn around, don't drown when encountering flooded roads. Most flood\ndeaths occur in vehicles.\n\nBe aware of your surroundings and do not drive on flooded roads.\n\nPlease report observed flooding to local emergency services or law\nenforcement and request they pass this information to the National\nWeather Service when you can do so safely.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "FFWSJU"
+                    ],
+                    "WMOidentifier": [
+                        "WGCA52 TJSJ 191728"
+                    ],
+                    "flashFloodDetection": [
+                        "RADAR INDICATED"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "EAS-ORG": [
+                        "WXR"
+                    ],
+                    "VTEC": [
+                        "/O.NEW.TJSJ.FF.W.0035.261019T1728Z-261019T2015Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-19T16:15:00-04:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "FFW"
+                    ],
+                    "NationalWeatherService": [
+                        "FFW"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.f394f86b2648dc76d90792603341ff314c751113.003.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.f394f86b2648dc76d90792603341ff314c751113.003.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.f394f86b2648dc76d90792603341ff314c751113.003.1",
+                "areaDesc": "St.Thomas...St. John.. and Adjacent Islands",
+                "geocode": {
+                    "SAME": [
+                        "078020",
+                        "078030"
+                    ],
+                    "UGC": [
+                        "VIZ001"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/VIZ001"
+                ],
+                "references": [],
+                "sent": "2026-10-19T13:10:00-04:00",
+                "effective": "2026-10-19T13:10:00-04:00",
+                "onset": "2026-10-20T18:00:00-04:00",
+                "expires": "2026-10-19T21:15:00-04:00",
+                "ends": "2026-10-21T08:00:00-04:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Rip Current Statement",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS San Juan PR",
+                "headline": "Rip Current Statement issued October 19 at 1:10PM AST until October 21 at 8:00AM AST by NWS San Juan PR",
+                "description": "* WHAT...High Rip Current Risk, life-threatening rip current.\n\n* WHERE...the north-facing beaches.\n\n* WHEN...from Tuesday evening through Wednesday morning.\n\n* IMPACTS...Rip currents can sweep even the best swimmers away\nfrom shore into deeper water, where it becomes difficult to\nreturn to safety.",
+                "instruction": "There is a high risk of rip currents.\n\nRip currents are powerful channels of water flowing quickly away\nfrom shore, which occur most often at low spots or breaks in the\nsandbar and in the vicinity of structures such as groins, jetties\nand piers. Heed the advice of lifeguards, beach patrol flags and\nsigns.\n\nIf you become caught in a rip current, yell for help. Remain\ncalm, do not exhaust yourself and stay afloat while waiting for\nhelp. If you have to swim out of a rip current, swim parallel to\nshore and back toward the beach when possible. Do not attempt to\nswim directly against a rip current as you will tire quickly.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "CFWSJU"
+                    ],
+                    "WMOidentifier": [
+                        "WHCA42 TJSJ 191710"
+                    ],
+                    "NWSheadline": [
+                        "HIGH RIP CURRENT RISK IN EFFECT FROM TUESDAY EVENING THROUGH WEDNESDAY MORNING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.NEW.TJSJ.RP.S.0022.261020T2200Z-261021T1200Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-21T08:00:00-04:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "RPS"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.f394f86b2648dc76d90792603341ff314c751113.002.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.f394f86b2648dc76d90792603341ff314c751113.002.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.f394f86b2648dc76d90792603341ff314c751113.002.1",
+                "areaDesc": "Culebra",
+                "geocode": {
+                    "SAME": [
+                        "072049"
+                    ],
+                    "UGC": [
+                        "PRZ012"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/PRZ012"
+                ],
+                "references": [],
+                "sent": "2026-10-19T13:10:00-04:00",
+                "effective": "2026-10-19T13:10:00-04:00",
+                "onset": "2026-10-20T02:00:00-04:00",
+                "expires": "2026-10-19T21:15:00-04:00",
+                "ends": "2026-10-21T08:00:00-04:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Rip Current Statement",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS San Juan PR",
+                "headline": "Rip Current Statement issued October 19 at 1:10PM AST until October 21 at 8:00AM AST by NWS San Juan PR",
+                "description": "* WHAT...High Rip Current Risk, life-threatening rip current.\n\n* WHERE...the north-facing beaches.\n\n* WHEN...from late tonight through Wednesday morning.\n\n* IMPACTS...Rip currents can sweep even the best swimmers away\nfrom shore into deeper water, where it becomes difficult to\nreturn to safety.",
+                "instruction": "There is a high risk of rip currents.\n\nRip currents are powerful channels of water flowing quickly away\nfrom shore, which occur most often at low spots or breaks in the\nsandbar and in the vicinity of structures such as groins, jetties\nand piers. Heed the advice of lifeguards, beach patrol flags and\nsigns.\n\nIf you become caught in a rip current, yell for help. Remain\ncalm, do not exhaust yourself and stay afloat while waiting for\nhelp. If you have to swim out of a rip current, swim parallel to\nshore and back toward the beach when possible. Do not attempt to\nswim directly against a rip current as you will tire quickly.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "CFWSJU"
+                    ],
+                    "WMOidentifier": [
+                        "WHCA42 TJSJ 191710"
+                    ],
+                    "NWSheadline": [
+                        "HIGH RIP CURRENT RISK IN EFFECT FROM LATE TONIGHT THROUGH WEDNESDAY MORNING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.NEW.TJSJ.RP.S.0022.261020T0600Z-261021T1200Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-21T08:00:00-04:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "RPS"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.f394f86b2648dc76d90792603341ff314c751113.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.f394f86b2648dc76d90792603341ff314c751113.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.f394f86b2648dc76d90792603341ff314c751113.001.1",
+                "areaDesc": "San Juan and Vicinity; Northeast; North Central; Northwest; Mayaguez and Vicinity",
+                "geocode": {
+                    "SAME": [
+                        "072021",
+                        "072031",
+                        "072033",
+                        "072061",
+                        "072127",
+                        "072135",
+                        "072137",
+                        "072139",
+                        "072029",
+                        "072037",
+                        "072053",
+                        "072069",
+                        "072087",
+                        "072089",
+                        "072103",
+                        "072119",
+                        "072013",
+                        "072017",
+                        "072051",
+                        "072054",
+                        "072091",
+                        "072143",
+                        "072145",
+                        "072005",
+                        "072027",
+                        "072065",
+                        "072071",
+                        "072115",
+                        "072003",
+                        "072011",
+                        "072067",
+                        "072097",
+                        "072099",
+                        "072117",
+                        "072125"
+                    ],
+                    "UGC": [
+                        "PRZ001",
+                        "PRZ002",
+                        "PRZ005",
+                        "PRZ008",
+                        "PRZ010"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/PRZ001",
+                    "https://api.weather.gov/zones/forecast/PRZ002",
+                    "https://api.weather.gov/zones/forecast/PRZ005",
+                    "https://api.weather.gov/zones/forecast/PRZ008",
+                    "https://api.weather.gov/zones/forecast/PRZ010"
+                ],
+                "references": [],
+                "sent": "2026-10-19T13:10:00-04:00",
+                "effective": "2026-10-19T13:10:00-04:00",
+                "onset": "2026-10-20T02:00:00-04:00",
+                "expires": "2026-10-19T21:15:00-04:00",
+                "ends": "2026-10-20T18:00:00-04:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "High Surf Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS San Juan PR",
+                "headline": "High Surf Advisory issued October 19 at 1:10PM AST until October 20 at 6:00PM AST by NWS San Juan PR",
+                "description": "* WHAT...For the High Surf Advisory, large breaking waves of 8 to\n12 feet. For the HIGH RIP CURRENT RISK, life-threatening rip\ncurrent.\n\n* WHERE...For the HIGH SURF ADVISORY and HIGH RIP CURRENT, the\nmost vulnerable areas are the exposed northwesterly and north-\nfacing beaches.\n\n* WHEN...For the High Surf Advisory from 2 AM to 6 PM AST\ntuesday. For the High Rip Current Risk from late tonight\nthrough Wednesday morning\n\n* IMPACTS...FOR THE HIGH SURF ADVISORY, High waves that can wash\nover jetties and sweep people and pets onto jagged rocks.\nRough surf may also knock you down. Large breaking waves will\nresult in localized beach/dune structure erosion and dangerous\nswimming conditions. FOR THE HIGH RIP CURRENT RISK, rip\ncurrents can sweep even the best swimmers away from shore into\ndeeper water, where it becomes difficult to return to safety.",
+                "instruction": "A High Surf Advisory means that high surf will affect beaches in\nthe advisory area, producing localized beach erosion and\ndangerous swimming conditions.\n\nThere is a high risk of rip currents.\n\nRip currents are powerful channels of water flowing quickly away\nfrom shore, which occur most often at low spots or breaks in the\nsandbar and in the vicinity of structures such as groins, jetties\nand piers. Heed the advice of lifeguards, beach patrol flags and\nsigns.\n\nIf you become caught in a rip current, yell for help. Remain\ncalm, do not exhaust yourself and stay afloat while waiting for\nhelp. If you have to swim out of a rip current, swim parallel to\nshore and back toward the beach when possible. Do not attempt to\nswim directly against a rip current as you will tire quickly.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "CFWSJU"
+                    ],
+                    "WMOidentifier": [
+                        "WHCA42 TJSJ 191710"
+                    ],
+                    "NWSheadline": [
+                        "HIGH SURF ADVISORY IN EFFECT FROM 2 AM TO 6 PM AST TUESDAY... ...HIGH RIP CURRENT RISK IN EFFECT FROM LATE TONIGHT THROUGH WEDNESDAY MORNING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.NEW.TJSJ.SU.Y.0006.261020T0600Z-261020T2200Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-20T18:00:00-04:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "SUY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.f394f86b2648dc76d90792603341ff314c751113.001.2",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.f394f86b2648dc76d90792603341ff314c751113.001.2",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.f394f86b2648dc76d90792603341ff314c751113.001.2",
+                "areaDesc": "San Juan and Vicinity; Northeast; North Central; Northwest; Mayaguez and Vicinity",
+                "geocode": {
+                    "SAME": [
+                        "072021",
+                        "072031",
+                        "072033",
+                        "072061",
+                        "072127",
+                        "072135",
+                        "072137",
+                        "072139",
+                        "072029",
+                        "072037",
+                        "072053",
+                        "072069",
+                        "072087",
+                        "072089",
+                        "072103",
+                        "072119",
+                        "072013",
+                        "072017",
+                        "072051",
+                        "072054",
+                        "072091",
+                        "072143",
+                        "072145",
+                        "072005",
+                        "072027",
+                        "072065",
+                        "072071",
+                        "072115",
+                        "072003",
+                        "072011",
+                        "072067",
+                        "072097",
+                        "072099",
+                        "072117",
+                        "072125"
+                    ],
+                    "UGC": [
+                        "PRZ001",
+                        "PRZ002",
+                        "PRZ005",
+                        "PRZ008",
+                        "PRZ010"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/PRZ001",
+                    "https://api.weather.gov/zones/forecast/PRZ002",
+                    "https://api.weather.gov/zones/forecast/PRZ005",
+                    "https://api.weather.gov/zones/forecast/PRZ008",
+                    "https://api.weather.gov/zones/forecast/PRZ010"
+                ],
+                "references": [],
+                "sent": "2026-10-19T13:10:00-04:00",
+                "effective": "2026-10-19T13:10:00-04:00",
+                "onset": "2026-10-20T02:00:00-04:00",
+                "expires": "2026-10-19T21:15:00-04:00",
+                "ends": "2026-10-21T08:00:00-04:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Rip Current Statement",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS San Juan PR",
+                "headline": "Rip Current Statement issued October 19 at 1:10PM AST until October 21 at 8:00AM AST by NWS San Juan PR",
+                "description": "* WHAT...For the High Surf Advisory, large breaking waves of 8 to\n12 feet. For the HIGH RIP CURRENT RISK, life-threatening rip\ncurrent.\n\n* WHERE...For the HIGH SURF ADVISORY and HIGH RIP CURRENT, the\nmost vulnerable areas are the exposed northwesterly and north-\nfacing beaches.\n\n* WHEN...For the High Surf Advisory from 2 AM to 6 PM AST\ntuesday. For the High Rip Current Risk from late tonight\nthrough Wednesday morning\n\n* IMPACTS...FOR THE HIGH SURF ADVISORY, High waves that can wash\nover jetties and sweep people and pets onto jagged rocks.\nRough surf may also knock you down. Large breaking waves will\nresult in localized beach/dune structure erosion and dangerous\nswimming conditions. FOR THE HIGH RIP CURRENT RISK, rip\ncurrents can sweep even the best swimmers away from shore into\ndeeper water, where it becomes difficult to return to safety.",
+                "instruction": "A High Surf Advisory means that high surf will affect beaches in\nthe advisory area, producing localized beach erosion and\ndangerous swimming conditions.\n\nThere is a high risk of rip currents.\n\nRip currents are powerful channels of water flowing quickly away\nfrom shore, which occur most often at low spots or breaks in the\nsandbar and in the vicinity of structures such as groins, jetties\nand piers. Heed the advice of lifeguards, beach patrol flags and\nsigns.\n\nIf you become caught in a rip current, yell for help. Remain\ncalm, do not exhaust yourself and stay afloat while waiting for\nhelp. If you have to swim out of a rip current, swim parallel to\nshore and back toward the beach when possible. Do not attempt to\nswim directly against a rip current as you will tire quickly.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "CFWSJU"
+                    ],
+                    "WMOidentifier": [
+                        "WHCA42 TJSJ 191710"
+                    ],
+                    "NWSheadline": [
+                        "HIGH SURF ADVISORY IN EFFECT FROM 2 AM TO 6 PM AST TUESDAY... ...HIGH RIP CURRENT RISK IN EFFECT FROM LATE TONIGHT THROUGH WEDNESDAY MORNING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.NEW.TJSJ.RP.S.0022.261020T0600Z-261021T1200Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-21T08:00:00-04:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "RPS"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.c7545cb79da2b50af615c2508af483333bb69657.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.c7545cb79da2b50af615c2508af483333bb69657.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.c7545cb79da2b50af615c2508af483333bb69657.001.1",
+                "areaDesc": "Northern Outer Banks; Ocracoke Island; Hatteras Island",
+                "geocode": {
+                    "SAME": [
+                        "037055",
+                        "037095"
+                    ],
+                    "UGC": [
+                        "NCZ203",
+                        "NCZ204",
+                        "NCZ205"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/NCZ203",
+                    "https://api.weather.gov/zones/forecast/NCZ204",
+                    "https://api.weather.gov/zones/forecast/NCZ205"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.365c0c79cb03761bde95a3d8b75fb42a1d479857.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.365c0c79cb03761bde95a3d8b75fb42a1d479857.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-19T02:08:00-04:00"
+                    }
+                ],
+                "sent": "2026-10-19T13:01:00-04:00",
+                "effective": "2026-10-19T13:01:00-04:00",
+                "onset": "2026-10-19T13:01:00-04:00",
+                "expires": "2026-10-20T04:00:00-04:00",
+                "ends": "2026-10-20T18:00:00-04:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Wind Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Newport/Morehead City NC",
+                "headline": "Wind Advisory issued October 19 at 1:01PM EDT until October 20 at 6:00PM EDT by NWS Newport/Morehead City NC",
+                "description": "* WHAT...North winds 25 to 35 mph with gusts up to 50 mph.\n\n* WHERE...Hatteras Island, Northern Outer Banks, and Ocracoke Island.\n\n* WHEN...Until 6 PM EDT Tuesday.\n\n* IMPACTS...Gusty winds will blow around unsecured objects. Tree\nlimbs could be blown down and a few power outages may result.",
+                "instruction": "Winds this strong can make driving difficult, especially for high\nprofile vehicles. Use extra caution.\n\nSecure outdoor objects.",
+                "response": "Execute",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "NPWMHX"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS72 KMHX 191701"
+                    ],
+                    "NWSheadline": [
+                        "WIND ADVISORY REMAINS IN EFFECT UNTIL 6 PM EDT TUESDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KMHX.WI.Y.0009.000000T0000Z-261020T2200Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-20T18:00:00-04:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.a2e1b800c157a7bb9e592b3fe0c4a62c5c1ce05b.002.1,2026-10-18T11:27:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.f43e6146ea956702b44b5f32f95b517e5ea59096.003.1,2026-10-18T02:36:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.49371078c9c6eb78cdd4b1a7b6e6f1aeecafad2e.003.1,2026-10-17T20:26:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.63364f387940b1a884141ebe5f1ff2b1102ac72c.003.1,2026-10-17T14:14:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.3b12582dd89c931cba328678b6e37ca9ae195d38.003.1,2026-10-17T14:11:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.393674ab350f33f7d89a5ad7def92aa394d2608e.002.1,2026-10-17T03:02:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.ad4df7c652a9aea0b8cdc5f41ad937f4cc4197b8.002.2,2026-10-17T02:59:00-04:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "WIY"
                     ]
                 }
             }
@@ -2778,703 +3832,4 @@
                 "senderName": "NWS Newport/Morehead City NC",
                 "headline": "Beach Hazards Statement issued October 19 at 10:05AM EDT until October 19 at 8:00PM EDT by NWS Newport/Morehead City NC",
                 "description": "* WHAT...For the Coastal Flood Warning, 2 to 4 feet of inundation\nabove ground level in low-lying areas near shorelines and tidal\nwaterways. For the High Surf Advisory, large breaking waves of\n10 to 14 feet in the surf zone. For the Beach Hazards\nStatement, dangerous rip currents, large breaking waves\nexpected, and strong longshore currents in the surf zone.\n\n* WHERE...Hatteras Island.\n\n* WHEN...For the Coastal Flood Warning, until 8 PM EDT\nWednesday. For the High Surf Advisory, until 6 AM EDT\nThursday. For the Beach Hazards Statement, until 8 PM EDT this\nevening.\n\n* IMPACTS...Up to 2 to 4 feet of inundation above ground level\nis expected in some areas near shorelines and tidal waterways\nresulting in an elevated threat of property damage. Flooding\nwill extend inland from the waterfront threatening some homes\nand businesses. Numerous road closures and flooding of\nvehicles will be possible. Vulnerable portions of NC-12 may be\ninundated, especially around high tide. There is a possibility\nof being stranded on Hatteras Island for multiple days. This\ncould be life threatening if you have an emergency. Dangerous\nswimming and surfing conditions and localized beach erosion.\nRip currents can sweep even the best swimmers away from shore\ninto deeper water. Dangerous shore break can throw a swimmer\nor surfer head first into the bottom causing neck and back\ninjuries. Strong longshore currents will create dangerous\nswimming conditions.\n\n* ADDITIONAL DETAILS...This is a long duration event with\nuncertainty on when conditions will improve. Significant ocean\noverwash impacts are expected at vulnerable oceanside areas\nthrough multiple high tide cycles into mid week. Minor\nsoundside water level rises will also be possible.",
-                "instruction": "Take the necessary actions to protect flood-prone property. If\ntravel is required, do not drive around barricades or through\nwater of unknown depth.\n\nInexperienced swimmers should remain out of the water due to\ndangerous surf conditions.\n\nLife-threatening rip currents. If caught in a rip current, remain\ncalm. Swim in a direction following the shoreline. If tired,\nfloat or tread water until out of the rip current. If unable to\nescape, face the shore and call or wave for help.\n\nShore break occurs when waves break directly on the beach. It is\nextremely important to protect your head and neck whenever you\nare in breaking waves by keeping your hands in front of you at\nall times.\n\nStrong longshore currents can sweep swimmers and surfers into rip\ncurrents, piers, jetties and other hazardous areas. In many\ncases, the longshore current is strong enough to prevent swimmers\nfrom being able to keep their feet on the bottom making it\ndifficult to return to shore.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "CFWMHX"
-                    ],
-                    "WMOidentifier": [
-                        "WHUS42 KMHX 191405"
-                    ],
-                    "NWSheadline": [
-                        "COASTAL FLOOD WARNING NOW IN EFFECT UNTIL 8 PM EDT WEDNESDAY... ...HIGH SURF ADVISORY REMAINS IN EFFECT UNTIL 6 AM EDT THURSDAY... ...BEACH HAZARDS STATEMENT REMAINS IN EFFECT UNTIL 8 PM EDT THIS EVENING"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.KMHX.BH.S.0072.000000T0000Z-261020T0000Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-19T20:00:00-04:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.a71a9dc5710c7eae23f815e464cd23dd69db989e.001.1,2026-10-18T20:56:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "BHS"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.001.2",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.001.2",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.001.2",
-                "areaDesc": "West Carteret",
-                "geocode": {
-                    "SAME": [
-                        "037031"
-                    ],
-                    "UGC": [
-                        "NCZ195"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/NCZ195"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.005.2",
-                        "identifier": "urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.005.2",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-19T02:38:00-04:00"
-                    }
-                ],
-                "sent": "2026-10-19T10:05:00-04:00",
-                "effective": "2026-10-19T10:05:00-04:00",
-                "onset": "2026-10-19T10:05:00-04:00",
-                "expires": "2026-10-19T20:00:00-04:00",
-                "ends": "2026-10-19T20:00:00-04:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Moderate",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Beach Hazards Statement",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Newport/Morehead City NC",
-                "headline": "Beach Hazards Statement issued October 19 at 10:05AM EDT until October 19 at 8:00PM EDT by NWS Newport/Morehead City NC",
-                "description": "* WHAT...Dangerous rip currents and strong longshore currents in\nthe surf zone.\n\n* WHERE...Bogue Banks beaches.\n\n* WHEN...Until 8 PM EDT this evening.\n\n* IMPACTS...Rip currents can sweep even the best swimmers away\nfrom shore into deeper water. Strong longshore currents will\ncreate dangerous swimming conditions.\n\n* ADDITIONAL DETAILS...The most likely time for strong rip\ncurrents to occur is a couple hours either side of low tide.",
-                "instruction": "Life-threatening rip currents. If caught in a rip current, remain\ncalm. Swim in a direction following the shoreline. If tired,\nfloat or tread water until out of the rip current. If unable to\nescape, face the shore and call or wave for help.\n\nStrong longshore currents can sweep swimmers and surfers into rip\ncurrents, piers, jetties and other hazardous areas. In many\ncases, the longshore current is strong enough to prevent swimmers\nfrom being able to keep their feet on the bottom making it\ndifficult to return to shore.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "CFWMHX"
-                    ],
-                    "WMOidentifier": [
-                        "WHUS42 KMHX 191405"
-                    ],
-                    "NWSheadline": [
-                        "BEACH HAZARDS STATEMENT REMAINS IN EFFECT UNTIL 8 PM EDT THIS EVENING... ...COASTAL FLOOD ADVISORY IS CANCELLED"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.KMHX.BH.S.0072.000000T0000Z-261020T0000Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-19T20:00:00-04:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.a71a9dc5710c7eae23f815e464cd23dd69db989e.005.1,2026-10-18T20:56:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "BHS"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.005.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.005.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.005.1",
-                "areaDesc": "East Carteret",
-                "geocode": {
-                    "SAME": [
-                        "037031"
-                    ],
-                    "UGC": [
-                        "NCZ196"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/NCZ196"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.004.2",
-                        "identifier": "urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.004.2",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-19T02:38:00-04:00"
-                    }
-                ],
-                "sent": "2026-10-19T10:05:00-04:00",
-                "effective": "2026-10-19T10:05:00-04:00",
-                "onset": "2026-10-19T10:05:00-04:00",
-                "expires": "2026-10-19T22:15:00-04:00",
-                "ends": "2026-10-21T08:00:00-04:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Minor",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "High Surf Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Newport/Morehead City NC",
-                "headline": "High Surf Advisory issued October 19 at 10:05AM EDT until October 21 at 8:00AM EDT by NWS Newport/Morehead City NC",
-                "description": "* WHAT...For the Coastal Flood Advisory, up to 1 to 3 feet of\ninundation above ground level in low-lying areas near shorelines\nand tidal waterways. For the High Surf Advisory, large breaking\nwaves of 8 to 10 feet in the surf zone. For the Beach Hazards\nStatement, dangerous rip currents, large breaking waves\nexpected, and strong longshore currents in the surf zone.\n\n* WHERE...East Carteret County.\n\n* WHEN...For the High Surf Advisory, until 8 AM EDT Wednesday.\nFor the Coastal Flood Advisory, until 8 PM EDT this evening.\nFor the Beach Hazards Statement, until 8 PM EDT this evening.\n\n* IMPACTS...Up to 1 to 3 feet of inundation above ground level is\nexpected in low-lying areas near shorelines and tidal waterways\nresulting in a low threat of property damage. Some roads and\nlow lying property including parking lots, parks, lawns, and\nhomes adjacent to the waterfront will experience shallow\nflooding. Dangerous swimming and surfing conditions and\nlocalized beach erosion. Rip currents can sweep even the best\nswimmers away from shore into deeper water. Dangerous shore\nbreak can throw a swimmer or surfer head first into the bottom\ncausing neck and back injuries. Strong longshore currents will\ncreate dangerous swimming conditions.",
-                "instruction": "If travel is required, allow extra time as some roads may be\nclosed. Do not drive around barricades or through water of\nunknown depth. Take the necessary actions to protect flood-prone\nproperty.\n\nInexperienced swimmers should remain out of the water due to\ndangerous surf conditions.\n\nLife-threatening rip currents. If caught in a rip current, remain\ncalm. Swim in a direction following the shoreline. If tired,\nfloat or tread water until out of the rip current. If unable to\nescape, face the shore and call or wave for help.\n\nShore break occurs when waves break directly on the beach. It is\nextremely important to protect your head and neck whenever you\nare in breaking waves by keeping your hands in front of you at\nall times.\n\nStrong longshore currents can sweep swimmers and surfers into rip\ncurrents, piers, jetties and other hazardous areas. In many\ncases, the longshore current is strong enough to prevent swimmers\nfrom being able to keep their feet on the bottom making it\ndifficult to return to shore.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "CFWMHX"
-                    ],
-                    "WMOidentifier": [
-                        "WHUS42 KMHX 191405"
-                    ],
-                    "NWSheadline": [
-                        "HIGH SURF ADVISORY NOW IN EFFECT UNTIL 8 AM EDT WEDNESDAY... ...COASTAL FLOOD ADVISORY REMAINS IN EFFECT UNTIL 8 PM EDT THIS EVENING... ...BEACH HAZARDS STATEMENT REMAINS IN EFFECT UNTIL 8 PM EDT THIS EVENING"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.EXT.KMHX.SU.Y.0008.000000T0000Z-261021T1200Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-21T08:00:00-04:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.a71a9dc5710c7eae23f815e464cd23dd69db989e.004.3,2026-10-18T20:56:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.cb161830b749cbd0e733cc365ccc1a651272c8dc.004.1,2026-10-18T16:04:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.0fa2b1cf35c0ffa63c715482f0e3077ecdd92f31.004.2,2026-10-18T11:02:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.523cfd40838f89a4c2dee3d1c22dbaad7c188f65.004.2,2026-10-18T03:24:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.13ae7e1da47230cfff91b99011363c9ace051d59.004.2,2026-10-17T20:33:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.1c2331befea2bbe6962538ac28872fa4c0a0a9d8.004.4,2026-10-17T19:40:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.b0ace643ad96eb8e139c9106400a2f229ef03ece.005.2,2026-10-17T15:46:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.f462365b1bb348e8cba6bfb4b4def2f6f738643a.004.2,2026-10-17T05:02:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.c636071d8131427853ca9202fcfbad16464ef59f.004.2,2026-10-17T03:35:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bd086668dcc450b9de3b2a93bb1d3ce9dc7dfd77.002.3,2026-10-16T20:46:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.58f085d78222bc390b55f288f2220f5d358a6dcf.002.2,2026-10-16T14:55:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "SUY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.007.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.007.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.007.1",
-                "areaDesc": "Tyrrell",
-                "geocode": {
-                    "SAME": [
-                        "037177"
-                    ],
-                    "UGC": [
-                        "NCZ046"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/NCZ046"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.007.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.007.1",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-19T02:38:00-04:00"
-                    }
-                ],
-                "sent": "2026-10-19T10:05:00-04:00",
-                "effective": "2026-10-19T10:05:00-04:00",
-                "onset": "2026-10-19T10:05:00-04:00",
-                "expires": "2026-10-19T22:15:00-04:00",
-                "ends": "2026-10-20T02:00:00-04:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Minor",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Coastal Flood Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Newport/Morehead City NC",
-                "headline": "Coastal Flood Advisory issued October 19 at 10:05AM EDT until October 20 at 2:00AM EDT by NWS Newport/Morehead City NC",
-                "description": "* WHAT...Up to 1 to 2 feet of inundation above ground level\nexpected in low-lying areas near shorelines and tidal\nwaterways.\n\n* WHERE...Areas along the Albemarle Sound, Alligator River,\nScuppernong River, and adjacent tidal creeks.\n\n* WHEN...Until 2 AM EDT Tuesday.\n\n* IMPACTS...Up to 1 to 2 feet of inundation above ground level\nis expected in low-lying areas near shorelines and tidal\nwaterways resulting in a low threat of property damage. Some\nroads and low lying property including parking lots, parks,\nlawns, and homes adjacent to the waterfront will experience\nshallow flooding. Flooding will impact portions of Highway 94\naround Northwest Fork, with water over the roadway in spots.",
-                "instruction": "If travel is required, allow extra time as some roads may be\nclosed. Do not drive around barricades or through water of\nunknown depth. Take the necessary actions to protect flood-prone\nproperty.",
-                "response": "Monitor",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "CFWMHX"
-                    ],
-                    "WMOidentifier": [
-                        "WHUS42 KMHX 191405"
-                    ],
-                    "NWSheadline": [
-                        "COASTAL FLOOD ADVISORY NOW IN EFFECT UNTIL 2 AM EDT TUESDAY"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.EXT.KMHX.CF.Y.0007.000000T0000Z-261020T0600Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-20T02:00:00-04:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.a71a9dc5710c7eae23f815e464cd23dd69db989e.007.1,2026-10-18T20:56:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.cb161830b749cbd0e733cc365ccc1a651272c8dc.007.1,2026-10-18T16:04:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.0fa2b1cf35c0ffa63c715482f0e3077ecdd92f31.007.1,2026-10-18T11:02:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.523cfd40838f89a4c2dee3d1c22dbaad7c188f65.007.1,2026-10-18T03:24:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.13ae7e1da47230cfff91b99011363c9ace051d59.007.1,2026-10-17T20:33:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.1c2331befea2bbe6962538ac28872fa4c0a0a9d8.005.1,2026-10-17T19:40:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "CFY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.005.3",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.005.3",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.005.3",
-                "areaDesc": "East Carteret",
-                "geocode": {
-                    "SAME": [
-                        "037031"
-                    ],
-                    "UGC": [
-                        "NCZ196"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/NCZ196"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.004.3",
-                        "identifier": "urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.004.3",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-19T02:38:00-04:00"
-                    }
-                ],
-                "sent": "2026-10-19T10:05:00-04:00",
-                "effective": "2026-10-19T10:05:00-04:00",
-                "onset": "2026-10-19T10:05:00-04:00",
-                "expires": "2026-10-19T22:15:00-04:00",
-                "ends": "2026-10-19T20:00:00-04:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Moderate",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Beach Hazards Statement",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Newport/Morehead City NC",
-                "headline": "Beach Hazards Statement issued October 19 at 10:05AM EDT until October 19 at 8:00PM EDT by NWS Newport/Morehead City NC",
-                "description": "* WHAT...For the Coastal Flood Advisory, up to 1 to 3 feet of\ninundation above ground level in low-lying areas near shorelines\nand tidal waterways. For the High Surf Advisory, large breaking\nwaves of 8 to 10 feet in the surf zone. For the Beach Hazards\nStatement, dangerous rip currents, large breaking waves\nexpected, and strong longshore currents in the surf zone.\n\n* WHERE...East Carteret County.\n\n* WHEN...For the High Surf Advisory, until 8 AM EDT Wednesday.\nFor the Coastal Flood Advisory, until 8 PM EDT this evening.\nFor the Beach Hazards Statement, until 8 PM EDT this evening.\n\n* IMPACTS...Up to 1 to 3 feet of inundation above ground level is\nexpected in low-lying areas near shorelines and tidal waterways\nresulting in a low threat of property damage. Some roads and\nlow lying property including parking lots, parks, lawns, and\nhomes adjacent to the waterfront will experience shallow\nflooding. Dangerous swimming and surfing conditions and\nlocalized beach erosion. Rip currents can sweep even the best\nswimmers away from shore into deeper water. Dangerous shore\nbreak can throw a swimmer or surfer head first into the bottom\ncausing neck and back injuries. Strong longshore currents will\ncreate dangerous swimming conditions.",
-                "instruction": "If travel is required, allow extra time as some roads may be\nclosed. Do not drive around barricades or through water of\nunknown depth. Take the necessary actions to protect flood-prone\nproperty.\n\nInexperienced swimmers should remain out of the water due to\ndangerous surf conditions.\n\nLife-threatening rip currents. If caught in a rip current, remain\ncalm. Swim in a direction following the shoreline. If tired,\nfloat or tread water until out of the rip current. If unable to\nescape, face the shore and call or wave for help.\n\nShore break occurs when waves break directly on the beach. It is\nextremely important to protect your head and neck whenever you\nare in breaking waves by keeping your hands in front of you at\nall times.\n\nStrong longshore currents can sweep swimmers and surfers into rip\ncurrents, piers, jetties and other hazardous areas. In many\ncases, the longshore current is strong enough to prevent swimmers\nfrom being able to keep their feet on the bottom making it\ndifficult to return to shore.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "CFWMHX"
-                    ],
-                    "WMOidentifier": [
-                        "WHUS42 KMHX 191405"
-                    ],
-                    "NWSheadline": [
-                        "HIGH SURF ADVISORY NOW IN EFFECT UNTIL 8 AM EDT WEDNESDAY... ...COASTAL FLOOD ADVISORY REMAINS IN EFFECT UNTIL 8 PM EDT THIS EVENING... ...BEACH HAZARDS STATEMENT REMAINS IN EFFECT UNTIL 8 PM EDT THIS EVENING"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.KMHX.BH.S.0072.000000T0000Z-261020T0000Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-19T20:00:00-04:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.a71a9dc5710c7eae23f815e464cd23dd69db989e.004.1,2026-10-18T20:56:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "BHS"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.004.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.004.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.004.1",
-                "areaDesc": "Northern Outer Banks",
-                "geocode": {
-                    "SAME": [
-                        "037055"
-                    ],
-                    "UGC": [
-                        "NCZ203"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/NCZ203"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.003.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.003.1",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-19T02:38:00-04:00"
-                    }
-                ],
-                "sent": "2026-10-19T10:05:00-04:00",
-                "effective": "2026-10-19T10:05:00-04:00",
-                "onset": "2026-10-19T10:05:00-04:00",
-                "expires": "2026-10-19T22:15:00-04:00",
-                "ends": "2026-10-21T20:00:00-04:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Minor",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Coastal Flood Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Newport/Morehead City NC",
-                "headline": "Coastal Flood Advisory issued October 19 at 10:05AM EDT until October 21 at 8:00PM EDT by NWS Newport/Morehead City NC",
-                "description": "* WHAT...For the Coastal Flood Advisory, up to 1 to 3 feet of\ninundation above ground level in low-lying areas near\nshorelines and tidal waterways. For the High Surf Advisory,\nlarge breaking waves of 9 to 12 feet in the surf zone. For the\nBeach Hazards Statement, dangerous rip currents, large\nbreaking waves expected, and strong longshore currents in the\nsurf zone.\n\n* WHERE...Northern Outer Banks.\n\n* WHEN...For the Coastal Flood Advisory, until 8 PM EDT\nWednesday. For the High Surf Advisory, until 6 AM EDT\nThursday. For the Beach Hazards Statement, until 8 PM EDT this\nevening.\n\n* IMPACTS...Up to 1 to 3 feet of inundation above ground level is\nexpected in low-lying areas near shorelines and tidal waterways\nresulting in a low threat of property damage. Some roads and low\nlying property including parking lots, parks, lawns, and homes\nadjacent to the waterfront will experience shallow flooding.\nDangerous swimming and surfing conditions and localized beach\nerosion. Rip currents can sweep even the best swimmers away from\nshore into deeper water. Dangerous shore break can throw a\nswimmer or surfer head first into the bottom causing neck and\nback injuries. Strong longshore currents will create dangerous\nswimming conditions.",
-                "instruction": "If travel is required, allow extra time as some roads may be\nclosed. Do not drive around barricades or through water of\nunknown depth. Take the necessary actions to protect flood-prone\nproperty.\n\nInexperienced swimmers should remain out of the water due to\ndangerous surf conditions.\n\nLife-threatening rip currents. If caught in a rip current, remain\ncalm. Swim in a direction following the shoreline. If tired,\nfloat or tread water until out of the rip current. If unable to\nescape, face the shore and call or wave for help.\n\nShore break occurs when waves break directly on the beach. It is\nextremely important to protect your head and neck whenever you\nare in breaking waves by keeping your hands in front of you at\nall times.\n\nStrong longshore currents can sweep swimmers and surfers into rip\ncurrents, piers, jetties and other hazardous areas. In many\ncases, the longshore current is strong enough to prevent swimmers\nfrom being able to keep their feet on the bottom making it\ndifficult to return to shore.",
-                "response": "Monitor",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "CFWMHX"
-                    ],
-                    "WMOidentifier": [
-                        "WHUS42 KMHX 191405"
-                    ],
-                    "NWSheadline": [
-                        "COASTAL FLOOD ADVISORY NOW IN EFFECT UNTIL 8 PM EDT WEDNESDAY... ...HIGH SURF ADVISORY REMAINS IN EFFECT UNTIL 6 AM EDT THURSDAY... ...BEACH HAZARDS STATEMENT REMAINS IN EFFECT UNTIL 8 PM EDT THIS EVENING"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.EXT.KMHX.CF.Y.0007.000000T0000Z-261022T0000Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-21T20:00:00-04:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.a71a9dc5710c7eae23f815e464cd23dd69db989e.003.2,2026-10-18T20:56:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.cb161830b749cbd0e733cc365ccc1a651272c8dc.003.2,2026-10-18T16:04:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.0fa2b1cf35c0ffa63c715482f0e3077ecdd92f31.003.1,2026-10-18T11:02:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.523cfd40838f89a4c2dee3d1c22dbaad7c188f65.003.1,2026-10-18T03:24:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.13ae7e1da47230cfff91b99011363c9ace051d59.003.1,2026-10-17T20:33:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.1c2331befea2bbe6962538ac28872fa4c0a0a9d8.003.3,2026-10-17T19:40:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.b0ace643ad96eb8e139c9106400a2f229ef03ece.004.2,2026-10-17T15:46:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.f462365b1bb348e8cba6bfb4b4def2f6f738643a.003.2,2026-10-17T05:02:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.c636071d8131427853ca9202fcfbad16464ef59f.003.2,2026-10-17T03:35:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bd086668dcc450b9de3b2a93bb1d3ce9dc7dfd77.001.3,2026-10-16T20:46:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.58f085d78222bc390b55f288f2220f5d358a6dcf.001.1,2026-10-16T14:55:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "CFY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.004.2",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.004.2",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.004.2",
-                "areaDesc": "Northern Outer Banks",
-                "geocode": {
-                    "SAME": [
-                        "037055"
-                    ],
-                    "UGC": [
-                        "NCZ203"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/NCZ203"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.003.2",
-                        "identifier": "urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.003.2",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-19T02:38:00-04:00"
-                    }
-                ],
-                "sent": "2026-10-19T10:05:00-04:00",
-                "effective": "2026-10-19T10:05:00-04:00",
-                "onset": "2026-10-19T10:05:00-04:00",
-                "expires": "2026-10-19T22:15:00-04:00",
-                "ends": "2026-10-22T06:00:00-04:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Minor",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "High Surf Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Newport/Morehead City NC",
-                "headline": "High Surf Advisory issued October 19 at 10:05AM EDT until October 22 at 6:00AM EDT by NWS Newport/Morehead City NC",
-                "description": "* WHAT...For the Coastal Flood Advisory, up to 1 to 3 feet of\ninundation above ground level in low-lying areas near\nshorelines and tidal waterways. For the High Surf Advisory,\nlarge breaking waves of 9 to 12 feet in the surf zone. For the\nBeach Hazards Statement, dangerous rip currents, large\nbreaking waves expected, and strong longshore currents in the\nsurf zone.\n\n* WHERE...Northern Outer Banks.\n\n* WHEN...For the Coastal Flood Advisory, until 8 PM EDT\nWednesday. For the High Surf Advisory, until 6 AM EDT\nThursday. For the Beach Hazards Statement, until 8 PM EDT this\nevening.\n\n* IMPACTS...Up to 1 to 3 feet of inundation above ground level is\nexpected in low-lying areas near shorelines and tidal waterways\nresulting in a low threat of property damage. Some roads and low\nlying property including parking lots, parks, lawns, and homes\nadjacent to the waterfront will experience shallow flooding.\nDangerous swimming and surfing conditions and localized beach\nerosion. Rip currents can sweep even the best swimmers away from\nshore into deeper water. Dangerous shore break can throw a\nswimmer or surfer head first into the bottom causing neck and\nback injuries. Strong longshore currents will create dangerous\nswimming conditions.",
-                "instruction": "If travel is required, allow extra time as some roads may be\nclosed. Do not drive around barricades or through water of\nunknown depth. Take the necessary actions to protect flood-prone\nproperty.\n\nInexperienced swimmers should remain out of the water due to\ndangerous surf conditions.\n\nLife-threatening rip currents. If caught in a rip current, remain\ncalm. Swim in a direction following the shoreline. If tired,\nfloat or tread water until out of the rip current. If unable to\nescape, face the shore and call or wave for help.\n\nShore break occurs when waves break directly on the beach. It is\nextremely important to protect your head and neck whenever you\nare in breaking waves by keeping your hands in front of you at\nall times.\n\nStrong longshore currents can sweep swimmers and surfers into rip\ncurrents, piers, jetties and other hazardous areas. In many\ncases, the longshore current is strong enough to prevent swimmers\nfrom being able to keep their feet on the bottom making it\ndifficult to return to shore.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "CFWMHX"
-                    ],
-                    "WMOidentifier": [
-                        "WHUS42 KMHX 191405"
-                    ],
-                    "NWSheadline": [
-                        "COASTAL FLOOD ADVISORY NOW IN EFFECT UNTIL 8 PM EDT WEDNESDAY... ...HIGH SURF ADVISORY REMAINS IN EFFECT UNTIL 6 AM EDT THURSDAY... ...BEACH HAZARDS STATEMENT REMAINS IN EFFECT UNTIL 8 PM EDT THIS EVENING"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.KMHX.SU.Y.0008.000000T0000Z-261022T1000Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-22T06:00:00-04:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.a71a9dc5710c7eae23f815e464cd23dd69db989e.003.3,2026-10-18T20:56:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.cb161830b749cbd0e733cc365ccc1a651272c8dc.003.1,2026-10-18T16:04:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.0fa2b1cf35c0ffa63c715482f0e3077ecdd92f31.003.2,2026-10-18T11:02:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.523cfd40838f89a4c2dee3d1c22dbaad7c188f65.003.2,2026-10-18T03:24:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.13ae7e1da47230cfff91b99011363c9ace051d59.003.2,2026-10-17T20:33:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.1c2331befea2bbe6962538ac28872fa4c0a0a9d8.003.4,2026-10-17T19:40:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.b0ace643ad96eb8e139c9106400a2f229ef03ece.004.1,2026-10-17T15:46:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.f462365b1bb348e8cba6bfb4b4def2f6f738643a.003.1,2026-10-17T05:02:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.c636071d8131427853ca9202fcfbad16464ef59f.003.1,2026-10-17T03:35:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bd086668dcc450b9de3b2a93bb1d3ce9dc7dfd77.001.2,2026-10-16T20:46:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.58f085d78222bc390b55f288f2220f5d358a6dcf.001.2,2026-10-16T14:55:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.f04e99941c5b8f280ffa4010dcd7be8b76c6af57.001.1,2026-10-15T20:00:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.673fe66b2c426d27dc74f263d8d16faea760c744.001.1,2026-10-16T02:51:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "SUY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.003.3",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.003.3",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.003.3",
-                "areaDesc": "Ocracoke Island",
-                "geocode": {
-                    "SAME": [
-                        "037095"
-                    ],
-                    "UGC": [
-                        "NCZ204"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/NCZ204"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.002.3",
-                        "identifier": "urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.002.3",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-19T02:38:00-04:00"
-                    }
-                ],
-                "sent": "2026-10-19T10:05:00-04:00",
-                "effective": "2026-10-19T10:05:00-04:00",
-                "onset": "2026-10-19T10:05:00-04:00",
-                "expires": "2026-10-19T22:15:00-04:00",
-                "ends": "2026-10-19T20:00:00-04:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Moderate",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Beach Hazards Statement",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Newport/Morehead City NC",
-                "headline": "Beach Hazards Statement issued October 19 at 10:05AM EDT until October 19 at 8:00PM EDT by NWS Newport/Morehead City NC",
-                "description": "* WHAT...For the Coastal Flood Warning, up to 2 to 4 feet of\ninundation above ground level in low-lying areas near\nshorelines and tidal waterways. For the High Surf Advisory,\nlarge breaking waves of 6 to 9 feet in the surf zone. For the\nBeach Hazards Statement, dangerous rip currents, large\nbreaking waves expected, and strong longshore currents in the\nsurf zone.\n\n* WHERE...Ocracoke Island.\n\n* WHEN...For the Coastal Flood Warning, until 8 PM EDT\nWednesday. For the High Surf Advisory, until 8 AM EDT\nWednesday. For the Beach Hazards Statement, until 8 PM EDT\nthis evening.\n\n* IMPACTS...Up to 2 to 4 feet of inundation above ground level\nis expected in some areas near shorelines and tidal waterways\nresulting in an elevated threat of property damage. Flooding\nwill extend inland from the waterfront threatening some homes\nand businesses. Numerous road closures and flooding of\nvehicles will be possible. Vulnerable portions of NC-12 may be\ninundated, especially around high tide. There is a possibility\nof being stranded on Ocracoke for multiple days. This could be\nlife threatening if you have an emergency. Dangerous swimming\nand surfing conditions and localized beach erosion. Rip\ncurrents can sweep even the best swimmers away from shore into\ndeeper water. Dangerous shore break can throw a swimmer or\nsurfer head first into the bottom causing neck and back\ninjuries. Strong longshore currents will create dangerous\nswimming conditions.\n\n* ADDITIONAL DETAILS...This is a long duration event with\nuncertainty on when conditions will improve. Significant ocean\noverwash impacts are expected at vulnerable oceanside areas\nthrough multiple high tide cycles into mid week. Minor\nsoundside water level rises will also be possible.",
-                "instruction": "Take the necessary actions to protect flood-prone property. If\ntravel is required, do not drive around barricades or through\nwater of unknown depth.\n\nInexperienced swimmers should remain out of the water due to\ndangerous surf conditions.\n\nLife-threatening rip currents. If caught in a rip current, remain\ncalm. Swim in a direction following the shoreline. If tired,\nfloat or tread water until out of the rip current. If unable to\nescape, face the shore and call or wave for help.\n\nShore break occurs when waves break directly on the beach. It is\nextremely important to protect your head and neck whenever you\nare in breaking waves by keeping your hands in front of you at\nall times.\n\nStrong longshore currents can sweep swimmers and surfers into rip\ncurrents, piers, jetties and other hazardous areas. In many\ncases, the longshore current is strong enough to prevent swimmers\nfrom being able to keep their feet on the bottom making it\ndifficult to return to shore.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "CFWMHX"
-                    ],
-                    "WMOidentifier": [
-                        "WHUS42 KMHX 191405"
-                    ],
-                    "NWSheadline": [
-                        "COASTAL FLOOD WARNING NOW IN EFFECT UNTIL 8 PM EDT WEDNESDAY... ...HIGH SURF ADVISORY NOW IN EFFECT UNTIL 8 AM EDT WEDNESDAY... ...BEACH HAZARDS STATEMENT REMAINS IN EFFECT UNTIL 8 PM EDT THIS EVENING"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.KMHX.BH.S.0072.000000T0000Z-261020T0000Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-19T20:00:00-04:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.a71a9dc5710c7eae23f815e464cd23dd69db989e.002.1,2026-10-18T20:56:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "BHS"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.004.3",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.004.3",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.b961e1c62cdd63c8031317b1ac07aa7b2aa0fbf5.004.3",
-                "areaDesc": "Northern Outer Banks",
-                "geocode": {
-                    "SAME": [
-                        "037055"
-                    ],
-                    "UGC": [
-                        "NCZ203"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/NCZ203"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.003.3",
-                        "identifier": "urn:oid:2.49.0.1.840.0.637f108880319418eacf31b5c0e50c6da1a744f1.003.3",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-19T02:38:00-04:00"
-                    }
-                ],
-                "sent": "2026-10-19T10:05:00-04:00",
-                "effective": "2026-10-19T10:05:00-04:00",
-                "onset": "2026-10-19T10:05:00-04:00",
-                "expires": "2026-10-19T22:15:00-04:00",
-                "ends": "2026-10-19T20:00:00-04:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Moderate",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Beach Hazards Statement",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Newport/Morehead City NC",
-                "headline": "Beach Hazards Statement issued October 19 at 10:05AM EDT until October 19 at 8:00PM EDT by NWS Newport/Morehead City NC",
-                "description": "* WHAT...For the Coastal Flood Advisory, up to 1 to 3 feet of\ninundation above ground level in low-lying areas near\nshorelines and tidal waterways. For the High Surf Advisory,\nlarge breaking waves of 9 to 12 feet in the surf zone. For the\nBeach Hazards Statement, dangerous rip currents, large\nbreaking waves expected, and strong longshore currents in the\nsurf zone.\n\n* WHERE...Northern Outer Banks.\n\n* WHEN...For the Coastal Flood Advisory, until 8 PM EDT\nWednesday. For the High Surf Advisory, until 6 AM EDT\nThursday. For the Beach Hazards Statement, until 8 PM EDT this\nevening.\n\n* IMPACTS...Up to 1 to 3 feet of inundation above ground level is\nexpected in low-lying areas near shorelines and tidal waterways\nresulting in a low threat of property damage. Some roads and low\nlying property including parking lots, parks, lawns, and homes\nadjacent to the waterfront will experience shallow flooding.\nDangerous swimming and surfing conditions and localized beach\nerosion. Rip currents can sweep even the best swimmers away from\nshore into deeper water. Dangerous shore break can throw a\nswimmer or surfer head first into the bottom causing neck and\nback injuries. Strong longshore currents will create dangerous\nswimming conditions.",
-                "instruction": "If travel is required, allow extra time as some roads may be\nclosed. Do not drive around barricades or through water of\nunknown depth. Take the necessary actions to protect flood-prone\nproperty.\n\nInexperienced swimmers should remain out of the water due to\ndangerous surf conditions.\n\nLife-threatening rip currents. If caught in a rip current, remain\ncalm. Swim in a direction following the shoreline. If tired,\nfloat or tread water until out of the rip current. If unable to\nescape, face the shore and call or wave for help.\n\nShore break occurs when waves break directly on the beach. It is\nextremely important to protect your head and neck whenever you\nare in breaking waves by keeping your hands in front of you at\nall times.\n\nStrong longshore currents can sweep swimmers and surfers into rip\ncurrents, piers, jetties and other hazardous areas. In many\ncases, the longshore current is strong enough to prevent swimmers\nfrom being able to keep their feet on the bottom making it\ndifficult to return to shore.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "CFWMHX"
-                    ],
-                    "WMOidentifier": [
-                        "WHUS42 KMHX 191405"
-                    ],
-                    "NWSheadline": [
-                        "COASTAL FLOOD ADVISORY NOW I
+                "instruction": "Take the necessary actions to protect flood-prone pro
