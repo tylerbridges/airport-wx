@@ -10,13 +10,13 @@
     "type": "FeatureCollection",
     "features": [
         {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0-KEEPALIVE-56485",
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0-KEEPALIVE-896",
             "type": "Feature",
             "geometry": null,
             "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0-KEEPALIVE-56485",
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0-KEEPALIVE-896",
                 "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0-KEEPALIVE-56485",
+                "id": "urn:oid:2.49.0.1.840.0-KEEPALIVE-896",
                 "areaDesc": "Montgomery",
                 "geocode": {
                     "SAME": [
@@ -30,10 +30,10 @@
                     "https://api.weather.gov/zones/county/MDC031"
                 ],
                 "references": [],
-                "sent": "2026-10-22T16:54:58+00:00",
-                "effective": "2026-10-22T16:54:58+00:00",
+                "sent": "2026-10-22T17:04:58+00:00",
+                "effective": "2026-10-22T17:04:58+00:00",
                 "onset": null,
-                "expires": "2026-10-22T17:04:58+00:00",
+                "expires": "2026-10-22T17:14:58+00:00",
                 "ends": null,
                 "status": "Test",
                 "messageType": "Alert",
@@ -54,7 +54,7 @@
                         "KEPWBC"
                     ],
                     "WMOidentifier": [
-                        "NZUS91 KWBC 221654"
+                        "NZUS91 KWBC 221704"
                     ],
                     "BLOCKCHANNEL": [
                         "CMAS",
@@ -72,6 +72,344 @@
                     ],
                     "NationalWeatherService": [
                         "TST"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.e4950e93881b095dedae9da52ea6c9aa823605bf.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.e4950e93881b095dedae9da52ea6c9aa823605bf.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.e4950e93881b095dedae9da52ea6c9aa823605bf.001.1",
+                "areaDesc": "Gila, AZ; Maricopa, AZ; Pinal, AZ",
+                "geocode": {
+                    "SAME": [
+                        "004007",
+                        "004013",
+                        "004021"
+                    ],
+                    "UGC": [
+                        "AZC007",
+                        "AZC013",
+                        "AZC021"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/county/AZC007",
+                    "https://api.weather.gov/zones/county/AZC013",
+                    "https://api.weather.gov/zones/county/AZC021"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5ea60dc11f151c1ccaad6dac7d742b06ef31c0e9.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.5ea60dc11f151c1ccaad6dac7d742b06ef31c0e9.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-22T04:01:00-07:00"
+                    }
+                ],
+                "sent": "2026-10-22T10:03:00-07:00",
+                "effective": "2026-10-22T10:03:00-07:00",
+                "onset": "2026-10-22T10:03:00-07:00",
+                "expires": "2026-10-22T13:00:00-07:00",
+                "ends": "2026-10-22T13:00:00-07:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Possible",
+                "urgency": "Future",
+                "event": "Severe Thunderstorm Watch",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Phoenix AZ",
+                "headline": "Severe Thunderstorm Watch issued October 22 at 10:03AM MST until October 22 at 1:00PM MST by NWS Phoenix AZ",
+                "description": "SEVERE THUNDERSTORM WATCH 692, PREVIOUSLY IN EFFECT UNTIL 11 AM\nMST THIS MORNING, IS NOW IN EFFECT UNTIL 1 PM MST THIS AFTERNOON\nFOR THE FOLLOWING AREAS\n\nIN ARIZONA THIS WATCH INCLUDES 3 COUNTIES\n\nIN EAST CENTRAL ARIZONA\n\nGILA\n\nIN SOUTH CENTRAL ARIZONA\n\nMARICOPA\n\nIN SOUTHEAST ARIZONA\n\nPINAL\n\nTHIS INCLUDES THE CITIES OF APACHE JUNCTION, CACTUS FOREST,\nCASA GRANDE, ELOY, FLORENCE, JAKES CORNER, KOHLS RANCH, MESA,\nPAYSON, PHOENIX, PUNKIN CENTER, RYE, STAR VALLEY,\nAND TONTO VILLAGE.",
+                "instruction": null,
+                "response": "Monitor",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "WCNPSR"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS65 KPSR 221703"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "EAS-ORG": [
+                        "WXR"
+                    ],
+                    "VTEC": [
+                        "/O.EXT.KPSR.SV.A.0692.000000T0000Z-261022T2000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-22T13:00:00-07:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "SVA"
+                    ],
+                    "NationalWeatherService": [
+                        "SVA"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.a7913fc5953e88644a4decf0daa339142862b5c3.001.1",
+            "type": "Feature",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            -111.89,
+                            33.8
+                        ],
+                        [
+                            -111.86,
+                            33.81
+                        ],
+                        [
+                            -111.72,
+                            33.79
+                        ],
+                        [
+                            -111.67,
+                            33.77
+                        ],
+                        [
+                            -111.66,
+                            33.75
+                        ],
+                        [
+                            -111.72,
+                            33.6
+                        ],
+                        [
+                            -111.73,
+                            33.58
+                        ],
+                        [
+                            -111.94,
+                            33.61
+                        ],
+                        [
+                            -111.94,
+                            33.66
+                        ],
+                        [
+                            -111.89,
+                            33.8
+                        ]
+                    ]
+                ]
+            },
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.a7913fc5953e88644a4decf0daa339142862b5c3.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.a7913fc5953e88644a4decf0daa339142862b5c3.001.1",
+                "areaDesc": "Maricopa, AZ",
+                "geocode": {
+                    "SAME": [
+                        "004013"
+                    ],
+                    "UGC": [
+                        "AZC013"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/county/AZC013"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.1c6ed12a7bb8ed7c59cd3c8d10cbadd1ff1fd945.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.1c6ed12a7bb8ed7c59cd3c8d10cbadd1ff1fd945.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-22T08:13:00-07:00"
+                    }
+                ],
+                "sent": "2026-10-22T10:01:00-07:00",
+                "effective": "2026-10-22T10:01:00-07:00",
+                "onset": "2026-10-22T10:01:00-07:00",
+                "expires": "2026-10-22T11:15:00-07:00",
+                "ends": "2026-10-22T11:15:00-07:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Flood Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Phoenix AZ",
+                "headline": "Flood Advisory issued October 22 at 10:01AM MST until October 22 at 11:15AM MST by NWS Phoenix AZ",
+                "description": "* WHAT...Flooding caused by excessive rainfall continues.\n\n* WHERE...Maricopa County in south central Arizona...\n\n* WHEN...Until 1115 AM MST.\n\n* IMPACTS...Minor flooding in low-lying and poor drainage areas.\n\n* ADDITIONAL DETAILS...\n- At 1001 AM MST, Doppler radar indicated heavy rain due to\nthunderstorms. Minor flooding is ongoing or expected to begin\nshortly in the advisory area. Up to 1 inch of rain has fallen.\n- Some locations that will experience flooding include...\nScottsdale, Fountain Hills, McDowell Mountain Park, Scottsdale\nAirport and Rio Verde.\n- http://www.weather.gov/safety/flood",
+                "instruction": "Turn around, don't drown when encountering flooded roads. Most flood\ndeaths occur in vehicles.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "FLSPSR"
+                    ],
+                    "WMOidentifier": [
+                        "WGUS85 KPSR 221701"
+                    ],
+                    "NWSheadline": [
+                        "FLOOD ADVISORY REMAINS IN EFFECT UNTIL 1115 AM MST THIS MORNING"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KPSR.FA.Y.0081.000000T0000Z-261022T1815Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-22T11:15:00-07:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "FAY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.88e383bb920de554bed73480eee0b8130f13d7c3.001.1",
+            "type": "Feature",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [
+                            -118.13,
+                            33.94
+                        ],
+                        [
+                            -118.24,
+                            33.95
+                        ],
+                        [
+                            -118.28,
+                            34.14
+                        ],
+                        [
+                            -118.02,
+                            34.1
+                        ],
+                        [
+                            -118.13,
+                            33.94
+                        ]
+                    ]
+                ]
+            },
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.88e383bb920de554bed73480eee0b8130f13d7c3.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.88e383bb920de554bed73480eee0b8130f13d7c3.001.1",
+                "areaDesc": "Los Angeles, CA",
+                "geocode": {
+                    "SAME": [
+                        "006037"
+                    ],
+                    "UGC": [
+                        "CAC037"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/county/CAC037"
+                ],
+                "references": [],
+                "sent": "2026-10-22T10:00:00-07:00",
+                "effective": "2026-10-22T10:00:00-07:00",
+                "onset": "2026-10-22T10:00:00-07:00",
+                "expires": "2026-10-22T10:45:00-07:00",
+                "ends": "2026-10-22T10:45:00-07:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Observed",
+                "urgency": "Immediate",
+                "event": "Severe Thunderstorm Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Los Angeles/Oxnard CA",
+                "headline": "Severe Thunderstorm Warning issued October 22 at 10:00AM PDT until October 22 at 10:45AM PDT by NWS Los Angeles/Oxnard CA",
+                "description": "SVRLOX\n\nThe National Weather Service in OXNARD has issued a\n\n* Severe Thunderstorm Warning for...\nSouthern Los Angeles County in southwestern California...\n\n* Until 1045 AM PDT.\n\n* At 959 AM PDT, a severe thunderstorm was located over Carson, or\nnear Torrance, moving north at 25 mph.\n\nHAZARD...60 mph wind gusts. Small chance for a brief, weak tornado.\n\nSOURCE...Radar indicated.\n\nIMPACT...Expect damage to roofs, siding, and trees.\n\n* Locations impacted include...\nAlhambra...\nDowntown Los Angeles...\nGriffith Park...\nEagle Rock...\nGlendale...\nCommerce...\nMontebello...\nBoyle Heights...\nMonterey Park...\nAtwater Village...\nHighland Park...\nEcho Park...\nSan Gabriel...\nElysian Park...\nDowney...\nPico Rivera...\nEl Monte...\nWatts...\nEast Los Angeles...\nand Temple City.",
+                "instruction": "Remain alert for a possible tornado! Tornadoes can develop quickly\nfrom severe thunderstorms. If you spot a tornado go at once into the\nbasement or small central room in a sturdy structure.\n\nFor your protection move to an interior room on the lowest floor of a\nbuilding.\n\nLarge hail, damaging wind, and continuous cloud to ground lightning\nare occurring with this storm. Move indoors immediately. Lightning is\none of nature's leading killers. Remember, if you can hear thunder,\nyou are close enough to be struck by lightning.\n\nTorrential rainfall is occurring with this storm, and may lead to\nflash flooding. Do not drive your vehicle through flooded roadways.",
+                "response": "Shelter",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "SVRLOX"
+                    ],
+                    "WMOidentifier": [
+                        "WUUS56 KLOX 221700"
+                    ],
+                    "eventMotionDescription": [
+                        "2026-10-22T16:59:00-00:00...storm...193DEG...21KT...33.85,-118.25"
+                    ],
+                    "windThreat": [
+                        "RADAR INDICATED"
+                    ],
+                    "maxWindGust": [
+                        "60 MPH"
+                    ],
+                    "hailThreat": [
+                        "RADAR INDICATED"
+                    ],
+                    "maxHailSize": [
+                        "Up to .75"
+                    ],
+                    "tornadoDetection": [
+                        "POSSIBLE"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "EAS-ORG": [
+                        "WXR"
+                    ],
+                    "VTEC": [
+                        "/O.NEW.KLOX.SV.W.0012.261022T1700Z-261022T1745Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-22T10:45:00-07:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "SVR"
+                    ],
+                    "NationalWeatherService": [
+                        "SVW"
                     ]
                 }
             }
@@ -1158,40 +1496,38 @@
             }
         },
         {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.007.1",
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.008.1",
             "type": "Feature",
             "geometry": null,
             "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.007.1",
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.008.1",
                 "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.007.1",
-                "areaDesc": "Baldwin Peninsula; Northern Seward Peninsula",
+                "id": "urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.008.1",
+                "areaDesc": "Eastern Norton Sound and Nulato Hills",
                 "geocode": {
                     "SAME": [
-                        "002188"
+                        "002180"
                     ],
                     "UGC": [
-                        "AKZ817",
-                        "AKZ818"
+                        "AKZ824"
                     ]
                 },
                 "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/AKZ817",
-                    "https://api.weather.gov/zones/forecast/AKZ818"
+                    "https://api.weather.gov/zones/forecast/AKZ824"
                 ],
                 "references": [
                     {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5b5e6906cbc690690dcda89e9e75555fe1f5cbf6.005.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.5b5e6906cbc690690dcda89e9e75555fe1f5cbf6.005.1",
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5b5e6906cbc690690dcda89e9e75555fe1f5cbf6.006.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.5b5e6906cbc690690dcda89e9e75555fe1f5cbf6.006.1",
                         "sender": "w-nws.webmaster@noaa.gov",
                         "sent": "2026-10-21T15:09:00-08:00"
                     }
                 ],
                 "sent": "2026-10-22T08:43:00-08:00",
                 "effective": "2026-10-22T08:43:00-08:00",
-                "onset": "2026-10-23T16:00:00-08:00",
+                "onset": "2026-10-23T04:00:00-08:00",
                 "expires": "2026-10-23T07:00:00-08:00",
-                "ends": "2026-10-25T22:00:00-08:00",
+                "ends": "2026-10-26T04:00:00-08:00",
                 "status": "Actual",
                 "messageType": "Update",
                 "category": "Met",
@@ -1201,8 +1537,8 @@
                 "event": "High Surf Advisory",
                 "sender": "w-nws.webmaster@noaa.gov",
                 "senderName": "NWS Fairbanks AK",
-                "headline": "High Surf Advisory issued October 22 at 8:43AM AKDT until October 25 at 10:00PM AKDT by NWS Fairbanks AK",
-                "description": "* WHAT...Large breaking waves of 2 to 4 feet above the normal\nhigh tide line.\n\n* WHERE...Baldwin Peninsula and Northern Seward Peninsula.\n\n* WHEN...From 4 PM Friday to 10 PM AKDT Sunday.\n\n* IMPACTS...Localized beach erosion may occur.\n\n* ADDITIONAL DETAILS...South to southeast winds increase Friday\nwith gusts up to 60 mph possible.",
+                "headline": "High Surf Advisory issued October 22 at 8:43AM AKDT until October 26 at 4:00AM AKDT by NWS Fairbanks AK",
+                "description": "* WHAT...Large breaking waves of 3 to 6 feet above the normal\nhigh tide line at Stebbins, St. Michael, and Unalakleet, 4 to\n7 feet above the normal high tide line at Shaktoolik, and 5 to\n10 feet above the normal high tide line at Koyuk and Elim.\n\n* WHERE...Eastern Norton Sound and Nulato Hills.\n\n* WHEN...From 4 AM Friday to 4 AM AKDT Monday.\n\n* IMPACTS...Localized beach erosion may occur.\n\n* ADDITIONAL DETAILS...South to southeast winds increase Friday\nmorning with gusts up to 60 mph possible.",
                 "instruction": "Precautions should be taken to protect property.",
                 "response": "Avoid",
                 "note": null,
@@ -1214,7 +1550,7 @@
                         "WHAK49 PAFG 221643"
                     ],
                     "NWSheadline": [
-                        "HIGH SURF ADVISORY REMAINS IN EFFECT FROM 4 PM FRIDAY TO 10 PM AKDT SUNDAY"
+                        "HIGH SURF ADVISORY REMAINS IN EFFECT FROM 4 AM FRIDAY TO 4 AM AKDT MONDAY"
                     ],
                     "BLOCKCHANNEL": [
                         "EAS",
@@ -1222,13 +1558,13 @@
                         "CMAS"
                     ],
                     "VTEC": [
-                        "/O.CON.PAFG.SU.Y.0009.261024T0000Z-261026T0600Z/"
+                        "/O.CON.PAFG.SU.Y.0009.261023T1200Z-261026T1200Z/"
                     ],
                     "eventEndingTime": [
-                        "2026-10-25T22:00:00-08:00"
+                        "2026-10-26T04:00:00-08:00"
                     ],
                     "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bfb1c48d470786be158b54beede2aa2ca24f0545.004.1,2026-10-20T15:07:00-08:00"
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bfb1c48d470786be158b54beede2aa2ca24f0545.005.1,2026-10-20T15:07:00-08:00"
                     ]
                 },
                 "scope": "Public",
@@ -1241,6 +1577,82 @@
                     ],
                     "NationalWeatherService": [
                         "SUY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.003.2",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.003.2",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.003.2",
+                "areaDesc": "Southern Seward Peninsula Coast",
+                "geocode": {
+                    "SAME": [
+                        "002180"
+                    ],
+                    "UGC": [
+                        "AKZ822"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/AKZ822"
+                ],
+                "references": [],
+                "sent": "2026-10-22T08:43:00-08:00",
+                "effective": "2026-10-22T08:43:00-08:00",
+                "onset": "2026-10-23T04:00:00-08:00",
+                "expires": "2026-10-23T07:00:00-08:00",
+                "ends": "2026-10-25T22:00:00-08:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Coastal Flood Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Fairbanks AK",
+                "headline": "Coastal Flood Advisory issued October 22 at 8:43AM AKDT until October 25 at 10:00PM AKDT by NWS Fairbanks AK",
+                "description": "* WHAT...Minor coastal flooding expected. Water levels of 4 to 6.5\nfeet above the normal high tide line expected.\n\n* WHERE...Southern Seward Peninsula Coast.\n\n* WHEN...From 4 AM Friday to 10 PM AKDT Sunday.\n\n* IMPACTS...Flooding of lots, parks, and roads with only\nisolated road closures expected.\n\n* ADDITIONAL DETAILS...For Nome and Golovin, water levels are\nexpected to rise to around 6 feet above the normal high tide\nline. In Nome, this can result in water approaching low-lying\nhomes in Belmont Subdivision with standing water expected in the\nport area. For Golovin, water may inundate any beach property\nbut the roads, buildings and residences shouldn't be impacted as\nthe water remains below the berm. Water levels will peak Friday\nafternoon and gradually drop, but remain above normal through\nthe weekend.",
+                "instruction": "If travel is required, allow extra time as some roads may be\nclosed. Do not drive around barricades or through water of\nunknown depth. Take the necessary actions to protect flood-prone\nproperty.",
+                "response": "Monitor",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "CFWAFG"
+                    ],
+                    "WMOidentifier": [
+                        "WHAK49 PAFG 221643"
+                    ],
+                    "NWSheadline": [
+                        "COASTAL FLOOD ADVISORY IN EFFECT FROM 4 AM FRIDAY TO 10 PM AKDT SUNDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.NEW.PAFG.CF.Y.0002.261023T1200Z-261026T0600Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-25T22:00:00-08:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "CFY"
                     ]
                 }
             }
@@ -1332,286 +1744,40 @@
             }
         },
         {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.003.2",
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.007.1",
             "type": "Feature",
             "geometry": null,
             "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.003.2",
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.007.1",
                 "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.003.2",
-                "areaDesc": "Southern Seward Peninsula Coast",
-                "geocode": {
-                    "SAME": [
-                        "002180"
-                    ],
-                    "UGC": [
-                        "AKZ822"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/AKZ822"
-                ],
-                "references": [],
-                "sent": "2026-10-22T08:43:00-08:00",
-                "effective": "2026-10-22T08:43:00-08:00",
-                "onset": "2026-10-23T04:00:00-08:00",
-                "expires": "2026-10-23T07:00:00-08:00",
-                "ends": "2026-10-25T22:00:00-08:00",
-                "status": "Actual",
-                "messageType": "Alert",
-                "category": "Met",
-                "severity": "Minor",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Coastal Flood Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Fairbanks AK",
-                "headline": "Coastal Flood Advisory issued October 22 at 8:43AM AKDT until October 25 at 10:00PM AKDT by NWS Fairbanks AK",
-                "description": "* WHAT...Minor coastal flooding expected. Water levels of 4 to 6.5\nfeet above the normal high tide line expected.\n\n* WHERE...Southern Seward Peninsula Coast.\n\n* WHEN...From 4 AM Friday to 10 PM AKDT Sunday.\n\n* IMPACTS...Flooding of lots, parks, and roads with only\nisolated road closures expected.\n\n* ADDITIONAL DETAILS...For Nome and Golovin, water levels are\nexpected to rise to around 6 feet above the normal high tide\nline. In Nome, this can result in water approaching low-lying\nhomes in Belmont Subdivision with standing water expected in the\nport area. For Golovin, water may inundate any beach property\nbut the roads, buildings and residences shouldn't be impacted as\nthe water remains below the berm. Water levels will peak Friday\nafternoon and gradually drop, but remain above normal through\nthe weekend.",
-                "instruction": "If travel is required, allow extra time as some roads may be\nclosed. Do not drive around barricades or through water of\nunknown depth. Take the necessary actions to protect flood-prone\nproperty.",
-                "response": "Monitor",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "CFWAFG"
-                    ],
-                    "WMOidentifier": [
-                        "WHAK49 PAFG 221643"
-                    ],
-                    "NWSheadline": [
-                        "COASTAL FLOOD ADVISORY IN EFFECT FROM 4 AM FRIDAY TO 10 PM AKDT SUNDAY"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.NEW.PAFG.CF.Y.0002.261023T1200Z-261026T0600Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-25T22:00:00-08:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "CFY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.008.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.008.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.008.1",
-                "areaDesc": "Eastern Norton Sound and Nulato Hills",
-                "geocode": {
-                    "SAME": [
-                        "002180"
-                    ],
-                    "UGC": [
-                        "AKZ824"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/AKZ824"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5b5e6906cbc690690dcda89e9e75555fe1f5cbf6.006.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.5b5e6906cbc690690dcda89e9e75555fe1f5cbf6.006.1",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-21T15:09:00-08:00"
-                    }
-                ],
-                "sent": "2026-10-22T08:43:00-08:00",
-                "effective": "2026-10-22T08:43:00-08:00",
-                "onset": "2026-10-23T04:00:00-08:00",
-                "expires": "2026-10-23T07:00:00-08:00",
-                "ends": "2026-10-26T04:00:00-08:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Minor",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "High Surf Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Fairbanks AK",
-                "headline": "High Surf Advisory issued October 22 at 8:43AM AKDT until October 26 at 4:00AM AKDT by NWS Fairbanks AK",
-                "description": "* WHAT...Large breaking waves of 3 to 6 feet above the normal\nhigh tide line at Stebbins, St. Michael, and Unalakleet, 4 to\n7 feet above the normal high tide line at Shaktoolik, and 5 to\n10 feet above the normal high tide line at Koyuk and Elim.\n\n* WHERE...Eastern Norton Sound and Nulato Hills.\n\n* WHEN...From 4 AM Friday to 4 AM AKDT Monday.\n\n* IMPACTS...Localized beach erosion may occur.\n\n* ADDITIONAL DETAILS...South to southeast winds increase Friday\nmorning with gusts up to 60 mph possible.",
-                "instruction": "Precautions should be taken to protect property.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "CFWAFG"
-                    ],
-                    "WMOidentifier": [
-                        "WHAK49 PAFG 221643"
-                    ],
-                    "NWSheadline": [
-                        "HIGH SURF ADVISORY REMAINS IN EFFECT FROM 4 AM FRIDAY TO 4 AM AKDT MONDAY"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.PAFG.SU.Y.0009.261023T1200Z-261026T1200Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-26T04:00:00-08:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bfb1c48d470786be158b54beede2aa2ca24f0545.005.1,2026-10-20T15:07:00-08:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "SUY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.004.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.004.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.004.1",
-                "areaDesc": "Western Arctic Coast",
-                "geocode": {
-                    "SAME": [
-                        "002185"
-                    ],
-                    "UGC": [
-                        "AKZ801"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/AKZ801"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5b5e6906cbc690690dcda89e9e75555fe1f5cbf6.002.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.5b5e6906cbc690690dcda89e9e75555fe1f5cbf6.002.1",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-21T15:09:00-08:00"
-                    }
-                ],
-                "sent": "2026-10-22T08:43:00-08:00",
-                "effective": "2026-10-22T08:43:00-08:00",
-                "onset": "2026-10-23T10:00:00-08:00",
-                "expires": "2026-10-23T07:00:00-08:00",
-                "ends": "2026-10-26T10:00:00-08:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Minor",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "High Surf Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Fairbanks AK",
-                "headline": "High Surf Advisory issued October 22 at 8:43AM AKDT until October 26 at 10:00AM AKDT by NWS Fairbanks AK",
-                "description": "* WHAT...Large breaking waves of 3 to 6 feet above the normal\nhigh tide line for Point Hope. Water levels in the 3 to 5 feet\nabove the normal high tide line for Point Lay.\n\n* WHERE...Western Arctic Coast.\n\n* WHEN...From 10 AM Friday to 10 AM AKDT Monday.\n\n* IMPACTS...Localized beach erosion may occur.\n\n* ADDITIONAL DETAILS...South to southeast winds increase Friday\nmorning gusting up to 65 mph. Strong winds continue through\nSaturday and into Sunday.",
-                "instruction": "Precautions should be taken to protect property.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "CFWAFG"
-                    ],
-                    "WMOidentifier": [
-                        "WHAK49 PAFG 221643"
-                    ],
-                    "NWSheadline": [
-                        "HIGH SURF ADVISORY REMAINS IN EFFECT FROM 10 AM FRIDAY TO 10 AM AKDT MONDAY"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.PAFG.SU.Y.0009.261023T1800Z-261026T1800Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-26T10:00:00-08:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bfb1c48d470786be158b54beede2aa2ca24f0545.001.1,2026-10-20T15:07:00-08:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "SUY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.006.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.006.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.006.1",
-                "areaDesc": "Kivalina and Red Dog Dock",
+                "id": "urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.007.1",
+                "areaDesc": "Baldwin Peninsula; Northern Seward Peninsula",
                 "geocode": {
                     "SAME": [
                         "002188"
                     ],
                     "UGC": [
-                        "AKZ815"
+                        "AKZ817",
+                        "AKZ818"
                     ]
                 },
                 "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/AKZ815"
+                    "https://api.weather.gov/zones/forecast/AKZ817",
+                    "https://api.weather.gov/zones/forecast/AKZ818"
                 ],
                 "references": [
                     {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5b5e6906cbc690690dcda89e9e75555fe1f5cbf6.004.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.5b5e6906cbc690690dcda89e9e75555fe1f5cbf6.004.1",
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5b5e6906cbc690690dcda89e9e75555fe1f5cbf6.005.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.5b5e6906cbc690690dcda89e9e75555fe1f5cbf6.005.1",
                         "sender": "w-nws.webmaster@noaa.gov",
                         "sent": "2026-10-21T15:09:00-08:00"
                     }
                 ],
                 "sent": "2026-10-22T08:43:00-08:00",
                 "effective": "2026-10-22T08:43:00-08:00",
-                "onset": "2026-10-23T10:00:00-08:00",
+                "onset": "2026-10-23T16:00:00-08:00",
                 "expires": "2026-10-23T07:00:00-08:00",
-                "ends": "2026-10-26T04:00:00-08:00",
+                "ends": "2026-10-25T22:00:00-08:00",
                 "status": "Actual",
                 "messageType": "Update",
                 "category": "Met",
@@ -1621,8 +1787,8 @@
                 "event": "High Surf Advisory",
                 "sender": "w-nws.webmaster@noaa.gov",
                 "senderName": "NWS Fairbanks AK",
-                "headline": "High Surf Advisory issued October 22 at 8:43AM AKDT until October 26 at 4:00AM AKDT by NWS Fairbanks AK",
-                "description": "* WHAT...Large breaking waves of 3 to 5 feet above the normal\nhigh tide line.\n\n* WHERE...Kivalina and Red Dog Dock.\n\n* WHEN...From 10 AM Friday to 4 AM AKDT Monday.\n\n* IMPACTS...Localized beach erosion may occur.\n\n* ADDITIONAL DETAILS...South to southeast winds increase Friday\nwith gusts up to 55 mph possible.",
+                "headline": "High Surf Advisory issued October 22 at 8:43AM AKDT until October 25 at 10:00PM AKDT by NWS Fairbanks AK",
+                "description": "* WHAT...Large breaking waves of 2 to 4 feet above the normal\nhigh tide line.\n\n* WHERE...Baldwin Peninsula and Northern Seward Peninsula.\n\n* WHEN...From 4 PM Friday to 10 PM AKDT Sunday.\n\n* IMPACTS...Localized beach erosion may occur.\n\n* ADDITIONAL DETAILS...South to southeast winds increase Friday\nwith gusts up to 60 mph possible.",
                 "instruction": "Precautions should be taken to protect property.",
                 "response": "Avoid",
                 "note": null,
@@ -1634,7 +1800,7 @@
                         "WHAK49 PAFG 221643"
                     ],
                     "NWSheadline": [
-                        "HIGH SURF ADVISORY REMAINS IN EFFECT FROM 10 AM FRIDAY TO 4 AM AKDT MONDAY"
+                        "HIGH SURF ADVISORY REMAINS IN EFFECT FROM 4 PM FRIDAY TO 10 PM AKDT SUNDAY"
                     ],
                     "BLOCKCHANNEL": [
                         "EAS",
@@ -1642,13 +1808,13 @@
                         "CMAS"
                     ],
                     "VTEC": [
-                        "/O.CON.PAFG.SU.Y.0009.261023T1800Z-261026T1200Z/"
+                        "/O.CON.PAFG.SU.Y.0009.261024T0000Z-261026T0600Z/"
                     ],
                     "eventEndingTime": [
-                        "2026-10-26T04:00:00-08:00"
+                        "2026-10-25T22:00:00-08:00"
                     ],
                     "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bfb1c48d470786be158b54beede2aa2ca24f0545.003.1,2026-10-20T15:07:00-08:00"
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bfb1c48d470786be158b54beede2aa2ca24f0545.004.1,2026-10-20T15:07:00-08:00"
                     ]
                 },
                 "scope": "Public",
@@ -1752,31 +1918,115 @@
             }
         },
         {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.005.1",
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.006.1",
             "type": "Feature",
             "geometry": null,
             "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.005.1",
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.006.1",
                 "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.005.1",
-                "areaDesc": "Northwest Arctic Coast; Northern Arctic Coast",
+                "id": "urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.006.1",
+                "areaDesc": "Kivalina and Red Dog Dock",
+                "geocode": {
+                    "SAME": [
+                        "002188"
+                    ],
+                    "UGC": [
+                        "AKZ815"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/AKZ815"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5b5e6906cbc690690dcda89e9e75555fe1f5cbf6.004.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.5b5e6906cbc690690dcda89e9e75555fe1f5cbf6.004.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-21T15:09:00-08:00"
+                    }
+                ],
+                "sent": "2026-10-22T08:43:00-08:00",
+                "effective": "2026-10-22T08:43:00-08:00",
+                "onset": "2026-10-23T10:00:00-08:00",
+                "expires": "2026-10-23T07:00:00-08:00",
+                "ends": "2026-10-26T04:00:00-08:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "High Surf Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Fairbanks AK",
+                "headline": "High Surf Advisory issued October 22 at 8:43AM AKDT until October 26 at 4:00AM AKDT by NWS Fairbanks AK",
+                "description": "* WHAT...Large breaking waves of 3 to 5 feet above the normal\nhigh tide line.\n\n* WHERE...Kivalina and Red Dog Dock.\n\n* WHEN...From 10 AM Friday to 4 AM AKDT Monday.\n\n* IMPACTS...Localized beach erosion may occur.\n\n* ADDITIONAL DETAILS...South to southeast winds increase Friday\nwith gusts up to 55 mph possible.",
+                "instruction": "Precautions should be taken to protect property.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "CFWAFG"
+                    ],
+                    "WMOidentifier": [
+                        "WHAK49 PAFG 221643"
+                    ],
+                    "NWSheadline": [
+                        "HIGH SURF ADVISORY REMAINS IN EFFECT FROM 10 AM FRIDAY TO 4 AM AKDT MONDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.PAFG.SU.Y.0009.261023T1800Z-261026T1200Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-26T04:00:00-08:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bfb1c48d470786be158b54beede2aa2ca24f0545.003.1,2026-10-20T15:07:00-08:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "SUY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.004.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.004.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.004.1",
+                "areaDesc": "Western Arctic Coast",
                 "geocode": {
                     "SAME": [
                         "002185"
                     ],
                     "UGC": [
-                        "AKZ802",
-                        "AKZ803"
+                        "AKZ801"
                     ]
                 },
                 "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/AKZ802",
-                    "https://api.weather.gov/zones/forecast/AKZ803"
+                    "https://api.weather.gov/zones/forecast/AKZ801"
                 ],
                 "references": [
                     {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5b5e6906cbc690690dcda89e9e75555fe1f5cbf6.003.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.5b5e6906cbc690690dcda89e9e75555fe1f5cbf6.003.1",
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5b5e6906cbc690690dcda89e9e75555fe1f5cbf6.002.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.5b5e6906cbc690690dcda89e9e75555fe1f5cbf6.002.1",
                         "sender": "w-nws.webmaster@noaa.gov",
                         "sent": "2026-10-21T15:09:00-08:00"
                     }
@@ -1796,7 +2046,7 @@
                 "sender": "w-nws.webmaster@noaa.gov",
                 "senderName": "NWS Fairbanks AK",
                 "headline": "High Surf Advisory issued October 22 at 8:43AM AKDT until October 26 at 10:00AM AKDT by NWS Fairbanks AK",
-                "description": "* WHAT...Large breaking waves of 2 to 3 feet above the normal\nhigh tide line near Utqiagvik and 2.5 to 4.5 feet above the\nnormal high tide line near Wainwright.\n\n* WHERE...Northwest Arctic Coast and Northern Arctic Coast.\n\n* WHEN...From 10 AM Friday to 10 AM AKDT Monday.\n\n* IMPACTS...Localized beach erosion may occur.\n\n* ADDITIONAL DETAILS...South winds increase late Friday to early\nSaturday with gusts up to 40 mph.",
+                "description": "* WHAT...Large breaking waves of 3 to 6 feet above the normal\nhigh tide line for Point Hope. Water levels in the 3 to 5 feet\nabove the normal high tide line for Point Lay.\n\n* WHERE...Western Arctic Coast.\n\n* WHEN...From 10 AM Friday to 10 AM AKDT Monday.\n\n* IMPACTS...Localized beach erosion may occur.\n\n* ADDITIONAL DETAILS...South to southeast winds increase Friday\nmorning gusting up to 65 mph. Strong winds continue through\nSaturday and into Sunday.",
                 "instruction": "Precautions should be taken to protect property.",
                 "response": "Avoid",
                 "note": null,
@@ -1822,7 +2072,7 @@
                         "2026-10-26T10:00:00-08:00"
                     ],
                     "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bfb1c48d470786be158b54beede2aa2ca24f0545.002.1,2026-10-20T15:07:00-08:00"
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bfb1c48d470786be158b54beede2aa2ca24f0545.001.1,2026-10-20T15:07:00-08:00"
                     ]
                 },
                 "scope": "Public",
@@ -1913,6 +2163,94 @@
                     ],
                     "NationalWeatherService": [
                         "CFY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.005.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.005.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.58ad593ae7c5ade43a042c50cdb91af18cb1b76e.005.1",
+                "areaDesc": "Northwest Arctic Coast; Northern Arctic Coast",
+                "geocode": {
+                    "SAME": [
+                        "002185"
+                    ],
+                    "UGC": [
+                        "AKZ802",
+                        "AKZ803"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/AKZ802",
+                    "https://api.weather.gov/zones/forecast/AKZ803"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5b5e6906cbc690690dcda89e9e75555fe1f5cbf6.003.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.5b5e6906cbc690690dcda89e9e75555fe1f5cbf6.003.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-21T15:09:00-08:00"
+                    }
+                ],
+                "sent": "2026-10-22T08:43:00-08:00",
+                "effective": "2026-10-22T08:43:00-08:00",
+                "onset": "2026-10-23T10:00:00-08:00",
+                "expires": "2026-10-23T07:00:00-08:00",
+                "ends": "2026-10-26T10:00:00-08:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "High Surf Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Fairbanks AK",
+                "headline": "High Surf Advisory issued October 22 at 8:43AM AKDT until October 26 at 10:00AM AKDT by NWS Fairbanks AK",
+                "description": "* WHAT...Large breaking waves of 2 to 3 feet above the normal\nhigh tide line near Utqiagvik and 2.5 to 4.5 feet above the\nnormal high tide line near Wainwright.\n\n* WHERE...Northwest Arctic Coast and Northern Arctic Coast.\n\n* WHEN...From 10 AM Friday to 10 AM AKDT Monday.\n\n* IMPACTS...Localized beach erosion may occur.\n\n* ADDITIONAL DETAILS...South winds increase late Friday to early\nSaturday with gusts up to 40 mph.",
+                "instruction": "Precautions should be taken to protect property.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "CFWAFG"
+                    ],
+                    "WMOidentifier": [
+                        "WHAK49 PAFG 221643"
+                    ],
+                    "NWSheadline": [
+                        "HIGH SURF ADVISORY REMAINS IN EFFECT FROM 10 AM FRIDAY TO 10 AM AKDT MONDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.PAFG.SU.Y.0009.261023T1800Z-261026T1800Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-26T10:00:00-08:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bfb1c48d470786be158b54beede2aa2ca24f0545.002.1,2026-10-20T15:07:00-08:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "SUY"
                     ]
                 }
             }
@@ -2011,98 +2349,6 @@
                     ],
                     "NationalWeatherService": [
                         "SCY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.2314cf945748a665ece90bbd484517df71dfd037.001.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.2314cf945748a665ece90bbd484517df71dfd037.001.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.2314cf945748a665ece90bbd484517df71dfd037.001.1",
-                "areaDesc": "Currituck Sound",
-                "geocode": {
-                    "SAME": [
-                        "073633"
-                    ],
-                    "UGC": [
-                        "ANZ633"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/ANZ633"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.8915a97d4fea61cd607568868017aa0236a05631.001.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.8915a97d4fea61cd607568868017aa0236a05631.001.1",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-22T02:32:00-04:00"
-                    },
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.86a25ceb969b11f8b72980b42ee222c64d1709a3.001.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.86a25ceb969b11f8b72980b42ee222c64d1709a3.001.1",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-22T09:57:00-04:00"
-                    }
-                ],
-                "sent": "2026-10-22T12:43:00-04:00",
-                "effective": "2026-10-22T12:43:00-04:00",
-                "onset": "2026-10-22T12:43:00-04:00",
-                "expires": "2026-10-22T13:45:00-04:00",
-                "ends": "2026-10-22T13:00:00-04:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Minor",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Low Water Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Wakefield VA",
-                "headline": "Low Water Advisory issued October 22 at 12:43PM EDT until October 22 at 1:00PM EDT by NWS Wakefield VA",
-                "description": "Water levels are gradually rising in the Currituck Sound.\nTherefore, the Low Water Advisory will be allowed to expire.",
-                "instruction": null,
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "MWWAKQ"
-                    ],
-                    "WMOidentifier": [
-                        "WHUS71 KAKQ 221643"
-                    ],
-                    "NWSheadline": [
-                        "LOW WATER ADVISORY WILL EXPIRE AT 1 PM EDT THIS AFTERNOON"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.EXP.KAKQ.LO.Y.0003.000000T0000Z-261022T1700Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-22T13:00:00-04:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.4019688d23935af78aeaa67767f61eb3defd7bbc.003.1,2026-10-21T19:00:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.cc377e237f869be635558b3c1e0622b661def7dd.004.1,2026-10-21T15:10:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.40106c1839d3a79c281126ec76f73ee0e2f2e4c6.005.1,2026-10-21T10:04:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.972f9bd6813a2c886ad656228e70087ee3dbdc08.005.1,2026-10-21T07:13:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.1089398d75398f523af489c3c8cb5ad381dd9960.007.1,2026-10-21T02:17:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.e3c361d5ef855d64bd417719359c0c3c8f67a814.001.3,2026-10-20T14:43:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.faf8494e9395a266ec5c9766c7f88b64456e8ed7.001.2,2026-10-20T09:59:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.c69feacc4be4a71b66481b41fa81e846981d34d6.003.1,2026-10-20T02:17:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.28d77c023c0e813c1b41c4089ff844cc99ed136a.001.2,2026-10-19T20:04:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.3b02ec8903132f2a96d20578ba77085fd0f40cf9.002.2,2026-10-19T14:48:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.1928aedb1db80c45a90bb66b730ec380836ed003.002.2,2026-10-19T08:01:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.2bad74e2e570e70baf525ea5f04f9b3347d2e4a9.002.2,2026-10-19T06:26:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.ddc7aaade0004ea442fd2cd41317d59c074a7b87.002.2,2026-10-19T02:47:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.52875acea6a9499f7e9cf079d3bba27431ffde61.001.1,2026-10-18T21:52:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "LOY"
                     ]
                 }
             }
@@ -3036,142 +3282,6 @@
             }
         },
         {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.24d703c72158e04073cd12fb6e46fd4f0b531052.001.1",
-            "type": "Feature",
-            "geometry": {
-                "type": "Polygon",
-                "coordinates": [
-                    [
-                        [
-                            -121.08,
-                            35.79
-                        ],
-                        [
-                            -120.94,
-                            35.7
-                        ],
-                        [
-                            -121.14,
-                            35.6
-                        ],
-                        [
-                            -121.17,
-                            35.64
-                        ],
-                        [
-                            -121.2,
-                            35.64
-                        ],
-                        [
-                            -121.22,
-                            35.65
-                        ],
-                        [
-                            -121.24,
-                            35.65
-                        ],
-                        [
-                            -121.28,
-                            35.67
-                        ],
-                        [
-                            -121.3,
-                            35.69
-                        ],
-                        [
-                            -121.2,
-                            35.8
-                        ],
-                        [
-                            -121.08,
-                            35.79
-                        ]
-                    ]
-                ]
-            },
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.24d703c72158e04073cd12fb6e46fd4f0b531052.001.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.24d703c72158e04073cd12fb6e46fd4f0b531052.001.1",
-                "areaDesc": "San Luis Obispo County Beaches; Santa Lucia Mountains; Southern Salinas Valley",
-                "geocode": {
-                    "SAME": [
-                        "006079"
-                    ],
-                    "UGC": [
-                        "CAZ340",
-                        "CAZ342",
-                        "CAZ343"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/CAZ340",
-                    "https://api.weather.gov/zones/forecast/CAZ342",
-                    "https://api.weather.gov/zones/forecast/CAZ343"
-                ],
-                "references": [],
-                "sent": "2026-10-22T09:16:00-07:00",
-                "effective": "2026-10-22T09:16:00-07:00",
-                "onset": "2026-10-22T09:16:00-07:00",
-                "expires": "2026-10-22T10:00:00-07:00",
-                "ends": null,
-                "status": "Actual",
-                "messageType": "Alert",
-                "category": "Met",
-                "severity": "Moderate",
-                "certainty": "Observed",
-                "urgency": "Expected",
-                "event": "Special Weather Statement",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Los Angeles/Oxnard CA",
-                "headline": "Special Weather Statement issued October 22 at 9:16AM PDT by NWS Los Angeles/Oxnard CA",
-                "description": "At 915 AM PDT, Doppler radar was tracking a strong thunderstorm near\nPoint Piedras Blancas, or 25 miles southeast of Gorda, moving\nnortheast at 25 mph.\n\nHAZARD...Wind gusts up to 40 mph. A potential waterspout off the coast\nmay make landfall. Therefore there is a small chance for a brief,\nweak landspout.\n\nSOURCE...Radar indicated.\n\nIMPACT...Gusty winds could knock down tree limbs and blow around\nunsecured objects.\n\nLocations impacted include...\nHearst Castle.",
-                "instruction": "If outdoors, consider seeking shelter inside a building.\n\nTorrential rainfall is also occurring with this storm and may lead to\nlocalized flooding. Do not drive your vehicle through flooded\nroadways.",
-                "response": "Execute",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "SPSLOX"
-                    ],
-                    "WMOidentifier": [
-                        "WWUS86 KLOX 221616"
-                    ],
-                    "NWSheadline": [
-                        "A STRONG THUNDERSTORM WILL IMPACT NORTHWESTERN SAN LUIS OBISPO COUNTY THROUGH 1000 AM PDT"
-                    ],
-                    "eventMotionDescription": [
-                        "2026-10-22T16:15:00-00:00...storm...223DEG...20KT...35.64,-121.2"
-                    ],
-                    "maxWindGust": [
-                        "40 MPH"
-                    ],
-                    "maxHailSize": [
-                        "0.00"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "EAS-ORG": [
-                        "WXR"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "SPS"
-                    ],
-                    "NationalWeatherService": [
-                        "SPS"
-                    ]
-                }
-            }
-        },
-        {
             "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.16b1993064d3839a89b822f463312f46bd2cfc52.001.1",
             "type": "Feature",
             "geometry": null,
@@ -3636,50 +3746,50 @@
             }
         },
         {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b508b7afd3a6645ebf02cf82f0c83c2be5472337.003.1",
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b508b7afd3a6645ebf02cf82f0c83c2be5472337.002.2",
             "type": "Feature",
             "geometry": null,
             "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b508b7afd3a6645ebf02cf82f0c83c2be5472337.003.1",
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b508b7afd3a6645ebf02cf82f0c83c2be5472337.002.2",
                 "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.b508b7afd3a6645ebf02cf82f0c83c2be5472337.003.1",
-                "areaDesc": "Coastal waters from Pt. St. George to Cape Mendocino CA out 10 nm",
+                "id": "urn:oid:2.49.0.1.840.0.b508b7afd3a6645ebf02cf82f0c83c2be5472337.002.2",
+                "areaDesc": "Waters from Cape Mendocino to Pt. Arena CA from 10 to 60 nm",
                 "geocode": {
                     "SAME": [
-                        "057450"
+                        "057475"
                     ],
                     "UGC": [
-                        "PZZ450"
+                        "PZZ475"
                     ]
                 },
                 "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/PZZ450"
+                    "https://api.weather.gov/zones/forecast/PZZ475"
                 ],
                 "references": [
                     {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ab410e86c80adcd1fb5d8fbab17c727f3311687f.003.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.ab410e86c80adcd1fb5d8fbab17c727f3311687f.003.1",
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ab410e86c80adcd1fb5d8fbab17c727f3311687f.002.2",
+                        "identifier": "urn:oid:2.49.0.1.840.0.ab410e86c80adcd1fb5d8fbab17c727f3311687f.002.2",
                         "sender": "w-nws.webmaster@noaa.gov",
                         "sent": "2026-10-22T02:16:00-07:00"
                     }
                 ],
                 "sent": "2026-10-22T09:02:00-07:00",
                 "effective": "2026-10-22T09:02:00-07:00",
-                "onset": "2026-10-22T18:00:00-07:00",
+                "onset": "2026-10-22T21:00:00-07:00",
                 "expires": "2026-10-22T17:15:00-07:00",
                 "ends": "2026-10-23T21:00:00-07:00",
                 "status": "Actual",
                 "messageType": "Update",
                 "category": "Met",
-                "severity": "Minor",
+                "severity": "Moderate",
                 "certainty": "Likely",
                 "urgency": "Expected",
-                "event": "Small Craft Advisory",
+                "event": "Gale Warning",
                 "sender": "w-nws.webmaster@noaa.gov",
                 "senderName": "NWS Eureka CA",
-                "headline": "Small Craft Advisory issued October 22 at 9:02AM PDT until October 23 at 9:00PM PDT by NWS Eureka CA",
-                "description": "* WHAT...North winds 20 to 30 kt with gusts up to 40 kt and seas\n7 to 12 feet expected.\n\n* WHERE...Coastal waters from Pt. St. George to Cape Mendocino\nCA out 10 nm.\n\n* WHEN...From 6 PM this evening to 9 PM PDT Friday.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
-                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
+                "headline": "Gale Warning issued October 22 at 9:02AM PDT until October 23 at 9:00PM PDT by NWS Eureka CA",
+                "description": "* WHAT...For the Gale Warning, north winds 25 to 30 kt with\ngusts up to 40 kt and seas 10 to 14 feet expected. For the\nSmall Craft Advisory, north winds 20 to 25 kt with gusts up to\n30 kt and seas 7 to 9 feet.\n\n* WHERE...Waters from Cape Mendocino to Pt. Arena CA from 10 to\n60 nm.\n\n* WHEN...For the Gale Warning, from 9 PM this evening to 9 PM\nPDT Friday. For the Small Craft Advisory, until 9 PM PDT this\nevening.\n\n* IMPACTS...Strong winds will cause hazardous seas which could\ncapsize or damage vessels and reduce visibility.",
+                "instruction": "Mariners should alter plans to avoid these hazardous conditions.\nRemain in port, seek safe harbor, alter course, and/or secure the\nvessel for severe conditions.",
                 "response": "Avoid",
                 "note": null,
                 "parameters": {
@@ -3690,7 +3800,7 @@
                         "WHUS76 KEKA 221602"
                     ],
                     "NWSheadline": [
-                        "SMALL CRAFT ADVISORY REMAINS IN EFFECT FROM 6 PM THIS EVENING TO 9 PM PDT FRIDAY"
+                        "SMALL CRAFT ADVISORY REMAINS IN EFFECT UNTIL 9 PM PDT THIS EVENING... ...GALE WARNING REMAINS IN EFFECT FROM 9 PM THIS EVENING TO 9 PM PDT FRIDAY"
                     ],
                     "BLOCKCHANNEL": [
                         "EAS",
@@ -3698,13 +3808,13 @@
                         "CMAS"
                     ],
                     "VTEC": [
-                        "/O.CON.KEKA.SC.Y.0095.261023T0100Z-261024T0400Z/"
+                        "/O.CON.KEKA.GL.W.0034.261023T0400Z-261024T0400Z/"
                     ],
                     "eventEndingTime": [
                         "2026-10-23T21:00:00-07:00"
                     ],
                     "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.2c8275b77cb53c81fdcb3456d5dcc9cda226eb2d.003.1,2026-10-21T21:17:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.a0110156697ce0aa6678acf0058af723d14f23bf.003.1,2026-10-21T15:07:00-07:00"
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.2c8275b77cb53c81fdcb3456d5dcc9cda226eb2d.002.2,2026-10-21T21:17:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.a0110156697ce0aa6678acf0058af723d14f23bf.002.2,2026-10-21T15:07:00-07:00"
                     ]
                 },
                 "scope": "Public",
@@ -3716,7 +3826,7 @@
                         "NWS"
                     ],
                     "NationalWeatherService": [
-                        "SCY"
+                        "GLW"
                     ]
                 }
             }
@@ -3808,50 +3918,50 @@
             }
         },
         {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b508b7afd3a6645ebf02cf82f0c83c2be5472337.002.2",
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b508b7afd3a6645ebf02cf82f0c83c2be5472337.003.1",
             "type": "Feature",
             "geometry": null,
             "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b508b7afd3a6645ebf02cf82f0c83c2be5472337.002.2",
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b508b7afd3a6645ebf02cf82f0c83c2be5472337.003.1",
                 "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.b508b7afd3a6645ebf02cf82f0c83c2be5472337.002.2",
-                "areaDesc": "Waters from Cape Mendocino to Pt. Arena CA from 10 to 60 nm",
+                "id": "urn:oid:2.49.0.1.840.0.b508b7afd3a6645ebf02cf82f0c83c2be5472337.003.1",
+                "areaDesc": "Coastal waters from Pt. St. George to Cape Mendocino CA out 10 nm",
                 "geocode": {
                     "SAME": [
-                        "057475"
+                        "057450"
                     ],
                     "UGC": [
-                        "PZZ475"
+                        "PZZ450"
                     ]
                 },
                 "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/PZZ475"
+                    "https://api.weather.gov/zones/forecast/PZZ450"
                 ],
                 "references": [
                     {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ab410e86c80adcd1fb5d8fbab17c727f3311687f.002.2",
-                        "identifier": "urn:oid:2.49.0.1.840.0.ab410e86c80adcd1fb5d8fbab17c727f3311687f.002.2",
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ab410e86c80adcd1fb5d8fbab17c727f3311687f.003.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.ab410e86c80adcd1fb5d8fbab17c727f3311687f.003.1",
                         "sender": "w-nws.webmaster@noaa.gov",
                         "sent": "2026-10-22T02:16:00-07:00"
                     }
                 ],
                 "sent": "2026-10-22T09:02:00-07:00",
                 "effective": "2026-10-22T09:02:00-07:00",
-                "onset": "2026-10-22T21:00:00-07:00",
+                "onset": "2026-10-22T18:00:00-07:00",
                 "expires": "2026-10-22T17:15:00-07:00",
                 "ends": "2026-10-23T21:00:00-07:00",
                 "status": "Actual",
                 "messageType": "Update",
                 "category": "Met",
-                "severity": "Moderate",
+                "severity": "Minor",
                 "certainty": "Likely",
                 "urgency": "Expected",
-                "event": "Gale Warning",
+                "event": "Small Craft Advisory",
                 "sender": "w-nws.webmaster@noaa.gov",
                 "senderName": "NWS Eureka CA",
-                "headline": "Gale Warning issued October 22 at 9:02AM PDT until October 23 at 9:00PM PDT by NWS Eureka CA",
-                "description": "* WHAT...For the Gale Warning, north winds 25 to 30 kt with\ngusts up to 40 kt and seas 10 to 14 feet expected. For the\nSmall Craft Advisory, north winds 20 to 25 kt with gusts up to\n30 kt and seas 7 to 9 feet.\n\n* WHERE...Waters from Cape Mendocino to Pt. Arena CA from 10 to\n60 nm.\n\n* WHEN...For the Gale Warning, from 9 PM this evening to 9 PM\nPDT Friday. For the Small Craft Advisory, until 9 PM PDT this\nevening.\n\n* IMPACTS...Strong winds will cause hazardous seas which could\ncapsize or damage vessels and reduce visibility.",
-                "instruction": "Mariners should alter plans to avoid these hazardous conditions.\nRemain in port, seek safe harbor, alter course, and/or secure the\nvessel for severe conditions.",
+                "headline": "Small Craft Advisory issued October 22 at 9:02AM PDT until October 23 at 9:00PM PDT by NWS Eureka CA",
+                "description": "* WHAT...North winds 20 to 30 kt with gusts up to 40 kt and seas\n7 to 12 feet expected.\n\n* WHERE...Coastal waters from Pt. St. George to Cape Mendocino\nCA out 10 nm.\n\n* WHEN...From 6 PM this evening to 9 PM PDT Friday.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
+                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
                 "response": "Avoid",
                 "note": null,
                 "parameters": {
@@ -3862,7 +3972,7 @@
                         "WHUS76 KEKA 221602"
                     ],
                     "NWSheadline": [
-                        "SMALL CRAFT ADVISORY REMAINS IN EFFECT UNTIL 9 PM PDT THIS EVENING... ...GALE WARNING REMAINS IN EFFECT FROM 9 PM THIS EVENING TO 9 PM PDT FRIDAY"
+                        "SMALL CRAFT ADVISORY REMAINS IN EFFECT FROM 6 PM THIS EVENING TO 9 PM PDT FRIDAY"
                     ],
                     "BLOCKCHANNEL": [
                         "EAS",
@@ -3870,13 +3980,13 @@
                         "CMAS"
                     ],
                     "VTEC": [
-                        "/O.CON.KEKA.GL.W.0034.261023T0400Z-261024T0400Z/"
+                        "/O.CON.KEKA.SC.Y.0095.261023T0100Z-261024T0400Z/"
                     ],
                     "eventEndingTime": [
                         "2026-10-23T21:00:00-07:00"
                     ],
                     "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.2c8275b77cb53c81fdcb3456d5dcc9cda226eb2d.002.2,2026-10-21T21:17:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.a0110156697ce0aa6678acf0058af723d14f23bf.002.2,2026-10-21T15:07:00-07:00"
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.2c8275b77cb53c81fdcb3456d5dcc9cda226eb2d.003.1,2026-10-21T21:17:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.a0110156697ce0aa6678acf0058af723d14f23bf.003.1,2026-10-21T15:07:00-07:00"
                     ]
                 },
                 "scope": "Public",
@@ -3888,7 +3998,7 @@
                         "NWS"
                     ],
                     "NationalWeatherService": [
-                        "GLW"
+                        "SCY"
                     ]
                 }
             }
@@ -4017,88 +4127,4 @@
                 "category": "Met",
                 "severity": "Minor",
                 "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Small Craft Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Eureka CA",
-                "headline": "Small Craft Advisory issued October 22 at 9:02AM PDT until October 23 at 9:00PM PDT by NWS Eureka CA",
-                "description": "* WHAT...Northwest winds 20 to 30 kt with gusts up to 40 kt and\nseas 8 to 13 feet expected.\n\n* WHERE...Coastal waters from Cape Mendocino to Pt. Arena CA out\n10 nm.\n\n* WHEN...From 6 PM this evening to 9 PM PDT Friday.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
-                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "MWWEKA"
-                    ],
-                    "WMOidentifier": [
-                        "WHUS76 KEKA 221602"
-                    ],
-                    "NWSheadline": [
-                        "SMALL CRAFT ADVISORY REMAINS IN EFFECT FROM 6 PM THIS EVENING TO 9 PM PDT FRIDAY"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.KEKA.SC.Y.0095.261023T0100Z-261024T0400Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-23T21:00:00-07:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.2c8275b77cb53c81fdcb3456d5dcc9cda226eb2d.004.1,2026-10-21T21:17:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.a0110156697ce0aa6678acf0058af723d14f23bf.004.1,2026-10-21T15:07:00-07:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "SCY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b508b7afd3a6645ebf02cf82f0c83c2be5472337.002.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.b508b7afd3a6645ebf02cf82f0c83c2be5472337.002.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.b508b7afd3a6645ebf02cf82f0c83c2be5472337.002.1",
-                "areaDesc": "Waters from Cape Mendocino to Pt. Arena CA from 10 to 60 nm",
-                "geocode": {
-                    "SAME": [
-                        "057475"
-                    ],
-                    "UGC": [
-                        "PZZ475"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/PZZ475"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.ab410e86c80adcd1fb5d8fbab17c727f3311687f.002.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.ab410e86c80adcd1fb5d8fbab17c727f3311687f.002.1",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-22T02:16:00-07:00"
-                    }
-                ],
-                "sent": "2026-10-22T09:02:00-07:00",
-                "effective": "2026-10-22T09:02:00-07:00",
-                "onset": "2026-10-22T09:02:00-07:00",
-                "expires": "2026-10-22T17:15:00-07:00",
-                "ends": "2026-10-22T21:00:00-07:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severit
+                "urgency"
