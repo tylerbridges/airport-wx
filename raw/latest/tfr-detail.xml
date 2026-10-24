@@ -1,37 +1,39 @@
-<XNOTAM-Update xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="0.1" origin="" created="2026-10-22T10:12:11">
+<XNOTAM-Update xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" version="0.1" origin="" created="2026-10-23T19:27:07">
   <Group>
     <Add>
       <Not>
         <NotUid>
           <txtNameAcctFac>FDC</txtNameAcctFac>
           <dateIndexYear>2026</dateIndexYear>
-          <noSeqNo>9978</noSeqNo>
-          <dateIssued>2026-10-16T18:19:44</dateIssued>
-          <txtLocalName>6/9978</txtLocalName>
-          <codeGUID>3e69c8b5-745f-44d3-970d-813996acbb03</codeGUID>
+          <noSeqNo>2016</noSeqNo>
+          <dateIssued>2026-10-24T00:07:45</dateIssued>
+          <txtLocalName>6/2016</txtLocalName>
+          <codeGUID>83d4129e-c6fe-439a-ae11-32790d7cd200</codeGUID>
         </NotUid>
-        <codeDailyOper>false</codeDailyOper>
-        <dateEffective>2026-10-20T00:00:00</dateEffective>
-        <dateExpire>2027-10-19T23:59:00</dateExpire>
+        <codeDailyOper>true</codeDailyOper>
+        <dateEffective>2026-10-24T12:00:00</dateEffective>
+        <dateExpire>2026-10-27T23:00:00</dateExpire>
         <codeTimeZone>UTC</codeTimeZone>
         <codeExpirationTimeZone>UTC</codeExpirationTimeZone>
+        <txtDescrPurpose>TO PROVIDE A SAFE ENVIRONMENT FOR FIRE FIGHTING ACFT OPS</txtDescrPurpose>
         <AffLocGroup>
-          <txtNameCity>U.S. MEXICO BORDER</txtNameCity>
-          <txtNameUSState>TEXAS</txtNameUSState>
+          <txtNameCity>14NM NW LUCEDALE</txtNameCity>
+          <txtNameUSState>MISSISSIPPI</txtNameUSState>
         </AffLocGroup>
-        <codeFacility>ZAB</codeFacility>
+        <codeFacility>ZHU</codeFacility>
         <TfrNot>
-          <codeType>99.7</codeType>
+          <codeType>91.137(a)(2)</codeType>
           <TFRAreaGroup>
             <aseTFRArea>
               <AseUid>
                 <codeType>RAS</codeType>
-                <codeId>1108</codeId>
+                <codeId>1315</codeId>
               </AseUid>
-              <codeDistVerUpper>HEI</codeDistVerUpper>
-              <valDistVerUpper>0</valDistVerUpper>
+              <txtName>Hazard Area1</txtName>
+              <codeDistVerUpper>ALT</codeDistVerUpper>
+              <valDistVerUpper>2000</valDistVerUpper>
               <uomDistVerUpper>FT</uomDistVerUpper>
-              <codeDistVerLower>HEI</codeDistVerLower>
+              <codeDistVerLower>ALT</codeDistVerLower>
               <valDistVerLower>0</valDistVerLower>
               <uomDistVerLower>FT</uomDistVerLower>
               <Att>
@@ -39,8 +41,314 @@
               </Att>
               <codeExclVerUpper>INCLUDE</codeExclVerUpper>
               <codeExclVerLower>INCLUDE</codeExclVerLower>
-              <isScheduledTfrArea>FALSE</isScheduledTfrArea>
+              <isScheduledTfrArea>TRUE</isScheduledTfrArea>
+              <dayCode>Daily</dayCode>
+              <ScheduleGroup>
+                <isTimeSeparate>TRUE</isTimeSeparate>
+                <dateEffective>2026-10-24T12:00:00</dateEffective>
+                <dateExpire>2026-10-27T23:00:00</dateExpire>
+                <startTime>2026-10-23T12:00:00</startTime>
+                <endTime>2026-10-23T23:00:00</endTime>
+              </ScheduleGroup>
             </aseTFRArea>
+            <Aac>
+              <AacUid>
+                <AseUidChi>
+                  <codeType>RAS</codeType>
+                  <codeId>1315</codeId>
+                </AseUidChi>
+                <AseUidPar>
+                  <codeType>PART</codeType>
+                  <codeId>1316</codeId>
+                </AseUidPar>
+              </AacUid>
+              <codeType>BOM</codeType>
+              <codeOpr>BASE</codeOpr>
+            </Aac>
+            <abdMergedArea>
+              <AbdUid>
+                <AseUid>
+                  <codeType>RAS</codeType>
+                  <codeId>1315</codeId>
+                </AseUid>
+              </AbdUid>
+              <txtRmk>1315</txtRmk>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.08340831N</geoLat>
+                <geoLong>088.8375W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.08290059N</geoLat>
+                <geoLong>088.83075946W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.08139287N</geoLat>
+                <geoLong>088.82422394W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.078931N</geoLat>
+                <geoLong>088.81809219W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.07558985N</geoLat>
+                <geoLong>088.81255068W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.07147104N</geoLat>
+                <geoLong>088.80776783W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.0666998N</geoLat>
+                <geoLong>088.80388899W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.06142118N</geoLat>
+                <geoLong>088.80103193W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.05579565N</geoLat>
+                <geoLong>088.79928333W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.04999416N</geoLat>
+                <geoLong>088.79869613W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.04419303N</geoLat>
+                <geoLong>088.79928797W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.03856849N</geoLat>
+                <geoLong>088.80104065W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.0332914N</geoLat>
+                <geoLong>088.80390073W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.02852204N</geoLat>
+                <geoLong>088.80778118W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.02440522N</geoLat>
+                <geoLong>088.81256403W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.02106596N</geoLat>
+                <geoLong>088.81810393W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.01860562N</geoLat>
+                <geoLong>088.82423265W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.01709889N</geoLat>
+                <geoLong>088.8307641W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.01659151N</geoLat>
+                <geoLong>088.8375W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.01709889N</geoLat>
+                <geoLong>088.8442359W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.01860562N</geoLat>
+                <geoLong>088.85076735W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.02106596N</geoLat>
+                <geoLong>088.85689607W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.02440522N</geoLat>
+                <geoLong>088.86243597W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.02852204N</geoLat>
+                <geoLong>088.86721882W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.0332914N</geoLat>
+                <geoLong>088.87109927W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.03856849N</geoLat>
+                <geoLong>088.87395935W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.04419303N</geoLat>
+                <geoLong>088.87571203W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.04999416N</geoLat>
+                <geoLong>088.87630387W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.05579565N</geoLat>
+                <geoLong>088.87571667W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.06142118N</geoLat>
+                <geoLong>088.87396807W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.0666998N</geoLat>
+                <geoLong>088.87111101W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.07147104N</geoLat>
+                <geoLong>088.86723217W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.07558985N</geoLat>
+                <geoLong>088.86244932W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.078931N</geoLat>
+                <geoLong>088.85690781W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.08139287N</geoLat>
+                <geoLong>088.85077606W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.08290059N</geoLat>
+                <geoLong>088.84424054W</geoLong>
+              </Avx>
+              <Avx>
+                <codeDatum>WGE</codeDatum>
+                <codeType>GRC</codeType>
+                <geoLat>31.08340831N</geoLat>
+                <geoLong>088.8375W</geoLong>
+              </Avx>
+            </abdMergedArea>
+            <aseShapes>
+              <AseUid>
+                <codeType>PART</codeType>
+                <codeId>1316</codeId>
+              </AseUid>
+              <Att>
+                <codeWorkHr>NOTAM</codeWorkHr>
+              </Att>
+              <Abd>
+                <AbdUid>
+                  <AseUid>
+                    <codeType>PART</codeType>
+                    <codeId>1316</codeId>
+                  </AseUid>
+                </AbdUid>
+                <txtRmk>1316</txtRmk>
+                <Avx>
+                  <codeType>CIR</codeType>
+                  <geoLat>31.05N</geoLat>
+                  <geoLong>088.8375W</geoLong>
+                  <codeDatum>WGE</codeDatum>
+                  <valRadiusArc>2.0</valRadiusArc>
+                  <uomRadiusArc>NM</uomRadiusArc>
+                  <Frd>
+                    <FrdUid>
+                      <DpnUid>
+                        <codeId>SJI31</codeId>
+                        <geoLat>31.05N</geoLat>
+                        <geoLong>088.8375W</geoLong>
+                      </DpnUid>
+                    </FrdUid>
+                    <Ain>
+                      <VorUid>
+                        <codeId>SJI</codeId>
+                        <geoLat>30.72597992N</geoLat>
+                        <geoLong>088.359294W</geoLong>
+                      </VorUid>
+                      <valAngleBrg>303.0</valAngleBrg>
+                    </Ain>
+                    <Din>
+                      <TcnUid>
+                        <codeId>SJI</codeId>
+                        <geoLat>30.72597992N</geoLat>
+                        <geoLong>088.359294W</geoLong>
+                      </TcnUid>
+                      <valDist>31.4</valDist>
+                      <uomDist>NM</uomDist>
+                    </Din>
+                    <txtRmk>SEMMES</txtRmk>
+                  </Frd>
+                </Avx>
+              </Abd>
+            </aseShapes>
             <InstructionsGroup />
             <codeIncFRD>TRUE</codeIncFRD>
             <codeShpPrt>COMPOSITE</codeShpPrt>
@@ -50,13 +358,15 @@
           <TemplateType>BigThreatLanguage</TemplateType>
           <codeCtrlFacilityType>ARTCC</codeCtrlFacilityType>
         </TfrNot>
+        <txtNameCoordFacility>HOUSTON</txtNameCoordFacility>
+        <codeCoordFacility>ZHU</codeCoordFacility>
         <codeCoordFacilityType>ARTCC</codeCoordFacilityType>
-        <txtDescrUSNS>!FDC 6/9978 ZAB SECURITY AZ, NM, TX..AIRSPACE U.S. MEXICO BORDER..TEMPORARY FLIGHT RESTRICTIONS. OCTOBER 19, 2026-OCTOBER 19, 2027 LOCAL. PURSUANT TO 49 USC 40103(B)(3), THE FEDERAL AVIATION ADMINISTRATION (FAA) CLASSIFIES THE AIRSPACE DEFINED IN THIS NOTAM AS 'NTL DEFENSE AIRSPACE'. PILOTS WHO DO NOT ADHERE TO THE FOLLOWING PROC MAY BE INTERCEPTED, DETAINED AND INTERVIEWED BY LAW ENFORCEMENT/SECURITY PERSONNEL. ANY OF THE FOLLOWING ADDITIONAL ACTIONS MAY ALSO BE TAKEN AGAINST A PILOT WHO DOES NOT COMPLY WITH THE RQMNTS OR ANY SPECIAL INSTRUCTIONS OR PROC ANNOUNCED IN THIS NOTAM: A) THE FAA MAY TAKE ADMINISTRATIVE ACTION, INCLUDING IMPOSING CIVIL PENALTIES AND THE SUSPENSION OR REVOCATION OF AIRMEN CERTIFICATES; OR B) THE UNITED STATES GOVERNMENT MAY PURSUE CRIMINAL CHARGES, INCLUDING CHARGES UNDER 49 USC SECTION 46307; OR C) THE UNITED STATES GOVERNMENT MAY USE DEADLY FORCE AGAINST THE AIRBORNE ACFT, IF IT IS DETERMINED THAT THE ACFT POSES AN IMMINENT SECURITY THREAT. PURSUANT TO 14 CFR 99.7, SPECIAL SECURITY INSTRUCTIONS (SSI), ALL UNMANNED ACFT SYSTEM - UAS FLT OPS ARE PROHIBITED: WI 1NM INLAND FROM THE U.S. SIDE OF THE U.S./MEXICO BORDER PORTION FM ANY POINT ALONG A LINE STARTING AT 320619N1133035W (GBN206066.3) ENDING AT 294543N1023336W (FST152074.4) EXCLUDING MEXICAN AIRSPACE SFC-400FT AGL EFFECTIVE 2610200000 UTC UNTIL 2710192359 UTC. SEE DOMESTIC NOTICE HTTPS://WWW.FAA.GOV/AIR_TRAFFIC/PUBLICATIONS/DOMESTICNOTICES/ OR VISUALIZE IT FOR GRAPHICAL REPRESENTATION EXC AS SPECIFIED BLW: A. UAS OPS MAY BE AUTH WI THE DEFINED AIRSPACE PROVIDED PRIOR APPROVAL HAS BEEN COORD WITH U.S. CUSTOMS AND BORDER PROTECTION (CBP), AND ALL APPLICABLE RQMNTS LISTED BLW ARE MET: 1. UAS OPS IN DCT SUPPORT OF ACT NTL DEFENSE, HOMELAND SECURITY, LAW ENFORCEMENT, FIREFIGHTING, MEDEVAC, SAR, OR DISASTER RESPONSE MISSIONS; 2. UAS OPS IN SUPPORT OF EVENT OPS; 3. UAS OPS MUST HAVE RECEIVED PRIOR COORD AND APPROVAL THROUGH CBP 4. AND UAS OPS MUST COMPLY WITH ALL OTHER APPLICABLE FEDERAL AVIATION REGULATIONS. B. UAS OPR WHO DO NOT COMPLY WITH APPLICABLE AIRSPACE RESTRICTIONS ARE WARNED THAT PURSUANT TO 10 U.S.C. SECTION 130I AND 6 U.S.C. SECTION 124N, THE DEPARTMENT OF DEFENSE(DOD), THE DEPARTMENT OF HOMELAND SECURITY(DHS) OR THE DEPARTMENT OF JUSTICE(DOJ) MAY TAKE SECURITY ACTION THAT RESULTS IN THE INTERFERENCE, DISRUPTION, SEIZURE, DAMAGING, OR DESTRUCTION OF UNMANNED ACFT DEEMED TO POSE A CREDIBLE SAFETY OR SECURITY THREAT TO PROTECTED PERSONNEL, FAC, OR ASSETS. C. U.S. CUSTOMS AND BORDER PROTECTION (CBP) IS RESPONSIBLE FOR MANAGING UAS AIRSPACE ACCESS REQUESTS WI THE DEFINED SSI AIRSPACE. UAS OPR REQUESTING ACCESS MUST SUBMIT REQUESTS TO SWBDRONEZONEWAIVERS@CBP.DHS.GOV AT LEAST 48 HOURS PRIOR TO OPS. ALL REQUESTS MUST INCLUDE: 1) OPERATOR NAME 2) FAA CERTIFICATIONS 3) OPERATOR TELEPHONE NUMBER 4) FLIGHT DATE, TIME AND LOCATION 5) UAS INFORMATION: REMOTE ID, MAKE, MODEL AND SERIAL NUMBER. D. FIRST RESPONDERS EMERGENCY UAS OPS CTC CBP AT 951-570-4185. E. THE FAA RECOMMENDS THAT ALL ACFT OPR CK NOTAMS FREQUENTLY FOR POSSIBLE CHANGES TO THIS TFR PRIOR TO OPS. OPR MAY REVIEW THE TFR DETAILS AT HTTPS://TFR.FAA.GOV/ OR HTTPS://WWW.1800WXBRIEF.COM. 2610200000-2710192359</txtDescrUSNS>
-        <txtDescrTraditional>!FDC 6/9978 ZAB TX..AIRSPACE U.S. MEXICO BORDER, TX..TEMPORARY FLIGHT RESTRICTION. PURSUANT TO 49 USC 40103(B)(3), THE FEDERAL AVIATION ADMINISTRATION (FAA) CLASSIFIES THE AIRSPACE DEFINED IN THIS NOTAM AS 'NTL DEFENSE AIRSPACE'. PILOTS WHO DO NOT ADHERE TO THE FOLLOWING PROC MAY BE INTERCEPTED, DETAINED AND INTERVIEWED BY LAW ENFORCEMENT/SECURITY PERSONNEL. ANY OF THE FOLLOWING ADDITIONAL ACTIONS MAY ALSO BE TAKEN AGAINST A PILOT WHO DOES NOT COMPLY WITH THE RQMNTS OR ANY SPECIAL INSTRUCTIONS OR PROC ANNOUNCED IN THIS NOTAM:
-A) THE FAA MAY TAKE ADMINISTRATIVE ACTION, INCLUDING IMPOSING CIVIL PENALTIES AND THE SUSPENSION OR REVOCATION OF AIRMEN CERTIFICATES; OR 
-B) THE UNITED STATES GOVERNMENT MAY PURSUE CRIMINAL CHARGES, INCLUDING CHARGES UNDER 49 USC SECTION 46307; OR 
-C) THE UNITED STATES GOVERNMENT MAY USE DEADLY FORCE AGAINST THE AIRBORNE ACFT, IF IT IS DETERMINED THAT THE ACFT POSES AN IMMINENT SECURITY THREAT. 
-PURSUANT TO 14 CFR 99.7, SPECIAL SECURITY INSTRUCTIONS, ALL ACFT FLT OPS ARE PROHIBITED: 2610221512-2710192359</txtDescrTraditional>
+        <txtAddrCoordPhone>281-230-5560</txtAddrCoordPhone>
+        <txtNamePOC>MISSISSIPPI DISPATCH ,  MERIT CREEK FIRE</txtNamePOC>
+        <txtAddrPOCPhone>601-420-6005</txtAddrPOCPhone>
+        <valFreqPOC>122.925</valFreqPOC>
+        <txtDescrUSNS>!FDC 6/2016 ZHU MS..AIRSPACE 14NM NW LUCEDALE, MS..TEMPORARY FLIGHT RESTRICTIONS. PURSUANT TO 14 CFR SECTION 91.137(A)(2) TEMPORARY FLIGHT RESTRICTIONS ARE IN EFFECT TO PROVIDE A SAFE ENVIRONMENT FOR FIRE FIGHTING ACFT OPS. WI AN AREA DEFINED AS 2NM RADIUS OF 310300N0885015W (SJI303031.4) SFC-2000FT MISSISSIPPI DISPATCH TEL 601-420-6005 OR FREQ 122.925 MERIT CREEK FIRE IS IN CHARGE OF THE OPERATION. HOUSTON/ZHU/ARTCC TEL 281-230-5560 IS THE FAA CDN FAC. DLY 1200-2300 2610241200-2610272300EST</txtDescrUSNS>
+        <txtDescrTraditional>!FDC 6/2016 ZHU MS..AIRSPACE 14NM NW LUCEDALE, MS..TEMPORARY FLIGHT RESTRICTION. PURSUANT TO 14 CFR SECTION 91.137(A)(2), TEMPORARY FLIGHT RESTRICTIONS ARE IN EFFECT WI AN AREA DEFINED AS 2NM RADIUS OF 310300N0885015W (SJI303031.4) SFC-2000FT MSL EFFECTIVE 2610241200 UTC UNTIL 2610272300 UTC DLY 1200-2300. TO PROVIDE A SAFE ENVIRONMENT FOR FIRE FIGHTING ACFT OPS MISSISSIPPI DISPATCH , MERIT CREEK FIRE, TEL 601-420-6005, /FREQ 122.925 IS IN CHARGE OF ON SCENE EMERGENCY RESPONSE ACTIVITIES. THE HOUSTON /ZHU/ ARTCC, TEL 281-230-5560, IS THE CDN FAC. 2610241200-2610272300</txtDescrTraditional>
         <txtDescrModern>&lt;html&gt;
   &lt;span style="Arial" valign="Top"&gt;
     &lt;Body&gt;
@@ -69,7 +379,7 @@ PURSUANT TO 14 CFR 99.7, SPECIAL SECURITY INSTRUCTIONS, ALL ACFT FLT OPS ARE PRO
           &lt;/TD&gt;
           &lt;TD valign="bottom" align="left" width="320"&gt;
             &lt;b&gt;
-              &lt;font color="#FFFFFF" size="3" face="Arial"&gt;FDC 6/9978&lt;/font&gt;
+              &lt;font color="#FFFFFF" size="3" face="Arial"&gt;FDC 6/2016&lt;/font&gt;
             &lt;/b&gt;
           &lt;/TD&gt;
         &lt;/TR&gt;
@@ -78,7 +388,7 @@ PURSUANT TO 14 CFR 99.7, SPECIAL SECURITY INSTRUCTIONS, ALL ACFT FLT OPS ARE PRO
             &lt;font face="Arial" size="2"&gt;Issue Date     :&lt;/font&gt;
           &lt;/TD&gt;
           &lt;TD valign="top"&gt;
-            &lt;font face="Arial" size="2"&gt;October 16, 2026 at 1819 UTC&lt;/font&gt;
+            &lt;font face="Arial" size="2"&gt;October 24, 2026 at 0007 UTC&lt;/font&gt;
           &lt;/TD&gt;
         &lt;/TR&gt;
         &lt;TR&gt;
@@ -86,7 +396,7 @@ PURSUANT TO 14 CFR 99.7, SPECIAL SECURITY INSTRUCTIONS, ALL ACFT FLT OPS ARE PRO
             &lt;font face="Arial" size="2"&gt;Location     :&lt;/font&gt;
           &lt;/TD&gt;
           &lt;TD&gt;
-            &lt;font face="Arial" size="2"&gt;U.S. MEXICO BORDER, Texas&lt;/font&gt;
+            &lt;font face="Arial" size="2"&gt;14NM NW LUCEDALE, Mississippi near SEMMES VORTAC (SJI)&lt;/font&gt;
           &lt;/TD&gt;
         &lt;/TR&gt;
         &lt;TR&gt;
@@ -94,7 +404,7 @@ PURSUANT TO 14 CFR 99.7, SPECIAL SECURITY INSTRUCTIONS, ALL ACFT FLT OPS ARE PRO
             &lt;font face="Arial" size="2"&gt;Beginning Date and Time     :&lt;/font&gt;
           &lt;/TD&gt;
           &lt;TD&gt;
-            &lt;font face="Arial" size="2"&gt;Effective Immediately &lt;/font&gt;
+            &lt;font face="Arial" size="2"&gt;October 24, 2026 UTC 1200-2300 Daily&lt;/font&gt;
           &lt;/TD&gt;
         &lt;/TR&gt;
         &lt;TR&gt;
@@ -102,7 +412,7 @@ PURSUANT TO 14 CFR 99.7, SPECIAL SECURITY INSTRUCTIONS, ALL ACFT FLT OPS ARE PRO
             &lt;font face="Arial" size="2"&gt;Ending Date and Time     :&lt;/font&gt;
           &lt;/TD&gt;
           &lt;TD&gt;
-            &lt;font face="Arial" size="2"&gt;October 19, 2027 at 2359 UTC&lt;/font&gt;
+            &lt;font face="Arial" size="2"&gt;October 27, 2026 UTC&lt;/font&gt;
           &lt;/TD&gt;
         &lt;/TR&gt;
         &lt;TR&gt;
@@ -110,7 +420,7 @@ PURSUANT TO 14 CFR 99.7, SPECIAL SECURITY INSTRUCTIONS, ALL ACFT FLT OPS ARE PRO
             &lt;font face="Arial" size="2"&gt;Reason for NOTAM     :&lt;/font&gt;
           &lt;/TD&gt;
           &lt;TD&gt;
-            &lt;font face="Arial" size="2"&gt;Temporary flight restrictions for Special Security Reasons&lt;/font&gt;
+            &lt;font face="Arial" size="2"&gt;TO PROVIDE A SAFE ENVIRONMENT FOR FIRE FIGHTING ACFT OPS&lt;/font&gt;
           &lt;/TD&gt;
         &lt;/TR&gt;
         &lt;TR&gt;
@@ -118,7 +428,7 @@ PURSUANT TO 14 CFR 99.7, SPECIAL SECURITY INSTRUCTIONS, ALL ACFT FLT OPS ARE PRO
             &lt;font face="Arial" size="2"&gt;Type     :&lt;/font&gt;
           &lt;/TD&gt;
           &lt;TD&gt;
-            &lt;font face="Arial" size="2"&gt;Security&lt;/font&gt;
+            &lt;font face="Arial" size="2"&gt;Hazards&lt;/font&gt;
           &lt;/TD&gt;
         &lt;/TR&gt;
         &lt;TR&gt;
@@ -127,6 +437,14 @@ PURSUANT TO 14 CFR 99.7, SPECIAL SECURITY INSTRUCTIONS, ALL ACFT FLT OPS ARE PRO
           &lt;/TD&gt;
           &lt;TD&gt;
             &lt;font face="Arial" size="2"&gt;N/A&lt;/font&gt;
+          &lt;/TD&gt;
+        &lt;/TR&gt;
+        &lt;TR&gt;
+          &lt;TD colspan="3" align="left" valign="top"&gt;
+            &lt;font face="Arial" size="2"&gt;Pilots May Contact     :&lt;/font&gt;
+          &lt;/TD&gt;
+          &lt;TD&gt;
+            &lt;font face="Arial" size="2"&gt;HOUSTON (ZHU) ARTCC, 281-230-5560&lt;/font&gt;
           &lt;/TD&gt;
         &lt;/TR&gt;
         &lt;TR&gt;
@@ -174,6 +492,59 @@ PURSUANT TO 14 CFR 99.7, SPECIAL SECURITY INSTRUCTIONS, ALL ACFT FLT OPS ARE PRO
             &lt;font face="Arial" size="2"&gt;
               &lt;b&gt;Airspace Definition:&lt;/b&gt;
             &lt;/font&gt;
+          &lt;/TD&gt;
+        &lt;/TR&gt;
+        &lt;TR&gt;
+          &lt;TD&gt; &lt;/TD&gt;
+          &lt;TD&gt; &lt;/TD&gt;
+          &lt;TD colspan="3"&gt;
+            &lt;font face="Arial" size="2"&gt;Center:&lt;/font&gt;
+          &lt;/TD&gt;
+          &lt;TD&gt;
+            &lt;font face="Arial" size="2"&gt; On the SEMMES VORTAC (SJI) 303 degree radial at 31.4 nautical miles. (Latitude: 31&amp;#xBA;03'00"N, Longitude: 88&amp;#xBA;50'15"W)&lt;/font&gt;
+          &lt;/TD&gt;
+        &lt;/TR&gt;
+        &lt;TR&gt;
+          &lt;TD&gt; &lt;/TD&gt;
+          &lt;TD&gt; &lt;/TD&gt;
+          &lt;TD colspan="3"&gt;
+            &lt;font face="Arial" size="2"&gt;Radius:&lt;/font&gt;
+          &lt;/TD&gt;
+          &lt;TD&gt;
+            &lt;font face="Arial" size="2"&gt; 2 nautical miles&lt;/font&gt;
+          &lt;/TD&gt;
+        &lt;/TR&gt;
+        &lt;TR&gt;
+          &lt;TD&gt; &lt;/TD&gt;
+          &lt;TD&gt; &lt;/TD&gt;
+          &lt;TD colspan="3"&gt;
+            &lt;font face="Arial" size="2"&gt;Altitude:&lt;/font&gt;
+          &lt;/TD&gt;
+          &lt;TD&gt;
+            &lt;font face="Arial" size="2"&gt; From the surface  up to and including 2000 feet MSL &lt;/font&gt;
+          &lt;/TD&gt;
+        &lt;/TR&gt;
+        &lt;TR&gt;
+          &lt;TD colspan="5"&gt;
+            &lt;font face="Arial" size="2"&gt;
+              &lt;b&gt;Effective Date(s):&lt;/b&gt;
+            &lt;/font&gt;
+          &lt;/TD&gt;
+        &lt;/TR&gt;
+        &lt;TR&gt;
+          &lt;TD&gt; &lt;/TD&gt;
+          &lt;TD&gt; &lt;/TD&gt;
+          &lt;TD colspan="5"&gt;
+            &lt;font face="Arial" size="2"&gt;
+              &lt;b&gt;In UTC:&lt;/b&gt;
+            &lt;/font&gt;
+          &lt;/TD&gt;
+        &lt;/TR&gt;
+        &lt;TR&gt;
+          &lt;TD&gt; &lt;/TD&gt;
+          &lt;TD&gt; &lt;/TD&gt;
+          &lt;TD colspan="5"&gt;
+            &lt;font face="Arial" size="2"&gt;1200 to 2300 UTC Daily starting October 24 and ending October 27.&lt;/font&gt;
           &lt;/TD&gt;
         &lt;/TR&gt;
         &lt;TR&gt;
@@ -243,7 +614,27 @@ PURSUANT TO 14 CFR 99.7, SPECIAL SECURITY INSTRUCTIONS, ALL ACFT FLT OPS ARE PRO
             &lt;font face="Arial" size="2"&gt;ARTCC:&lt;/font&gt;
           &lt;/TD&gt;
           &lt;TD&gt;
-            &lt;font face="Arial" size="2"&gt;ZAB - Albuquerque Center&lt;/font&gt;
+            &lt;font face="Arial" size="2"&gt;ZHU - Houston Center&lt;/font&gt;
+          &lt;/TD&gt;
+        &lt;/TR&gt;
+        &lt;TR&gt;
+          &lt;TD colspan="2"&gt;
+            &lt;font face="Arial" size="2"&gt;Point of Contact:&lt;/font&gt;
+          &lt;/TD&gt;
+          &lt;TD&gt;
+            &lt;font face="Arial" size="2"&gt;MISSISSIPPI DISPATCH ,  MERIT CREEK FIRE&lt;/font&gt;
+          &lt;/TD&gt;
+        &lt;/TR&gt;
+        &lt;TR&gt;
+          &lt;TD colspan="2"&gt; &lt;/TD&gt;
+          &lt;TD&gt;
+            &lt;font face="Arial" size="2"&gt;Telephone 601-420-6005&lt;/font&gt;
+          &lt;/TD&gt;
+        &lt;/TR&gt;
+        &lt;TR&gt;
+          &lt;TD colspan="2"&gt; &lt;/TD&gt;
+          &lt;TD&gt;
+            &lt;font face="Arial" size="2"&gt;Frequency 122.925&lt;/font&gt;
           &lt;/TD&gt;
         &lt;/TR&gt;
         &lt;TR&gt;
@@ -251,7 +642,7 @@ PURSUANT TO 14 CFR 99.7, SPECIAL SECURITY INSTRUCTIONS, ALL ACFT FLT OPS ARE PRO
             &lt;font face="Arial" size="2"&gt;Authority:&lt;/font&gt;
           &lt;/TD&gt;
           &lt;TD&gt;
-            &lt;font face="Arial" size="2"&gt;Title 14 CFR section 99.7&lt;/font&gt;
+            &lt;font face="Arial" size="2"&gt;Title 14 CFR section 91.137(a)(2)&lt;/font&gt;
           &lt;/TD&gt;
         &lt;/TR&gt;
         &lt;TR&gt;
