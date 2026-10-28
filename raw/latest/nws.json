@@ -10,13 +10,13 @@
     "type": "FeatureCollection",
     "features": [
         {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0-KEEPALIVE-44345",
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0-KEEPALIVE-26044",
             "type": "Feature",
             "geometry": null,
             "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0-KEEPALIVE-44345",
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0-KEEPALIVE-26044",
                 "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0-KEEPALIVE-44345",
+                "id": "urn:oid:2.49.0.1.840.0-KEEPALIVE-26044",
                 "areaDesc": "Montgomery",
                 "geocode": {
                     "SAME": [
@@ -30,10 +30,10 @@
                     "https://api.weather.gov/zones/county/MDC031"
                 ],
                 "references": [],
-                "sent": "2026-10-28T03:54:58+00:00",
-                "effective": "2026-10-28T03:54:58+00:00",
+                "sent": "2026-10-28T05:04:58+00:00",
+                "effective": "2026-10-28T05:04:58+00:00",
                 "onset": null,
-                "expires": "2026-10-28T04:04:58+00:00",
+                "expires": "2026-10-28T05:14:58+00:00",
                 "ends": null,
                 "status": "Test",
                 "messageType": "Alert",
@@ -54,7 +54,7 @@
                         "KEPWBC"
                     ],
                     "WMOidentifier": [
-                        "NZUS91 KWBC 280354"
+                        "NZUS91 KWBC 280504"
                     ],
                     "BLOCKCHANNEL": [
                         "CMAS",
@@ -72,6 +72,895 @@
                     ],
                     "NationalWeatherService": [
                         "TST"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.7fe6759c5ce037c3b63d80fa887f041fa220c900.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.7fe6759c5ce037c3b63d80fa887f041fa220c900.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.7fe6759c5ce037c3b63d80fa887f041fa220c900.001.1",
+                "areaDesc": "Coastal waters from Cape Mendocino to Pt. Arena CA out 10 nm",
+                "geocode": {
+                    "SAME": [
+                        "057455"
+                    ],
+                    "UGC": [
+                        "PZZ455"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/PZZ455"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.d0e6bf924cc4972bad77a4eb7dfa7fff392e2f03.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.d0e6bf924cc4972bad77a4eb7dfa7fff392e2f03.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-27T14:55:00-07:00"
+                    }
+                ],
+                "sent": "2026-10-27T21:53:00-07:00",
+                "effective": "2026-10-27T21:53:00-07:00",
+                "onset": "2026-10-27T21:53:00-07:00",
+                "expires": "2026-10-28T06:00:00-07:00",
+                "ends": "2026-10-29T03:00:00-07:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Small Craft Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Eureka CA",
+                "headline": "Small Craft Advisory issued October 27 at 9:53PM PDT until October 29 at 3:00AM PDT by NWS Eureka CA",
+                "description": "* WHAT...North winds 10 to 20 kt with gusts up to 30 kt and seas\n7 to 10 feet.\n\n* WHERE...Coastal waters from Cape Mendocino to Pt. Arena CA out\n10 nm.\n\n* WHEN...Until 3 AM PDT Thursday.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
+                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "MWWEKA"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS76 KEKA 280453"
+                    ],
+                    "NWSheadline": [
+                        "SMALL CRAFT ADVISORY REMAINS IN EFFECT UNTIL 3 AM PDT THURSDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KEKA.SC.Y.0098.000000T0000Z-261029T1000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-29T03:00:00-07:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.9036324803452300cf5fd2db88b6961291d2deab.001.1,2026-10-27T08:35:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.5efb48e1dc08a44b81e99903c116d1cf4dba424d.001.1,2026-10-27T02:28:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.c77c8b9377031aec25ed083b1a9042ea374cfcbe.001.1,2026-10-26T21:30:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.d22bf478afde256feb0bf4232958f3e44774f119.001.1,2026-10-26T15:06:00-07:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "SCY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.7fe6759c5ce037c3b63d80fa887f041fa220c900.002.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.7fe6759c5ce037c3b63d80fa887f041fa220c900.002.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.7fe6759c5ce037c3b63d80fa887f041fa220c900.002.1",
+                "areaDesc": "Waters from Cape Mendocino to Pt. Arena CA from 10 to 60 nm",
+                "geocode": {
+                    "SAME": [
+                        "057475"
+                    ],
+                    "UGC": [
+                        "PZZ475"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/PZZ475"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.d0e6bf924cc4972bad77a4eb7dfa7fff392e2f03.002.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.d0e6bf924cc4972bad77a4eb7dfa7fff392e2f03.002.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-27T14:55:00-07:00"
+                    }
+                ],
+                "sent": "2026-10-27T21:53:00-07:00",
+                "effective": "2026-10-27T21:53:00-07:00",
+                "onset": "2026-10-27T21:53:00-07:00",
+                "expires": "2026-10-28T06:00:00-07:00",
+                "ends": "2026-10-29T03:00:00-07:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Small Craft Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Eureka CA",
+                "headline": "Small Craft Advisory issued October 27 at 9:53PM PDT until October 29 at 3:00AM PDT by NWS Eureka CA",
+                "description": "* WHAT...North winds 15 to 25 kt with gusts up to 30 kt and seas\n8 to 10 feet.\n\n* WHERE...Waters from Cape Mendocino to Pt. Arena CA from 10 to\n60 nm.\n\n* WHEN...Until 3 AM PDT Thursday.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
+                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "MWWEKA"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS76 KEKA 280453"
+                    ],
+                    "NWSheadline": [
+                        "SMALL CRAFT ADVISORY REMAINS IN EFFECT UNTIL 3 AM PDT THURSDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KEKA.SC.Y.0098.000000T0000Z-261029T1000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-29T03:00:00-07:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.9036324803452300cf5fd2db88b6961291d2deab.002.1,2026-10-27T08:35:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.5efb48e1dc08a44b81e99903c116d1cf4dba424d.002.1,2026-10-27T02:28:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.c77c8b9377031aec25ed083b1a9042ea374cfcbe.002.1,2026-10-26T21:30:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.d22bf478afde256feb0bf4232958f3e44774f119.002.1,2026-10-26T15:06:00-07:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "SCY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5ab36dc64d1180e8e8fa72aec62be5eb60cadaa7.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5ab36dc64d1180e8e8fa72aec62be5eb60cadaa7.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.5ab36dc64d1180e8e8fa72aec62be5eb60cadaa7.001.1",
+                "areaDesc": "Tampa Bay waters; Charlotte Harbor and Pine Island Sound; Coastal waters from Tarpon Springs to Suwannee River FL out 20 NM; Coastal waters from Englewood to Tarpon Springs FL out 20 NM; Coastal waters from Bonita Beach to Englewood FL out 20 NM; Waters from Tarpon Springs to Suwannee River FL out 20 to 60 NM; Waters from Englewood to Tarpon Springs FL out 20 to 60 NM; Waters from Bonita Beach to Englewood FL out 20 to 60 NM",
+                "geocode": {
+                    "SAME": [
+                        "077830",
+                        "077836",
+                        "077850",
+                        "077853",
+                        "077856",
+                        "077870",
+                        "077873",
+                        "077876"
+                    ],
+                    "UGC": [
+                        "GMZ830",
+                        "GMZ836",
+                        "GMZ850",
+                        "GMZ853",
+                        "GMZ856",
+                        "GMZ870",
+                        "GMZ873",
+                        "GMZ876"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/GMZ830",
+                    "https://api.weather.gov/zones/forecast/GMZ836",
+                    "https://api.weather.gov/zones/forecast/GMZ850",
+                    "https://api.weather.gov/zones/forecast/GMZ853",
+                    "https://api.weather.gov/zones/forecast/GMZ856",
+                    "https://api.weather.gov/zones/forecast/GMZ870",
+                    "https://api.weather.gov/zones/forecast/GMZ873",
+                    "https://api.weather.gov/zones/forecast/GMZ876"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.6ebb996dd1b71a811d1dca72de6783a9744365a2.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.6ebb996dd1b71a811d1dca72de6783a9744365a2.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-25T12:15:00-04:00"
+                    },
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.f5dde998b43105aed1c7205caba9026de401e1bf.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.f5dde998b43105aed1c7205caba9026de401e1bf.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-26T03:50:00-04:00"
+                    }
+                ],
+                "sent": "2026-10-28T00:50:00-04:00",
+                "effective": "2026-10-28T00:50:00-04:00",
+                "onset": "2026-10-28T00:50:00-04:00",
+                "expires": "2026-10-29T08:00:00-04:00",
+                "ends": "2026-10-29T08:00:00-04:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Small Craft Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Tampa Bay Ruskin FL",
+                "headline": "Small Craft Advisory issued October 28 at 12:50AM EDT until October 29 at 8:00AM EDT by NWS Tampa Bay Ruskin FL",
+                "description": "* WHAT...Northeast winds 20 to 25 knots with gusts up to 30\nknots and seas 4 to 7 feet.\n\n* WHERE...Portions of Gulf of America.\n\n* WHEN...Until 8 AM EDT Thursday.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
+                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "MWWTBW"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS72 KTBW 280450"
+                    ],
+                    "NWSheadline": [
+                        "SMALL CRAFT ADVISORY NOW IN EFFECT UNTIL 8 AM EDT THURSDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.EXT.KTBW.SC.Y.0023.000000T0000Z-261029T1200Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-29T08:00:00-04:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.3e75747ad12f0bccfe934a4d2edea64c6c75c6ad.001.1,2026-10-23T01:08:00-04:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "SCY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5b405ebb73628233101682e5c755c77f8b38be85.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.5b405ebb73628233101682e5c755c77f8b38be85.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.5b405ebb73628233101682e5c755c77f8b38be85.001.1",
+                "areaDesc": "San Diego County Coastal Areas; Orange County Coastal",
+                "geocode": {
+                    "SAME": [
+                        "006073",
+                        "006059"
+                    ],
+                    "UGC": [
+                        "CAZ043",
+                        "CAZ552"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/CAZ043",
+                    "https://api.weather.gov/zones/forecast/CAZ552"
+                ],
+                "references": [],
+                "sent": "2026-10-27T21:34:00-07:00",
+                "effective": "2026-10-27T21:34:00-07:00",
+                "onset": "2026-10-27T21:34:00-07:00",
+                "expires": "2026-10-28T06:15:00-07:00",
+                "ends": "2026-10-29T13:00:00-07:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Severe",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Coastal Flood Warning",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS San Diego CA",
+                "headline": "Coastal Flood Warning issued October 27 at 9:34PM PDT until October 29 at 1:00PM PDT by NWS San Diego CA",
+                "description": "* WHAT...Significant coastal flooding expected.\n\n* WHERE...San Diego County coastal areas and Orange County\nCoastal Areas.\n\n* WHEN...Until 1 PM PDT Thursday during high tides in the late\nmornings.\n\n* IMPACTS...Numerous roads may be closed. Low lying property\nincluding homes, businesses, and some critical infrastructure\nwill be inundated. Some shoreline erosion will occur in the\nlate mornings.\n\n* ADDITIONAL DETAILS...Coastal residents and managers of\ninfrastructure in the warned area should prepare for rising\nwater and take appropriate action to protect life and\nproperty. High tides each day will occur in the late morning.\nObserved high tides are 1.4 to 1.6 feet above astronomical\ntide predictions.",
+                "instruction": "Take the necessary actions to protect flood-prone property. If\ntravel is required, do not drive around barricades or through\nwater of unknown depth.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "CFWSGX"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS46 KSGX 280434"
+                    ],
+                    "NWSheadline": [
+                        "COASTAL FLOOD WARNING REMAINS IN EFFECT UNTIL 1 PM PDT THURSDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "EAS-ORG": [
+                        "WXR"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KSGX.CF.W.0002.000000T0000Z-261029T2000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-29T13:00:00-07:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.b5dd4a7827d5831bd12586c63700c0e58edb28f4.001.1,2026-10-27T12:53:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.cb9a01d3ffcd3a8b047c7066f747cd67fa006bbb.001.1,2026-10-27T02:02:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.67ea415d86ee42aed445b9fc6509aa0da884ffe5.001.1,2026-10-26T21:52:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.064a66f3353ab51278234c05852bb44116b5880b.001.1,2026-10-26T13:55:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.19fa88a0adfca12e340742140ffd9dad35222093.001.1,2026-10-26T01:28:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.bbd13095f5ea53f29d870fc59022d78caf95a1b3.001.1,2026-10-25T09:11:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.47df58b0791d4f59f0bee7f084adfd43f56bf66d.001.1,2026-10-25T00:59:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.93e62e512da3b44f42078b65a2b48598e0ef00f2.001.1,2026-10-23T11:03:00-07:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "CFW"
+                    ],
+                    "NationalWeatherService": [
+                        "CFW"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.98b5c94e2f254fc5eee4b2d1329ab7838c2c800a.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.98b5c94e2f254fc5eee4b2d1329ab7838c2c800a.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.98b5c94e2f254fc5eee4b2d1329ab7838c2c800a.001.1",
+                "areaDesc": "Western Chelan County; Western Okanogan County",
+                "geocode": {
+                    "SAME": [
+                        "053007",
+                        "053047"
+                    ],
+                    "UGC": [
+                        "WAZ048",
+                        "WAZ049"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/WAZ048",
+                    "https://api.weather.gov/zones/forecast/WAZ049"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.628a1a04aecd58eeb601cbe3c828640c9d6ecb9a.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.628a1a04aecd58eeb601cbe3c828640c9d6ecb9a.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-27T11:20:00-07:00"
+                    }
+                ],
+                "sent": "2026-10-27T21:31:00-07:00",
+                "effective": "2026-10-27T21:31:00-07:00",
+                "onset": "2026-10-27T21:31:00-07:00",
+                "expires": "2026-10-28T08:15:00-07:00",
+                "ends": "2026-10-28T17:00:00-07:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Moderate",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Winter Weather Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Spokane WA",
+                "headline": "Winter Weather Advisory issued October 27 at 9:31PM PDT until October 28 at 5:00PM PDT by NWS Spokane WA",
+                "description": "* WHAT...Mountain snow expected above 3000 feet. Snow accumulations\nof 2 to 5 inches expected except 5 to 9 inches near the Cascade\ncrest, including at Washington Pass and Stevens Pass.\n\n* WHERE...Washington Pass, Holden Village, Loup Loup Pass, and\nStevens Pass.\n\n* WHEN...Until 5 PM PDT Wednesday.\n\n* IMPACTS...Winter travel conditions expected.\n\n* ADDITIONAL DETAILS...Snow level of 4000 feet Tuesday evening\nfalling to 3000 feet Wednesday morning.",
+                "instruction": "Slow down and use caution while traveling. For the latest travel\ninformation in Washington, go to https://wsdot.wa.gov/travel",
+                "response": "Execute",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "WSWOTX"
+                    ],
+                    "WMOidentifier": [
+                        "WWUS46 KOTX 280431"
+                    ],
+                    "NWSheadline": [
+                        "WINTER WEATHER ADVISORY REMAINS IN EFFECT UNTIL 5 PM PDT WEDNESDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KOTX.WW.Y.0021.000000T0000Z-261029T0000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-28T17:00:00-07:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.3a1c5b699b05c36df4d5198a6dea093425ee56ea.001.1,2026-10-26T19:42:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.9bdd7f933cde8b49bc912191ca68d9731b926ec2.001.1,2026-10-26T16:28:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.3108e1ef16275299ebc91c048dad296b2332f669.001.1,2026-10-26T13:46:00-07:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "WWY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.8e854db163a80013d644e3ff09dd8ee206f945c0.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.8e854db163a80013d644e3ff09dd8ee206f945c0.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.8e854db163a80013d644e3ff09dd8ee206f945c0.001.1",
+                "areaDesc": "Sheboygan to Port Washington WI",
+                "geocode": {
+                    "SAME": [
+                        "092643"
+                    ],
+                    "UGC": [
+                        "LMZ643"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/LMZ643"
+                ],
+                "references": [],
+                "sent": "2026-10-27T23:15:00-05:00",
+                "effective": "2026-10-27T23:15:00-05:00",
+                "onset": "2026-10-28T19:00:00-05:00",
+                "expires": "2026-10-28T07:15:00-05:00",
+                "ends": "2026-10-29T07:00:00-05:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Small Craft Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Milwaukee/Sullivan WI",
+                "headline": "Small Craft Advisory issued October 27 at 11:15PM CDT until October 29 at 7:00AM CDT by NWS Milwaukee/Sullivan WI",
+                "description": "* WHAT...Southwest winds 15 to 20 kt with gusts up to 25 kt\nexpected and waves to 3-5 feet.\n\n* WHERE...Nearshore Waters from Sheboygan to Port Washington.\n\n* WHEN...From 7 PM Wednesday to 7 AM CDT Thursday.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
+                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "MWWMKX"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS73 KMKX 280415"
+                    ],
+                    "NWSheadline": [
+                        "SMALL CRAFT ADVISORY IN EFFECT FROM 7 PM WEDNESDAY TO 7 AM CDT THURSDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.NEW.KMKX.SC.Y.0096.261029T0000Z-261029T1200Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-29T07:00:00-05:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "SCY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.3efd0f17815c91c5e11546a5245456d3242c4f41.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.3efd0f17815c91c5e11546a5245456d3242c4f41.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.3efd0f17815c91c5e11546a5245456d3242c4f41.001.1",
+                "areaDesc": "Aransas Islands; Kleberg Islands; Nueces Islands; Calhoun Islands",
+                "geocode": {
+                    "SAME": [
+                        "048007",
+                        "048273",
+                        "048355",
+                        "048057"
+                    ],
+                    "UGC": [
+                        "TXZ345",
+                        "TXZ442",
+                        "TXZ443",
+                        "TXZ447"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/TXZ345",
+                    "https://api.weather.gov/zones/forecast/TXZ442",
+                    "https://api.weather.gov/zones/forecast/TXZ443",
+                    "https://api.weather.gov/zones/forecast/TXZ447"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.fe83c77a07498c78964ed4b775bfa88c3124f4b5.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.fe83c77a07498c78964ed4b775bfa88c3124f4b5.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-27T13:11:00-05:00"
+                    }
+                ],
+                "sent": "2026-10-27T23:14:00-05:00",
+                "effective": "2026-10-27T23:14:00-05:00",
+                "onset": "2026-10-27T23:14:00-05:00",
+                "expires": "2026-10-29T05:00:00-05:00",
+                "ends": "2026-10-29T05:00:00-05:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Coastal Flood Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Corpus Christi TX",
+                "headline": "Coastal Flood Advisory issued October 27 at 11:14PM CDT until October 29 at 5:00AM CDT by NWS Corpus Christi TX",
+                "description": "* WHAT...Minor coastal flooding.\n\n* WHERE...Aransas Islands, Kleberg Islands, Nueces Islands and\nCalhoun Islands Counties.\n\n* WHEN...Until 5 AM CDT Thursday.\n\n* IMPACTS...Flooding of lots, parks, and roads with only\nisolated road closures expected.",
+                "instruction": "If travel is required, allow extra time as some roads may be\nclosed. Do not drive around barricades or through water of\nunknown depth. Take the necessary actions to protect flood-prone\nproperty.",
+                "response": "Monitor",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "CFWCRP"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS44 KCRP 280414"
+                    ],
+                    "NWSheadline": [
+                        "COASTAL FLOOD ADVISORY NOW IN EFFECT UNTIL 5 AM CDT THURSDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.EXT.KCRP.CF.Y.0023.000000T0000Z-261029T1000Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-29T05:00:00-05:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.55d9f23b71725a43387bca2387a9ab5a753551f0.001.1,2026-10-27T02:10:00-05:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.ba9b3bb02fc5c63dd7a6af155436cf1a6b10dc31.001.1,2026-10-26T13:12:00-05:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.18530d4803940b35126f86d1471ab7ec6a26b568.001.1,2026-10-26T08:14:00-05:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.b7784fd38a6f0ea2bd4681cda84670a641623be5.001.1,2026-10-26T00:13:00-05:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "CFY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.2ec62706f826e0a73af083130fec24367f73304d.002.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.2ec62706f826e0a73af083130fec24367f73304d.002.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.2ec62706f826e0a73af083130fec24367f73304d.002.1",
+                "areaDesc": "Rock Island Passage to Sturgeon Bay WI; Sturgeon Bay to Two Rivers WI; Two Rivers to Sheboygan WI",
+                "geocode": {
+                    "SAME": [
+                        "092541",
+                        "092542",
+                        "092543"
+                    ],
+                    "UGC": [
+                        "LMZ541",
+                        "LMZ542",
+                        "LMZ543"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/LMZ541",
+                    "https://api.weather.gov/zones/forecast/LMZ542",
+                    "https://api.weather.gov/zones/forecast/LMZ543"
+                ],
+                "references": [],
+                "sent": "2026-10-27T23:12:00-05:00",
+                "effective": "2026-10-27T23:12:00-05:00",
+                "onset": "2026-10-28T19:00:00-05:00",
+                "expires": "2026-10-28T12:00:00-05:00",
+                "ends": "2026-10-29T10:00:00-05:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Small Craft Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Green Bay WI",
+                "headline": "Small Craft Advisory issued October 27 at 11:12PM CDT until October 29 at 10:00AM CDT by NWS Green Bay WI",
+                "description": "* WHAT...Southwest winds 10 to 20 kt with gusts up to 30 kt and\nwaves 3 to 6 ft expected.\n\n* WHERE...Lake Michigan nearshore waters from Washington Island\nto Sheboygan.\n\n* WHEN...From 7 PM Wednesday to 10 AM CDT Thursday.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
+                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "MWWGRB"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS73 KGRB 280412"
+                    ],
+                    "NWSheadline": [
+                        "SMALL CRAFT ADVISORY IN EFFECT FROM 7 PM WEDNESDAY TO 10 AM CDT THURSDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.NEW.KGRB.SC.Y.0094.261029T0000Z-261029T1500Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-29T10:00:00-05:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "SCY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.2ec62706f826e0a73af083130fec24367f73304d.001.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.2ec62706f826e0a73af083130fec24367f73304d.001.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.2ec62706f826e0a73af083130fec24367f73304d.001.1",
+                "areaDesc": "Green Bay south of line from  Cedar River to Rock Island Passage and north of a line from Oconto WI to Little Sturgeon Bay WI; Green Bay south of line from  Oconto WI to Little Sturgeon Bay WI",
+                "geocode": {
+                    "SAME": [
+                        "092521",
+                        "092522"
+                    ],
+                    "UGC": [
+                        "LMZ521",
+                        "LMZ522"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/LMZ521",
+                    "https://api.weather.gov/zones/forecast/LMZ522"
+                ],
+                "references": [],
+                "sent": "2026-10-27T23:12:00-05:00",
+                "effective": "2026-10-27T23:12:00-05:00",
+                "onset": "2026-10-28T19:00:00-05:00",
+                "expires": "2026-10-28T12:00:00-05:00",
+                "ends": "2026-10-29T04:00:00-05:00",
+                "status": "Actual",
+                "messageType": "Alert",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Small Craft Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Green Bay WI",
+                "headline": "Small Craft Advisory issued October 27 at 11:12PM CDT until October 29 at 4:00AM CDT by NWS Green Bay WI",
+                "description": "* WHAT...South winds 10 to 20 kt with gusts up to 25 kt and waves\n2 to 5 ft expected.\n\n* WHERE...Central and Southern Bay of Green Bay.\n\n* WHEN...From 7 PM Wednesday to 4 AM CDT Thursday.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
+                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "MWWGRB"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS73 KGRB 280412"
+                    ],
+                    "NWSheadline": [
+                        "SMALL CRAFT ADVISORY IN EFFECT FROM 7 PM WEDNESDAY TO 4 AM CDT THURSDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.NEW.KGRB.SC.Y.0094.261029T0000Z-261029T0900Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-29T04:00:00-05:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "SCY"
+                    ]
+                }
+            }
+        },
+        {
+            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.f096c6c15492f064ec72d715e2bbe02c5299ac41.002.1",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.f096c6c15492f064ec72d715e2bbe02c5299ac41.002.1",
+                "@type": "wx:Alert",
+                "id": "urn:oid:2.49.0.1.840.0.f096c6c15492f064ec72d715e2bbe02c5299ac41.002.1",
+                "areaDesc": "Point Piedras Blancas to Point Sal from 10 to 60 NM; Waters from Pt. Sal to Santa Cruz Island CA and westward 60 nm including San Miguel and Santa Rosa Islands; Outer waters from Santa Cruz Island to San Clemente Island to 60 NM offshore including San Nicolas and Santa Barbara Islands",
+                "geocode": {
+                    "SAME": [
+                        "057670",
+                        "057673",
+                        "057676"
+                    ],
+                    "UGC": [
+                        "PZZ670",
+                        "PZZ673",
+                        "PZZ676"
+                    ]
+                },
+                "affectedZones": [
+                    "https://api.weather.gov/zones/forecast/PZZ670",
+                    "https://api.weather.gov/zones/forecast/PZZ673",
+                    "https://api.weather.gov/zones/forecast/PZZ676"
+                ],
+                "references": [
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.9edcb63a16a76827edcd26fe2cab91f071eb7c61.001.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.9edcb63a16a76827edcd26fe2cab91f071eb7c61.001.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-27T07:20:00-07:00"
+                    },
+                    {
+                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.77e23fa4f03a0cc98c59032b8819395e9093332f.002.1",
+                        "identifier": "urn:oid:2.49.0.1.840.0.77e23fa4f03a0cc98c59032b8819395e9093332f.002.1",
+                        "sender": "w-nws.webmaster@noaa.gov",
+                        "sent": "2026-10-27T13:19:00-07:00"
+                    }
+                ],
+                "sent": "2026-10-27T21:06:00-07:00",
+                "effective": "2026-10-27T21:06:00-07:00",
+                "onset": "2026-10-27T21:06:00-07:00",
+                "expires": "2026-10-28T09:00:00-07:00",
+                "ends": "2026-10-28T09:00:00-07:00",
+                "status": "Actual",
+                "messageType": "Update",
+                "category": "Met",
+                "severity": "Minor",
+                "certainty": "Likely",
+                "urgency": "Expected",
+                "event": "Small Craft Advisory",
+                "sender": "w-nws.webmaster@noaa.gov",
+                "senderName": "NWS Los Angeles/Oxnard CA",
+                "headline": "Small Craft Advisory issued October 27 at 9:06PM PDT until October 28 at 9:00AM PDT by NWS Los Angeles/Oxnard CA",
+                "description": "* WHAT...Hazardous sea conditions.\n\n* WHERE...Portions of the coastal waters of southwest\nCalifornia.\n\n* WHEN...Until 9 AM PDT Wednesday.\n\n* IMPACTS...Conditions will be hazardous to small craft.\n\n* ADDITIONAL DETAILS...See the Coastal Waters Forecast (CWFLOX)\nfor more.",
+                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in hazardous conditions.",
+                "response": "Avoid",
+                "note": null,
+                "parameters": {
+                    "AWIPSidentifier": [
+                        "MWWLOX"
+                    ],
+                    "WMOidentifier": [
+                        "WHUS76 KLOX 280406"
+                    ],
+                    "NWSheadline": [
+                        "SMALL CRAFT ADVISORY REMAINS IN EFFECT UNTIL 9 AM PDT WEDNESDAY"
+                    ],
+                    "BLOCKCHANNEL": [
+                        "EAS",
+                        "NWEM",
+                        "CMAS"
+                    ],
+                    "VTEC": [
+                        "/O.CON.KLOX.SC.Y.0157.000000T0000Z-261028T1600Z/"
+                    ],
+                    "eventEndingTime": [
+                        "2026-10-28T09:00:00-07:00"
+                    ],
+                    "expiredReferences": [
+                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.886d9fce94d0a74f2cb845248a41c5ef224a25f4.002.1,2026-10-26T20:39:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.fc8ea0f7c98bfe7e952e8ee0e35dcb3b373bdc1c.001.1,2026-10-26T10:02:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.f750f1ed9783b873c5122858cf2a310729b04151.001.1,2026-10-26T02:44:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.6ed32b5000bcd4ec3eedf23d1398aca1418ff66f.001.1,2026-10-25T13:03:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.8e71164fb11c58de045321c09161cc97166d9cc9.001.1,2026-10-25T20:26:00-07:00"
+                    ]
+                },
+                "scope": "Public",
+                "code": "IPAWSv1.0",
+                "language": "en-US",
+                "web": "http://www.weather.gov",
+                "eventCode": {
+                    "SAME": [
+                        "NWS"
+                    ],
+                    "NationalWeatherService": [
+                        "SCY"
                     ]
                 }
             }
@@ -929,138 +1818,6 @@
                     ],
                     "NationalWeatherService": [
                         "FGY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.73d2704a031c5252bafa648249c2d0f23a4ad419.001.1",
-            "type": "Feature",
-            "geometry": {
-                "type": "Polygon",
-                "coordinates": [
-                    [
-                        [
-                            -106.14,
-                            37.51
-                        ],
-                        [
-                            -106.04,
-                            37.64
-                        ],
-                        [
-                            -105.78,
-                            37.57
-                        ],
-                        [
-                            -105.66,
-                            37.2
-                        ],
-                        [
-                            -105.83,
-                            37.19
-                        ],
-                        [
-                            -105.96,
-                            37.26
-                        ],
-                        [
-                            -106.14,
-                            37.51
-                        ]
-                    ]
-                ]
-            },
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.73d2704a031c5252bafa648249c2d0f23a4ad419.001.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.73d2704a031c5252bafa648249c2d0f23a4ad419.001.1",
-                "areaDesc": "Alamosa, CO; Conejos, CO; Costilla, CO; Rio Grande, CO",
-                "geocode": {
-                    "SAME": [
-                        "008003",
-                        "008021",
-                        "008023",
-                        "008105"
-                    ],
-                    "UGC": [
-                        "COC003",
-                        "COC021",
-                        "COC023",
-                        "COC105"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/county/COC003",
-                    "https://api.weather.gov/zones/county/COC021",
-                    "https://api.weather.gov/zones/county/COC023",
-                    "https://api.weather.gov/zones/county/COC105"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.18df4b783766d97c79b5cd903f7d7a7b9cc03a01.001.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.18df4b783766d97c79b5cd903f7d7a7b9cc03a01.001.1",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-27T19:36:00-06:00"
-                    }
-                ],
-                "sent": "2026-10-27T21:07:00-06:00",
-                "effective": "2026-10-27T21:07:00-06:00",
-                "onset": "2026-10-27T21:07:00-06:00",
-                "expires": "2026-10-27T22:45:00-06:00",
-                "ends": "2026-10-27T22:45:00-06:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Severe",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Flood Warning",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Pueblo CO",
-                "headline": "Flood Warning issued October 27 at 9:07PM MDT until October 27 at 10:45PM MDT by NWS Pueblo CO",
-                "description": "* WHAT...Flooding continues, especially along and near the Rio Grande\nand Conejos River.\n\n* WHERE...Northeastern Conejos County, West Central Costilla County,\nSoutheastern Rio Grande County, and Southwestern Alamosa County...\n\n* WHEN...Until 1045 PM MDT.\n\n* IMPACTS...Flooding of rivers, creeks, streams, and other low-lying\nand flood-prone locations is occurring, especially in areas along\nand near the Conejos River and the Rio Grande. Widespread\ninundation of agriculture fields, wetlands, and other low-lying\nareas persists. Areas of standing or slow moving water will\ncontinue over many roadways.\n\n* ADDITIONAL DETAILS...\n- At 906 PM MDT, Flooding was still occurring in the warning area,\nespecially in low-lying areas.\n- Water levels continues to remain elevated within the Conejos\nRiver near Manassa. In addition, Widespread inundation of\nagriculture fields, wetlands, and other low-lying areas.\n- Low lying areas in Conejos, Costilla, Rio Grande and Alamosa\ncounties are impacted, especially along and near the Rio Grande\nand Conejos River.\n- http://www.weather.gov/safety/flood",
-                "instruction": "Heed all road closures and directives from law enforcement and local\nemergency management.\n\nBe aware of your surroundings and do not drive on flooded roads.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "FLWPUB"
-                    ],
-                    "WMOidentifier": [
-                        "WGUS45 KPUB 280307"
-                    ],
-                    "NWSheadline": [
-                        "FLOOD WARNING NOW IN EFFECT UNTIL 1045 PM MDT THIS EVENING"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "EAS-ORG": [
-                        "WXR"
-                    ],
-                    "VTEC": [
-                        "/O.EXT.KPUB.FA.W.0020.000000T0000Z-261028T0445Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-27T22:45:00-06:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.790ee368b6e4b75b29eb64512d858a645b370fd3.001.1,2026-10-27T17:27:00-06:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.920cebfa51858b63db6c30bd8dbade33f7d1457c.001.1,2026-10-27T15:10:00-06:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.e022c3cfe55bea01177f4c1ddb3939d6d900c419.001.1,2026-10-27T13:19:00-06:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.de6800166ae3329136067733601a02ea8c27e563.001.1,2026-10-27T08:48:00-06:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.be45b32662f9a218913a5d3be6a23797bdd7f2bc.001.1,2026-10-26T23:55:00-06:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "FLW"
-                    ],
-                    "NationalWeatherService": [
-                        "FAW"
                     ]
                 }
             }
@@ -3002,646 +3759,4 @@
                 "sender": "w-nws.webmaster@noaa.gov",
                 "senderName": "NWS San Juan PR",
                 "headline": "Rip Current Statement issued October 27 at 9:27PM AST until October 28 at 6:00AM AST by NWS San Juan PR",
-                "description": "* WHAT...High Rip Current Risk, life-threatening rip currents.\n\n* WHERE...North-facing beaches of St. Thomas, and St. John.\n\n* WHEN...Through late tonight.\n\n* IMPACTS...Rip currents can sweep even the best swimmers away\nfrom shore into deeper water, where it becomes difficult to\nreturn to safety.",
-                "instruction": "There is a high risk of rip currents.\n\nRip currents are powerful channels of water flowing quickly away\nfrom shore, which occur most often at low spots or breaks in the\nsandbar and in the vicinity of structures such as groins, jetties\nand piers. Heed the advice of lifeguards, beach patrol flags and\nsigns.\n\nIf you become caught in a rip current, yell for help. Remain\ncalm, do not exhaust yourself and stay afloat while waiting for\nhelp. If you have to swim out of a rip current, swim parallel to\nshore and back toward the beach when possible. Do not attempt to\nswim directly against a rip current as you will tire quickly.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "CFWSJU"
-                    ],
-                    "WMOidentifier": [
-                        "WHCA42 TJSJ 280127"
-                    ],
-                    "NWSheadline": [
-                        "HIGH RIP CURRENT RISK REMAINS IN EFFECT UNTIL 6 AM AST WEDNESDAY"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.TJSJ.RP.S.0024.000000T0000Z-261028T1000Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-28T06:00:00-04:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.9a71c9ffb9922c9ccb42ac15064dad9cef8949fc.003.1,2026-10-27T10:08:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.92055294537e04ecdd74391397167d410688012e.003.1,2026-10-27T03:07:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.ef123cbd22f946c3366663e07c22a70db2f094e3.003.1,2026-10-26T21:38:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.89a389fdbeec86fdadd36ef6fedcdaae2ecef670.003.1,2026-10-26T17:51:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.5f594f588ca77aec396eb00f46549ea85f137042.002.1,2026-10-26T17:33:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "RPS"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.d8031007bf5af6513e262d31f1b72dafaa2c9b02.002.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.d8031007bf5af6513e262d31f1b72dafaa2c9b02.002.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.d8031007bf5af6513e262d31f1b72dafaa2c9b02.002.1",
-                "areaDesc": "Culebra",
-                "geocode": {
-                    "SAME": [
-                        "072049"
-                    ],
-                    "UGC": [
-                        "PRZ012"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/PRZ012"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.e17608bb2ecc50616f1669063e2baac2965ab316.002.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.e17608bb2ecc50616f1669063e2baac2965ab316.002.1",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-27T17:05:00-04:00"
-                    }
-                ],
-                "sent": "2026-10-27T21:27:00-04:00",
-                "effective": "2026-10-27T21:27:00-04:00",
-                "onset": "2026-10-27T21:27:00-04:00",
-                "expires": "2026-10-28T05:00:00-04:00",
-                "ends": "2026-10-28T18:00:00-04:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Moderate",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Rip Current Statement",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS San Juan PR",
-                "headline": "Rip Current Statement issued October 27 at 9:27PM AST until October 28 at 6:00PM AST by NWS San Juan PR",
-                "description": "* WHAT...High Rip Current Risk, life-threatening rip currents.\n\n* WHERE...North-facing beaches of Culebra.\n\n* WHEN...Through Wednesday afternoon.\n\n* IMPACTS...Rip currents can sweep even the best swimmers away\nfrom shore into deeper water, where it becomes difficult to\nreturn to safety.",
-                "instruction": "There is a high risk of rip currents.\n\nRip currents are powerful channels of water flowing quickly away\nfrom shore, which occur most often at low spots or breaks in the\nsandbar and in the vicinity of structures such as groins, jetties\nand piers. Heed the advice of lifeguards, beach patrol flags and\nsigns.\n\nIf you become caught in a rip current, yell for help. Remain\ncalm, do not exhaust yourself and stay afloat while waiting for\nhelp. If you have to swim out of a rip current, swim parallel to\nshore and back toward the beach when possible. Do not attempt to\nswim directly against a rip current as you will tire quickly.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "CFWSJU"
-                    ],
-                    "WMOidentifier": [
-                        "WHCA42 TJSJ 280127"
-                    ],
-                    "NWSheadline": [
-                        "HIGH RIP CURRENT RISK REMAINS IN EFFECT THROUGH WEDNESDAY AFTERNOON"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.TJSJ.RP.S.0023.000000T0000Z-261028T2200Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-28T18:00:00-04:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.9a71c9ffb9922c9ccb42ac15064dad9cef8949fc.002.1,2026-10-27T10:08:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.92055294537e04ecdd74391397167d410688012e.002.1,2026-10-27T03:07:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.ef123cbd22f946c3366663e07c22a70db2f094e3.002.1,2026-10-26T21:38:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.89a389fdbeec86fdadd36ef6fedcdaae2ecef670.002.1,2026-10-26T17:51:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.5f594f588ca77aec396eb00f46549ea85f137042.003.1,2026-10-26T17:33:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.50fe1e58882db094ed70ef184697084fdce2f836.002.1,2026-10-26T10:18:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.8804aeb7d9b6adbc4d179ab543bb07c0fdec3792.002.1,2026-10-26T06:14:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.5c5b0b92b6b261dd7b67931814a96a6bc9ba1377.001.1,2026-10-25T16:08:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.dfc927b646f085f032835050d5032ca62ff3f69c.001.1,2026-10-25T10:02:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.7287c3395bade56b46fc9151fa4fabcdfab20826.001.1,2026-10-25T02:57:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.d775fe2cead87229ec0a126a7f467286d0922bdc.001.1,2026-10-24T21:21:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.c0853050dbb4eba671b6eb845a037dc8ee36def0.001.1,2026-10-24T16:48:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.b9ea413d20ead3601f11c6f75ac6b1db9b718fbc.001.1,2026-10-24T10:26:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.5397cfb818a24b5d458d44bc494602afac3c522d.001.1,2026-10-24T04:03:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.74e498b5d109f426c7319d8818c2ffa976008643.001.1,2026-10-23T20:07:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.aa4c82532ab888233293402f11a6eec2bd410815.002.1,2026-10-23T15:57:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.3da782242c5056ee66cfdf4c0d714c880cab323f.002.1,2026-10-23T09:39:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.616e50a11b003bb49e6b0fbe4fd5c3d62207a090.002.1,2026-10-23T03:40:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.3be72587a8cbc8b9f87ff357b4707721a099222e.002.1,2026-10-22T21:44:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.7729ca14f282fece55a75fc73847b628da1596ea.002.1,2026-10-22T16:18:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "RPS"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.d8031007bf5af6513e262d31f1b72dafaa2c9b02.001.2",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.d8031007bf5af6513e262d31f1b72dafaa2c9b02.001.2",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.d8031007bf5af6513e262d31f1b72dafaa2c9b02.001.2",
-                "areaDesc": "San Juan and Vicinity; Northeast; North Central; Northwest; Mayaguez and Vicinity",
-                "geocode": {
-                    "SAME": [
-                        "072021",
-                        "072031",
-                        "072033",
-                        "072061",
-                        "072127",
-                        "072135",
-                        "072137",
-                        "072139",
-                        "072029",
-                        "072037",
-                        "072053",
-                        "072069",
-                        "072087",
-                        "072089",
-                        "072103",
-                        "072119",
-                        "072013",
-                        "072017",
-                        "072051",
-                        "072054",
-                        "072091",
-                        "072143",
-                        "072145",
-                        "072005",
-                        "072027",
-                        "072065",
-                        "072071",
-                        "072115",
-                        "072003",
-                        "072011",
-                        "072067",
-                        "072097",
-                        "072099",
-                        "072117",
-                        "072125"
-                    ],
-                    "UGC": [
-                        "PRZ001",
-                        "PRZ002",
-                        "PRZ005",
-                        "PRZ008",
-                        "PRZ010"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/PRZ001",
-                    "https://api.weather.gov/zones/forecast/PRZ002",
-                    "https://api.weather.gov/zones/forecast/PRZ005",
-                    "https://api.weather.gov/zones/forecast/PRZ008",
-                    "https://api.weather.gov/zones/forecast/PRZ010"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.e17608bb2ecc50616f1669063e2baac2965ab316.001.2",
-                        "identifier": "urn:oid:2.49.0.1.840.0.e17608bb2ecc50616f1669063e2baac2965ab316.001.2",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-27T17:05:00-04:00"
-                    }
-                ],
-                "sent": "2026-10-27T21:27:00-04:00",
-                "effective": "2026-10-27T21:27:00-04:00",
-                "onset": "2026-10-27T21:27:00-04:00",
-                "expires": "2026-10-28T05:00:00-04:00",
-                "ends": "2026-10-28T18:00:00-04:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Moderate",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Rip Current Statement",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS San Juan PR",
-                "headline": "Rip Current Statement issued October 27 at 9:27PM AST until October 28 at 6:00PM AST by NWS San Juan PR",
-                "description": "* WHAT...For the High Surf Advisory, large breaking waves of 7 to\n10 feet. For the HIGH RIP CURRENT RISK, life-threatening rip\ncurrent.\n\n* WHERE... For the HIGH SURF ADVISORY, the most vulnerable areas\nfor high surf and beach erosion include Pinones along Road 187,\nParcelas Suarez, Villas del Mar, and Villa Christiana in Loiza;\nFortuna in Luquillo; Pueblo and Tamarindo in Aguadilla; Bario\nObrero, Pueblo and Jareaito in Arecibo; Las Boca in Barceloneta;\nMachuca in Manati; Puerto Nuevo in Vega Baja; Ocean Park in San\nJuan; and Barrio Espinal in Aguada. For the HIGH RIP CURRENT\nRISK, beaches along west to northeast Puerto Rico.\n\n* WHEN...For the High Surf Advisory remains until 2 AM AST\nWednesday. For the High Rip Current Risk remains through Wednesday\nafternoon.\n\n* IMPACTS...FOR THE HIGH SURF ADVISORY, High waves that can wash\nover jetties and sweep people and pets onto jagged rocks.\nRough surf may also knock you down. Large breaking waves will\nresult in localized beach/dune structure erosion and dangerous\nswimming conditions. FOR THE HIGH RIP CURRENT RISK, rip\ncurrents can sweep even the best swimmers away from shore into\ndeeper water, where it becomes difficult to return to safety.",
-                "instruction": "A High Surf Advisory means that high surf will affect beaches in\nthe advisory area, producing localized beach erosion and\ndangerous swimming conditions.\n\nThere is a high risk of rip currents.\n\nRip currents are powerful channels of water flowing quickly away\nfrom shore, which occur most often at low spots or breaks in the\nsandbar and in the vicinity of structures such as groins, jetties\nand piers. Heed the advice of lifeguards, beach patrol flags and\nsigns.\n\nIf you become caught in a rip current, yell for help. Remain\ncalm, do not exhaust yourself and stay afloat while waiting for\nhelp. If you have to swim out of a rip current, swim parallel to\nshore and back toward the beach when possible. Do not attempt to\nswim directly against a rip current as you will tire quickly.\n\nA High Surf Advisory means that high surf will affect beaches in\nthe advisory area, producing localized beach erosion and\ndangerous swimming conditions.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "CFWSJU"
-                    ],
-                    "WMOidentifier": [
-                        "WHCA42 TJSJ 280127"
-                    ],
-                    "NWSheadline": [
-                        "HIGH SURF ADVISORY REMAINS IN EFFECT UNTIL 2 AM AST WEDNESDAY... ...HIGH RIP CURRENT RISK REMAINS IN EFFECT THROUGH WEDNESDAY AFTERNOON"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.TJSJ.RP.S.0023.000000T0000Z-261028T2200Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-28T18:00:00-04:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.9a71c9ffb9922c9ccb42ac15064dad9cef8949fc.001.2,2026-10-27T10:08:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.92055294537e04ecdd74391397167d410688012e.001.2,2026-10-27T03:07:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.ef123cbd22f946c3366663e07c22a70db2f094e3.001.2,2026-10-26T21:38:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.89a389fdbeec86fdadd36ef6fedcdaae2ecef670.001.2,2026-10-26T17:51:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.5f594f588ca77aec396eb00f46549ea85f137042.001.1,2026-10-26T17:33:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.50fe1e58882db094ed70ef184697084fdce2f836.001.2,2026-10-26T10:18:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.8804aeb7d9b6adbc4d179ab543bb07c0fdec3792.001.2,2026-10-26T06:14:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.5c5b0b92b6b261dd7b67931814a96a6bc9ba1377.001.1,2026-10-25T16:08:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.dfc927b646f085f032835050d5032ca62ff3f69c.001.1,2026-10-25T10:02:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.7287c3395bade56b46fc9151fa4fabcdfab20826.001.1,2026-10-25T02:57:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.d775fe2cead87229ec0a126a7f467286d0922bdc.001.1,2026-10-24T21:21:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.c0853050dbb4eba671b6eb845a037dc8ee36def0.001.1,2026-10-24T16:48:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.b9ea413d20ead3601f11c6f75ac6b1db9b718fbc.001.1,2026-10-24T10:26:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.5397cfb818a24b5d458d44bc494602afac3c522d.001.1,2026-10-24T04:03:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.74e498b5d109f426c7319d8818c2ffa976008643.002.1,2026-10-23T20:07:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.74e498b5d109f426c7319d8818c2ffa976008643.001.1,2026-10-23T20:07:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.aa4c82532ab888233293402f11a6eec2bd410815.001.2,2026-10-23T15:57:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.3da782242c5056ee66cfdf4c0d714c880cab323f.001.2,2026-10-23T09:39:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.616e50a11b003bb49e6b0fbe4fd5c3d62207a090.001.2,2026-10-23T03:40:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.3be72587a8cbc8b9f87ff357b4707721a099222e.001.2,2026-10-22T21:44:00-04:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.7729ca14f282fece55a75fc73847b628da1596ea.001.2,2026-10-22T16:18:00-04:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "RPS"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.09b62a04226fd50403af46e59172ca65e183996b.001.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.09b62a04226fd50403af46e59172ca65e183996b.001.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.09b62a04226fd50403af46e59172ca65e183996b.001.1",
-                "areaDesc": "Garden; Grant; Hooker; Thomas; Blaine; Loup; Garfield; Arthur; McPherson; Logan; Custer; Deuel; Keith; Perkins; Lincoln; Chase; Hayes; Frontier",
-                "geocode": {
-                    "SAME": [
-                        "031069",
-                        "031075",
-                        "031091",
-                        "031171",
-                        "031009",
-                        "031115",
-                        "031071",
-                        "031005",
-                        "031117",
-                        "031113",
-                        "031041",
-                        "031049",
-                        "031101",
-                        "031135",
-                        "031111",
-                        "031029",
-                        "031085",
-                        "031063"
-                    ],
-                    "UGC": [
-                        "NEZ022",
-                        "NEZ023",
-                        "NEZ024",
-                        "NEZ025",
-                        "NEZ026",
-                        "NEZ027",
-                        "NEZ028",
-                        "NEZ035",
-                        "NEZ036",
-                        "NEZ037",
-                        "NEZ038",
-                        "NEZ056",
-                        "NEZ057",
-                        "NEZ058",
-                        "NEZ059",
-                        "NEZ069",
-                        "NEZ070",
-                        "NEZ071"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/NEZ022",
-                    "https://api.weather.gov/zones/forecast/NEZ023",
-                    "https://api.weather.gov/zones/forecast/NEZ024",
-                    "https://api.weather.gov/zones/forecast/NEZ025",
-                    "https://api.weather.gov/zones/forecast/NEZ026",
-                    "https://api.weather.gov/zones/forecast/NEZ027",
-                    "https://api.weather.gov/zones/forecast/NEZ028",
-                    "https://api.weather.gov/zones/forecast/NEZ035",
-                    "https://api.weather.gov/zones/forecast/NEZ036",
-                    "https://api.weather.gov/zones/forecast/NEZ037",
-                    "https://api.weather.gov/zones/forecast/NEZ038",
-                    "https://api.weather.gov/zones/forecast/NEZ056",
-                    "https://api.weather.gov/zones/forecast/NEZ057",
-                    "https://api.weather.gov/zones/forecast/NEZ058",
-                    "https://api.weather.gov/zones/forecast/NEZ059",
-                    "https://api.weather.gov/zones/forecast/NEZ069",
-                    "https://api.weather.gov/zones/forecast/NEZ070",
-                    "https://api.weather.gov/zones/forecast/NEZ071"
-                ],
-                "references": [],
-                "sent": "2026-10-27T20:24:00-05:00",
-                "effective": "2026-10-27T20:24:00-05:00",
-                "onset": "2026-10-27T22:00:00-05:00",
-                "expires": "2026-10-28T05:00:00-05:00",
-                "ends": "2026-10-28T11:00:00-05:00",
-                "status": "Actual",
-                "messageType": "Alert",
-                "category": "Met",
-                "severity": "Moderate",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Dense Fog Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS North Platte NE",
-                "headline": "Dense Fog Advisory issued October 27 at 8:24PM CDT until October 28 at 11:00AM CDT by NWS North Platte NE",
-                "description": "* WHAT...Visibility one quarter mile or less in dense fog.\n\n* WHERE...Portions of central, north central, panhandle, southwest,\nand west central Nebraska.\n\n* WHEN...Until 11 AM CDT /10 AM MDT/ Wednesday.\n\n* IMPACTS...Low visibility could make driving conditions hazardous.",
-                "instruction": "If driving, slow down, use your headlights, and leave plenty of\ndistance ahead of you.",
-                "response": "Execute",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "NPWLBF"
-                    ],
-                    "WMOidentifier": [
-                        "WWUS73 KLBF 280124"
-                    ],
-                    "NWSheadline": [
-                        "DENSE FOG ADVISORY IN EFFECT UNTIL 11 AM CDT /10 AM MDT/ WEDNESDAY"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.NEW.KLBF.FG.Y.0014.261028T0300Z-261028T1600Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-28T11:00:00-05:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "FGY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.e08410b53340132be9592116ad51aaf7be28dbf9.001.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.e08410b53340132be9592116ad51aaf7be28dbf9.001.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.e08410b53340132be9592116ad51aaf7be28dbf9.001.1",
-                "areaDesc": "Kauai Channel; Oahu Windward Waters; Oahu Leeward Waters; Kaiwi Channel; Maui County Windward Waters; Maui County Leeward Waters; Pailolo Channel",
-                "geocode": {
-                    "SAME": [
-                        "059113",
-                        "059114",
-                        "059115",
-                        "059116",
-                        "059117",
-                        "059118",
-                        "059120"
-                    ],
-                    "UGC": [
-                        "PHZ113",
-                        "PHZ114",
-                        "PHZ115",
-                        "PHZ116",
-                        "PHZ117",
-                        "PHZ118",
-                        "PHZ120"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/PHZ113",
-                    "https://api.weather.gov/zones/forecast/PHZ114",
-                    "https://api.weather.gov/zones/forecast/PHZ115",
-                    "https://api.weather.gov/zones/forecast/PHZ116",
-                    "https://api.weather.gov/zones/forecast/PHZ117",
-                    "https://api.weather.gov/zones/forecast/PHZ118",
-                    "https://api.weather.gov/zones/forecast/PHZ120"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.f4d51f1e3440b4e3c14adcdfedc47d49c25adde3.001.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.f4d51f1e3440b4e3c14adcdfedc47d49c25adde3.001.1",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-27T09:12:00-10:00"
-                    }
-                ],
-                "sent": "2026-10-27T15:20:00-10:00",
-                "effective": "2026-10-27T15:20:00-10:00",
-                "onset": "2026-10-28T00:00:00-10:00",
-                "expires": "2026-10-28T04:30:00-10:00",
-                "ends": "2026-10-28T18:00:00-10:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Minor",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Small Craft Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Honolulu HI",
-                "headline": "Small Craft Advisory issued October 27 at 3:20PM HST until October 28 at 6:00PM HST by NWS Honolulu HI",
-                "description": "* WHAT...Mainly northeast to east winds to 25 kt.\n\n* WHERE...Kauai Channel, Oahu Windward Waters, Oahu Leeward\nWaters, Kaiwi Channel, Maui County Windward Waters, Maui\nCounty Leeward Waters and Pailolo Channel.\n\n* WHEN...From midnight tonight to 6 PM HST Wednesday.\n\n* IMPACTS...Conditions will be hazardous to small craft.\n\n* ADDITIONAL DETAILS...A vigorous area of low pressure will move\nover Maui County and Oahu waters tonight and Wednesday, bringing\nstrong easterly winds north of the low and southerly winds to\nthe south of the low. Strong thunderstorms may develop near the\nlow and generate erratic gusty winds.",
-                "instruction": "Inexperienced mariners, especially those operating smaller\nvessels, should avoid navigating in these conditions.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "MWWHFO"
-                    ],
-                    "WMOidentifier": [
-                        "WHHW70 PHFO 280120"
-                    ],
-                    "NWSheadline": [
-                        "SMALL CRAFT ADVISORY REMAINS IN EFFECT FROM MIDNIGHT TONIGHT TO 6 PM HST WEDNESDAY"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.PHFO.SC.Y.0041.261028T1000Z-261029T0400Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-28T18:00:00-10:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "SCY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.e9d3c283b7a6390cc905ee6146ca2e9bc3d7efdc.001.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.e9d3c283b7a6390cc905ee6146ca2e9bc3d7efdc.001.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.e9d3c283b7a6390cc905ee6146ca2e9bc3d7efdc.001.1",
-                "areaDesc": "Coastal Waters From Cape Flattery To James Island 10 To 60 Nm; Waters From James Island To Point Grenville 10 To 60 Nm; Coastal Waters From Point Grenville To Cape Shoalwater 10 To 60 Nm",
-                "geocode": {
-                    "SAME": [
-                        "057170",
-                        "057173",
-                        "057176"
-                    ],
-                    "UGC": [
-                        "PZZ170",
-                        "PZZ173",
-                        "PZZ176"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/PZZ170",
-                    "https://api.weather.gov/zones/forecast/PZZ173",
-                    "https://api.weather.gov/zones/forecast/PZZ176"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.c511ca50bfa2c910cc7429c5dd5930a3ae3e169c.001.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.c511ca50bfa2c910cc7429c5dd5930a3ae3e169c.001.1",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-27T10:41:00-07:00"
-                    }
-                ],
-                "sent": "2026-10-27T18:10:00-07:00",
-                "effective": "2026-10-27T18:10:00-07:00",
-                "onset": "2026-10-27T18:10:00-07:00",
-                "expires": "2026-10-28T02:15:00-07:00",
-                "ends": "2026-10-28T05:00:00-07:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Minor",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Small Craft Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Seattle WA",
-                "headline": "Small Craft Advisory issued October 27 at 6:10PM PDT until October 28 at 5:00AM PDT by NWS Seattle WA",
-                "description": "* WHAT...West winds 15 to 25 kt and seas 8 to 10 ft.\n\n* WHERE...Coastal Waters from Cape Flattery to Cape Shoalwater\n10 to 60 nm.\n\n* WHEN...Until 5 AM PDT Wednesday.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
-                "instruction": "A Small Craft Advisory means that wind speeds of 21 to 33 knots\nand/or seas 10 feet or higher are expected to produce hazardous\nwave conditions to small craft. Inexperienced mariners,\nespecially those operating smaller vessels should avoid\nnavigating in these conditions.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "MWWSEW"
-                    ],
-                    "WMOidentifier": [
-                        "WHUS76 KSEW 280110"
-                    ],
-                    "NWSheadline": [
-                        "SMALL CRAFT ADVISORY REMAINS IN EFFECT UNTIL 5 AM PDT WEDNESDAY"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                    "VTEC": [
-                        "/O.CON.KSEW.SC.Y.0141.000000T0000Z-261028T1200Z/"
-                    ],
-                    "eventEndingTime": [
-                        "2026-10-28T05:00:00-07:00"
-                    ],
-                    "expiredReferences": [
-                        "w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.264a2015a20bccfbe43c1531300af361612974a0.003.1,2026-10-27T03:08:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.95297b929f8b74a63e799f972b58706694af29b0.001.1,2026-10-27T01:51:00-07:00 w-nws.webmaster@noaa.gov,urn:oid:2.49.0.1.840.0.7d1ea1ff000d969d2e7781cdbfd22797975505aa.001.1,2026-10-26T14:21:00-07:00"
-                    ]
-                },
-                "scope": "Public",
-                "code": "IPAWSv1.0",
-                "language": "en-US",
-                "web": "http://www.weather.gov",
-                "eventCode": {
-                    "SAME": [
-                        "NWS"
-                    ],
-                    "NationalWeatherService": [
-                        "SCY"
-                    ]
-                }
-            }
-        },
-        {
-            "id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.e9d3c283b7a6390cc905ee6146ca2e9bc3d7efdc.002.1",
-            "type": "Feature",
-            "geometry": null,
-            "properties": {
-                "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.e9d3c283b7a6390cc905ee6146ca2e9bc3d7efdc.002.1",
-                "@type": "wx:Alert",
-                "id": "urn:oid:2.49.0.1.840.0.e9d3c283b7a6390cc905ee6146ca2e9bc3d7efdc.002.1",
-                "areaDesc": "Central U.S. Waters Strait Of Juan De Fuca; East Entrance U.S. Waters Strait Of Juan De Fuca",
-                "geocode": {
-                    "SAME": [
-                        "057131",
-                        "057132"
-                    ],
-                    "UGC": [
-                        "PZZ131",
-                        "PZZ132"
-                    ]
-                },
-                "affectedZones": [
-                    "https://api.weather.gov/zones/forecast/PZZ131",
-                    "https://api.weather.gov/zones/forecast/PZZ132"
-                ],
-                "references": [
-                    {
-                        "@id": "https://api.weather.gov/alerts/urn:oid:2.49.0.1.840.0.c511ca50bfa2c910cc7429c5dd5930a3ae3e169c.002.1",
-                        "identifier": "urn:oid:2.49.0.1.840.0.c511ca50bfa2c910cc7429c5dd5930a3ae3e169c.002.1",
-                        "sender": "w-nws.webmaster@noaa.gov",
-                        "sent": "2026-10-27T10:41:00-07:00"
-                    }
-                ],
-                "sent": "2026-10-27T18:10:00-07:00",
-                "effective": "2026-10-27T18:10:00-07:00",
-                "onset": "2026-10-27T18:10:00-07:00",
-                "expires": "2026-10-27T23:00:00-07:00",
-                "ends": "2026-10-27T23:00:00-07:00",
-                "status": "Actual",
-                "messageType": "Update",
-                "category": "Met",
-                "severity": "Minor",
-                "certainty": "Likely",
-                "urgency": "Expected",
-                "event": "Small Craft Advisory",
-                "sender": "w-nws.webmaster@noaa.gov",
-                "senderName": "NWS Seattle WA",
-                "headline": "Small Craft Advisory issued October 27 at 6:10PM PDT until October 27 at 11:00PM PDT by NWS Seattle WA",
-                "description": "* WHAT...West winds 15 to 25 kt.\n\n* WHERE...Central U. S. Waters Strait Of Juan De Fuca and East\nEntrance U. S. Waters Strait Of Juan De Fuca.\n\n* WHEN...Until 11 PM PDT this evening.\n\n* IMPACTS...Conditions will be hazardous to small craft.",
-                "instruction": "A Small Craft Advisory means that wind speeds of 21 to 33 knots\nand/or seas 10 feet or higher are expected to produce hazardous\nwave conditions to small craft. Inexperienced mariners,\nespecially those operating smaller vessels should avoid\nnavigating in these conditions.",
-                "response": "Avoid",
-                "note": null,
-                "parameters": {
-                    "AWIPSidentifier": [
-                        "MWWSEW"
-                    ],
-                    "WMOidentifier": [
-                        "WHUS76 KSEW 280110"
-                    ],
-                    "NWSheadline": [
-                        "SMALL CRAFT ADVISORY REMAINS IN EFFECT UNTIL 11 PM PDT THIS EVENING"
-                    ],
-                    "BLOCKCHANNEL": [
-                        "EAS",
-                        "NWEM",
-                        "CMAS"
-                    ],
-                
+                "description": "* WHAT...High Rip Current Risk, life-threatening rip currents.\n\n* WHERE...North-facing 
